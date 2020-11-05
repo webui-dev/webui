@@ -75,6 +75,8 @@ examples: webui.lib icon
 	$(info   )
 	$(CC) ./examples/helloworld/helloworld.cpp $(CCFLAGS) $(OUTPUT)./examples/helloworld/helloworld$(APP_EXTENTION)
 
+example: examples
+
 icon:
 	$(info   )
 	$(info Compiling icon resources.. )
