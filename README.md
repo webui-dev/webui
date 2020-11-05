@@ -1,6 +1,6 @@
 # WebUI
 
-[![N|Solid](https://cdn2.iconfinder.com/data/icons/whcompare-blue-green-web-hosting-1/397/site-cloning-256.png)](https://github.com/alifcommunity/webui)
+[![N|Solid](https://raw.githubusercontent.com/alifcommunity/webui/main/screenshot.png)](https://github.com/alifcommunity/webui)
 
 [![Build Status](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master)](https://github.com/alifcommunity/webui)
 
