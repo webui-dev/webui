@@ -105,6 +105,8 @@ See examples folder.
 
 ## How to compile from source ?
 
+[ ! ] Boost 1.74 already embedded with this repository, no action needed.
+
 - Clone source code
 ```sh
 git clonse https://github.com/alifcommunity/webui.git
@@ -113,8 +115,6 @@ git clonse https://github.com/alifcommunity/webui.git
 ### Compile under Windows
 - Windows SDK 10x. You can download it from http://microsoft.com 
 - Microsoft Visual Studio build tools. basically goto Start -> Visual Studio 20xx -> Native Tools Command Prompt.
-- Using your 'Native Tools Command Prompt'
-- [!] ### Please edit Makefile to change your paths as need.
 ```sh
 cd webui
 make
@@ -127,6 +127,7 @@ make example
 - [!] Comming soon!
 
 ### Compile under macOS
+- Clang
 - [!] Comming soon!
 
 ### License
