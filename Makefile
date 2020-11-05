@@ -1,15 +1,3 @@
-# --- Paths --------------------------------------------
-
-# Microsoft build tools
-MSVC_INCLUDE=E:/Hassan/Code/Projects/webui/thirdparty/msvc/include
-MSVC_LIB=E:/Hassan/Code/Projects/webui/thirdparty/msvc/lib/x86
-
-# Microsoft SDK
-SDK_INCLUDE=E:/Hassan/Code/Projects/webui/thirdparty/sdk/include
-SDK_LIB=E:/Hassan/Code/Projects/webui/thirdparty/sdk/lib
-
-# ------------------------------------------------------
-
 ifeq ($(OS),Windows_NT) 
     detected_OS := Windows
 else
@@ -30,9 +18,9 @@ LD=lib.exe
 SubSys=WINDOWS
 LibName=webui.lib
 TestAppName=test.exe
-CC_FLAGSFULL=/c /std:c++17 /EHsc /MT /errorReport:none /nologo /D WIN32 /D NDEBUG /D _WINDOWS /D _UNICODE /D UNICODE ./src/webui.cpp /I $(MSVC_INCLUDE) /I $(SDK_INCLUDE) /I $(BOOST_INCLUDE) /I $(WEBUI_INCLUDE) /link /LIBPATH:$(MSVC_LIB) /LIBPATH:$(SDK_LIB) /LIBPATH:$(BOOST_LIB)
+CC_FLAGSFULL=/c /std:c++17 /EHsc /MT /errorReport:none /nologo /D WIN32 /D NDEBUG /D _WINDOWS /D _UNICODE /D UNICODE ./src/webui.cpp /I $(BOOST_INCLUDE) /I $(WEBUI_INCLUDE) /link /LIBPATH:$(BOOST_LIB)
 LD_FLAGSFULL=webui.obj /nologo /OUT:$(WEBUI_LIB)/$(LibName)
-CCFLAGS=/std:c++17 /EHsc /MT /TP /analyze- /errorReport:none /nologo /D WIN32 /D NDEBUG /D _WINDOWS /D _UNICODE /D UNICODE /I $(MSVC_INCLUDE) /I $(SDK_INCLUDE) /I $(BOOST_INCLUDE) /I $(WEBUI_INCLUDE) /link /LIBPATH:$(MSVC_LIB) /LIBPATH:$(SDK_LIB) /LIBPATH:$(BOOST_LIB) /LIBPATH:$(WEBUI_LIB) user32.lib kernel32.lib Shell32.lib Advapi32.lib Comdlg32.lib webui.lib ./resources/app.res /SUBSYSTEM:$(SubSys) /OPT:REF 
+CCFLAGS=/std:c++17 /EHsc /MT /TP /analyze- /errorReport:none /nologo /D WIN32 /D NDEBUG /D _WINDOWS /D _UNICODE /D UNICODE /I $(BOOST_INCLUDE) /I $(WEBUI_INCLUDE) /link /LIBPATH:$(BOOST_LIB) /LIBPATH:$(WEBUI_LIB) user32.lib kernel32.lib Shell32.lib Advapi32.lib Comdlg32.lib webui.lib ./resources/app.res /SUBSYSTEM:$(SubSys) /OPT:REF 
 CLEAN=del *.obj
 RESOURCES=rc ./resources/app.rc
 OUTPUT=/OUT:
