@@ -1,6 +1,6 @@
 # WebUI
 
-[![N|Solid](https://cdn2.iconfinder.com/data/icons/whcompare-blue-green-web-hosting-1/397/site-cloning-256.png)](https://nodesource.com/products/nsolid)
+[![N|Solid](https://cdn2.iconfinder.com/data/icons/whcompare-blue-green-web-hosting-1/397/site-cloning-256.png)](https://github.com/alifcommunity/webui)
 
 [![Build Status](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master)](https://github.com/alifcommunity/webui)
 
@@ -18,7 +18,7 @@ Basically this library use Boost web server and WebSocket to maintaine the commu
 
 - Include one header file:
 ```sh
-#include <webui.hpp>
+#include <webui/webui.hpp>
 ```
 
 - Set your HTML code
