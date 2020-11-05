@@ -111,21 +111,20 @@ git clonse https://github.com/alifcommunity/webui.git
 ```
 
 ### Compile under Windows
-- Boost compiled library version. You can follow instructions on http://boost.org or visit http://webui.me to download one.
 - Windows SDK 10x. You can download it from http://microsoft.com 
 - Microsoft Visual Studio build tools. basically goto Start -> Visual Studio 20xx -> Native Tools Command Prompt.
 - Using your 'Native Tools Command Prompt'
-- [!] Please edit build.bat to change your paths as need.
-- [!] Make file script comming soon.
+- [!] ### Please edit Makefile to change your paths as need.
 ```sh
 cd webui
-build
+make
+make test
+make example
 ```
 
 ### Compile under Linux
 - GCC
-- boost boost-dev
-- [!] Make file script comming soon.
+- [!] Comming soon!
 
 ### Compile under macOS
 - [!] Comming soon!
