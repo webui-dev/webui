@@ -109,7 +109,7 @@ See examples folder.
 
 - Clone source code
 ```sh
-git clonse https://github.com/alifcommunity/webui.git
+git clone https://github.com/alifcommunity/webui.git
 ```
 
 ### Compile under Windows
