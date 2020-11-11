@@ -1250,7 +1250,7 @@ namespace webui{
 		#ifdef _WIN32
 			LPCWSTR wide_msg;
 			wide_msg = msg.c_str();
-			MessageBox(NULL, wide_msg, L"Message", NULL);
+			MessageBoxW(NULL, wide_msg, L"Message", NULL);
 		#else
 			wprintf(L"%s \n", msg);
 		#endif
