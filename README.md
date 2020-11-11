@@ -116,7 +116,7 @@ git clone https://github.com/alifcommunity/webui.git
 - Microsoft Visual Studio build tools. basically goto Start -> Visual Studio 20xx -> Native Tools Command Prompt.
 - CMake +3.17. You can download it from https://cmake.org/download
 
-### Using MSVC (Recommanded)
+### Using MSVC (Recommended)
 ```sh
 cd webui
 mkdir build
