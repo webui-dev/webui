@@ -121,15 +121,28 @@ git clone https://github.com/alifcommunity/webui.git
 cd webui
 mkdir build
 cd build
+```
+
+Generate Visual Studio 2017 solution.
+```sh
+cmake .. -G "Visual Studio 15 2017" -A Win32
+```
+
+Generate Visual Studio 2019 solution.
+```sh
+cmake .. -G "Visual Studio 16 2019" -A Win32
+```
+
+Generate Makefile for Microsoft Visual Studio build tools.
+```sh
 cmake .. -G "NMake Makefiles"
 nmake
 ```
 
-### Using MinGW (Beta)
+### Using MinGW (beta)
+
+Generate Makefile for MinGW (beta)
 ```sh
-cd webui
-mkdir build
-cd build
 cmake .. -G "MinGW Makefiles"
 make
 ```
