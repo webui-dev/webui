@@ -15,4 +15,4 @@ add_subdirectory(${WebUIProject_SOURCE_DIR}/examples/helloworld)
 # Test
 include(CTest)
 enable_testing()
-add_subdirectory(${WebUIProject_SOURCE_DIR}/tests)
+add_subdirectory(${WebUIProject_SOURCE_DIR}/test)
