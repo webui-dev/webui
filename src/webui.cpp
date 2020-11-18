@@ -258,11 +258,11 @@ using tcp = boost::asio::ip::tcp;			// from <boost/asio/ip/tcp.hpp>
 namespace webui{
 
 	// -- Global ---
-	std::atomic<unsigned short> connected_swindow = 0;
+	std::atomic<unsigned short> connected_swindow(0);
 	const std::string html_def = "<html><head><meta http-equiv=\"refresh\" content=\"1\"></head>"
 								 "<body style=\"background-color:#515C6B; color:#fff; font-family:\"Lucida Console\", Courier, monospace\">"
 								 "Loading..</body></html>";
-	std::atomic<bool> waitfor_swindow = false;
+	std::atomic<bool> waitfor_swindow (false);
 	std::vector<std::string> key_v;
 	std::array<void(*)(), 64> key_actions;
 	unsigned short port_start = 8080;
@@ -360,7 +360,9 @@ namespace BoostWebServer{
 
 		// The timer for putting a deadline on connection processing.
 		net::steady_timer deadline_{
-			socket_.get_executor(), std::chrono::seconds(60)};
+			socket_.get_executor(), 
+			std::chrono::seconds(60)
+			};
 
 		// Asynchronously receive a complete request message.
 		void
@@ -1230,7 +1232,7 @@ namespace webui{
 		}
 	}
 
-	static std::atomic<bool> initialized = false;
+	static std::atomic<bool> initialized (false);
 
 	void ini(){
 
