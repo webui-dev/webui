@@ -117,6 +117,7 @@ git clone https://github.com/alifcommunity/webui.git
 
 ### Using MSVC (Recommended)
 ```sh
+git clone https://github.com/alifcommunity/webui.git
 cd webui
 mkdir build
 cd build
@@ -152,6 +153,7 @@ make
 - CMake +3.1.0: ```sudo apt install cmake```
 
 ```sh
+git clone https://github.com/alifcommunity/webui.git
 cd webui
 mkdir build
 cd build
