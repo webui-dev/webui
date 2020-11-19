@@ -27,6 +27,8 @@
 #include <iostream>		// std::cout / std::cerr
 #include <codecvt>		// std::wstring_convert
 #include <fstream>		// std::fstream
+#include <thread>		// Standard threading
+#include <pthread.h>	// POSIX threading
 
 // -- Boost Web Server Headers -----------------
 #include <boost/beast/core.hpp>
@@ -272,6 +274,12 @@ namespace webui{
 	std::array<std::string *,		64> nat_data;
 	std::array<std::atomic<bool>,	64> nat_data_status;
 	std::vector<unsigned short>			nat_id_v = { 0 };
+
+	#ifdef _WIN32
+		std::string sep = webui::sep + "";
+	#else
+		std::string sep = "/";
+	#endif
 
 	// -- Func ----
 	void ini();
@@ -525,6 +533,7 @@ namespace BoostWebSocket{
 		public:
 
 		webui::_window *p_ui;
+		std::vector<std::uint8_t> packets_v;
 
 		~session(){
 
@@ -590,9 +599,13 @@ namespace BoostWebSocket{
 					shared_from_this()));
 		}
 
-		void receive_task(std::vector<std::uint8_t> &packets_v){	
+		//void receive_task(std::vector<std::uint8_t> &packets_v){
+		//	this->p_ui->receive(packets_v);
+		//}
 
-			this->p_ui->receive(packets_v);
+		void receive_task(){
+
+			this->p_ui->receive(this->packets_v);
 		}
 
 		void
@@ -611,7 +624,7 @@ namespace BoostWebSocket{
 			
 			if (ws_.got_binary()){
 				
-				std::vector<std::uint8_t> packets_v;
+				//std::vector<std::uint8_t> packets_v;
 				
 				// Loop cast way
 				// packets_v.reserve(buffer_.data().size());
@@ -633,7 +646,8 @@ namespace BoostWebSocket{
 					return;
 				
 				// -- Process message --------------------------------------------
-				std::thread receive_job(&session::receive_task, this, packets_v);
+				//std::thread receive_job(&session::receive_task, this, packets_v);
+				std::thread receive_job(&session::receive_task, this);
 				receive_job.detach();
 				// ---------------------------------------------------------------
 			}
@@ -720,7 +734,7 @@ namespace BoostWebSocket{
 		}
 
 		public:
-		bool *p_WindowWasConnected = false;
+		bool *p_WindowWasConnected;
 		webui::_window *p_ui;
 
 		listener(
@@ -833,13 +847,16 @@ namespace webui{
 		#define chrome		(1)
 		#define firefox		(2)
 		#define edge		(3)
-		#define safari		(3)
+		#define safari		(4)
+		#define chromium	(5)
 
 		unsigned short CurrentBrowser = 0;
 		std::string browser_path;
 		std::string frofile_path;
 
 		int command(std::string cmd){
+
+			std::cout << "command: " << cmd << std::endl;
 
 			//boost::process::environment env = ::boost::this_process::environment();
 			//boost::process::child c(cmd, browser::env, boost::process::windows::hide);
@@ -851,6 +868,8 @@ namespace webui{
 
 		int command_browser(std::string cmd){
 
+			std::cout << "command_browser: " << cmd << std::endl;
+
 			boost::process::child c(cmd);
 			c.detach();
 			return 0;
@@ -858,39 +877,35 @@ namespace webui{
 
 		void clean(){
 
-			if(browser::CurrentBrowser == chrome)
-				browser::command("if exist \"%tmp%\\WebUIChromeProfile\" rmdir \"%tmp%\\WebUIChromeProfile\" /s /q");
+			// TODO: Clean for every OS
+			// if(browser::CurrentBrowser == chrome)
+			//	browser::command("if exist \"%tmp%\\WebUIChromeProfile\" rmdir \"%tmp%\\WebUIChromeProfile\" /s /q");
 		}
 
 		bool browserr_exist(unsigned short browser){
 
+			// Check if a browser exist
+
 			#ifdef _WIN32
+				// set Windows Program Files path
 				char* p_drive = std::getenv("SystemDrive");
 				if(p_drive == nullptr)
 					return false;
 				std::string drive = p_drive;
-				std::string programs_folder32 = drive + "\\Program Files (x86)";
-				std::string programs_folder64 = drive + "\\Program Files";
-			#elif __APPLE__
-				std::string programs_folder = "/Applications";
-			#else
-				std::string programs_folder = "/usr/bin";
+				std::string programs_folder32 = drive + webui::sep + "Program Files (x86)";
+				std::string programs_folder64 = drive + webui::sep + "Program Files";
 			#endif
 
 			if(browser == firefox){
 
 				// Firefox
 
-				#ifndef _WIN32
-					std::string fullpath;
-				#endif
-
 				#ifdef _WIN32
 
 					// Firefox 32/64 on Windows
 
-					std::string fullpath32 = programs_folder32 + "\\Mozilla Firefox\\firefox.exe";
-					std::string fullpath64 = programs_folder64 + "\\Mozilla Firefox\\firefox.exe";
+					std::string fullpath32 = programs_folder32 + webui::sep + "Mozilla Firefox\\firefox.exe";
+					std::string fullpath64 = programs_folder64 + webui::sep + "Mozilla Firefox\\firefox.exe";
 
 					if(boost::filesystem::is_regular_file(fullpath64)){
 
@@ -902,38 +917,39 @@ namespace webui{
 						browser_path = "\"" + fullpath32 + "\"";
 						return true;
 					}
-					else return false;
+					else
+						return false;
 
 				#elif __APPLE__
+
 					// Firefox on macOS
-					std::string fullpath = "\"" + programs_folder + "/Mozilla Firefox/firefox.app/.../...\"";
+					//std::string fullpath = "\"" + programs_folder + "/Mozilla Firefox/firefox.app/.../...\"";
+
 				#else
+
 					// Firefox on Linux
-					std::string fullpath = "\"" + programs_folder + "/firefox\"";
+
+					if(system("firefox -v 2>&1 >/dev/null") == 0){
+
+						browser_path = "firefox";
+						return true;
+					}
+					else
+						return false;
+
 				#endif
 
-				#ifndef _WIN32
-					// Firefox on macOS/Linux
-					if(boost::filesystem::is_regular_file(fullpath)){
-						browser_path = fullpath;
-						return true;
-					}					
-				#endif
 			}
 			else if(browser == chrome){
 
 				// Chrome
 
-				#ifndef _WIN32
-					std::string fullpath;
-				#endif
-
 				#ifdef _WIN32
 
 					// Chrome on Windows
 
-					std::string fullpath32 = programs_folder32 + "\\Google\\Chrome\\Application\\chrome.exe";
-					std::string fullpath64 = programs_folder64 + "\\Google\\Chrome\\Application\\chrome.exe";
+					std::string fullpath32 = programs_folder32 + webui::sep + "Google\\Chrome\\Application\\chrome.exe";
+					std::string fullpath64 = programs_folder64 + webui::sep + "Google\\Chrome\\Application\\chrome.exe";
 
 					if(boost::filesystem::is_regular_file(fullpath64)){
 
@@ -948,35 +964,33 @@ namespace webui{
 					else return false;
 
 				#elif __APPLE__
-					// Chrome on macOS
-					std::string fullpath = "\"" + programs_folder + "/Google/Chrome/Application/chrome.app/.../...\"";
-				#else
-					// Chrome on Linux
-					std::string fullpath = "\"" + programs_folder + "/chrome\"";
-				#endif
 
-				#ifndef _WIN32
-					// Chrome on macOS/Linux
-					if(boost::filesystem::is_regular_file(fullpath)){
-						browser_path = fullpath;
+					// Chrome on macOS
+					//std::stringfullpath = "\"" + programs_folder + "/Google/Chrome/Application/chrome.app/.../...\"";
+
+				#else
+
+					// Chrome on Linux
+					if(system("google-chrome --version 2>&1 >/dev/null") == 0){
+
+						browser_path = "google-chrome";
 						return true;
-					}					
+					}
+					else
+						return false;
+
 				#endif
 			}
 			else if(browser == edge){
 
 				// Edge
 
-				#ifndef _WIN32
-					std::string fullpath;
-				#endif
-
 				#ifdef _WIN32
 
 					// Edge on Windows
 
-					std::string fullpath32 = programs_folder32 + "\\Microsoft\\Edge\\Application\\msedge.exe";
-					std::string fullpath64 = programs_folder64 + "\\Microsoft\\Edge\\Application\\msedge.exe";
+					std::string fullpath32 = programs_folder32 + webui::sep + "Microsoft\\Edge\\Application\\msedge.exe";
+					std::string fullpath64 = programs_folder64 + webui::sep + "Microsoft\\Edge\\Application\\msedge.exe";
 
 					if(boost::filesystem::is_regular_file(fullpath64)){
 
@@ -991,29 +1005,60 @@ namespace webui{
 					else return false;
 
 				#elif __APPLE__
-					// Edge on macOS
-					std::string fullpath = "\"" + programs_folder + "/Microsoft/Edge/Application/msedge.app/.../...\"";
-				#else
-					// Edge on Linux
-					std::string fullpath = "\"" + programs_folder + "/Edge\"";
-				#endif
 
-				#ifndef _WIN32
-					// Edge on macOS/Linux
-					if(boost::filesystem::is_regular_file(fullpath)){
-						browser_path = fullpath;
-						return true;
-					}					
+					// Edge on macOS
+					return false;
+
+				#else
+
+					// Edge on Linux
+					return false;
+
 				#endif
 			}
 
 			return false;
 		}
 
-		std::string get_temp_path(){
+		std::string get_temp_path(unsigned short browser){
 
-			boost::filesystem::path p(boost::filesystem::temp_directory_path());
-			return p.string();
+			boost::filesystem::path t(boost::filesystem::temp_directory_path());
+			//return t.string();
+
+			if(browser == chrome){
+
+				#ifdef _WIN32
+					return ""; // TODO: find better place
+				#elif __APPLE__
+					return ""; // TODO: find better place
+				#else
+					return "/var/tmp";
+				#endif
+			}
+			else if(browser == firefox){
+
+				#ifdef _WIN32
+					return ""; // TODO: find better place
+				#elif __APPLE__
+					return ""; // TODO: find better place
+				#else
+					return "/var/tmp";
+				#endif
+			}
+			else if(browser == edge){
+				
+				#ifdef _WIN32
+					return ""; // TODO: find better place
+				#elif __APPLE__
+					return ""; // TODO: find better place
+				#else
+					return "/var/tmp";
+				#endif
+			}
+			
+			std::cerr << "[!] Error: Unknow browser ID." << std::endl;
+			webui::exit();
+			return "";
 		}
 
 		bool folder_exist(std::string folder){
@@ -1024,17 +1069,17 @@ namespace webui{
 
 		bool create_profile_folder(unsigned short browser){
 
-			std::string temp = get_temp_path();
+			std::string temp = get_temp_path(browser);
 
 			if(browser == chrome){
 
-				frofile_path = temp + "\\WebUIChromeProfile";
+				frofile_path = temp + webui::sep + "WebUIChromeProfile";
 				return true;
 			}
 			
 			if(browser == edge){
 
-				frofile_path = temp + "\\WebUIEdgeProfile";
+				frofile_path = temp + webui::sep + "WebUIEdgeProfile";
 				return true;
 			}
 
@@ -1043,48 +1088,50 @@ namespace webui{
 			if(browser == firefox)
 				profile_name = "WebUIFirefoxProfile";
 
-			#ifdef _WIN32
+			if(!folder_exist(temp + webui::sep + profile_name)){
 
-				if(!folder_exist(temp + "\\" + profile_name)){
+				printf("Firefox creat folder.. \n");
 
-					browser::command(browser::browser_path + " -CreateProfile \"WebUI " + temp + "\\" + profile_name + "\"");
+				browser::command(browser::browser_path + " -CreateProfile \"WebUI " + temp + webui::sep + profile_name + "\"");
 
-					for(unsigned short n = 0; n <= 10; n++){
+				for(unsigned short n = 0; n <= 10; n++){
 
-						if(folder_exist(temp + "\\" + profile_name))
-							break;
-						
-						std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(500));
-					}
-
-					if(!folder_exist(temp + "\\" + profile_name))
-						return false;
-
-					// prefs.js
-					std::fstream prefs(temp + "\\" + profile_name + "\\prefs.js", std::ios::out | std::ios::app);
-						if(prefs.fail())
-							return false;
-						prefs << "user_pref(\"toolkit.legacyUserProfileCustomizations.stylesheets\", true); " << std::endl;
-						prefs << "user_pref(\"browser.shell.checkDefaultBrowser\", false); " << std::endl;
-						prefs << "user_pref(\"browser.tabs.warnOnClose\", false); " << std::endl;
-					prefs.close();
-
-					// userChrome.css
-					boost::filesystem::create_directory(temp + "\\" + profile_name + "\\chrome\\");
-					std::fstream userChrome(temp + "\\" + profile_name + "\\chrome\\userChrome.css", std::ios::out | std::ios::app);
-						if(prefs.fail())
-							return false;
-						userChrome << ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]){--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]){z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}" << std::endl;
-					userChrome.close();
-
-					frofile_path = temp + "\\" + profile_name;
+					if(folder_exist(temp + webui::sep + profile_name))
+						break;
+					
+					std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(500));
 				}
 
-			#elif __APPLE__
-				// ...
-			#else
-				// ...
-			#endif
+				if(!folder_exist(temp + webui::sep + profile_name))
+					return false;
+
+				// prefs.js
+				std::fstream prefs(temp + webui::sep + profile_name + webui::sep + "prefs.js", std::ios::out | std::ios::app);
+					if(prefs.fail())
+						return false;
+					prefs << "user_pref(\"toolkit.legacyUserProfileCustomizations.stylesheets\", true); " << std::endl;
+					prefs << "user_pref(\"browser.shell.checkDefaultBrowser\", false); " << std::endl;
+					prefs << "user_pref(\"browser.tabs.warnOnClose\", false); " << std::endl;
+				prefs.close();
+
+				// userChrome.css
+				boost::filesystem::create_directory(temp + webui::sep + profile_name + webui::sep + "chrome" + webui::sep);
+				std::fstream userChrome(temp + webui::sep + profile_name + webui::sep + "chrome" + webui::sep + "userChrome.css", std::ios::out | std::ios::app);
+					if(prefs.fail())
+						return false;
+
+					#ifdef _WIN32
+						userChrome << ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]){--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]){z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}" << std::endl;
+					#elif __APPLE__
+						userChrome << ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]){--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]){z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}" << std::endl;
+					#else
+						userChrome << ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]){--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]){z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}" << std::endl;
+					#endif
+
+				userChrome.close();
+
+				frofile_path = temp + webui::sep + profile_name;
+			}
 
 			return true;
 		}

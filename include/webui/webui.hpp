@@ -11,10 +11,11 @@
 #define WEBUI_H
 
 // -- C++ Standard -----------------------------
-#include <iostream>	//
-#include <string>	//
-#include <thread>	//
-#include <vector>	//
+#include <iostream>		//
+#include <string>		//
+#include <vector>		//
+#include <thread>		// Standard threading
+#include <pthread.h>	// POSIX threading
 
 namespace webui{
 
@@ -63,7 +64,8 @@ namespace webui{
 
 			union {
 
-				_window o_win = _window::_window();
+				//_window o_win = _window::_window();
+				_window o_win = _window();
 			};
 
 			const std::string * p_html = nullptr;
