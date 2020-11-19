@@ -93,8 +93,8 @@ Please see examples folder.
 | Windows | Firefox | Supported |
 | Windows | Chrome | Supported |
 | Windows | Edge | Supported |
-| Linux | Firefox | Under development |
-| Linux | Chrome | Under development |
+| Linux | Firefox | Supported |
+| Linux | Chrome | Supported |
 | macOS | Firefox | Under development |
 | macOS | Chrome | Under development |
 | macOS | Safari | Under development |
@@ -105,16 +105,15 @@ Please see examples folder.
 
 ## How to clone
 
-[ ! ] Boost 1.74 already embedded with this repository, no action needed.
-
 ```sh
 git clone https://github.com/alifcommunity/webui.git
 ```
 
 ## Build from source - Windows
+- [ ! ] Boost 1.74 already embedded with this repository, no action needed.
 - Windows SDK 10x. You can download it from http://microsoft.com 
 - Microsoft Visual Studio build tools. basically goto Start -> Visual Studio 20xx -> Native Tools Command Prompt.
-- CMake +3.17. You can download it from https://cmake.org/download
+- CMake +3.1.0. You can download it from https://cmake.org/download
 
 ### Using MSVC (Recommended)
 ```sh
@@ -148,8 +147,17 @@ make
 ```
 
 ## Build from source - Linux
-- GCC
-- [!] Comming soon!
+- C++17 compiler (GCC/Clang): ```sudo apt install build-essential```
+- Boost lib +1.70.0: ```sudo apt install libboost-all-dev```
+- CMake +3.1.0: ```sudo apt install cmake```
+
+```sh
+cd webui
+mkdir build
+cd build
+cmake ..
+make
+```
 
 ## Build from source - macOS
 - Clang
