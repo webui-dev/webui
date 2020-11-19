@@ -41,7 +41,7 @@ int main(){
 	my_window.bind("MyButtonID", my_handler);
 
 	// Show window
-	//if(!my_window.show(webui::browser::firefox))    // If Firefox not installed
+	if(!my_window.show(webui::browser::firefox))    // If Firefox not installed
 		my_window.show();                           // try other web browsers.
 
 	// Loop
