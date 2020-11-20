@@ -1,18 +1,36 @@
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.17.0)
 
-# WebUI Version
+# --[ WebUI version ] --------------------------------------------------------------
+
 project(WebUIProject VERSION 1.0.0)
+message("-- [ WebUI version ${CMAKE_PROJECT_VERSION} ]")
 
-# C++ Standard
+# --[ Settings ] -------------------------------------------------------------------
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Settings
 set(CMAKE_VERBOSE_MAKEFILE OFF)
-if(NOT CMAKE_BUILD_TYPE)  
-    set(CMAKE_BUILD_TYPE STRING Release)
-    message("[*] Build type changed to ${CMAKE_BUILD_TYPE}.")
+
+if(CMAKE_BUILD_TYPE STREQUAL Debug)  
+    message("[!] Warning: Build type set to Debug. Make sure you have Debug version of Boost.")
 endif()
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+    message("[!] Build type changed to ${CMAKE_BUILD_TYPE}.")
+endif()
+
+# Comment this line if you realy want a debug version of WebUI.
+    set(CMAKE_BUILD_TYPE Release)
+    message("[!] Build type changed to ${CMAKE_BUILD_TYPE}.")
+
+if(NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_CONFIGURATION_TYPES Release)
+    message("[!] Configuration type changed to ${CMAKE_CONFIGURATION_TYPES}.")
+endif()
+
+# --[ Directories ] ----------------------------------------------------------------
 
 # Source code
 add_subdirectory(${WebUIProject_SOURCE_DIR}/src webui)

@@ -1,74 +1,94 @@
 
-# Name
-set(ExampleName "Hello World")
+# Info
+set(Info_Title "Hello World")
+set(Info_Source "helloworld.cpp")
+set(Info_App "helloworld")
 
-# WebUI paths
+# --[ WebUI ] -------------------------------------------------------------------
+
 include_directories(${WebUIProject_SOURCE_DIR}/include)
 link_directories(${WebUIProject_BIN_DIR}/webui)
 
+# --[ pThread ] -----------------------------------------------------------------
 
+if(UNIX)
+	message("[*] Using POSIX threading (pThread).")
+	set(THREADS_PREFER_PTHREAD_FLAG ON)
+	find_package(Threads REQUIRED)
+endif (UNIX)
 
-# Boost settings
-find_package(Boost 1.70.0 REQUIRED COMPONENTS date_time filesystem regex)
+# --[ Boost ] -------------------------------------------------------------------
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+	message("[*] Using local copy of Boost.")
+	include_directories(${WebUIProject_SOURCE_DIR}/thirdparty/boost/include)
+	link_directories(${WebUIProject_SOURCE_DIR}/thirdparty/boost/lib)
+	Set(Boost_INCLUDE_DIR ${WebUIProject_SOURCE_DIR}/thirdparty/boost/include)
+	Set(Boost_LIBRARY_DIR_RELEASE ${WebUIProject_SOURCE_DIR}/thirdparty/boost/lib)
+endif()
+
+if(UNIX)
+	message("[*] Searching for Boost Linux...")
+	find_package(Boost 1.70.0 REQUIRED COMPONENTS date_time filesystem regex)
+else()
+	message("[*] Searching for Boost Windows...")
+	find_package(Boost 1.70.0)
+endif (UNIX)
+
+if(Boost_FOUND)
+	include_directories(${Boost_INCLUDE_DIRS})
+	link_directories(${Boost_LIBRARY_DIRS})
+else()
+	message("[!] Please install Boost libraries (Static MultiThreaded).")
+	return()
+endif()
+
 set(Boost_DEBUG 				OFF)
 set(Boost_USE_STATIC_LIBS       ON)
 set(Boost_USE_MULTITHREADED     ON)
-set(Boost_USE_STATIC_RUNTIME    OFF)
-if(Boost_FOUND)
+set(Boost_USE_STATIC_RUNTIME    ON)
 
-	include_directories(${Boost_INCLUDE_DIRS})
-	link_directories(${Boost_LIBRARY_DIRS})
-	add_executable(helloworld helloworld.cpp)
+# --[ Target ] ------------------------------------------------------------------
 
-	#message("[*] Found boost include: ${Boost_INCLUDE_DIRS}")
-	#message("[*] Found boost lib: ${Boost_LIBRARY_DIRS}")
+add_executable(${Info_App} ${Info_Source})
 
-	# Compilers
-	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+# --[ Compiler flags ] ----------------------------------------------------------
 
-		# using Clang
-		message("[*] Initializing '${ExampleName}' settings for Clang.")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
-	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	# using Clang
+	message("[*] Initializing '${Info_Title}' settings for Clang.")
 
-		# using GCC
-		message("[*] Initializing '${ExampleName}' settings for GCC.")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
-		# Flags
-		set_target_properties(helloworld PROPERTIES LINK_FLAGS_RELEASE -s)
-		set(CMAKE_CXX_FLAGS_RELEASE " -O3 ")
-		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s ")
+	# using GCC
+	message("[*] Initializing '${Info_Title}' settings for GCC.")
 
-	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+	# Flags
+	set_target_properties(${Info_App} PROPERTIES LINK_FLAGS_RELEASE -s)
+	set(CMAKE_CXX_FLAGS_RELEASE " -O3 ")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s ")
 
-		# using Intel C++
-		message("[*] Initializing '${ExampleName}' settings for Intel.")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 
-	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+	# using Intel C++
+	message("[*] Initializing '${Info_Title}' settings for Intel.")
 
-		# Microsoft build tools
-		message("[*] Initializing '${ExampleName}' settings for MSVC.")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
-		# Boost
-		include_directories(${WebUIProject_SOURCE_DIR}/thirdparty/boost/include)
-		link_directories(${WebUIProject_SOURCE_DIR}/thirdparty/boost/lib)
-		Set(Boost_INCLUDE_DIR ${WebUIProject_SOURCE_DIR}/thirdparty/boost/include)
+	# Microsoft build tools
+	message("[*] Initializing '${Info_Title}' settings for MSVC.")
 
-		# Flags
-		add_link_options("/SUBSYSTEM:WINDOWS")
-		set_property(TARGET helloworld PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
-		
-	endif()
-
-	#pThread
-	if(UNIX)
-		message("[*] Using POSIX threading (pThread).")
-		set(THREADS_PREFER_PTHREAD_FLAG ON)
-		find_package(Threads REQUIRED)
-	endif (UNIX)
-
-	target_link_libraries(helloworld PRIVATE webui ${Boost_FILESYSTEM_LIBRARIES} Threads::Threads) # PRIVATE | ${Boost_REGEX_LIBRARY} | ${Boost_DATETIME_LIBRARY}
-else()
-	message("[!] Please install Boost library.")
-	return()
+	# Flags
+	add_link_options("/SUBSYSTEM:CONSOL")
+	set_property(TARGET ${Info_App} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
+	
 endif()
+
+# --[ Build ] -------------------------------------------------------------------
+
+if(UNIX)
+	target_link_libraries(${Info_App} PRIVATE webui ${Boost_FILESYSTEM_LIBRARIES} Threads::Threads) # PRIVATE | ${Boost_REGEX_LIBRARY} | ${Boost_DATETIME_LIBRARY}
+else()
+	target_link_libraries(${Info_App} PRIVATE webui ${Boost_FILESYSTEM_LIBRARIES})
+endif (UNIX)

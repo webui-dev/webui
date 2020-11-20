@@ -11,11 +11,13 @@
 #define WEBUI_H
 
 // -- C++ Standard -----------------------------
-#include <iostream>		//
-#include <string>		//
-#include <vector>		//
-#include <thread>		// Standard threading
-#include <pthread.h>	// POSIX threading
+#include <iostream>			//
+#include <string>			//
+#include <vector>			//
+#include <thread>			// Standard threading
+#ifdef __linux__
+	#include <pthread.h>	// POSIX threading
+#endif
 
 namespace webui{
 

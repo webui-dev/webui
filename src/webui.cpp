@@ -11,16 +11,18 @@
 #define TYPE_RUN_JS 		0xFE
 #define TYPE_EVENT 			0xFD
 
-// -- Windows ----------------------------------
+// -- Windows ---------------------------------
 #ifdef _WIN32
 	//Fix: _WIN32_WINNT warning
 	#include <SDKDDKVer.h>
 #endif
 
-// -- Linux ------------------------------------
-// ...
+// -- Linux -----------------------------------
+#ifdef __linux__
+	#include <pthread.h>	// POSIX threading
+#endif
 
-// -- macOS ------------------------------------
+// -- macOS -----------------------------------
 // ...
 
 // -- C++ Standard ----------------------------
@@ -28,7 +30,6 @@
 #include <codecvt>		// std::wstring_convert
 #include <fstream>		// std::fstream
 #include <thread>		// Standard threading
-#include <pthread.h>	// POSIX threading
 
 // -- Boost Web Server Headers -----------------
 #include <boost/beast/core.hpp>
@@ -276,7 +277,7 @@ namespace webui{
 	std::vector<unsigned short>			nat_id_v = { 0 };
 
 	#ifdef _WIN32
-		std::string sep = webui::sep + "";
+		std::string sep = "\\";
 	#else
 		std::string sep = "/";
 	#endif
@@ -856,8 +857,6 @@ namespace webui{
 
 		int command(std::string cmd){
 
-			std::cout << "command: " << cmd << std::endl;
-
 			//boost::process::environment env = ::boost::this_process::environment();
 			//boost::process::child c(cmd, browser::env, boost::process::windows::hide);
 			boost::process::child c(cmd);
@@ -867,8 +866,6 @@ namespace webui{
 		}
 
 		int command_browser(std::string cmd){
-
-			std::cout << "command_browser: " << cmd << std::endl;
 
 			boost::process::child c(cmd);
 			c.detach();
@@ -887,8 +884,8 @@ namespace webui{
 			// Check if a browser exist
 
 			#ifdef _WIN32
-				// set Windows Program Files path
-				char* p_drive = std::getenv("SystemDrive");
+				// Resolve SystemDrive
+				char* p_drive = std::getenv("SystemDrive"); // _dupenv_s
 				if(p_drive == nullptr)
 					return false;
 				std::string drive = p_drive;
@@ -1025,12 +1022,20 @@ namespace webui{
 			boost::filesystem::path t(boost::filesystem::temp_directory_path());
 			//return t.string();
 
+			#ifdef _WIN32
+				// Resolve %USERPROFILE%
+				char* p_drive = std::getenv("USERPROFILE"); // _dupenv_s
+				if(p_drive == nullptr)
+					return t.string();
+				std::string WinUserProfile = p_drive;
+			#endif
+
 			if(browser == chrome){
 
 				#ifdef _WIN32
-					return ""; // TODO: find better place
+					return WinUserProfile;
 				#elif __APPLE__
-					return ""; // TODO: find better place
+					return "";
 				#else
 					return "/var/tmp";
 				#endif
@@ -1038,9 +1043,9 @@ namespace webui{
 			else if(browser == firefox){
 
 				#ifdef _WIN32
-					return ""; // TODO: find better place
+					return WinUserProfile;
 				#elif __APPLE__
-					return ""; // TODO: find better place
+					return "";
 				#else
 					return "/var/tmp";
 				#endif
@@ -1048,9 +1053,9 @@ namespace webui{
 			else if(browser == edge){
 				
 				#ifdef _WIN32
-					return ""; // TODO: find better place
+					return WinUserProfile;
 				#elif __APPLE__
-					return ""; // TODO: find better place
+					return "";
 				#else
 					return "/var/tmp";
 				#endif
@@ -1089,8 +1094,6 @@ namespace webui{
 				profile_name = "WebUIFirefoxProfile";
 
 			if(!folder_exist(temp + webui::sep + profile_name)){
-
-				printf("Firefox creat folder.. \n");
 
 				browser::command(browser::browser_path + " -CreateProfile \"WebUI " + temp + webui::sep + profile_name + "\"");
 
@@ -1173,7 +1176,7 @@ namespace webui{
 
 			if(!browserr_exist(firefox))
 				return false;
-			
+
 			if(!create_profile_folder(firefox))
 				return false;
 
@@ -1559,10 +1562,9 @@ namespace webui{
 			return;
 
 		if(webui::session_actions[this->settings.number] && webui::session_actions[this->settings.number] != nullptr)
-			webui::session_actions[this->settings.number]->send(packets_v);
+			webui::session_actions[this->settings.number]->send(packets_v); // TODO: make send(const packets_v)
 
-			// TODO: make send(const packets_v)
-			// TODO: add custom quee system. dont call send() if busy.
+		// TODO: add custom quee system. dont call send() if busy.
 	}
 
 	std::string _window::run(std::string js, unsigned short seconds){
