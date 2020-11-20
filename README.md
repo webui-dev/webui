@@ -110,12 +110,12 @@ git clone https://github.com/alifcommunity/webui.git
 ```
 
 ## Build from source - Windows
-- [ ! ] Boost 1.74 already embedded with this repository, no action needed.
+- [ ! ] Boost for Windows is already embedded with this repository, no action needed.
 - Windows SDK 10x. You can download it from http://microsoft.com 
-- Microsoft Visual Studio build tools. basically goto Start -> Visual Studio 20xx -> Native Tools Command Prompt.
-- CMake +3.1.0. You can download it from https://cmake.org/download
+- Microsoft Visual Studio build tools 2019. basically goto Start -> Visual Studio 2019 -> Native Tools Command Prompt.
+- CMake +3.15.0. You can download it from https://cmake.org/download
 
-### Using MSVC (Recommended)
+### Using MSVC (2019 is recommended)
 ```sh
 git clone https://github.com/alifcommunity/webui.git
 cd webui
@@ -123,23 +123,18 @@ mkdir build
 cd build
 ```
 
-Generate Visual Studio 2017 solution.
-```sh
-cmake .. -G "Visual Studio 15 2017" -A Win32
-```
-
-Generate Visual Studio 2019 solution.
+Generate Visual Studio 2019 solution (Build in Release mode).
 ```sh
 cmake .. -G "Visual Studio 16 2019" -A Win32
 ```
 
-Generate Makefile for Microsoft Visual Studio build tools.
+Generate Makefile for Microsoft Visual Studio build tools 2019.
 ```sh
 cmake .. -G "NMake Makefiles"
 nmake
 ```
 
-### Using MinGW (beta)
+### Using MinGW (not tested yet)
 
 Generate Makefile for MinGW (beta)
 ```sh
@@ -150,7 +145,7 @@ make
 ## Build from source - Linux
 - C++17 compiler (GCC/Clang): ```sudo apt install build-essential```
 - Boost lib +1.70.0: ```sudo apt install libboost-all-dev```
-- CMake +3.1.0: ```sudo apt install cmake```
+- CMake +3.15.0: ```sudo apt install cmake```
 
 ```sh
 git clone https://github.com/alifcommunity/webui.git
