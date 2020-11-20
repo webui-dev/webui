@@ -80,7 +80,8 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	message("[*] Initializing '${Info_Title}' settings for MSVC.")
 
 	# Flags
-	add_link_options("/SUBSYSTEM:CONSOL")
+	add_link_options("/SUBSYSTEM:WINDOWS")
+	set_target_properties(${Info_App} PROPERTIES LINK_FLAGS /SUBSYSTEM:WINDOWS)
 	set_property(TARGET ${Info_App} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
 	
 endif()
