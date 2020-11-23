@@ -79,7 +79,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# Microsoft build tools
 	message("[*] Initializing '${Info_Title}' settings for MSVC.")
 
-	# Flags
+	# Flags (WINDOWS / CONSOLE)
 	add_link_options("/SUBSYSTEM:WINDOWS")
 	set_target_properties(${Info_App} PROPERTIES LINK_FLAGS /SUBSYSTEM:WINDOWS)
 	set_property(TARGET ${Info_App} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")

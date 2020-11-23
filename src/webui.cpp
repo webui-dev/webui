@@ -10,6 +10,8 @@
 #define TYPE_SIGNATURE 		0xFF
 #define TYPE_RUN_JS 		0xFE
 #define TYPE_EVENT 			0xFD
+#define TYPE_SWITCH 		0xFC
+#define TYPE_CLOSE 			0xFB
 
 // -- Windows ---------------------------------
 #ifdef _WIN32
@@ -63,28 +65,39 @@ namespace webui {
 		// external const _wsport;
 		// external const _webui_minimum_data;
 
-		var WebUIWS;
-		var WebUIWSStatus = false;
+		var _webui_ws;
+		var _webui_ws_status = false;
+		var _webui_do_win_close = true;
 
-		function WebUISocket(){
+		function _webui_start(){
 		
 			if ('WebSocket' in window){
 			
-				WebUIWS = new WebSocket('ws://127.0.0.1:' + _wssport);
-				WebUIWS.binaryType = 'blob';
+				_webui_ws = new WebSocket('ws://127.0.0.1:' + _wssport);
+				_webui_ws.binaryType = 'blob';
 			
-				WebUIWS.onopen = function(){
+				_webui_ws.onopen = function(){
 
-					WebUIWS.binaryType = 'blob';
-					WebUIWSStatus = true;
-					var _xmlHttp = new XMLHttpRequest();
-					_xmlHttp.open('GET', 'http://127.0.0.1:' + _wsport + '/s1', true);
-					_xmlHttp.send(null);
-					_xmlHttp.open('GET', 'http://127.0.0.1:' + _wsport + '/s2', true);
-					_xmlHttp.send(null);
+					_webui_ws.binaryType = 'blob';
+					_webui_ws_status = true;
 				};
 
-				WebUIWS.onmessage = function (evt) {
+				_webui_ws.onerror = function(){
+
+					_webui_ws_status = false;
+					_webui_ws.close();
+					if(_webui_do_win_close)
+						window.close();
+				};
+			
+				_webui_ws.onclose = function(){
+
+					_webui_ws_status = false;
+					if(_webui_do_win_close)
+						window.close();
+				};
+
+				_webui_ws.onmessage = function (evt) {
 
 					var reader;
 					var buffer8;
@@ -99,15 +112,16 @@ namespace webui {
 							return;
 						
 						if(buffer8[0] !== 0xFF){
-							console.log( 'Error flag: ' + buffer8[0] );
-							console.log( 'Error flag: ' + buffer8[1] );
-							console.log( 'Error flag: ' + buffer8[2] );
+
+							// console.log( 'Error flag: ' + buffer8[0] );
+							// console.log( 'Error flag: ' + buffer8[1] );
+							// console.log( 'Error flag: ' + buffer8[2] );
 							return;
 						}
 
-						console.log( 'Flag OK: ' + buffer8[0] );
-						console.log( 'Flag OK: ' + buffer8[1] );
-						console.log( 'Flag OK: ' + buffer8[2] );
+						// console.log( 'Flag OK: ' + buffer8[0] );
+						// console.log( 'Flag OK: ' + buffer8[1] );
+						// console.log( 'Flag OK: ' + buffer8[2] );
 
 						var len = buffer8.length - 3;
 
@@ -117,17 +131,20 @@ namespace webui {
 						
 						var data8utf8 = new TextDecoder("utf-8").decode(data8);
 
-						if(buffer8[1] === 0xFE){
+						if(buffer8[1] === 0xFC){
 
-							// var Res = "OK"; // call ...
-							// var Res8 = new TextEncoder("utf-8").encode(Res);
-							// Res_buffer8 = new Uint8Array(reserved + Res8.length);
-							// Res_buffer8[0] = 0xFF;
-							// Res_buffer8[1] = buffer8[1];
-							// Res_buffer8[2] = buffer8[2];
-							// var p = -1;
-							// for(i = reserved; i < (reserved + Res8.length); i++)
-							// console.log( 'Res_buffer8['+i+'] = Res8[' + (++p) + ']' );
+							_webui_do_win_close = false;
+							_webui_ws_status = false;
+							_webui_ws.close();
+							window.location.replace(data8utf8);
+						}
+						else if(buffer8[1] === 0xFB){
+
+							_webui_ws_status = false;
+							_webui_ws.close();
+							window.close();
+						}
+						else if(buffer8[1] === 0xFE){
 
 							console.log( 'Run JS: ' + data8utf8 );
 
@@ -138,7 +155,7 @@ namespace webui {
 							if (FunReturn === undefined)
 								return;
 
-							console.log( 'Get JS: ' + FunReturn );
+							// console.log( 'Get JS: ' + FunReturn );
 
 							var FunReturn8 = new TextEncoder("utf-8").encode(FunReturn);
 							var Return8 = new Uint8Array(3 + FunReturn8.length);
@@ -151,45 +168,33 @@ namespace webui {
 								Return8[i] = FunReturn8[++p];
 							
 							if(Return8[0] !== 0xFF){
-								console.log( 'Error response: ' + buffer8[0] );
-								console.log( 'Error response: ' + buffer8[1] );
-								console.log( 'Error response: ' + buffer8[2] );
+
+								// console.log( 'Error response: ' + buffer8[0] );
+								// console.log( 'Error response: ' + buffer8[1] );
+								// console.log( 'Error response: ' + buffer8[2] );
 								return;
 							}
 
-							for(i = 0; i < Return8.length; i++)
-								console.log( 'Sending Return8['+ i +']: ' + Return8[i] );
+							// for(i = 0; i < Return8.length; i++)
+							// 	console.log( 'Sending Return8['+ i +']: ' + Return8[i] );
 
-							WebUIWS.send(Return8.buffer);
+							if(_webui_ws_status)
+								_webui_ws.send(Return8.buffer);
 						}
 					});
-				};
-				
-				WebUIWS.onerror = function(){
-					window.close();
-				};
-			
-				WebUIWS.onclose = function(){
-					window.close();
 				};
 			}
 			else {
 				
 				alert('Sorry. WebSocket not supported by your Browser.');
-				window.close();
+				if(_webui_do_win_close)
+					window.close();
 			}
 		}
 
 		// - - - - - - - - - - -
 		// Event
 		// - - - - - - - - - - -
-
-		document.onkeydown = function(evt){
-			evt = evt || window.event;
-			if (evt.keyCode == 116){
-				window.close();
-			}
-		};
 
 		function SendEvent(name){
 
@@ -205,46 +210,50 @@ namespace webui {
 				for(i = 3; i < Name8.length + 3; i++)
 					Event8[i] = Name8[++p];
 
-				for(i = 0; i < Event8.length; i++)
-					console.log( 'Sending Event8['+ i +']: ' + Event8[i] );
+				// for(i = 0; i < Event8.length; i++)
+				// 	console.log( 'Sending Event8['+ i +']: ' + Event8[i] );
 
-				WebUIWS.send(Event8.buffer);
+				if(_webui_ws_status)
+					_webui_ws.send(Event8.buffer);
 			}
 		}
-
-		window.onbeforeunload = function (){
-			if(WebUIWSStatus){
-				WebUIWS.onclose = function () {}; // disabling onclose handler
-				WebUIWS.close();
-			}
-		};
 
 		window.addEventListener("load",function(){
 
 			var elems = document.getElementsByTagName("form");
 			for (i = 0; i < elems.length; i++){
+
+				_webui_ws_status = false;
 				alert('Incompatible HTML.\n\nYour HTML contain <form> elements, wish is not compatible with WebUI. Please remove all those elements.');
-				window.close();
+				_webui_ws.close();
+				if(_webui_do_win_close)
+					window.close();
 			}
 		
 			elems = document.getElementsByTagName("button");
-			for (i = 0; i < elems.length; i++){
+			for (i = 0; i < elems.length; i++)
 				elems[i].addEventListener("click", function(){ SendEvent(this.id) });
-			}
-		
+			
 			elems = document.getElementsByTagName("div");
-			for (i = 0; i < elems.length; i++){
+			for (i = 0; i < elems.length; i++)
 				elems[i].addEventListener("click", function(){ SendEvent(this.id) });
-			}
 		});
 
-		WebUISocket();
+		window.onbeforeunload = function (){
+
+			if(_webui_ws_status)
+				_webui_ws.close();
+		};		
+
+		_webui_start();
+
 		setTimeout(function(){
 
-			if(!WebUIWSStatus){
+			if(!_webui_ws_status){
 
 				alert('Failed to connect to server');
-				window.close();
+				if(_webui_do_win_close)
+					window.close();
 			}
 		}, 3000);
 
@@ -262,9 +271,12 @@ namespace webui{
 
 	// -- Global ---
 	std::atomic<unsigned short> connected_swindow(0);
-	const std::string html_def = "<html><head><meta http-equiv=\"refresh\" content=\"1\"></head>"
+	// const std::string html_def = "<html><head><meta http-equiv=\"refresh\" content=\"1\"></head>"
+	// 							 "<body style=\"background-color:#515C6B; color:#fff; font-family:\"Lucida Console\", Courier, monospace\">"
+	// 							 "Loading..</body></html>";
+	const std::string html_served = "<html><head></head>"
 								 "<body style=\"background-color:#515C6B; color:#fff; font-family:\"Lucida Console\", Courier, monospace\">"
-								 "Loading..</body></html>";
+								 "Already served.</body></html>";
 	std::atomic<bool> waitfor_swindow (false);
 	std::vector<std::string> key_v;
 	std::array<void(*)(), 64> key_actions;
@@ -311,11 +323,11 @@ namespace webui{
 				bool ws_running = false;
 				bool wss_running = false;
 				bool ws_served = false;
-				std::string ws_port = "00000";
-				std::string wss_port = "00000";
+				std::string ws_port = "0";
+				std::string wss_port = "0";
+				const std::string * html;
 			} settings;
 			void receive(std::vector<std::uint8_t> &packets_v);
-			std::string run(std::string js, unsigned short seconds);
 			void send(std::vector<std::uint8_t> &packets_v);
 			void event(std::string id);
 			void websocket_session_clean();
@@ -323,6 +335,7 @@ namespace webui{
 			bool window_show(const std::string * html, unsigned short browser);
 			bool window_is_running();
 			void destroy();
+			std::string run(std::string js, unsigned short seconds);
 	};
 }
 
@@ -335,7 +348,7 @@ namespace BoostWebServer{
 	class http_connection : public std::enable_shared_from_this<http_connection>{
 
 		public:
-		const std::string * html_main = &webui::html_def;
+		//const std::string * html_main = &webui::html_def;
 		webui::_window *p_ui;
 
 		http_connection(tcp::socket socket)
@@ -345,9 +358,9 @@ namespace BoostWebServer{
 
 		// Initiate the asynchronous operations associated with the connection.
 		void
-		start(const std::string * html, webui::_window * ui)
+		start(webui::_window * ui)
 		{
-			this->html_main = html;
+			//this->html_main = html;
 			this->p_ui = ui;
 			
 			read_request();
@@ -427,21 +440,42 @@ namespace BoostWebServer{
 		void
 		create_response()
 		{
-			this->p_ui->settings.ws_served = true;
+			if(request_.target() == "/"){
 
-			response_.set(http::field::content_type, "text/html; charset=utf-8");
-			beast::ostream(response_.body())	<< *this->html_main 
-												<< "\n <script type = \"text/javascript\"> \n const _wssport = " 
-												<< this->p_ui->settings.wss_port
-												<< "; \n "
-												<< " const _wsport = " 
-												<< this->p_ui->settings.ws_port
-												<< "; \n "
-												<< " const _webui_minimum_data = " 
-												<< MINIMUM_PACKETS_SIZE
-												<< "; \n "
-												<< webui::javascriptbridge
-												<< " \n </script>";
+				if(this->p_ui->settings.ws_served){
+
+					// Main HTML already served.
+					response_.set(http::field::content_type, "text/html; charset=utf-8");
+					beast::ostream(response_.body()) << webui::html_served;
+					return;
+				}
+
+				// Send main HTML
+				response_.set(http::field::content_type, "text/html; charset=utf-8");
+				beast::ostream(response_.body())	<< *this->p_ui->settings.html	// *this->html_main 
+													<< "\n <script type = \"text/javascript\"> \n const _wssport = " 
+													<< this->p_ui->settings.wss_port
+													<< "; \n "
+													<< " const _wsport = " 
+													<< this->p_ui->settings.ws_port
+													<< "; \n "
+													<< " const _webui_minimum_data = " 
+													<< MINIMUM_PACKETS_SIZE
+													<< "; \n "
+													<< webui::javascriptbridge
+													<< " \n </script>";
+
+				this->p_ui->settings.ws_served = true;
+			}
+			else if(request_.target() == "/favicon.ico"){
+
+			}
+			else {
+
+				response_.result(http::status::not_found);
+				response_.set(http::field::content_type, "text/plain");
+				beast::ostream(response_.body()) << "File not found\r\n";
+			}
 		}
 
 		// Asynchronously transmit the response message.
@@ -484,20 +518,20 @@ namespace BoostWebServer{
 	class http_loop {
 
 		public:
-		const std::string * html_def = &webui::html_def;
+		//const std::string * html_def = &webui::html_def;
 		webui::_window *p_ui;
 
 		void
 		http_server(tcp::acceptor& acceptor, tcp::socket& socket){
 			
-			if(this->p_ui->settings.ws_served)
-				return;
+			// if(this->p_ui->settings.ws_served)
+			// 	return;
 
 			acceptor.async_accept(socket,
 			[&](beast::error_code ec)
 			{
 				if(!ec)
-					std::make_shared<http_connection>(std::move(socket))->start(this->html_def, this->p_ui);
+					std::make_shared<http_connection>(std::move(socket))->start(this->p_ui);
 
 				http_server(acceptor, socket);
 			});
@@ -520,7 +554,7 @@ namespace BoostWebSocket{
 
 		void fail(beast::error_code ec, char const* what){
 
-			std::cerr << "[!] {session}: " << what << ": " << ec.message() << "\n";
+			std::cerr << "[!] Error: {session} -> " << what << ": " << ec.message() << "\n";
 
 			// Close the WebSocket connection
 			ws_.async_close(websocket::close_code::normal,
@@ -538,7 +572,6 @@ namespace BoostWebSocket{
 
 		~session(){
 
-			//printf("~session() \n");
 		}
 
 		// Take ownership of the socket
@@ -697,7 +730,6 @@ namespace BoostWebSocket{
 
 		void on_close(beast::error_code ec){
 
-			std::cout << "[!] on_close(). " << std::endl;
 		}
 	};
 
@@ -728,7 +760,7 @@ namespace BoostWebSocket{
 
 		void fail(beast::error_code ec, char const* what){
 
-			std::cerr << "[!] {listener}: " << what << ": " << ec.message() << "\n";
+			std::cerr << "[!] Error: {listener} -> " << what << ": " << ec.message() << "\n";
 			
 			// Close the IOC service
 			// ...
@@ -874,9 +906,15 @@ namespace webui{
 
 		void clean(){
 
-			// TODO: Clean for every OS
-			// if(browser::CurrentBrowser == chrome)
-			//	browser::command("if exist \"%tmp%\\WebUIChromeProfile\" rmdir \"%tmp%\\WebUIChromeProfile\" /s /q");
+			// - Clean web server.
+			// All WebSocket are closed but not web servers
+			// every window has 1 web server still runing.
+			// right now, we let compiler destroy every obj!
+			
+			// - Clean profile folders
+			// Remove browser profile folders if needed
+			// or keep it to save window positions for
+			// future run.
 		}
 
 		bool browserr_exist(unsigned short browser){
@@ -1369,9 +1407,7 @@ namespace webui{
 			}
 		}
 
-		// Keep WebUI profile to 
-		// save _window positions
-		//browser::clean();
+		browser::clean();
 	}
 
 	void exit(){
@@ -1449,7 +1485,7 @@ namespace webui{
 		return webui::winlast++;
 	}
 
-	void start_webserver(const char * ip, unsigned short port, const std::string * html, webui::_window * ui){
+	void start_webserver(const char * ip, unsigned short port, webui::_window * ui){
 
 		// Initialization
 		ui->settings.ws_running = true;
@@ -1464,7 +1500,6 @@ namespace webui{
 			tcp::acceptor acceptor{ioc, {address, port}};
 			tcp::socket socket{ioc};
 			BoostWebServer::http_loop Server;
-			Server.html_def = html;
 			Server.p_ui = ui;
 			Server.http_server(acceptor, socket);
 			ioc.run();
@@ -1475,6 +1510,7 @@ namespace webui{
 			std::cerr << "[!] start_webserver(): " << e.what() << std::endl;
 		}
 
+		// Clean
 		ui->settings.ws_running = false;
 		ui->settings.ws_served = false;
 		webui::FreePort(port);
@@ -1519,12 +1555,19 @@ namespace webui{
 
 	_window::~_window(){
 
-		//printf("~_window() \n");
 	}		
 
 	void _window::destroy(){
 
-		// ...
+		// Prepare packets
+		std::vector<std::uint8_t> packets_v;
+		packets_v.push_back(TYPE_SIGNATURE);	// Signature
+		packets_v.push_back(TYPE_CLOSE);		// Type
+		packets_v.push_back(0);					// ID
+		packets_v.push_back(0);					// Data
+
+		// Send packets
+		this->send(packets_v);
 	}
 
 	bool _window::window_is_running(){
@@ -1672,33 +1715,83 @@ namespace webui{
 
 	bool _window::window_show(const std::string * html, unsigned short browser){
 
-		// window app loop mode
-		webui::waitfor_swindow = true;
-
-		unsigned short port_web = webui::getport();
+		// Initializing
 		unsigned short port_ws = webui::getport();
+		this->settings.html = html;
+		this->settings.ws_served = false;
 
-		if(!browser::start(port_web, browser))
-			return false;
-		
-		// -- Web Server ----------------------------
-		std::thread StartWebServer_job(	&webui::start_webserver,	// pointer
-										"127.0.0.1",				// IP
-										port_web,					// Port
-										html,						// HTML Code
-										this);						// obj
-		this->settings.t_ws = &StartWebServer_job;
-		StartWebServer_job.detach();
-		// ------------------------------------------
+		auto _start_websocket = [&]() {
 
-		// -- Web Socket ----------------------------
-		std::thread StartWebSocket_job(	&webui::start_websocket,	// pointer
-										"127.0.0.1",				// IP
-										port_ws,					// Port
-										this);						// obj
-		this->settings.t_wss = &StartWebSocket_job;
-		StartWebSocket_job.detach();
-		// ------------------------------------------
+			// -- Web Socket ----------------------------
+			std::thread StartWebSocket_job(	&webui::start_websocket,	// pointer
+											"127.0.0.1",				// IP
+											port_ws,					// Port
+											this);						// obj
+			this->settings.t_wss = &StartWebSocket_job;
+			StartWebSocket_job.detach();
+			// ------------------------------------------			 
+		};
+
+		if(!this->window_is_running()){
+
+			// New window
+			unsigned short port_web = webui::getport();
+
+			if(!browser::start(port_web, browser))
+				return false;			
+
+			// window app loop mode
+			webui::waitfor_swindow = true;
+
+			_start_websocket();
+
+			// -- Web Server ----------------------------
+			std::thread StartWebServer_job(	&webui::start_webserver,	// pointer
+											"127.0.0.1",				// IP
+											port_web,					// Port
+											this);						// obj
+			this->settings.t_ws = &StartWebServer_job;
+			StartWebServer_job.detach();
+			// ------------------------------------------
+		}
+		else {
+
+			// Switch on an already runing window
+
+			// New websocket port
+			this->settings.wss_port = std::to_string(port_ws);
+
+			// Start websocket
+			_start_websocket();
+
+			// url
+			std::string url = "http://127.0.0.1:" + this->settings.ws_port;
+
+			// Prepare packets
+			std::vector<std::uint8_t> packets_v;
+			packets_v.push_back(TYPE_SIGNATURE);						// Signature
+			packets_v.push_back(TYPE_SWITCH);							// Type
+			packets_v.push_back(0);										// ID
+			packets_v.insert(packets_v.end(), url.begin(), url.end());	// Data
+
+			// Provent main loop from breaking
+			webui::connected_swindow++;
+
+			// Send packets
+			this->send(packets_v);
+
+			// Wait window to switch
+			for(unsigned short n = 0; n < 10; n++){
+
+				if(this->settings.ws_served)
+					break;
+				
+				std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(100));
+			}
+
+			// Back to real runing window number
+			webui::connected_swindow--;
+		}
 
 		return true;
 	}

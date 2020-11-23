@@ -46,11 +46,11 @@ namespace webui{
 				bool ws_running = false;
 				bool wss_running = false;
 				bool ws_served = false;
-				std::string ws_port = "00000";
-				std::string wss_port = "00000";
+				std::string ws_port = "0";
+				std::string wss_port = "0";
+				const std::string * html;
 			} settings;
 			void receive(std::vector<std::uint8_t> &packets_v);
-			std::string run(std::string js, unsigned short seconds);
 			void send(std::vector<std::uint8_t> &packets_v);
 			void event(std::string id);
 			void websocket_session_clean();
@@ -58,6 +58,7 @@ namespace webui{
 			bool window_show(const std::string * html, unsigned short browser);
 			bool window_is_running();
 			void destroy();
+			std::string run(std::string js, unsigned short seconds);
 	};
 
 	class window{
@@ -74,10 +75,9 @@ namespace webui{
 
 		public:
 
-			window(const std::string * html){
+			window(){
 
 				webui::ini();
-				this->p_html = html;
 			}
 
 			~window(){
@@ -87,25 +87,37 @@ namespace webui{
 
 		// -- Window -----------------------------
 
-		bool show(){
+		bool is_show(){
 
-			if(o_win.window_is_running())
-				return true;
+			return o_win.window_is_running();
+		}
 
+		bool show(const std::string * html){
+
+			// if(o_win.window_is_running())
+			// 	return true;
+
+			this->p_html = html;
 			return o_win.window_show(this->p_html, 0);
 		}
 
-		bool show(unsigned short browser){
+		bool show(const std::string * html, unsigned short browser){
 
-			if(o_win.window_is_running())
-				return true;
+			// if(o_win.window_is_running())
+			// 	return true;
 			
+			this->p_html = html;
 			return o_win.window_show(this->p_html, browser);
 		}
 
 		void bind(std::string id, void (* func_ref)()){
 
 			o_win.bind(id, func_ref);
+		}
+
+		void close(){
+
+			o_win.destroy();
 		}
 
 		// -- JavaScript ------------------------------------------
