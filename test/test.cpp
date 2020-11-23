@@ -27,7 +27,7 @@ const std::string html = R"V0G0N(
 </html>
 )V0G0N";
 
-webui::window win(&html);
+webui::window win;
 
 void bar(){
 
@@ -38,8 +38,8 @@ int main(){
    
    win.bind("foo", bar);
 
-   if(!win.show(webui::browser::chrome))
-      win.show();
+   if(!win.show(&html, webui::browser::chrome))
+      win.show(&html);
 
    std::thread t(webui::loop);
    t.join();

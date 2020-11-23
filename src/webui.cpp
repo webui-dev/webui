@@ -142,7 +142,7 @@ namespace webui {
 
 							_webui_ws_status = false;
 							_webui_ws.close();
-							window.close();
+							//window.close();
 						}
 						else if(buffer8[1] === 0xFE){
 
@@ -883,6 +883,12 @@ namespace webui{
 		#define safari		(4)
 		#define chromium	(5)
 
+		#ifdef _WIN32
+			#define DirSep "\""
+		#else
+			#define DirSep ""
+		#endif
+
 		unsigned short CurrentBrowser = 0;
 		std::string browser_path;
 		std::string frofile_path;
@@ -898,6 +904,8 @@ namespace webui{
 		}
 
 		int command_browser(std::string cmd){
+
+			std::cout << cmd << std::endl;
 
 			boost::process::child c(cmd);
 			c.detach();
@@ -1190,7 +1198,7 @@ namespace webui{
 			if(!create_profile_folder(edge))
 				return false;
 
-			std::string arg = " --user-data-dir=\"" + frofile_path + "\" --no-proxy-server --app=http://127.0.0.1:";	
+			std::string arg = " --user-data-dir=" DirSep + frofile_path + DirSep " --no-proxy-server --app=http://127.0.0.1:";	
 			std::string s_port = std::to_string(port);
 			std::string full(browser::browser_path);
 			full.append(arg);
@@ -1245,14 +1253,14 @@ namespace webui{
 			
 			if(!create_profile_folder(chrome))
 				return false;
-
-			std::string arg = " --user-data-dir=\"" + frofile_path + "\" --no-proxy-server --app=http://127.0.0.1:";	
+			
+			std::string arg = " --user-data-dir=" DirSep + frofile_path + DirSep " --no-proxy-server --app=http://127.0.0.1:";	
 			std::string s_port = std::to_string(port);
 			std::string full(browser::browser_path);
 			full.append(arg);
 			full.append(s_port);
 
-			if(browser::command_browser(full) == 0){
+			if(browser::command_browser(full + " 2>&1 >/dev/null") == 0){
 
 				browser::CurrentBrowser = chrome;
 				return true;
