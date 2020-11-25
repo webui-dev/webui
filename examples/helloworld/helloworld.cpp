@@ -23,6 +23,7 @@ const std::string my_html = R"V0G0N(
 	<body style="background-color:#515C6B; color:#fff; font-family:"Lucida Console", Courier, monospace">
 		<h1>Welcome to WebUI!</h1>
 		<button id="MyButtonID1">Switch to dashboard</button> | <button id="MyButtonID2">Open dashboard in a new window</button>
+
 	</body>
 </html>
 )V0G0N";
@@ -35,7 +36,8 @@ const std::string dashboard = R"V0G0N(
 	</head>
 	<body style="background-color:#515C6B; color:#fff; font-family:"Lucida Console", Courier, monospace">
 		<h1>Dashboard</h1>
-		<button id="MyDashButton1">Run JS from C++ app</button> | <button id="MyDashButton2">Close dashboard</button> | <button id="MyDashButton3">Close app</button>
+		<button id="MyDashButton1">Run JS from C++ app</button> | <button id="MyDashButton2">Close this window</button> | <button id="MyDashButton3">Close app</button>
+		
 	</body>
 </html>
 )V0G0N";
@@ -109,7 +111,7 @@ int main(){
 	ui.join();
 
 	// All windows are closed.
-	printf("Good! All windows are closed now.\n");
+	printf("Good! All windows are closed now.\nFinish.");
 	
 	return 0;
 }

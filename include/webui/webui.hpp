@@ -34,32 +34,32 @@ namespace webui{
 	}		
 
 	// -- Class ----
-	class _window {
-		public:
-			_window();
-			~_window();			
-			struct {
-				std::thread * t_ws;
-				std::thread * t_wss;
-				std::string number_s;
-				unsigned short number;
-				bool ws_running = false;
-				bool wss_running = false;
-				bool ws_served = false;
-				std::string ws_port = "0";
-				std::string wss_port = "0";
-				const std::string * html;
-			} settings;
-			void receive(std::vector<std::uint8_t> &packets_v);
-			void send(std::vector<std::uint8_t> &packets_v);
-			void event(std::string id);
-			void websocket_session_clean();
-			void bind(std::string key_id, void(*new_action)());
-			bool window_show(const std::string * html, unsigned short browser);
-			bool window_is_running();
-			void destroy();
-			std::string run(std::string js, unsigned short seconds);
-	};
+    class _window {
+    public:
+        _window();
+        ~_window();
+        struct {
+            std::thread * t_ws = nullptr;
+            std::thread * t_wss = nullptr;
+            std::string number_s;
+            unsigned short number = 0;
+            bool ws_running = false;
+            bool wss_running = false;
+            bool ws_served = false;
+            std::string ws_port = "0";
+            std::string wss_port = "0";
+            const std::string * html = nullptr;
+        } settings;
+        void receive(std::vector<std::uint8_t> &packets_v);
+        void send(std::vector<std::uint8_t> &packets_v) const;
+        static void event(const std::string& id);
+        void websocket_session_clean();
+        void bind(std::string key_id, void(*new_action)()) const;
+        bool window_show(const std::string * html, unsigned short browser);
+        bool window_is_running() const;
+        void destroy();
+        std::string run(std::string js, unsigned short seconds) const;
+    };
 
 	class window{
 
@@ -87,7 +87,7 @@ namespace webui{
 
 		// -- Window -----------------------------
 
-		bool is_show(){
+		bool is_show() const{
 
 			return o_win.window_is_running();
 		}
@@ -110,7 +110,7 @@ namespace webui{
 			return o_win.window_show(this->p_html, browser);
 		}
 
-		void bind(std::string id, void (* func_ref)()){
+		void bind(const std::string& id, void (* func_ref)()) const{
 
 			o_win.bind(id, func_ref);
 		}
@@ -122,7 +122,7 @@ namespace webui{
 
 		// -- JavaScript ------------------------------------------
 
-		std::string run_js(const std::string js){
+		std::string run_js(const std::string& js) const{
 
 			if(!o_win.window_is_running())
 				return "";
@@ -130,7 +130,7 @@ namespace webui{
 			return o_win.run(js, 1);
 		}
 
-		std::string run_js(const std::string js, unsigned short s){
+		std::string run_js(const std::string& js, unsigned short s) const{
 
 			if(!o_win.window_is_running())
 				return "";
@@ -138,20 +138,32 @@ namespace webui{
 			return o_win.run(js, s);
 		}
 
-		std::string get_value(const std::string id){
+		std::string get_value(const std::string& id) const{
 
 			if(!o_win.window_is_running())
 				return "";
 
-			return o_win.run(" return String(document.getElementById('" + id + "').value); ", 1);
+            std::string buf;
+            buf.append(" return String(document.getElementById('");
+            buf.append(id);
+            buf.append("').value); ");
+
+			return o_win.run(buf, 1);
 		}
 
-		std::string set_value(const std::string id, const std::string data){
+		std::string set_value(const std::string& id, const std::string& data){
 
 			if(!o_win.window_is_running())
 				return "";
 
-			return o_win.run(" const rawdata = String.raw`" + data + "`; document.getElementById('" + id + "').value = `${rawdata}`; ", 1);
+            std::string buf;
+            buf.append(" const rawdata = String.raw`");
+            buf.append(data);
+            buf.append("`; document.getElementById('");
+            buf.append(id);
+            buf.append("').value = `${rawdata}`; ");
+
+			return o_win.run(buf, 1);
 		}
 	};
 }

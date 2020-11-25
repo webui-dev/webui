@@ -22,8 +22,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Comment this line if you realy want a debug version of WebUI.
-    set(CMAKE_BUILD_TYPE Release)
-    message("[!] Build type changed to ${CMAKE_BUILD_TYPE}.")
+    #set(CMAKE_BUILD_TYPE Release)
+    #message("[!] Build type changed to ${CMAKE_BUILD_TYPE}.")
 
 if(NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_CONFIGURATION_TYPES Release)
@@ -39,6 +39,6 @@ add_subdirectory(${WebUIProject_SOURCE_DIR}/src webui)
 add_subdirectory(${WebUIProject_SOURCE_DIR}/examples/helloworld)
 
 # Test
-include(CTest)
+#include(CTest)
 enable_testing()
 add_subdirectory(${WebUIProject_SOURCE_DIR}/test)

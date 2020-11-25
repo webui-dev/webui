@@ -69,6 +69,17 @@ namespace webui {
 		var _webui_ws_status = false;
 		var _webui_do_win_close = true;
 
+		var _webui_action8 = new Uint8Array(1);
+		var _webui_action_val;
+
+		function _webui_close(vbyte, v){
+
+			_webui_ws_status = false;
+			_webui_action8[0] = vbyte;
+			_webui_action_val = v;
+			_webui_ws.close();
+		}
+
 		function _webui_start(){
 		
 			if ('WebSocket' in window){
@@ -84,17 +95,33 @@ namespace webui {
 
 				_webui_ws.onerror = function(){
 
-					_webui_ws_status = false;
-					_webui_ws.close();
-					if(_webui_do_win_close)
-						window.close();
+					console.log( '[!] Error WS. ' );
+
+					_webui_close(0xFF, '');
 				};
 			
 				_webui_ws.onclose = function(){
 
-					_webui_ws_status = false;
-					if(_webui_do_win_close)
-						window.close();
+					//_webui_ws_status = false;
+
+					if(_webui_action8[0] == 0xFC){
+
+						console.log( 'WS Close -> Switch URL. ' );
+
+						// Switch URL
+						window.location.replace(_webui_action_val);
+					}
+					else {
+
+						// App has exit.
+						// WS Error.
+						// Window close.
+
+						console.log( 'WS Close -> Other. ' );
+
+						if(_webui_do_win_close)
+							window.close();
+					}
 				};
 
 				_webui_ws.onmessage = function (evt) {
@@ -113,15 +140,15 @@ namespace webui {
 						
 						if(buffer8[0] !== 0xFF){
 
-							// console.log( 'Error flag: ' + buffer8[0] );
-							// console.log( 'Error flag: ' + buffer8[1] );
-							// console.log( 'Error flag: ' + buffer8[2] );
+							console.log( 'Error flag: ' + buffer8[0] );
+							console.log( 'Error flag: ' + buffer8[1] );
+							console.log( 'Error flag: ' + buffer8[2] );
 							return;
 						}
 
-						// console.log( 'Flag OK: ' + buffer8[0] );
-						// console.log( 'Flag OK: ' + buffer8[1] );
-						// console.log( 'Flag OK: ' + buffer8[2] );
+						console.log( 'Flag OK: ' + buffer8[0] );
+						console.log( 'Flag OK: ' + buffer8[1] );
+						console.log( 'Flag OK: ' + buffer8[2] );
 
 						var len = buffer8.length - 3;
 
@@ -133,16 +160,11 @@ namespace webui {
 
 						if(buffer8[1] === 0xFC){
 
-							_webui_do_win_close = false;
-							_webui_ws_status = false;
-							_webui_ws.close();
-							window.location.replace(data8utf8);
+							_webui_close(0xFC, data8utf8);
 						}
 						else if(buffer8[1] === 0xFB){
 
-							_webui_ws_status = false;
-							_webui_ws.close();
-							//window.close();
+							_webui_close(0xFB, '');
 						}
 						else if(buffer8[1] === 0xFE){
 
@@ -155,7 +177,7 @@ namespace webui {
 							if (FunReturn === undefined)
 								return;
 
-							// console.log( 'Get JS: ' + FunReturn );
+							console.log( 'Get JS: ' + FunReturn );
 
 							var FunReturn8 = new TextEncoder("utf-8").encode(FunReturn);
 							var Return8 = new Uint8Array(3 + FunReturn8.length);
@@ -169,9 +191,9 @@ namespace webui {
 							
 							if(Return8[0] !== 0xFF){
 
-								// console.log( 'Error response: ' + buffer8[0] );
-								// console.log( 'Error response: ' + buffer8[1] );
-								// console.log( 'Error response: ' + buffer8[2] );
+								console.log( 'Error response: ' + buffer8[0] );
+								console.log( 'Error response: ' + buffer8[1] );
+								console.log( 'Error response: ' + buffer8[2] );
 								return;
 							}
 
@@ -223,11 +245,10 @@ namespace webui {
 			var elems = document.getElementsByTagName("form");
 			for (i = 0; i < elems.length; i++){
 
-				_webui_ws_status = false;
+				//_webui_ws_status = false;
 				alert('Incompatible HTML.\n\nYour HTML contain <form> elements, wish is not compatible with WebUI. Please remove all those elements.');
-				_webui_ws.close();
-				if(_webui_do_win_close)
-					window.close();
+
+				_webui_close(0xFF, '');
 			}
 		
 			elems = document.getElementsByTagName("button");
@@ -241,8 +262,7 @@ namespace webui {
 
 		window.onbeforeunload = function (){
 
-			if(_webui_ws_status)
-				_webui_ws.close();
+			_webui_close(0xFF, '');
 		};		
 
 		_webui_start();
@@ -251,7 +271,7 @@ namespace webui {
 
 			if(!_webui_ws_status){
 
-				alert('Failed to connect to server');
+				alert('WebUI failed to find the background app.');
 				if(_webui_do_win_close)
 					window.close();
 			}
@@ -296,10 +316,10 @@ namespace webui{
 
 	// -- Func ----
 	void ini();
-	void msgbox(std::wstring msg);
-	void msgbox(std::string msg);
-	int getkey(std::string id);
-	unsigned setkey(const std::string id);
+	void msgbox(const std::wstring& msg);
+	void msgbox(const std::string& msg);
+	int getkey(const std::string& id);
+	unsigned setkey(const std::string& id);
 	unsigned short getport();
 	unsigned short getwin();
 	// void start_webserver(const char * ip, unsigned short port, const std::string * html, webui::_window * ui);
@@ -313,29 +333,29 @@ namespace webui{
 	// -- Class ----
 	class _window {
 		public:
-			_window();
-			~_window();			
-			struct {
-				std::thread * t_ws;
-				std::thread * t_wss;
-				std::string number_s;
-				unsigned short number;
-				bool ws_running = false;
-				bool wss_running = false;
-				bool ws_served = false;
-				std::string ws_port = "0";
-				std::string wss_port = "0";
-				const std::string * html;
-			} settings;
-			void receive(std::vector<std::uint8_t> &packets_v);
-			void send(std::vector<std::uint8_t> &packets_v);
-			void event(std::string id);
-			void websocket_session_clean();
-			void bind(std::string key_id, void(*new_action)());
-			bool window_show(const std::string * html, unsigned short browser);
-			bool window_is_running();
-			void destroy();
-			std::string run(std::string js, unsigned short seconds);
+        _window();
+        ~_window();
+        struct {
+            std::thread * t_ws = nullptr;
+            std::thread * t_wss = nullptr;
+            std::string number_s;
+            unsigned short number = 0;
+            bool ws_running = false;
+            bool wss_running = false;
+            bool ws_served = false;
+            std::string ws_port = "0";
+            std::string wss_port = "0";
+            const std::string * html = nullptr;
+        } settings;
+        void receive(std::vector<std::uint8_t> &packets_v);
+        void send(std::vector<std::uint8_t> &packets_v) const;
+        static void event(const std::string& id);
+        void websocket_session_clean();
+        void bind(std::string key_id, void(*new_action)()) const;
+        bool window_show(const std::string * html, unsigned short browser);
+        bool window_is_running() const;
+        void destroy();
+        std::string run(std::string js, unsigned short seconds) const;
 	};
 }
 
@@ -349,7 +369,7 @@ namespace BoostWebServer{
 
 		public:
 		//const std::string * html_main = &webui::html_def;
-		webui::_window *p_ui;
+		webui::_window *p_ui = nullptr;
 
 		http_connection(tcp::socket socket)
 			: socket_(std::move(socket))
@@ -440,6 +460,7 @@ namespace BoostWebServer{
 		void
 		create_response()
 		{
+
 			if(request_.target() == "/"){
 
 				if(this->p_ui->settings.ws_served){
@@ -447,6 +468,7 @@ namespace BoostWebServer{
 					// Main HTML already served.
 					response_.set(http::field::content_type, "text/html; charset=utf-8");
 					beast::ostream(response_.body()) << webui::html_served;
+
 					return;
 				}
 
@@ -469,6 +491,7 @@ namespace BoostWebServer{
 			}
 			else if(request_.target() == "/favicon.ico"){
 
+				// Sending icon base64
 			}
 			else {
 
@@ -493,7 +516,9 @@ namespace BoostWebServer{
 				{
 					self->socket_.shutdown(tcp::socket::shutdown_send, ec);
 					self->deadline_.cancel();
-				});
+				}
+			);
+
 		}
 
 		// Check whether we have spent enough time on this connection.
@@ -567,12 +592,10 @@ namespace BoostWebSocket{
 
 		public:
 
-		webui::_window *p_ui;
+		webui::_window *p_ui = nullptr;
 		std::vector<std::uint8_t> packets_v;
 
-		~session(){
-
-		}
+		~session()= default;
 
 		// Take ownership of the socket
 		explicit session(tcp::socket&& socket) : ws_(std::move(socket)){
@@ -689,13 +712,21 @@ namespace BoostWebSocket{
 			// Clear buffer
 			buffer_.consume(buffer_.size());
 
-			ws_.async_write(
-				buffer_.data(),
+			// Read again
+			ws_.async_read(
+				buffer_,
 				beast::bind_front_handler(
-					&session::on_write,
+					&session::on_read,
 					shared_from_this()
 				)
 			);
+			// ws_.async_write(
+			// 	buffer_.data(),
+			// 	beast::bind_front_handler(
+			// 		&session::on_write,
+			// 		shared_from_this()
+			// 	)
+			// );
 		}
 
 		void
@@ -712,17 +743,17 @@ namespace BoostWebSocket{
 			buffer_.consume(buffer_.size());
 
 			// Do another read
-			do_read();
+			//do_read();
 		}
 
 		// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-		void send(std::vector<std::uint8_t> &packets_v){
+		void send(std::vector<std::uint8_t> &data){
 
-			if(packets_v.size() < MINIMUM_PACKETS_SIZE)
+			if(data.size() < MINIMUM_PACKETS_SIZE)
 				return;
 
-			ws_.write(boost::asio::buffer(packets_v, packets_v.size()));
+			ws_.write(boost::asio::buffer(data, data.size()));
 			
 			// Clear buffer?
 			//buffer_.consume(buffer_.size());
@@ -767,8 +798,8 @@ namespace BoostWebSocket{
 		}
 
 		public:
-		bool *p_WindowWasConnected;
-		webui::_window *p_ui;
+		bool *p_WindowWasConnected = nullptr;
+		webui::_window *p_ui = nullptr;
 
 		listener(
 			net::io_context& ioc,
@@ -787,7 +818,7 @@ namespace BoostWebSocket{
 			}
 
 			// Allow address reuse
-			acceptor_.set_option(net::socket_base::reuse_address(true), ec);
+			acceptor_.set_option(net::socket_base::reuse_address(false), ec);
 			if(ec)
 			{
 				fail(ec, "set_option");
@@ -904,8 +935,6 @@ namespace webui{
 		}
 
 		int command_browser(std::string cmd){
-
-			std::cout << cmd << std::endl;
 
 			boost::process::child c(cmd);
 			c.detach();
@@ -1143,9 +1172,16 @@ namespace webui{
 
 				browser::command(browser::browser_path + " -CreateProfile \"WebUI " + temp + webui::sep + profile_name + "\"");
 
+				std::string buf;
+
 				for(unsigned short n = 0; n <= 10; n++){
 
-					if(folder_exist(temp + webui::sep + profile_name))
+				    buf.clear();
+                    buf.append(temp);
+                    buf.append(webui::sep);
+                    buf.append(profile_name);
+
+					if(folder_exist(buf))
 						break;
 					
 					std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(500));
@@ -1336,11 +1372,11 @@ namespace webui{
 			return;
 		webui::initialized = true;
 
-		webui::key_v.push_back("");
+		webui::key_v.emplace_back("");
 		webui::port_v.clear();
 	}
 
-	void msgbox(std::wstring msg){
+	void msgbox(const std::wstring& msg){
 
 		std::wcout << msg << std::endl;
 		return;
@@ -1350,22 +1386,20 @@ namespace webui{
 			wide_msg = msg.c_str();
 			MessageBoxW(NULL, wide_msg, L"Message", NULL);
 		#else
-			wprintf(L"%s \n", msg);
+			wprintf(L"%s \n", msg.c_str());
 		#endif
 	}
 
-	void msgbox(std::string msg){
+	void msgbox(const std::string& msg){
 
 		std::cout << msg << std::endl;
-		return;
 
-		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		/*std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 		std::wstring wide = converter.from_bytes(msg);
-
-		msgbox(wide);
+		msgbox(wide);*/
 	}
 
-	int getkey(std::string id){
+	int getkey(const std::string& id){
 
 		for (int i = 0; i < webui::key_v.size(); i++){
 
@@ -1378,7 +1412,7 @@ namespace webui{
 		return -1;
 	}
 
-	unsigned setkey(const std::string id){
+	unsigned setkey(const std::string& id){
 
 		webui::key_v.push_back(id);
 		return webui::key_v.size() - 1;
@@ -1507,7 +1541,7 @@ namespace webui{
 			net::io_context ioc{1}; // 1 thread
 			tcp::acceptor acceptor{ioc, {address, port}};
 			tcp::socket socket{ioc};
-			BoostWebServer::http_loop Server;
+			BoostWebServer::http_loop Server{};
 			Server.p_ui = ui;
 			Server.http_server(acceptor, socket);
 			ioc.run();
@@ -1541,7 +1575,7 @@ namespace webui{
 		// Clean
 		if(WindowWasConnected)
 			webui::FreeWindow();
-		webui::session_actions[ui->settings.number] = nullptr;	
+		webui::session_actions[ui->settings.number] = nullptr;
 		webui::FreePort(port);
 		ui->settings.wss_running = false;
 	}
@@ -1561,9 +1595,7 @@ namespace webui{
 		this->settings.wss_port = "00000";
 	}
 
-	_window::~_window(){
-
-	}		
+	_window::~_window()= default;
 
 	void _window::destroy(){
 
@@ -1578,7 +1610,7 @@ namespace webui{
 		this->send(packets_v);
 	}
 
-	bool _window::window_is_running(){
+	bool _window::window_is_running() const{
 
 		return this->settings.wss_running;
 	}
@@ -1607,7 +1639,7 @@ namespace webui{
 		webui::nat_id_v.erase(std::remove(webui::nat_id_v.begin(), webui::nat_id_v.end(), id), webui::nat_id_v.end());
 	}
 
-	void _window::send(std::vector<std::uint8_t> &packets_v){
+	void _window::send(std::vector<std::uint8_t> &packets_v) const{
 
 		if(packets_v.size() < MINIMUM_PACKETS_SIZE)
 			return;
@@ -1618,7 +1650,7 @@ namespace webui{
 		// TODO: add custom quee system. dont call send() if busy.
 	}
 
-	std::string _window::run(std::string js, unsigned short seconds){
+	std::string _window::run(std::string js, unsigned short seconds) const{
 
 		if(js.empty())
 			return "";
@@ -1695,7 +1727,7 @@ namespace webui{
 		webui::session_actions[this->settings.number] = nullptr;
 	}
 
-	void _window::event(std::string id){
+	void _window::event(const std::string& id){
 
 		int key_id = webui::getkey(id);
 
@@ -1704,7 +1736,7 @@ namespace webui{
 				webui::key_actions[key_id]();
 	}
 
-	void _window::bind(std::string key_id, void(*new_action)()){
+	void _window::bind(std::string key_id, void(*new_action)()) const{
 
 		key_id = this->settings.number_s + "/" + key_id;
 
@@ -1724,9 +1756,10 @@ namespace webui{
 	bool _window::window_show(const std::string * html, unsigned short browser){
 
 		// Initializing
-		unsigned short port_ws = webui::getport();
-		this->settings.html = html;
-		this->settings.ws_served = false;
+		unsigned short port_ws		= webui::getport();
+		this->settings.html			= html;
+		this->settings.ws_served	= false;
+		webui::waitfor_swindow		= true;
 
 		auto _start_websocket = [&]() {
 
@@ -1742,16 +1775,9 @@ namespace webui{
 
 		if(!this->window_is_running()){
 
-			// New window
+			// Start a new window
+
 			unsigned short port_web = webui::getport();
-
-			if(!browser::start(port_web, browser))
-				return false;			
-
-			// window app loop mode
-			webui::waitfor_swindow = true;
-
-			_start_websocket();
 
 			// -- Web Server ----------------------------
 			std::thread StartWebServer_job(	&webui::start_webserver,	// pointer
@@ -1761,6 +1787,12 @@ namespace webui{
 			this->settings.t_ws = &StartWebServer_job;
 			StartWebServer_job.detach();
 			// ------------------------------------------
+
+			_start_websocket();
+			//std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(1000));
+
+			if(!browser::start(port_web, browser))
+				return false;
 		}
 		else {
 
@@ -1771,6 +1803,7 @@ namespace webui{
 
 			// Start websocket
 			_start_websocket();
+			//std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(1000));
 
 			// url
 			std::string url = "http://127.0.0.1:" + this->settings.ws_port;
