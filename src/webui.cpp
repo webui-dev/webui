@@ -975,7 +975,7 @@ namespace webui{
 				#ifdef _WIN32
 
 					// Firefox 32/64 on Windows
-
+					// TODO: C:\Program Files\Firefox Nightly\firefox.exe
 					std::string fullpath32 = programs_folder32 + webui::sep + "Mozilla Firefox\\firefox.exe";
 					std::string fullpath64 = programs_folder64 + webui::sep + "Mozilla Firefox\\firefox.exe";
 
