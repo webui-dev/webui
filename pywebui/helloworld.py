@@ -9,6 +9,7 @@
 # -------------------------------------------------------------------------------
 
 import os
+import platform
 import sys
 import ctypes
 from ctypes import cdll, c_void_p, CFUNCTYPE, POINTER
@@ -21,9 +22,17 @@ class WebUI:
     cb_fun_list = []
     def __init__(self): 
         webui_wrapper = None
-        try:    
-            os.add_dll_directory(os.getcwd())
-            self.webui_lib = cdll.LoadLibrary('pywebui.dll')
+        try:
+            if platform.system() == 'Darwin':
+                self.webui_lib = ctypes.CDLL('pywebui.dylib')
+            elif platform.system() == 'Windows':
+                if sys.version_info.major == 3 and sys.version_info.minor == 8:
+                    os.add_dll_directory(os.getcwd())
+                    #self.webui_lib = ctypes.CDLL('pywebui.dll')
+                    self.webui_lib = cdll.LoadLibrary('pywebui.dll')
+            elif platform.system() == 'Linux':
+                os.chdir(os.getcwd())
+                self.webui_lib = ctypes.CDLL(os.getcwd() + '/libpywebui.so')
             webui_wrapper = self.webui_lib.py_create_window
             webui_wrapper.restype = c_void_p
             self.window = c_void_p(webui_wrapper())
@@ -41,7 +50,7 @@ class WebUI:
         prototype = None
         fun = None
         cb_fun_type = ctypes.CFUNCTYPE(ctypes.c_void_p) # define C pointer to a function type
-        self.cb_fun = cb_fun_type(func_ref)             # define a C function equivalent to the python function 'func_ref'
+        self.cb_fun = cb_fun_type(func_ref)             # define a C function equivalent to the python function
         self.cb_fun_list.append(self.cb_fun)
         prototype = ctypes.PYFUNCTYPE(
             ctypes.c_void_p,    # fun return
@@ -96,3 +105,4 @@ MyWindow.loop()
 
 print('Good! All windows are closed now.')
 sys.exit(0)
+

@@ -43,11 +43,6 @@ else()
 	return()
 endif()
 
-set(Boost_DEBUG 				OFF)
-set(Boost_USE_STATIC_LIBS       ON)
-set(Boost_USE_MULTITHREADED     ON)
-set(Boost_USE_STATIC_RUNTIME    ON)
-
 # --[ Python ] ------------------------------------------------------------------
 
 	message("[*] Searching for Python...")
@@ -75,6 +70,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("[*] Initializing '${Info_Title}' settings for Clang.")
 
 	target_compile_options(${Info_App} PUBLIC -shared -fPIC -O2)
+	
+	set(Boost_DEBUG 		 OFF)
+	set(Boost_USE_STATIC_LIBS       ON)
+	set(Boost_USE_MULTITHREADED     ON)
+	set(Boost_USE_STATIC_RUNTIME    ON)
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
@@ -86,13 +86,23 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	#set(CMAKE_CXX_FLAGS_RELEASE " -O3 ")
 	#set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s ")
 
-	target_compile_options(${Info_App} PUBLIC -shared -fPIC -O2)
-
+	target_compile_options(${Info_App} PUBLIC -fPIC -Wl,-Bstatic -lboost_filesystem -Wl,-Bshared)
+	
+	set(Boost_DEBUG 		 OFF)
+	set(Boost_USE_STATIC_LIBS       OFF)
+	set(Boost_USE_MULTITHREADED     ON)
+	set(Boost_USE_STATIC_RUNTIME    OFF)
+	
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 
 	# using Intel C++
 	message("[*] Initializing '${Info_Title}' settings for Intel.")
-
+	
+	set(Boost_DEBUG 		 OFF)
+	set(Boost_USE_STATIC_LIBS       ON)
+	set(Boost_USE_MULTITHREADED     ON)
+	set(Boost_USE_STATIC_RUNTIME    ON)
+	
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
 	# Microsoft build tools
@@ -107,7 +117,12 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	#SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${F_PIC}")
 
 	#target_compile_options(${Info_App} PUBLIC --enable-pic -O2)
-
+	
+	set(Boost_DEBUG 		 OFF)
+	set(Boost_USE_STATIC_LIBS       ON)
+	set(Boost_USE_MULTITHREADED     ON)
+	set(Boost_USE_STATIC_RUNTIME    ON)
+	
 endif()
 
 # --[ Build ] -------------------------------------------------------------------
@@ -116,4 +131,11 @@ endif()
 # lib PyWebUI.
 #target_link_libraries(${Info_App} webui)
 
+if(UNIX)
+	target_link_libraries(${Info_App} PRIVATE ${Boost_FILESYSTEM_LIBRARIES} Threads::Threads) # PRIVATE | ${Boost_REGEX_LIBRARY} | ${Boost_DATETIME_LIBRARY}
+else()
+	#target_link_libraries(${Info_App} PRIVATE ...)
+endif (UNIX)
+
 configure_file(${WebUIProject_SOURCE_DIR}/pywebui/helloworld.py ${CMAKE_CURRENT_BINARY_DIR}/helloworld.py COPYONLY)
+

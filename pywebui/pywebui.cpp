@@ -26,7 +26,12 @@
 #include <Python.h>
 
 // Defines
-#define DLLEXPORT extern "C" __declspec(dllexport)
+#ifdef _WIN32
+	#define DLLEXPORT extern "C" __declspec(dllexport)
+#else
+	#define DLLEXPORT extern "C"
+#endif
+
 bool py_initialized = false;
 static std::vector<PyObject *> callback_obj_v;
 static std::vector<void (*)()> callback_void_v;
