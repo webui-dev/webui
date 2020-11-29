@@ -53,7 +53,7 @@ endif()
 		link_directories(${Python_LIBRARY_DIRS})
 	else()
 		message("[!] Please install Python.")
-		return()
+		#return()
 	endif()
 
 # --[ Target ] ------------------------------------------------------------------
@@ -71,7 +71,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
 	target_compile_options(${Info_App} PUBLIC -shared -fPIC -O2)
 	
-	set(Boost_DEBUG 		 OFF)
+	set(Boost_DEBUG 		 		OFF)
 	set(Boost_USE_STATIC_LIBS       ON)
 	set(Boost_USE_MULTITHREADED     ON)
 	set(Boost_USE_STATIC_RUNTIME    ON)
@@ -88,7 +88,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 	target_compile_options(${Info_App} PUBLIC -fPIC -Wl,-Bstatic -lboost_filesystem -Wl,-Bshared)
 	
-	set(Boost_DEBUG 		 OFF)
+	set(Boost_DEBUG 		 		OFF)
 	set(Boost_USE_STATIC_LIBS       OFF)
 	set(Boost_USE_MULTITHREADED     ON)
 	set(Boost_USE_STATIC_RUNTIME    OFF)
@@ -98,7 +98,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
 	# using Intel C++
 	message("[*] Initializing '${Info_Title}' settings for Intel.")
 	
-	set(Boost_DEBUG 		 OFF)
+	set(Boost_DEBUG 		 		OFF)
 	set(Boost_USE_STATIC_LIBS       ON)
 	set(Boost_USE_MULTITHREADED     ON)
 	set(Boost_USE_STATIC_RUNTIME    ON)
@@ -110,15 +110,16 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
 	# Flags (WINDOWS / CONSOLE)
 	#add_link_options("/SUBSYSTEM:WINDOWS")
+
 	#set_target_properties(${Info_App} PROPERTIES LINK_FLAGS "/WHOLEARCHIVE")
-	#set_property(TARGET ${Info_App} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
+	set_property(TARGET ${Info_App} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
+
 	#add_compile_options("-shared -fPIC -O2")
 	#SET(F_PIC "-shared -fPIC -O2")
 	#SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${F_PIC}")
-
 	#target_compile_options(${Info_App} PUBLIC --enable-pic -O2)
 	
-	set(Boost_DEBUG 		 OFF)
+	set(Boost_DEBUG 		 		OFF)
 	set(Boost_USE_STATIC_LIBS       ON)
 	set(Boost_USE_MULTITHREADED     ON)
 	set(Boost_USE_STATIC_RUNTIME    ON)
@@ -134,8 +135,7 @@ endif()
 if(UNIX)
 	target_link_libraries(${Info_App} PRIVATE ${Boost_FILESYSTEM_LIBRARIES} Threads::Threads) # PRIVATE | ${Boost_REGEX_LIBRARY} | ${Boost_DATETIME_LIBRARY}
 else()
-	#target_link_libraries(${Info_App} PRIVATE ...)
+	target_link_libraries(${Info_App} PRIVATE ${Boost_FILESYSTEM_LIBRARIES} ${Boost_REGEX_LIBRARY} ${Boost_DATETIME_LIBRARY})
 endif (UNIX)
 
 configure_file(${WebUIProject_SOURCE_DIR}/pywebui/helloworld.py ${CMAKE_CURRENT_BINARY_DIR}/helloworld.py COPYONLY)
-

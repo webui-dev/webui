@@ -8,13 +8,13 @@
 # Copyright (C)2020 Hassan DRAGA <https://github.com/hassandraga>.
 # -------------------------------------------------------------------------------
 
+# ---[ WebUI Class ]--------------------------------------------------------------
 import os
 import platform
 import sys
 import ctypes
 from ctypes import cdll, c_void_p, CFUNCTYPE, POINTER
 
-# ---[ WebUI Class ]--------------------------------------------------------------
 class WebUI:
     webui_lib = None
     window = None
@@ -27,9 +27,10 @@ class WebUI:
                 self.webui_lib = ctypes.CDLL('pywebui.dylib')
             elif platform.system() == 'Windows':
                 if sys.version_info.major == 3 and sys.version_info.minor == 8:
+                    os.chdir(os.getcwd())
                     os.add_dll_directory(os.getcwd())
-                    #self.webui_lib = ctypes.CDLL('pywebui.dll')
-                    self.webui_lib = cdll.LoadLibrary('pywebui.dll')
+                    self.webui_lib = ctypes.CDLL('pywebui.dll')
+                    #self.webui_lib = cdll.LoadLibrary('pywebui.dll')
             elif platform.system() == 'Linux':
                 os.chdir(os.getcwd())
                 self.webui_lib = ctypes.CDLL(os.getcwd() + '/libpywebui.so')
@@ -105,4 +106,3 @@ MyWindow.loop()
 
 print('Good! All windows are closed now.')
 sys.exit(0)
-
