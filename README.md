@@ -4,15 +4,15 @@
 
 [![Build Status](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master)](https://github.com/alifcommunity/webui)
 
-WebUI is a free and open source library that can help you using any installed web browser as your user interface. Basically you can transform an basic console app to a nice GUI application, in a easy way.
+WebUI is a free and open source GUI library that use any installed web browser as your user interface. Basically you can transform an basic console app or any Python script to a nice GUI application, in a easy way.
 
 ## Why WebUI?
 
-First, web technologies is everywhere now, and web browsers today have everything a modern UI need, your application will look nicer, and won't need any external library to run.
+First, web technologies is everywhere now, and web browsers today have everything a modern UI need, your application will look nicer and multi-platform.
 
 ## How its work?
 
-Basically this library use latest web server and WebSocket standards to maintaine the communication in binary mode between the web browser and your application. You receive any click events, and of course you can send data or executing JavaScript code. 
+Basically this library use latest web server and WebSocket standards to maintaine the communication in binary mode between the web browser (UI) and your application. You receive any click events, and of course you can send data or executing JavaScript code. 
 
 ## How I can use it?
 
@@ -73,6 +73,32 @@ if(!my_window.show(webui::browser::firefox))    // If Firefox not installed
     my_window.show();                           // try other web browsers.
 ```
 
+## Python
+
+```sh
+def my_function():
+    print('You clicked on the first button!')
+
+def my_function_two():
+    print('You clicked on the second button!')
+
+# Create a window object
+MyWindow = WebUI()
+
+# Bind am HTML element ID with a python function
+MyWindow.bind('MyButtonID1', my_function)
+MyWindow.bind('MyButtonID2', my_function_two)
+
+# Show the window
+MyWindow.show(my_html)
+
+# Wait unitil all windows are closed
+MyWindow.loop()
+
+print('Good! All windows are closed now.')
+sys.exit(0)
+```
+
 ## Complete examples
 
 Please see examples folder.
@@ -103,17 +129,13 @@ Please see examples folder.
 
 - Goto http://webui.me and download latest release WebUI library.
 
-## How to clone
-
-```sh
-git clone https://github.com/alifcommunity/webui.git
-```
-
 ## Build from source - Windows
 - [ ! ] Boost for Windows is already embedded with this repository, no action needed.
+- [ ! ] Microsoft Visual Studio 2017 is not supported. 
 - Windows SDK 10x. You can download it from http://microsoft.com 
-- Microsoft Visual Studio build tools 2019. basically goto Start -> Visual Studio 2019 -> Native Tools Command Prompt.
+- Microsoft Visual Studio 2019.
 - CMake +3.15.0. You can download it from https://cmake.org/download
+- Python 3.8 (only if you want PyWebUI).
 
 ### Using MSVC (2019 is recommended)
 ```sh
@@ -125,27 +147,25 @@ cd build
 
 Generate Visual Studio 2019 solution (Build in Release mode).
 ```sh
-cmake .. -G "Visual Studio 16 2019" -A Win32
+cmake .. -G "Visual Studio 16 2019" -DCMAKE_BUILD_TYPE=Release
 ```
 
 Generate Makefile for Microsoft Visual Studio build tools 2019.
 ```sh
-cmake .. -G "NMake Makefiles"
+cmake .. -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
 nmake
 ```
 
-### Using MinGW (not tested yet)
-
-Generate Makefile for MinGW (beta)
+Build PyWebUI
 ```sh
-cmake .. -G "MinGW Makefiles"
-make
+nmake pywebui
 ```
 
 ## Build from source - Linux
 - C++17 compiler (GCC/Clang): ```sudo apt install build-essential```
 - Boost lib +1.70.0: ```sudo apt install libboost-all-dev```
 - CMake +3.15.0: ```sudo apt install cmake```
+- Python 3.8 (only if you want PyWebUI).
 
 ```sh
 git clone https://github.com/alifcommunity/webui.git
@@ -154,6 +174,11 @@ mkdir build
 cd build
 cmake ..
 make
+```
+
+Build PyWebUI
+```sh
+make pywebui
 ```
 
 ## Build from source - macOS
