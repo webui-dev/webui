@@ -1,6 +1,7 @@
 /*
 	WebUI Library
 	- - - - - - -
+	http://webui.me
 	https://github.com/alifcommunity/webui
 	Licensed under GNU General Public License v3.0.
 	Copyright (C)2020 Hassan DRAGA <https://github.com/hassandraga>.
@@ -297,9 +298,14 @@ namespace webui{
 	const std::string html_served = "<html><head></head>"
 								 "<body style=\"background-color:#515C6B; color:#fff; font-family:\"Lucida Console\", Courier, monospace\">"
 								 "Already served.</body></html>";
+	struct event{
+	
+		unsigned short id = 0;
+		std::string element = "";
+	};
 	std::atomic<bool> waitfor_swindow (false);
 	std::vector<std::string> key_v;
-	std::array<void(*)(), 64> key_actions;
+	std::array<void(*)(webui::event e), 64> key_actions;
 	unsigned short port_start = 8080;
 	std::vector<unsigned short> port_v = { 0 };
 	unsigned short winlast = 1;
@@ -329,6 +335,7 @@ namespace webui{
 	void FreeWindow();
 	void loop();
 	void exit();
+	bool any_is_show();
 
 	// -- Class ----
 	class _window {
@@ -349,11 +356,12 @@ namespace webui{
         } settings;
         void receive(std::vector<std::uint8_t> &packets_v);
         void send(std::vector<std::uint8_t> &packets_v) const;
-        static void event(const std::string& id);
+        static void event(const std::string& id, const std::string& element);
         void websocket_session_clean();
-        void bind(std::string key_id, void(*new_action)()) const;
+        int bind(std::string key_id, void(*function_ref)(webui::event e)) const;
         bool window_show(const std::string * html, unsigned short browser);
         bool window_is_running() const;
+        bool any_window_is_running() const;
         void destroy();
         std::string run(std::string js, unsigned short seconds) const;
 	};
@@ -1580,6 +1588,14 @@ namespace webui{
 		ui->settings.wss_running = false;
 	}
 
+	bool any_is_show() {
+
+		if(webui::connected_swindow > 0)
+			return true;
+		
+		return false;
+	}
+
 	// --- Window ------------------------------------
 
 	_window::_window(){
@@ -1613,6 +1629,14 @@ namespace webui{
 	bool _window::window_is_running() const{
 
 		return this->settings.wss_running;
+	}
+
+	bool _window::any_window_is_running() const{
+
+		if(webui::connected_swindow > 0)
+			return true;
+		
+		return false;
 	}
 
 	unsigned short get_nat_id(){
@@ -1705,7 +1729,7 @@ namespace webui{
 			// Event
 
 			if(!data.empty())
-				this->event(this->settings.number_s + "/" + data);
+				this->event(this->settings.number_s + "/" + data, data);
 		}
 		else if (type == TYPE_RUN_JS){
 
@@ -1727,30 +1751,41 @@ namespace webui{
 		webui::session_actions[this->settings.number] = nullptr;
 	}
 
-	void _window::event(const std::string& id){
+	void _window::event(const std::string& id, const std::string& element){
 
 		int key_id = webui::getkey(id);
 
-		if(key_id >= 0)
-			if(webui::key_actions[key_id])
-				webui::key_actions[key_id]();
+		if(key_id >= 0 && webui::key_actions[key_id]){
+
+			webui::event e;
+			e.element = element;
+			e.id = key_id;
+
+			// webui::key_actions[key_id](e);
+			std::thread t(webui::key_actions[key_id], e);
+    		t.detach();
+		}
 	}
 
-	void _window::bind(std::string key_id, void(*new_action)()) const{
+	int _window::bind(std::string key_id, void(*function_ref)(webui::event e)) const{
 
 		key_id = this->settings.number_s + "/" + key_id;
 
-		int old_id = webui::getkey(key_id);
-		if(old_id >= 0){
+		int id = webui::getkey(key_id);
+		
+		if(id >= 0){
 
 			// Replace a reference
-			webui::key_actions[old_id] = new_action;
+			webui::key_actions[id] = function_ref;
 		}
 		else {
 
 			// New reference
-			webui::key_actions[setkey(key_id)] = new_action;
+			id = setkey(key_id);
+			webui::key_actions[id] = function_ref;
 		}
+
+		return id;
 	}
 
 	bool _window::window_show(const std::string * html, unsigned short browser){

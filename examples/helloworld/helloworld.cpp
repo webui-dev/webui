@@ -45,7 +45,7 @@ const std::string dashboard = R"V0G0N(
 webui::window my_window;
 webui::window dashboard_window;
 
-void run_javascript(){
+void run_javascript(webui::event e){
 
     // Run a JavaScript code
 	if(dashboard_window.is_show())
@@ -54,19 +54,19 @@ void run_javascript(){
 		my_window.run_js("alert('It\\'s seem you chose to open the dashboard in the same window.');");
 }
 
-void switch_to_dashboard(){
+void switch_to_dashboard(webui::event e){
 
 	// Switch same window to the dashboard HTML script
 	my_window.show(&dashboard);
 }
 
-void open_dashboard(){
+void open_dashboard(webui::event e){
 
 	// Open dashboard in a new window
 	dashboard_window.show(&dashboard);
 }
 
-void close_dashboard(){
+void close_dashboard(webui::event e){
 
 	// Close dashboard window
 	if(dashboard_window.is_show())
@@ -75,7 +75,7 @@ void close_dashboard(){
 		my_window.close();
 }
 
-void close_app(){
+void close_app(webui::event e){
 
 	// Close all opened windows
 	// this make webui::loop() to finish

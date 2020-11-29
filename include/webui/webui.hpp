@@ -1,6 +1,7 @@
 /*
 	WebUI Library
 	- - - - - - -
+	http://webui.me
 	https://github.com/alifcommunity/webui
 	Licensed under GNU General Public License v3.0.
 	Copyright (C)2020 Hassan DRAGA <https://github.com/hassandraga>.
@@ -24,6 +25,7 @@ namespace webui{
 	void ini();
 	void loop();
 	void exit();
+	bool any_is_show();
 
 	namespace browser{
 
@@ -31,11 +33,17 @@ namespace webui{
 		unsigned short firefox	= 2;
 		unsigned short edge		= 3;
 		unsigned short safari	= 4;
-	}		
+	}
+
+	struct event{
+	
+		unsigned short id = 0;
+		std::string element = "";
+	};
 
 	// -- Class ----
     class _window {
-    public:
+		public:
         _window();
         ~_window();
         struct {
@@ -52,14 +60,15 @@ namespace webui{
         } settings;
         void receive(std::vector<std::uint8_t> &packets_v);
         void send(std::vector<std::uint8_t> &packets_v) const;
-        static void event(const std::string& id);
+        static void event(const std::string& id, const std::string& element);
         void websocket_session_clean();
-        void bind(std::string key_id, void(*new_action)()) const;
+        int bind(std::string key_id, void(*function_ref)(webui::event e)) const;
         bool window_show(const std::string * html, unsigned short browser);
         bool window_is_running() const;
+        bool any_window_is_running() const;
         void destroy();
         std::string run(std::string js, unsigned short seconds) const;
-    };
+	};
 
 	class window{
 
@@ -92,6 +101,11 @@ namespace webui{
 			return o_win.window_is_running();
 		}
 
+		bool any_is_show() const{
+
+			return o_win.any_window_is_running();
+		}
+
 		bool show(const std::string * html){
 
 			// if(o_win.window_is_running())
@@ -110,9 +124,15 @@ namespace webui{
 			return o_win.window_show(this->p_html, browser);
 		}
 
-		void bind(const std::string& id, void (* func_ref)()) const{
+		bool show(const std::string html){
 
-			o_win.bind(id, func_ref);
+			std::string * _html = new std::string(html);
+			return this->show(_html, 0);
+		}
+
+		int bind(const std::string& id, void (* func_ref)(webui::event e)) const{
+
+			return o_win.bind(id, func_ref);
 		}
 
 		void close(){

@@ -52,6 +52,8 @@ set(Boost_USE_STATIC_RUNTIME    ON)
 
 add_library(${Info_App} STATIC ${Info_Source})
 
+set_target_properties(${Info_App} PROPERTIES PUBLIC_HEADER ${WebUIProject_SOURCE_DIR}/include/webui/webui.hpp)
+
 # --[ Compiler flags ] ----------------------------------------------------------
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

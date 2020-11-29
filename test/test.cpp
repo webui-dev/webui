@@ -29,7 +29,7 @@ const std::string html = R"V0G0N(
 
 webui::window win;
 
-void bar(){
+void bar(webui::event e){
 
    printf("WebUI Test");
 }
