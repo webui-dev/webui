@@ -1009,7 +1009,7 @@ namespace webui{
 
 					// Firefox on Linux
 
-					if(system("firefox -v 2>&1 >/dev/null") == 0){
+					if(system("firefox -v &> /dev/null") == 0){
 
 						browser_path = "firefox";
 						return true;
@@ -1051,7 +1051,7 @@ namespace webui{
 				#else
 
 					// Chrome on Linux
-					if(system("google-chrome --version 2>&1 >/dev/null") == 0){
+					if(system("google-chrome --version &> /dev/null") == 0){
 
 						browser_path = "google-chrome";
 						return true;
