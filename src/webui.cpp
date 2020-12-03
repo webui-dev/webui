@@ -1276,7 +1276,7 @@ namespace webui{
 			full.append(arg);
 			full.append(s_port);
 
-			if(browser::command_browser(full) == 0){
+			if(browser::command_browser("sh -c \"" + full + " &> /dev/null\"") == 0){
 
 				browser::CurrentBrowser = firefox;
 				return true;
@@ -1304,7 +1304,7 @@ namespace webui{
 			full.append(arg);
 			full.append(s_port);
 
-			if(browser::command_browser(full + " 2>&1 >/dev/null") == 0){
+			if(browser::command_browser("sh -c \"" + full + " &> /dev/null\"") == 0){
 
 				browser::CurrentBrowser = chrome;
 				return true;
