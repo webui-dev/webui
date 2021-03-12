@@ -174,6 +174,7 @@ mkdir build
 cd build
 cmake ..
 make
+make install
 ```
 
 Build PyWebUI
