@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15.0)
 
 # --[ WebUI version ] --------------------------------------------------------------
 
-project(WebUIProject VERSION 1.0.2 DESCRIPTION "Use web browser as GUI.")
+project(WebUIProject VERSION 1.0.3 DESCRIPTION "Use web browser as GUI.")
 message("-- [ WebUI version ${CMAKE_PROJECT_VERSION} ]")
 
 # --[ Settings ] -------------------------------------------------------------------

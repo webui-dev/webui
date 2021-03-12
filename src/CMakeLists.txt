@@ -89,3 +89,15 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 # --[ Build ] -------------------------------------------------------------------
+
+
+
+# --[ Install ] -----------------------------------------------------------------
+
+if(UNIX)
+	message("[*] Initializing installation settings...")
+	install (TARGETS ${Info_App}
+			ARCHIVE DESTINATION lib
+			LIBRARY DESTINATION lib
+			RUNTIME DESTINATION bin)
+endif (UNIX)
