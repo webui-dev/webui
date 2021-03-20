@@ -1,0 +1,64 @@
+name: Build WebUI #& PyWebUI  
+
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    # Both System 
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/build
+    
+    # GNU/Linux
+    - name: Install Boost
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt install libboost-all-dev
+
+    - name: Configure CMake
+      if: matrix.os == 'ubuntu-latest'
+      working-directory: ${{github.workspace}}/build
+      run: cmake $GITHUB_WORKSPACE
+
+    - name: Build WebUI
+      if: matrix.os == 'ubuntu-latest'
+      working-directory: ${{github.workspace}}/build
+      run: make -j $(nproc)
+
+    # Windows MSVC
+    - name: Install Boost
+      if: matrix.os == 'windows-latest'
+      uses: MarkusJx/install-boost@v1.0.1
+      id: install-boost
+      with:
+        boost_version: 1.73.0
+        toolset: msvc14.2
+
+    - name: Configure CMake Using MSVC
+      if: matrix.os == 'windows-latest'
+      env:
+        BOOST_ROOT: ${{steps.install-boost.outputs.BOOST_ROOT}}
+      working-directory: ${{github.workspace}}/build
+      shell: cmd
+      run: |
+           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+           cmake .. . -G "NMake Makefiles"
+
+    - name: Build WebUI Using MSVC
+      if: matrix.os == 'windows-latest'
+      working-directory: ${{github.workspace}}/build
+      shell: cmd
+      run: |
+           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+           nmake
