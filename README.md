@@ -121,8 +121,8 @@ Please see examples folder.
 | Windows | Edge | Supported |
 | Linux | Firefox | Supported |
 | Linux | Chrome | Supported |
-| macOS | Firefox | Under development |
-| macOS | Chrome | Under development |
+| macOS | Firefox | Supported |
+| macOS | Chrome | Supported |
 | macOS | Safari | Under development |
 
 ## How to use pre-compiled version ?
