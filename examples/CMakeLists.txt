@@ -1,10 +1,8 @@
 
 # Info
-set(Info_Title "Hello World")
-set(Info_Source "helloworld.cpp")
-set(Info_App "helloworld")
+set(Info_Title "Examples")
 
-# --[ WebUI ] -------------------------------------------------------------------
+# --[ WebUI Lib ] ------------------------------------------------------------------
 
 include_directories(${webui_SOURCE_DIR}/include)
 link_directories(${webui_BIN_DIR}/webui)
@@ -58,10 +56,6 @@ if(UNIX)
 	find_package(Threads REQUIRED)
 endif (UNIX)
 
-# --[ Target ] ------------------------------------------------------------------
-
-add_executable(${Info_App} ${Info_Source})
-
 # --[ Compiler flags ] ----------------------------------------------------------
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -88,7 +82,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	endif()
 
 	# Flags
-	# set_target_properties(${Info_App} PROPERTIES LINK_FLAGS_RELEASE -s)
+	# set_target_properties(${Info_Appzzzzzzzzzzzz} PROPERTIES LINK_FLAGS_RELEASE -s)
 	# set(CMAKE_CXX_FLAGS_RELEASE " -O3 ")
 	# set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s ")
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mbig-obj")
@@ -106,17 +100,32 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 
 	# Flags (WINDOWS / CONSOLE)
 	# add_link_options("/SUBSYSTEM:WINDOWS")
-	# set_target_properties(${Info_App} PROPERTIES LINK_FLAGS /SUBSYSTEM:WINDOWS)
-	# set_property(TARGET ${Info_App} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
+	# set_target_properties(${Info_Appzzzzzzzzzzzz} PROPERTIES LINK_FLAGS /SUBSYSTEM:WINDOWS)
+	# set_property(TARGET ${Info_Appzzzzzzzzzzzz} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 	
 endif()
 
-# --[ Build ] -------------------------------------------------------------------
+# --[ Target / Build ] ----------------------------------------------------------
 
-if(UNIX)
-	target_link_libraries(${Info_App} PRIVATE webui ${Boost_LIBRARIES} Threads::Threads)
-else()
-	target_link_libraries(${Info_App} PRIVATE webui ws2_32 wsock32 ${Boost_LIBRARIES})
-endif (UNIX)
+file(GLOB files ${webui_SOURCE_DIR}/examples/*.cpp)
+foreach(filePath ${files})
+
+	# Remove path
+	get_filename_component(file ${filePath} NAME)
+
+	# Remove extension
+	string(REPLACE ".cpp" "" example_app ${file})
+
+	message("[*] Found WebUI example: ${file} ")
+
+	add_executable(${example_app} ${file})
+
+	if(UNIX)
+		target_link_libraries(${example_app} PRIVATE webui ${Boost_LIBRARIES} Threads::Threads)
+	else()
+		target_link_libraries(${example_app} PRIVATE webui ws2_32 wsock32 ${Boost_LIBRARIES})
+	endif (UNIX)
+
+endforeach()

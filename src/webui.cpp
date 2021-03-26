@@ -136,7 +136,7 @@ namespace webui {
 					}
 				};
 
-				_webui_ws.onmessage = function (evt) {
+				_webui_ws.onmessage = function (evt){
 
 					var reader;
 					var buffer8;
@@ -303,17 +303,24 @@ namespace webui{
 
 	// -- Global ---
 	std::atomic<unsigned short> connected_swindow(0);
-	// const std::string html_def = "<html><head><meta http-equiv=\"refresh\" content=\"1\"></head>"
-	// 							 "<body style=\"background-color:#515C6B; color:#fff; font-family:\"Lucida Console\", Courier, monospace\">"
-	// 							 "Loading..</body></html>";
+	
 	const std::string html_served = "<html><head></head>"
-								 "<body style=\"background-color:#515C6B; color:#fff; font-family:\"Lucida Console\", Courier, monospace\">"
-								 "Already served.</body></html>";
+								 "<body style=\"background-color:#515C6B; color:#fff;\">"
+								 "Sorry, This WebUI window is already served.</body></html>";
 	struct event{
 	
 		unsigned short id = 0;
 		std::string element = "";
 	};
+
+	struct custom_browser_t {
+
+		std::string app;
+		std::string arg;
+		bool link = true;
+	};
+
+	const custom_browser_t *p_custom;
 	std::atomic<bool> waitfor_swindow (false);
 	std::vector<std::string> key_v;
 	std::array<void(*)(webui::event e), 64> key_actions;
@@ -321,6 +328,7 @@ namespace webui{
 	std::vector<unsigned short> port_v = { 0 };
 	unsigned short winlast = 1;
 	unsigned short startup_timeout = 10; // t = n * 1000 / 500
+	bool use_timeout = true;
 	std::array<std::string *,		64> nat_data;
 	std::array<std::atomic<bool>,	64> nat_data_status;
 	std::vector<unsigned short>			nat_id_v = { 0 };
@@ -341,12 +349,14 @@ namespace webui{
 	unsigned short getwin();
 	// void start_webserver(const char * ip, unsigned short port, const std::string * html, webui::_window * ui);
 	// void start_websocket(const char * ip, unsigned short port, webui::_window * ui);
+	void set_timeout_sec(unsigned short s);
 	void waitforstartup();
 	void FreePort();
 	void FreeWindow();
 	void loop();
 	void exit();
 	bool any_is_show();
+	void set_custom_browser(const webui::custom_browser_t *p);
 
 	// -- Class ----
 	class _window {
@@ -354,15 +364,15 @@ namespace webui{
         _window();
         ~_window();
         struct {
-            std::thread * t_ws = nullptr;
-            std::thread * t_wss = nullptr;
+            std::thread * webserver_thread = nullptr;
+            std::thread * websocket_thread = nullptr;
             std::string number_s;
             unsigned short number = 0;
-            bool ws_running = false;
-            bool wss_running = false;
-            bool ws_served = false;
-            std::string ws_port = "0";
-            std::string wss_port = "0";
+            bool webserver_running = false;
+            bool websocket_running = false;
+            bool webserver_served = false;
+            std::string webserver_port = "0";
+            std::string websocket_port = "0";
             const std::string * html = nullptr;
         } settings;
         void receive(std::vector<std::uint8_t> &packets_v);
@@ -371,6 +381,7 @@ namespace webui{
         void websocket_session_clean();
         size_t bind(std::string key_id, void(*function_ref)(webui::event e)) const;
         bool window_show(const std::string * html, unsigned short browser);
+        std::string window_get_address(const std::string * html);
         bool window_is_running() const;
         bool any_window_is_running() const;
         void destroy();
@@ -482,7 +493,7 @@ namespace BoostWebServer{
 
 			if(request_.target() == "/"){
 
-				if(this->p_ui->settings.ws_served){
+				if(this->p_ui->settings.webserver_served){
 
 					// Main HTML already served.
 					response_.set(http::field::content_type, "text/html; charset=utf-8");
@@ -495,10 +506,10 @@ namespace BoostWebServer{
 				response_.set(http::field::content_type, "text/html; charset=utf-8");
 				beast::ostream(response_.body())	<< *this->p_ui->settings.html	// *this->html_main 
 													<< "\n <script type = \"text/javascript\"> \n const _wssport = " 
-													<< this->p_ui->settings.wss_port
+													<< this->p_ui->settings.websocket_port
 													<< "; \n "
 													<< " const _wsport = " 
-													<< this->p_ui->settings.ws_port
+													<< this->p_ui->settings.webserver_port
 													<< "; \n "
 													<< " const _webui_minimum_data = " 
 													<< MINIMUM_PACKETS_SIZE
@@ -506,7 +517,7 @@ namespace BoostWebServer{
 													<< webui::javascriptbridge
 													<< " \n </script>";
 
-				this->p_ui->settings.ws_served = true;
+				this->p_ui->settings.webserver_served = true;
 			}
 			else if(request_.target() == "/favicon.ico"){
 
@@ -568,7 +579,7 @@ namespace BoostWebServer{
 		void
 		http_server(tcp::acceptor& acceptor, tcp::socket& socket){
 			
-			// if(this->p_ui->settings.ws_served)
+			// if(this->p_ui->settings.webserver_served)
 			// 	return;
 
 			acceptor.async_accept(socket,
@@ -906,7 +917,7 @@ namespace BoostWebSocket{
 			else {
 
 				webui::connected_swindow++;
-				this->p_ui->settings.wss_running = true;
+				this->p_ui->settings.websocket_running = true;
 				*this->p_WindowWasConnected = true;
 
 				// Create the session and run it
@@ -932,6 +943,7 @@ namespace webui{
 		#define edge		(3)
 		#define safari		(4)
 		#define chromium	(5)
+		#define custom		(99)
 
 		#ifdef _WIN32
 			#define DirSep "\""
@@ -973,9 +985,19 @@ namespace webui{
 			// future run.
 		}
 
-		bool browserr_exist(unsigned short browser){
+		bool browser_exist(unsigned short browser){
 
 			// Check if a browser exist
+
+			if(browser == custom){
+
+				// Custom Browser
+
+				if(p_custom == nullptr)
+					return false;
+
+				return true;
+			}
 
 			#ifdef _WIN32
 				// Resolve SystemDrive
@@ -1168,6 +1190,16 @@ namespace webui{
 
 		bool create_profile_folder(unsigned short browser){
 
+			if(browser == custom){
+
+				// Custom Browser
+
+				if(p_custom == nullptr)
+					return false;
+
+				return true;
+			}
+
 			std::string temp = get_temp_path(browser);
 
 			if(browser == chrome){
@@ -1247,7 +1279,7 @@ namespace webui{
 			if(CurrentBrowser != 0 && CurrentBrowser != edge)
 				return false;
 
-			if(!browserr_exist(edge))
+			if(!browser_exist(edge))
 				return false;
 			
 			if(!create_profile_folder(edge))
@@ -1275,7 +1307,7 @@ namespace webui{
 			if(CurrentBrowser != 0 && CurrentBrowser != firefox)
 				return false;
 
-			if(!browserr_exist(firefox))
+			if(!browser_exist(firefox))
 				return false;
 
 			if(!create_profile_folder(firefox))
@@ -1301,6 +1333,46 @@ namespace webui{
 				return false;
 		}
 
+		bool start_custom(unsigned short port){
+
+			// -- Custom Browser ----------------------
+
+			if(CurrentBrowser != 0 && CurrentBrowser != custom)
+				return false;
+
+			if(!browser_exist(custom))
+				return false;
+			
+			if(!create_profile_folder(custom))
+				return false;
+
+			std::string arg = " " + p_custom->arg;
+
+			if(p_custom->link){
+
+				arg.append("http://127.0.0.1:");
+
+				std::string s_port = std::to_string(port);
+				arg.append(s_port);
+			}
+
+			std::string full(p_custom->app);
+			full.append(arg);
+
+			#ifdef _WIN32
+				if(browser::command_browser("cmd /c \"" + full + "\"") == 0)
+			#else
+				if(browser::command_browser("sh -c \"" + full + " &> /dev/null\"") == 0)
+			#endif
+			{
+
+				browser::CurrentBrowser = custom;
+				return true;
+			}
+			else
+				return false;
+		}
+
 		bool start_chrome(unsigned short port){
 
 			// -- Chrome ----------------------
@@ -1308,7 +1380,7 @@ namespace webui{
 			if(CurrentBrowser != 0 && CurrentBrowser != chrome)
 				return false;
 
-			if(!browserr_exist(chrome))
+			if(!browser_exist(chrome))
 				return false;
 			
 			if(!create_profile_folder(chrome))
@@ -1336,6 +1408,10 @@ namespace webui{
 
 		bool start(unsigned short port, unsigned short browser){
 
+			// Non existing browser
+			if(browser > 99)
+				return false;
+			
 			if(browser != 0){
 
 				// Specified browser
@@ -1345,6 +1421,8 @@ namespace webui{
 					return start_firefox(port);
 				else if(browser == edge)
 					return start_edge(port);
+				else if(browser == custom)
+					return start_custom(port);
 				else
 					return false;
 			}
@@ -1357,6 +1435,8 @@ namespace webui{
 					return start_firefox(port);
 				else if(CurrentBrowser == edge)
 					return start_edge(port);
+				else if(CurrentBrowser == custom)
+					return start_custom(port);
 				else
 					return false;
 					//webui::exit();
@@ -1370,22 +1450,25 @@ namespace webui{
 					if(!start_chrome(port))
 						if(!start_firefox(port))
 							if(!start_edge(port))
-								return false;
-								//webui::exit();
+								if(!start_custom(port))
+									return false;
+									//webui::exit();
 				#elif __APPLE__
 					// macOS
 					if(!start_chrome(port))
 						if(!start_firefox(port))
 							if(!start_edge(port))
-								return false;
-								//webui::exit();
+								if(!start_custom(port))
+									return false;
+									//webui::exit();
 				#else
 					// Linux
 					if(!start_chrome(port))
 						if(!start_firefox(port))
 							if(!start_edge(port))
-								return false;
-								//webui::exit();
+								if(!start_custom(port))
+									return false;
+									//webui::exit();
 				#endif
 			}
 
@@ -1403,6 +1486,9 @@ namespace webui{
 
 		webui::key_v.emplace_back("");
 		webui::port_v.clear();
+
+		webui::use_timeout = true;
+		webui::startup_timeout = 10; // 10 seconds
 	}
 
 	void msgbox(const std::wstring& msg){
@@ -1428,6 +1514,11 @@ namespace webui{
 		msgbox(wide);*/
 	}
 
+	void set_custom_browser(const webui::custom_browser_t *p){
+
+		p_custom = p;
+	}
+
 	size_t getkey(const std::string& id){
 
 		for (size_t i = 0; i < webui::key_v.size(); i++){
@@ -1447,11 +1538,23 @@ namespace webui{
 		return webui::key_v.size() - 1;
 	}
 
+	void set_timeout_sec(unsigned short s){
+
+		if(s < 1)
+			webui::use_timeout = false;
+		else {
+
+			webui::use_timeout = true;
+			webui::startup_timeout = s;
+		}
+	}
+
 	void waitforstartup(){
 
 		if(webui::connected_swindow > 0)
 			return;
 
+		// Wait for a specific time
 		for(unsigned short n = 0; n <= (webui::startup_timeout * 2); n++){
 
 			if(webui::connected_swindow > 0)
@@ -1463,19 +1566,30 @@ namespace webui{
 
 	void loop(){
 
-		if(browser::CurrentBrowser < 1)
-			return;
+		if(webui::use_timeout){
 
-		if(webui::waitfor_swindow){
+			// Wait for a specific time
 
-			// Wait one time while user 
-			// browser is starting!
-			webui::waitforstartup();
+			if(browser::CurrentBrowser < 1)
+				return;
 
-			while(webui::connected_swindow > 0){
-			
-				std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(100));
+			if(webui::waitfor_swindow){
+
+				// Wait one time while user 
+				// browser is starting!
+				webui::waitforstartup();
+
+				while(webui::connected_swindow > 0){
+				
+					std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(100));
+				}
 			}
+		}
+		else {
+
+			// Wait forever!
+			while(1)
+				std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(500));
 		}
 
 		browser::clean();
@@ -1559,9 +1673,9 @@ namespace webui{
 	void start_webserver(const char * ip, unsigned short port, webui::_window * ui){
 
 		// Initialization
-		ui->settings.ws_running = true;
+		ui->settings.webserver_running = true;
 		const std::string s_port = std::to_string(port);
-		ui->settings.ws_port = s_port;
+		ui->settings.webserver_port = s_port;
 
 		try {
 
@@ -1582,8 +1696,8 @@ namespace webui{
 		}
 
 		// Clean
-		ui->settings.ws_running = false;
-		ui->settings.ws_served = false;
+		ui->settings.webserver_running = false;
+		ui->settings.webserver_served = false;
 		webui::FreePort(port);
 	}
 
@@ -1592,7 +1706,7 @@ namespace webui{
 		// Initialization
 		bool WindowWasConnected = false;
 		std::string s_port = std::to_string(port);
-		ui->settings.wss_port = s_port;
+		ui->settings.websocket_port = s_port;
 	
 		// IO Context
 		auto const address = net::ip::make_address(ip);
@@ -1606,10 +1720,10 @@ namespace webui{
 			webui::FreeWindow();
 		webui::session_actions[ui->settings.number] = nullptr;
 		webui::FreePort(port);
-		ui->settings.wss_running = false;
+		ui->settings.websocket_running = false;
 	}
 
-	bool any_is_show() {
+	bool any_is_show(){
 
 		if(webui::connected_swindow > 0)
 			return true;
@@ -1621,15 +1735,15 @@ namespace webui{
 
 	_window::_window(){
 
-		this->settings.t_ws = nullptr;
-		this->settings.t_wss = nullptr;
+		this->settings.webserver_thread = nullptr;
+		this->settings.websocket_thread = nullptr;
 		this->settings.number = webui::getwin();
 		this->settings.number_s = std::to_string(this->settings.number);
-		this->settings.ws_running = false;
-		this->settings.ws_served = false;
-		this->settings.wss_running = false;
-		this->settings.ws_port = "00000";
-		this->settings.wss_port = "00000";
+		this->settings.webserver_running = false;
+		this->settings.webserver_served = false;
+		this->settings.websocket_running = false;
+		this->settings.webserver_port = "0000";
+		this->settings.websocket_port = "0000";
 	}
 
 	_window::~_window()= default;
@@ -1649,7 +1763,7 @@ namespace webui{
 
 	bool _window::window_is_running() const{
 
-		return this->settings.wss_running;
+		return this->settings.websocket_running;
 	}
 
 	bool _window::any_window_is_running() const{
@@ -1809,22 +1923,45 @@ namespace webui{
 		return id;
 	}
 
+	std::string _window::window_get_address(const std::string * html){
+
+		// Start webserver and websocket
+		// 100 is a non existing browser!
+		// we need only servers now.
+		this->window_show(html, 100);
+
+		// Wait for webserver to start
+		for(unsigned short n = 0; n < 10; n++){
+			putchar('*');
+
+			if(this->settings.webserver_running)
+				break;
+			
+			std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(100));
+		}
+
+		// Get URL
+		std::string url = "http://127.0.0.1:" + this->settings.webserver_port;
+
+		return url;
+	}
+
 	bool _window::window_show(const std::string * html, unsigned short browser){
 
 		// Initializing
 		unsigned short port_ws		= webui::getport();
 		this->settings.html			= html;
-		this->settings.ws_served	= false;
+		this->settings.webserver_served	= false;
 		webui::waitfor_swindow		= true;
 
-		auto _start_websocket = [&]() {
+		auto _start_websocket = [&](){
 
 			// -- Web Socket ----------------------------
 			std::thread StartWebSocket_job(	&webui::start_websocket,	// pointer
 											"127.0.0.1",				// IP
-											port_ws,					// Port
+											port_ws,					// port
 											this);						// obj
-			this->settings.t_wss = &StartWebSocket_job;
+			this->settings.websocket_thread = &StartWebSocket_job;
 			StartWebSocket_job.detach();
 			// ------------------------------------------			 
 		};
@@ -1838,9 +1975,9 @@ namespace webui{
 			// -- Web Server ----------------------------
 			std::thread StartWebServer_job(	&webui::start_webserver,	// pointer
 											"127.0.0.1",				// IP
-											port_web,					// Port
+											port_web,					// port
 											this);						// obj
-			this->settings.t_ws = &StartWebServer_job;
+			this->settings.webserver_thread = &StartWebServer_job;
 			StartWebServer_job.detach();
 			// ------------------------------------------
 
@@ -1855,14 +1992,14 @@ namespace webui{
 			// Switch on an already runing window
 
 			// New websocket port
-			this->settings.wss_port = std::to_string(port_ws);
+			this->settings.websocket_port = std::to_string(port_ws);
 
 			// Start websocket
 			_start_websocket();
 			//std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(1000));
 
 			// url
-			std::string url = "http://127.0.0.1:" + this->settings.ws_port;
+			std::string url = "http://127.0.0.1:" + this->settings.webserver_port;
 
 			// Prepare packets
 			std::vector<std::uint8_t> packets_v;
@@ -1877,10 +2014,10 @@ namespace webui{
 			// Send packets
 			this->send(packets_v);
 
-			// Wait window to switch
+			// Wait for window to switch
 			for(unsigned short n = 0; n < 10; n++){
 
-				if(this->settings.ws_served)
+				if(this->settings.webserver_served)
 					break;
 				
 				std::this_thread::sleep_until(std::chrono::system_clock::now() + std::chrono::milliseconds(100));

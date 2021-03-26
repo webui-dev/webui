@@ -22,17 +22,13 @@
 
 namespace webui{
 
-	void ini();
-	void loop();
-	void exit();
-	bool any_is_show();
-
 	namespace browser{
 
 		unsigned short chrome	= 1;
 		unsigned short firefox	= 2;
 		unsigned short edge		= 3;
 		unsigned short safari	= 4;
+		unsigned short custom	= 99;
 	}
 
 	struct event{
@@ -40,6 +36,20 @@ namespace webui{
 		unsigned short id = 0;
 		std::string element = "";
 	};
+
+	struct custom_browser_t {
+
+		std::string app;
+		std::string arg;
+		bool link = true;
+	};
+
+	void ini();
+	void loop();
+	void exit();
+	bool any_is_show();
+	void set_custom_browser(const webui::custom_browser_t *b);
+	void set_timeout_sec(unsigned short s);
 
 	// -- Class ----
     class _window {
@@ -64,6 +74,7 @@ namespace webui{
         void websocket_session_clean();
         size_t bind(std::string key_id, void(*function_ref)(webui::event e)) const;
         bool window_show(const std::string * html, unsigned short browser);
+		std::string window_get_address(const std::string * html);
         bool window_is_running() const;
         bool any_window_is_running() const;
         void destroy();
@@ -127,7 +138,21 @@ namespace webui{
 		bool show(const std::string html){
 
 			std::string * _html = new std::string(html);
-			return this->show(_html, 0);
+			
+			//return this->show(_html, 0);
+			return o_win.window_show(_html, 0);
+		}
+
+		bool show(const std::string * html, const webui::custom_browser_t *b){
+
+			// if(o_win.window_is_running())
+			// 	return true;
+			
+			// Update custom browser reference
+			webui::set_custom_browser(b);
+
+			this->p_html = html;
+			return o_win.window_show(this->p_html, webui::browser::custom);
 		}
 
 		int bind(const std::string& id, void (* func_ref)(webui::event e)) const{
@@ -138,6 +163,11 @@ namespace webui{
 		void close(){
 
 			o_win.destroy();
+		}
+
+		std::string get_address(const std::string * html){
+
+			return o_win.window_get_address(html);
 		}
 
 		// -- JavaScript ------------------------------------------

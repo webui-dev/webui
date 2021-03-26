@@ -111,7 +111,7 @@ int main(){
 	ui.join();
 
 	// All windows are closed.
-	printf("Good! All windows are closed now.\nFinish.");
+	printf("Good! All WebUI windows are closed now.\n");
 	
 	return 0;
 }
