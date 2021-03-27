@@ -19,12 +19,27 @@ const std::string my_html = R"V0G0N(
 <html>
 	<head>
 		<title>Custom Browser - WebUI</title>
+		<style>
+			body{
+
+				background: #ad5389;  /* fallback for old browsers */
+				background: -webkit-linear-gradient(to right, #3c1053, #ad5389);  /* Chrome 10-25, Safari 5.1-6 */
+				background: linear-gradient(to right, #3c1053, #ad5389); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+				
+				color:#fff; 
+				font-family: Avant Garde,Avantgarde,Century Gothic,CenturyGothic,AppleGothic,sans-serif; 
+				font-size: 18px;
+				text-align: center;
+			}
+		</style>
 	</head>
-	<body style="background-color:#515C6B; color:#fff; font-family:"Lucida Console", Courier, monospace">
+	<body>
 
 		<h1>Welcome to WebUI!</h1>
-		<p>This window is using custom web browser settings.</p>
-		<button id="MyButtonID1">Close This Window</button>
+		<h2>Custom Browser Example</h2>
+		<br>
+		<p>This example show how to use custom settings to run your favorite web browser.</p>
+		<button id="MyButtonID1">Exit</button>
 
 	</body>
 </html>
@@ -34,7 +49,7 @@ webui::window my_window;
 
 void close(webui::event e){
 
-	std::cout << "You just clicked on a button!" << std::endl;
+	std::cout << "Bye!" << std::endl;
 	my_window.close();
 }
 

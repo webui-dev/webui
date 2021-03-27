@@ -18,10 +18,27 @@ const std::string my_html = R"V0G0N(
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>My first WebUI app</title>
+		<title>Custom Browser - WebUI</title>
+		<style>
+			body{
+
+				background: #E44D26;  /* fallback for old browsers */
+				background: -webkit-linear-gradient(to right, #F16529, #E44D26);  /* Chrome 10-25, Safari 5.1-6 */
+				background: linear-gradient(to right, #F16529, #E44D26); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+
+				color:#fff; 
+				font-family: Avant Garde,Avantgarde,Century Gothic,CenturyGothic,AppleGothic,sans-serif; 
+				font-size: 18px;
+				text-align: center;
+			}
+		</style>
 	</head>
-	<body style="background-color:#515C6B; color:#fff; font-family:"Lucida Console", Courier, monospace">
+	<body>
+
 		<h1>Welcome to WebUI!</h1>
+		<h2>Hello World Example</h2>
+		<br>
+		<p>You can access the dahboard in the same window or in a new one.</p>
 		<button id="MyButtonID1">Switch to dashboard</button> | <button id="MyButtonID2">Open dashboard in a new window</button>
 
 	</body>
@@ -32,12 +49,26 @@ const std::string dashboard = R"V0G0N(
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>My Second window!</title>
+		<title>Custom Browser - WebUI</title>
+		<style>
+			body{
+
+				background: #485563;  /* fallback for old browsers */
+				background: -webkit-linear-gradient(to right, #29323c, #485563);  /* Chrome 10-25, Safari 5.1-6 */
+				background: linear-gradient(to right, #29323c, #485563); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+				color:#fff; 
+				font-family: Avant Garde,Avantgarde,Century Gothic,CenturyGothic,AppleGothic,sans-serif; 
+				font-size: 18px;
+				text-align: center;
+			}
+		</style>
 	</head>
-	<body style="background-color:#515C6B; color:#fff; font-family:"Lucida Console", Courier, monospace">
+	<body>
+
 		<h1>Dashboard</h1>
+		<br>
 		<button id="MyDashButton1">Run JS from C++ app</button> | <button id="MyDashButton2">Close this window</button> | <button id="MyDashButton3">Close app</button>
-		
+
 	</body>
 </html>
 )V0G0N";

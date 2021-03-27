@@ -57,24 +57,26 @@ namespace webui{
         _window();
         ~_window();
         struct {
-            std::thread * t_ws = nullptr;
-            std::thread * t_wss = nullptr;
+            std::thread * webserver_thread = nullptr;
+            std::thread * websocket_thread = nullptr;
             std::string number_s;
             unsigned short number = 0;
-            bool ws_running = false;
-            bool wss_running = false;
-            bool ws_served = false;
-            std::string ws_port = "0";
-            std::string wss_port = "0";
+            bool webserver_running = false;
+            bool websocket_running = false;
+            bool webserver_served = false;
+            bool webserver_allow_multi = false;
+            std::string webserver_port = "0";
+            std::string websocket_port = "0";
             const std::string * html = nullptr;
         } settings;
         void receive(std::vector<std::uint8_t> &packets_v);
         void send(std::vector<std::uint8_t> &packets_v) const;
         static void event(const std::string& id, const std::string& element);
         void websocket_session_clean();
-        size_t bind(std::string key_id, void(*function_ref)(webui::event e)) const;
+        unsigned short bind(std::string key_id, void(*function_ref)(webui::event e)) const;
         bool window_show(const std::string * html, unsigned short browser);
-		std::string window_get_address(const std::string * html);
+		void allow_multi_access(bool status);
+        std::string new_server(const std::string * html);
         bool window_is_running() const;
         bool any_window_is_running() const;
         void destroy();
@@ -155,19 +157,27 @@ namespace webui{
 			return o_win.window_show(this->p_html, webui::browser::custom);
 		}
 
-		int bind(const std::string& id, void (* func_ref)(webui::event e)) const{
+		unsigned short bind(const std::string& id, void (* func_ref)(webui::event e)) const{
 
 			return o_win.bind(id, func_ref);
 		}
 
 		void close(){
 
-			o_win.destroy();
+			o_win.run(" window.close(); ", 2);
+
+			if(o_win.window_is_running())
+				o_win.destroy();
 		}
 
-		std::string get_address(const std::string * html){
+		void allow_multi_serving(bool b){
 
-			return o_win.window_get_address(html);
+			o_win.allow_multi_access(b);
+		}
+
+		std::string new_server(const std::string * html){
+
+			return o_win.new_server(html);
 		}
 
 		// -- JavaScript ------------------------------------------
