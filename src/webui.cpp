@@ -1052,34 +1052,40 @@ namespace webui{
 			if(browser == firefox){
 
 				// Firefox
-
-				#ifdef _WIN32
-
-					// Firefox 32/64 on Windows
+			  
+                        #ifdef _WIN32
+			  
+			  // Firefox 32/64 on Windows
 					// TODO: Add support for C:\Program Files\Firefox Nightly\firefox.exe
-					std::string fullpath32 = programs_folder32 + webui::sep + "Mozilla Firefox\\firefox.exe";
-					std::string fullpath64 = programs_folder64 + webui::sep + "Mozilla Firefox\\firefox.exe";
-
-					if(boost::filesystem::is_regular_file(fullpath64)){
-
-						browser_path = "\"" + fullpath64 + "\"";
-						return true;
-					}
-					else if(boost::filesystem::is_regular_file(fullpath32)){
-
-						browser_path = "\"" + fullpath32 + "\"";
-						return true;
+			  std::string fullpath32 = programs_folder32 + webui::sep + "Mozilla Firefox\\firefox.exe";
+			  std::string fullpath64 = programs_folder64 + webui::sep + "Mozilla Firefox\\firefox.exe";
+					
+			  if(boost::filesystem::is_regular_file(fullpath64)){
+					  
+			    browser_path = "\"" + fullpath64 + "\"";
+			    return true;
+			  }
+			  else if(boost::filesystem::is_regular_file(fullpath32)){
+					  
+					  browser_path = "\"" + fullpath32 + "\"";
+					  return true;
 					}
 					else
-						return false;
+					  return false;
 
 				#elif __APPLE__
-
+					
 					// Firefox on macOS
-					//std::string fullpath = "\"" + programs_folder + "/Mozilla Firefox/firefox.app/.../...\"";
-
-				#else
-
+					if (system("open -R -a \"firefox\"") == 0)
+					  {
+					    browser_path  = "/Applications/Firefox.app/Contents/MacOS/firefox";
+					    return true;
+					    
+					  }
+					else
+					  return false;
+                                #else
+					
 					// Firefox on Linux
 
 					if(system("firefox -v >>/dev/null 2>>/dev/null") == 0){
@@ -1119,9 +1125,15 @@ namespace webui{
 				#elif __APPLE__
 
 					// Chrome on macOS
-					//std::stringfullpath = "\"" + programs_folder + "/Google/Chrome/Application/chrome.app/.../...\"";
-
-				#else
+					if (system("open -R -a \"Google Chrome\"") == 0)
+					  {
+					    browser_path  = "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome";
+					    return true;
+					    
+					}
+					else
+					  return false;
+                                #else
 
 					// Chrome on Linux
 					if(system("google-chrome --version >>/dev/null 2>>/dev/null") == 0){
@@ -1191,7 +1203,8 @@ namespace webui{
 				#ifdef _WIN32
 					return WinUserProfile;
 				#elif __APPLE__
-					return "";
+					char* tmpdir = std::getenv("TMPDIR"); 
+					return tmpdir;
 				#else
 					return "/var/tmp";
 				#endif
@@ -1201,7 +1214,8 @@ namespace webui{
 				#ifdef _WIN32
 					return WinUserProfile;
 				#elif __APPLE__
-					return "";
+					char* tmpdir = std::getenv("TMPDIR"); 
+					return tmpdir;
 				#else
 					return "/var/tmp";
 				#endif
@@ -1211,8 +1225,9 @@ namespace webui{
 				#ifdef _WIN32
 					return WinUserProfile;
 				#elif __APPLE__
-					return "";
-				#else
+					char* tmpdir = std::getenv("TMPDIR"); 
+					return tmpdir;
+                                #else
 					return "/var/tmp";
 				#endif
 			}
@@ -1263,6 +1278,7 @@ namespace webui{
 
 				browser::command(browser::browser_path + " -CreateProfile \"WebUI " + temp + webui::sep + profile_name + "\"");
 
+				std::cout << browser::browser_path + " -CreateProfile \"WebUI " + temp + webui::sep + profile_name + "\"" << std::endl;
 				std::string buf;
 
 				for(unsigned short n = 0; n <= 10; n++){
