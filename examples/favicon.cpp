@@ -18,7 +18,7 @@ const std::string my_html = R"V0G0N(
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>Custom Browser - WebUI</title>
+		<title>Favicon - WebUI</title>
 		<style>
 			body{
 
