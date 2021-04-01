@@ -19,7 +19,7 @@ if (WIN32)
 
 	set(Boost_ARCHITECTURE "-x64")
 	# set(Boost_DEBUG					OFF)
-	# set(Boost_USE_STATIC_LIBS			ON)
+	set(Boost_USE_STATIC_LIBS			ON)
 	# set(Boost_USE_MULTITHREADED		ON)
 	# set(Boost_USE_STATIC_RUNTIME		ON)
 	# set(Boost_DETAILED_FAILURE_MSG	OFF)
@@ -104,6 +104,8 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# set_property(TARGET ${Info_Appzzzzzzzzzzzz} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+	set(CMAKE_CXX_STANDARD 20)
+	#add_compile_options("/std:c++latest")
 	
 endif()
 
@@ -123,9 +125,11 @@ foreach(filePath ${files})
 	add_executable(${example_app} ${file})
 
 	if(UNIX)
+		#Linux
 		target_link_libraries(${example_app} PRIVATE webui ${Boost_LIBRARIES} Threads::Threads)
 	else()
-		target_link_libraries(${example_app} PRIVATE webui ws2_32 wsock32 ${Boost_LIBRARIES})
+		#Windows
+		target_link_libraries(${example_app} PUBLIC webui ws2_32 wsock32 ${Boost_LIBRARIES})
 	endif (UNIX)
 
 endforeach()

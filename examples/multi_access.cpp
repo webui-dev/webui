@@ -78,7 +78,7 @@ int main(){
 
 	std::cout << "Please goto to this address: " << url << std::endl;
 	std::cout << std::endl << "Wait forever!.." << std::endl;
-	std::cout << "To stop just hit Ctrl + C" << std::endl;
+	std::cout << "To stop just press Ctrl + C" << std::endl;
 
 	// Loop
 	std::thread ui(webui::loop);

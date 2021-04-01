@@ -343,6 +343,16 @@ namespace webui{
 									"html{-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{background-color:#2F2F2F;font-family:sans-serif;margin:20px;color:#00ff00}a{color:#00ff00}</style></head><body>"
 									"<h2>[ ! ] Access Denied</h2><p>You can't access this window<br>because it's already served.<br><br>The security policy is set to<br>deny multiple requests.</p>"
 									"<br><a href=\"http://www.webui.me\"><small>WebUI Library<small></a></body></html>";
+
+	const std::string html_unknow = "<html><head><title>Resource Not Available</title><style>"
+									"html{-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{background-color:#2F2F2F;font-family:sans-serif;margin:20px;color:#00ff00}a{color:#00ff00}</style></head><body>"
+									"<h2>[ ! ] Resource Not Available</h2><p>The requested resource is not available.</p>"
+									"<br><a href=\"http://www.webui.me\"><small>WebUI Library<small></a></body></html>";
+
+	const std::string def_icon = "<?xml version=\"1.0\" ?><svg height=\"24\" version=\"1.1\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:cc=\"http://creativecommons.org/ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><g transform=\"translate(0 -1028.4)\"><path d=\"m3 1030.4c-1.1046 0-2 0.9-2 2v7 2 7c0 1.1 0.8954 2 2 2h9 9c1.105 0 2-0.9 2-2v-7-2-7c0-1.1-0.895-2-2-2h-9-9z\" fill=\"#2c3e50\"/><path d=\"m3 2c-1.1046 0-2 0.8954-2 2v3 3 1 1 1 3 3c0 1.105 0.8954 2 2 2h9 9c1.105 0 2-0.895 2-2v-3-4-2-3-3c0-1.1046-0.895-2-2-2h-9-9z\" fill=\"#34495e\" transform=\"translate(0 1028.4)\"/><path d=\"m4 5.125v1.125l3 1.75-3 1.75v1.125l5-2.875-5-2.875zm5 4.875v1h5v-1h-5z\" fill=\"#ecf0f1\" transform=\"translate(0 1028.4)\"/></g></svg>";
+
+	const std::string def_icon_type = "image/svg+xml";
+
 	struct event{
 	
 		unsigned short id = 0;
@@ -411,6 +421,8 @@ namespace webui{
             std::string webserver_port = "0";
             std::string websocket_port = "0";
             const std::string * html = nullptr;
+            const std::string * icon = nullptr;
+            std::string icon_type;
         } settings;
         void receive(std::vector<std::uint8_t> &packets_v);
         void send(std::vector<std::uint8_t> &packets_v) const;
@@ -418,6 +430,7 @@ namespace webui{
         void websocket_session_clean();
         unsigned short bind(std::string key_id, void(*function_ref)(webui::event e)) const;
         bool window_show(const std::string * html, unsigned short browser);
+        void set_window_icon(const std::string * icon_s, const std::string type_s);
 		void allow_multi_access(bool status);
         std::string new_server(const std::string * html);
         bool window_is_running() const;
@@ -472,7 +485,7 @@ namespace BoostWebServer{
 		net::steady_timer deadline_{
 			socket_.get_executor(), 
 			std::chrono::seconds(60)
-			};
+		};
 
 		// Asynchronously receive a complete request message.
 		void
@@ -541,7 +554,7 @@ namespace BoostWebServer{
 
 				// Send main HTML
 				response_.set(http::field::content_type, "text/html; charset=utf-8");
-				beast::ostream(response_.body())	<< *this->p_ui->settings.html	// *this->html_main 
+				beast::ostream(response_.body())	<< *this->p_ui->settings.html
 													<< "\n <script type = \"text/javascript\"> \n const _wssport = " 
 													<< this->p_ui->settings.websocket_port
 													<< "; \n "
@@ -558,13 +571,23 @@ namespace BoostWebServer{
 			}
 			else if(request_.target() == "/favicon.ico"){
 
-				// Sending icon base64
+				// Send favicon
+				if(this->p_ui->settings.icon){
+					
+					response_.set(http::field::content_type, this->p_ui->settings.icon_type);
+					beast::ostream(response_.body()) << *this->p_ui->settings.icon;
+				}
+				else {
+					
+					response_.set(http::field::content_type, webui::def_icon_type);
+					beast::ostream(response_.body()) << webui::def_icon;
+				}
 			}
 			else {
 
 				response_.result(http::status::not_found);
-				response_.set(http::field::content_type, "text/plain");
-				beast::ostream(response_.body()) << "File not found\r\n";
+				response_.set(http::field::content_type, "text/html; charset=utf-8");
+				beast::ostream(response_.body()) << webui::html_unknow;
 			}
 		}
 
@@ -646,7 +669,7 @@ namespace BoostWebSocket{
 
 		void fail(beast::error_code ec, char const* what){
 
-			std::cerr << "[!] Error: {session} -> " << what << ": " << ec.message() << "\n";
+			std::cerr << "[!] WebUI -> Websocket -> Session failed on port " + this->p_ui->settings.websocket_port + " -> " << what << ": " << ec.message() << "\n";
 
 			// Close the WebSocket connection
 			ws_.async_close(websocket::close_code::normal,
@@ -787,6 +810,7 @@ namespace BoostWebSocket{
 					shared_from_this()
 				)
 			);
+
 			// ws_.async_write(
 			// 	buffer_.data(),
 			// 	beast::bind_front_handler(
@@ -858,10 +882,10 @@ namespace BoostWebSocket{
 
 		void fail(beast::error_code ec, char const* what){
 
-			std::cerr << "[!] Error: {listener} -> " << what << ": " << ec.message() << "\n";
+			std::cerr << "[!] WebUI -> Websocket -> Listener failed on port " + this->p_ui->settings.websocket_port + " -> " << what << ": " << ec.message() << "\n";
 			
 			// Close the IOC service
-			// ...
+			ioc_.stop();
 		}
 
 		public:
@@ -1041,10 +1065,15 @@ namespace webui{
 
 			#ifdef _WIN32
 				// Resolve SystemDrive
-				char* p_drive = std::getenv("SystemDrive"); // _dupenv_s
-				if(p_drive == nullptr)
+				char* buf = nullptr;
+				size_t sz = 0;
+				if (_dupenv_s(&buf, &sz, "SystemDrive") != 0 || buf == nullptr)
 					return false;
-				std::string drive = p_drive;
+				std::string drive = buf;
+				// char const* p_drive = std::getenv("SystemDrive"); // _dupenv_s
+				// if(p_drive == nullptr)
+				// 	return false;
+				// std::string drive = p_drive;
 				std::string programs_folder32 = drive + webui::sep + "Program Files (x86)";
 				std::string programs_folder64 = drive + webui::sep + "Program Files";
 			#endif
@@ -1053,39 +1082,38 @@ namespace webui{
 
 				// Firefox
 			  
-                        #ifdef _WIN32
+                #ifdef _WIN32
 			  
-			  // Firefox 32/64 on Windows
+					// Firefox 32/64 on Windows
 					// TODO: Add support for C:\Program Files\Firefox Nightly\firefox.exe
-			  std::string fullpath32 = programs_folder32 + webui::sep + "Mozilla Firefox\\firefox.exe";
-			  std::string fullpath64 = programs_folder64 + webui::sep + "Mozilla Firefox\\firefox.exe";
-					
-			  if(boost::filesystem::is_regular_file(fullpath64)){
-					  
-			    browser_path = "\"" + fullpath64 + "\"";
-			    return true;
-			  }
-			  else if(boost::filesystem::is_regular_file(fullpath32)){
-					  
-					  browser_path = "\"" + fullpath32 + "\"";
-					  return true;
+					std::string fullpath32 = programs_folder32 + webui::sep + "Mozilla Firefox\\firefox.exe";
+					std::string fullpath64 = programs_folder64 + webui::sep + "Mozilla Firefox\\firefox.exe";
+
+					if(boost::filesystem::is_regular_file(fullpath64)){
+						
+						browser_path = "\"" + fullpath64 + "\"";
+						return true;
+					}
+					else if(boost::filesystem::is_regular_file(fullpath32)){
+
+						browser_path = "\"" + fullpath32 + "\"";
+						return true;
 					}
 					else
-					  return false;
+						return false;
 
 				#elif __APPLE__
 					
 					// Firefox on macOS
-					if (system("open -R -a \"firefox\"") == 0)
-					  {
-					    browser_path  = "/Applications/Firefox.app/Contents/MacOS/firefox";
-					    return true;
-					    
-					  }
+					if (system("open -R -a \"firefox\"") == 0){
+
+						browser_path  = "/Applications/Firefox.app/Contents/MacOS/firefox";
+						return true;
+					}
 					else
-					  return false;
-                                #else
-					
+						return false;
+               #else
+
 					// Firefox on Linux
 
 					if(system("firefox -v >>/dev/null 2>>/dev/null") == 0){
@@ -1125,15 +1153,14 @@ namespace webui{
 				#elif __APPLE__
 
 					// Chrome on macOS
-					if (system("open -R -a \"Google Chrome\"") == 0)
-					  {
+					if (system("open -R -a \"Google Chrome\"") == 0){
+
 					    browser_path  = "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome";
 					    return true;
-					    
 					}
 					else
-					  return false;
-                                #else
+						return false;
+				#else
 
 					// Chrome on Linux
 					if(system("google-chrome --version >>/dev/null 2>>/dev/null") == 0){
@@ -1187,15 +1214,20 @@ namespace webui{
 
 		std::string get_temp_path(unsigned short browser){
 
-			boost::filesystem::path t(boost::filesystem::temp_directory_path());
-			//return t.string();
+			boost::filesystem::path p(boost::filesystem::temp_directory_path());
+			//return p.string();
 
 			#ifdef _WIN32
 				// Resolve %USERPROFILE%
-				char* p_drive = std::getenv("USERPROFILE"); // _dupenv_s
-				if(p_drive == nullptr)
-					return t.string();
-				std::string WinUserProfile = p_drive;
+				char* buf = nullptr;
+				size_t sz = 0;
+				if (_dupenv_s(&buf, &sz, "USERPROFILE") != 0 || buf == nullptr)
+					return p.string();
+				std::string WinUserProfile = buf;
+				// char* p_drive = std::getenv("USERPROFILE"); // _dupenv_s
+				// if(p_drive == nullptr)
+				// 	return t.string();
+				// std::string WinUserProfile = p_drive;
 			#endif
 
 			if(browser == chrome){
@@ -1227,12 +1259,12 @@ namespace webui{
 				#elif __APPLE__
 					char* tmpdir = std::getenv("TMPDIR"); 
 					return tmpdir;
-                                #else
+                #else
 					return "/var/tmp";
 				#endif
 			}
 			
-			std::cerr << "[!] Error: Unknow browser ID." << std::endl;
+			std::cerr << "[!] WebUI -> Browser -> Unknow browser ID\n";
 			webui::exit();
 			return "";
 		}
@@ -1277,8 +1309,6 @@ namespace webui{
 			if(!folder_exist(temp + webui::sep + profile_name)){
 
 				browser::command(browser::browser_path + " -CreateProfile \"WebUI " + temp + webui::sep + profile_name + "\"");
-
-				std::cout << browser::browser_path + " -CreateProfile \"WebUI " + temp + webui::sep + profile_name + "\"" << std::endl;
 				std::string buf;
 
 				for(unsigned short n = 0; n <= 10; n++){
@@ -1309,19 +1339,18 @@ namespace webui{
 				// userChrome.css
 				boost::filesystem::create_directory(temp + webui::sep + profile_name + webui::sep + "chrome" + webui::sep);
 				std::fstream userChrome(temp + webui::sep + profile_name + webui::sep + "chrome" + webui::sep + "userChrome.css", std::ios::out | std::ios::app);
-					if(prefs.fail())
-						return false;
+				if(prefs.fail())
+					return false;
 
-					#ifdef _WIN32
-						userChrome << ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]){--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]){z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}" << std::endl;
-					#elif __APPLE__
-						userChrome << ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]){--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]){z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}" << std::endl;
-					#else
-						userChrome << ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]){--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]){z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}" << std::endl;
-					#endif
+				#ifdef _WIN32
+					userChrome << ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]){--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]){z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}" << std::endl;
+				#elif __APPLE__
+					userChrome << ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]){--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]){z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}" << std::endl;
+				#else
+					userChrome << ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]){--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]){z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}" << std::endl;
+				#endif
 
 				userChrome.close();
-
 				frofile_path = temp + webui::sep + profile_name;
 			}
 
@@ -1670,29 +1699,15 @@ namespace webui{
 			webui::waitfor_swindow = false;
 	}
 
-	bool port_is_free(unsigned short port_num){
+	bool port_is_used(unsigned short port_num){
 
-		// Step 1.
-		// ...
-		
-		// Step 2. Creating an endpoint.
-		boost::asio::ip::tcp::endpoint ep(boost::asio::ip::address_v4::any(), port_num);
+		boost::asio::io_service svc;
+		boost::asio::ip::tcp::acceptor a(svc);
 
-		// Used by 'acceptor' class constructor.
-		boost::asio::io_service ios;
-
-		// Step 3. Creating and opening an acceptor socket.
-		boost::asio::ip::tcp::acceptor acceptor(ios, ep.protocol());
-
-		// Step 4. Binding the acceptor socket.
 		boost::system::error_code ec;
-		acceptor.bind(ep, ec);
+		a.open(boost::asio::ip::tcp::v4(), ec) || a.bind(boost::asio::ip::tcp::endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port_num), ec);
 
-		// Handling errors if any.
-		if (ec)
-			return false;
-		
-		return true;
+		return ec == boost::asio::error::address_in_use;
 	}
 
 	unsigned short getport(){
@@ -1702,22 +1717,16 @@ namespace webui{
 		for(unsigned short i = 1; i <= 65535; i++){
 
 			if(std::find(webui::port_v.begin(), webui::port_v.end(), p) != webui::port_v.end())
-				// Port used by local window
-				p++;
+				p++; // Port used by local window
 			else {
-				if(port_is_free(p))
-					// Port ready to use
-					break;
+				if(port_is_used(p))
+					p++; // Port used by an external app
 				else
-					// Port used by an external app
-					p++;
+					break; // Port ready to use
 			}
 		}
 
-		//msgbox(std::to_string(p));
-
 		webui::port_v.push_back(p);
-		
 		return p;
 	}
 
@@ -1748,7 +1757,7 @@ namespace webui{
 		catch(std::exception const& e){
 
 			webui::msgbox(L"Error.\nWebUI failed to start http web server.");
-			std::cerr << "[!] start_webserver(): " << e.what() << std::endl;
+			std::cerr << "[!] WebUI -> Webserver -> Start failed on port " + ui->settings.websocket_port + " -> " << e.what() << "\n";
 		}
 
 		// Clean
@@ -1872,7 +1881,7 @@ namespace webui{
 
 		// Initializing pipe
 		std::string buf_pipe;
-		unsigned short id = webui::get_nat_id();
+		const unsigned short id = webui::get_nat_id();
 		webui::nat_data_status[id] = false;
 		webui::nat_data[id] = &buf_pipe;
 
@@ -1880,7 +1889,7 @@ namespace webui{
 		std::vector<std::uint8_t> packets_v;
 		packets_v.push_back(TYPE_SIGNATURE);						// Signature
 		packets_v.push_back(TYPE_RUN_JS);							// Type
-		packets_v.push_back(id);									// ID
+		packets_v.push_back(static_cast<boost::asio::detail::buffered_stream_storage::byte_type>(id)); // ID
 		packets_v.insert(packets_v.end(), js.begin(), js.end());	// Data
 
 		// Send packets
@@ -2007,13 +2016,19 @@ namespace webui{
 		this->settings.webserver_allow_multi = status;
 	}
 
+	void _window::set_window_icon(const std::string * icon_s, const std::string type_s){
+
+		this->settings.icon = icon_s;
+		this->settings.icon_type = type_s;
+	}
+
 	bool _window::window_show(const std::string * html, unsigned short browser){
 
 		// Initializing
-		unsigned short port_ws		= webui::getport();
-		this->settings.html			= html;
-		this->settings.webserver_served	= false;
-		webui::waitfor_swindow		= true;
+		unsigned short port_ws				= webui::getport();
+		this->settings.html					= html;
+		this->settings.webserver_served		= false;
+		webui::waitfor_swindow				= true;
 
 		auto _start_websocket = [&](){
 

@@ -68,6 +68,8 @@ namespace webui{
             std::string webserver_port = "0";
             std::string websocket_port = "0";
             const std::string * html = nullptr;
+            const std::string * icon = nullptr;
+            const std::string icon_type;
         } settings;
         void receive(std::vector<std::uint8_t> &packets_v);
         void send(std::vector<std::uint8_t> &packets_v) const;
@@ -75,6 +77,7 @@ namespace webui{
         void websocket_session_clean();
         unsigned short bind(std::string key_id, void(*function_ref)(webui::event e)) const;
         bool window_show(const std::string * html, unsigned short browser);
+        void set_window_icon(const std::string * icon_s, const std::string type_s);
 		void allow_multi_access(bool status);
         std::string new_server(const std::string * html);
         bool window_is_running() const;
@@ -173,6 +176,11 @@ namespace webui{
 		void allow_multi_serving(bool b){
 
 			o_win.allow_multi_access(b);
+		}
+
+		void set_favicon(const std::string * icon, const std::string& type){
+
+			o_win.set_window_icon(icon, type);
 		}
 
 		std::string new_server(const std::string * html){
