@@ -65,11 +65,13 @@ namespace webui{
             bool websocket_running = false;
             bool webserver_served = false;
             bool webserver_allow_multi = false;
+            bool webserver_local_files = true;
+            std::string webserver_local_root;
             std::string webserver_port = "0";
             std::string websocket_port = "0";
             const std::string * html = nullptr;
             const std::string * icon = nullptr;
-            const std::string icon_type;
+            std::string icon_type;
         } settings;
         void receive(std::vector<std::uint8_t> &packets_v);
         void send(std::vector<std::uint8_t> &packets_v) const;
@@ -79,6 +81,7 @@ namespace webui{
         bool window_show(const std::string * html, unsigned short browser);
         void set_window_icon(const std::string * icon_s, const std::string type_s);
 		void allow_multi_access(bool status);
+		void set_root_folder(std::string local_path);
         std::string new_server(const std::string * html);
         bool window_is_running() const;
         bool any_window_is_running() const;
@@ -165,6 +168,16 @@ namespace webui{
 			return o_win.bind(id, func_ref);
 		}
 
+		void serve_folder(std::string p){
+
+			o_win.set_root_folder(p);
+		}
+
+		void serve_folder(){
+
+			o_win.set_root_folder("");
+		}
+
 		void close(){
 
 			o_win.run(" window.close(); ", 2);
@@ -186,6 +199,11 @@ namespace webui{
 		std::string new_server(const std::string * html){
 
 			return o_win.new_server(html);
+		}
+
+		std::string new_server(){
+
+			return o_win.new_server(nullptr);
 		}
 
 		// -- JavaScript ------------------------------------------

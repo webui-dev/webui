@@ -133,3 +133,7 @@ foreach(filePath ${files})
 	endif (UNIX)
 
 endforeach()
+
+# Copy files for serve_folder example
+configure_file(${webui_SOURCE_DIR}/examples/index.html ${CMAKE_CURRENT_BINARY_DIR}/index.html COPYONLY)
+configure_file(${webui_SOURCE_DIR}/examples/style.css ${CMAKE_CURRENT_BINARY_DIR}/style.css COPYONLY)

@@ -76,6 +76,7 @@ int main(){
 	// and get URL
 	std::string url = my_window.new_server(&my_html);
 
+	std::cout << "Starting WebUI server.." << std::endl;
 	std::cout << "Please goto to this address: " << url << std::endl;
 	std::cout << std::endl << "Wait forever!.." << std::endl;
 	std::cout << "To stop just press Ctrl + C" << std::endl;
