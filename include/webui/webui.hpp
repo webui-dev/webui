@@ -65,7 +65,7 @@ namespace webui{
             bool websocket_running = false;
             bool webserver_served = false;
             bool webserver_allow_multi = false;
-            bool webserver_local_files = true;
+            bool webserver_local_files = false;
             std::string webserver_local_root;
             std::string webserver_port = "0";
             std::string websocket_port = "0";
@@ -180,10 +180,10 @@ namespace webui{
 
 		void close(){
 
-			o_win.run(" window.close(); ", 2);
+			o_win.run(" webui_close_window(); ", 1);
 
-			if(o_win.window_is_running())
-				o_win.destroy();
+			// if(o_win.window_is_running())
+			// 	o_win.destroy();
 		}
 
 		void allow_multi_serving(bool b){

@@ -78,12 +78,13 @@ namespace webui {
 		// external const _webui_minimum_data;
 
 		// Log & keep window open
-		const _webui_log = true;
+		const _webui_log = false;
 
 		var _webui_ws;
 		var _webui_ws_status = false;
 		var _webui_action8 = new Uint8Array(1);
 		var _webui_action_val;
+		var _webui_allow_close = false;
 
 		function _webui_close(vbyte, v){
 
@@ -91,6 +92,22 @@ namespace webui {
 			_webui_action8[0] = vbyte;
 			_webui_action_val = v;
 			_webui_ws.close();
+		}
+
+		function _webui_freez_ui(){
+
+			document.body.style.filter = "contrast(1%)";
+		}
+
+		function webui_close_window(){
+
+			_webui_freez_ui();
+			_webui_allow_close = true;
+
+			if(_webui_ws_status)
+				_webui_close(0xFF, '');
+			else
+				window.close();
 		}
 
 		function _webui_start(){
@@ -140,6 +157,8 @@ namespace webui {
 
 						if(!_webui_log)
 							window.close();
+						else
+							_webui_freez_ui();
 					}
 				};
 
@@ -160,13 +179,13 @@ namespace webui {
 						if(buffer8[0] !== 0xFF){
 
 							if(_webui_log)
-								console.log('WebUI -> Invalid flag -> ' + buffer8[0] + buffer8[1] + buffer8[2]);
+								console.log('WebUI -> Invalid flag -> 0x' + buffer8[0] + ' 0x' + buffer8[1] + ' 0x' + buffer8[2]);
 
 							return;
 						}
 
 						if(_webui_log)
-							console.log('WebUI -> Flag -> ' + buffer8[0] + buffer8[1] + buffer8[2]);
+							console.log('WebUI -> Flag -> 0x' + buffer8[0] + ' 0x' + buffer8[1] + ' 0x' + buffer8[2]);
 
 						var len = buffer8.length - 3;
 
@@ -178,10 +197,12 @@ namespace webui {
 
 						if(buffer8[1] === 0xFC){
 
+							// 0xFC (252): Switch the URL
 							_webui_close(0xFC, data8utf8);
 						}
 						else if(buffer8[1] === 0xFB){
 
+							// 0xFB (251): Close connection
 							_webui_close(0xFB, '');
 						}
 						else if(buffer8[1] === 0xFE){
@@ -212,7 +233,7 @@ namespace webui {
 							if(Return8[0] !== 0xFF){
 
 								if(_webui_log)
-									console.log('WebUI -> JS -> Invalid respons -> ' + buffer8[0] + buffer8[1] + buffer8[2]);
+									console.log('WebUI -> JS -> Invalid respons -> 0x' + buffer8[0] + ' 0x' + buffer8[1] + ' 0x' + buffer8[2]);
 								return;
 							}
 
@@ -236,17 +257,13 @@ namespace webui {
 				alert('Sorry. WebSocket not supported by your Browser.');
 
 				if(!_webui_log)
-					window.close();
+					webui_close_window();
 			}
 		}
 
-		// - - - - - - - - - - -
-		// Event
-		// - - - - - - - - - - -
-
 		function SendEvent(name){
 
-			if(name != ''){
+			if(_webui_ws_status && name != ''){
 
 				var Name8 = new TextEncoder("utf-8").encode(name);
 				var Event8 = new Uint8Array(3 + Name8.length);
@@ -306,12 +323,7 @@ namespace webui {
 				
 				elems[i].addEventListener("click", function(){ SendEvent(this.id) });
 			}
-		});
-
-		window.onbeforeunload = function (){
-
-			_webui_close(0xFF, '');
-		};		
+		});	
 
 		_webui_start();
 
@@ -324,7 +336,7 @@ namespace webui {
 				alert('WebUI failed to find the background application.');
 
 				if(!_webui_log)
-					window.close();
+					webui_close_window();
 			}
 		}, 1000);
 
@@ -337,11 +349,25 @@ namespace webui {
 				return false;
 			}		
 		});
+
 		// Unload
 		window.addEventListener('beforeunload', function (e) {
-		  e.preventDefault();
-		  e.returnValue = '';
+
+			// console.log('WebUI -> CLOSE -> START');
+			// if(_webui_ws_status && !_webui_allow_close){
+			// 	console.log('WebUI -> CLOSE -> TRY TO PROVENT');
+			// 	e.preventDefault();
+			// 	e.returnValue = '';
+			// 	console.log('WebUI -> CLOSE -> RETURNED VOID');
+			// }
+			// console.log('WebUI -> CLOSE -> FUNC END');
+			_webui_close(0xFF, '');
 		});
+
+		// window.onbeforeunload = function (){
+		// 	_webui_close(0xFF, '');
+		// };
+
 		// Right click
 		document.addEventListener('contextmenu', function (e) {
 		  //e.preventDefault();
@@ -442,7 +468,7 @@ namespace webui{
             bool websocket_running = false;
             bool webserver_served = false;
             bool webserver_allow_multi = false;
-            bool webserver_local_files = true;
+            bool webserver_local_files = false;
             std::string webserver_local_root;
             std::string webserver_port = "0";
             std::string websocket_port = "0";
@@ -475,7 +501,7 @@ namespace BoostWebServer{
 
 	// Return a reasonable mime type based on the extension of a file.
     beast::string_view
-    mime_type(beast::string_view path){
+    mime_type(beast::string_view path, bool *is_html){
 
         auto const ext = [&path]{
 
@@ -486,9 +512,9 @@ namespace BoostWebServer{
             return path.substr(pos);
         }();
 
-        if(boost::beast::iequals(ext, ".htm"))  return "text/html";
-        if(boost::beast::iequals(ext, ".html")) return "text/html";
-        if(boost::beast::iequals(ext, ".php"))  return "text/html";
+        if(boost::beast::iequals(ext, ".htm")){ *is_html = true;  return "text/html";}
+        if(boost::beast::iequals(ext, ".html")){ *is_html = true; return "text/html";}
+        if(boost::beast::iequals(ext, ".php")){ *is_html = true;  return "text/html";}
         if(boost::beast::iequals(ext, ".css"))  return "text/css";
         if(boost::beast::iequals(ext, ".txt"))  return "text/plain";
         if(boost::beast::iequals(ext, ".js"))   return "application/javascript";
@@ -633,6 +659,11 @@ namespace BoostWebServer{
 		void
 		create_response()
 		{
+			// Disable browser cache
+			response_.set(http::field::cache_control, "no-cache, no-store, must-revalidate");
+			response_.set(http::field::pragma, "no-cache");
+			response_.set(http::field::expires, "0");
+
 			auto resource_not_available = [&](){
 
 				// Resource Not Available
@@ -698,19 +729,26 @@ namespace BoostWebServer{
   				std::string file_data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 				// Respond
-				response_.set(http::field::content_type, mime_type(path));
-				beast::ostream(response_.body())	<< file_data
-													<< "\n <script type = \"text/javascript\"> \n const _webui_websocket_port = " 
-													<< this->p_ui->settings.websocket_port
-													<< "; \n "
-													<< " const _webui_webserver_port = " 
-													<< this->p_ui->settings.webserver_port
-													<< "; \n "
-													<< " const _webui_minimum_data = " 
-													<< MINIMUM_PACKETS_SIZE
-													<< "; \n "
-													<< webui::javascriptbridge
-													<< " \n </script>";
+				bool is_html = false;
+				response_.set(http::field::content_type, mime_type(path, &is_html));
+
+				if(is_html){
+
+					beast::ostream(response_.body())	<< file_data
+														<< "\n <script type = \"text/javascript\"> \n const _webui_websocket_port = " 
+														<< this->p_ui->settings.websocket_port
+														<< "; \n "
+														<< " const _webui_webserver_port = " 
+														<< this->p_ui->settings.webserver_port
+														<< "; \n "
+														<< " const _webui_minimum_data = " 
+														<< MINIMUM_PACKETS_SIZE
+														<< "; \n "
+														<< webui::javascriptbridge
+														<< " \n </script>";
+				}
+				else
+					beast::ostream(response_.body()) << file_data;
 			}
 			else if(request_.target() == "/"){
 
@@ -740,7 +778,9 @@ namespace BoostWebServer{
 
 				this->p_ui->settings.webserver_served = true;
 			}
-			else if(request_.target() == "/favicon.ico"){
+			else if(request_.target() == "/favicon.ico" ||
+					request_.target() == "/favicon.svg" ||
+					request_.target() == "/favicon.png"){
 
 				// Send favicon
 				if(this->p_ui->settings.icon){
@@ -839,15 +879,6 @@ namespace BoostWebSocket{
 		void fail(beast::error_code ec, char const* what){
 
 			std::cerr << "[!] WebUI -> Websocket -> Session failed on port " + this->p_ui->settings.websocket_port + " -> " << what << ": " << ec.message() << "\n";
-
-			// Close the WebSocket connection
-			// ws_.async_close(websocket::close_code::normal,
-			// 	beast::bind_front_handler(
-			// 		&session::on_close,
-			// 		shared_from_this()
-			// 	)
-			// );
-			ws_.close(websocket::close_code::normal);
 		}
 
 		public:
@@ -938,7 +969,7 @@ namespace BoostWebSocket{
 
 			if(ec)
 				fail(ec, "read");
-			
+
 			if (ws_.got_binary()){
 				
 				//std::vector<std::uint8_t> packets_v;
@@ -1016,12 +1047,14 @@ namespace BoostWebSocket{
 
 			ws_.write(boost::asio::buffer(data, data.size()));
 			
-			// Clear buffer?
+			// Did we need to clear the buffer?
 			//buffer_.consume(buffer_.size());
 		}
 
 		void on_close(beast::error_code ec){
 
+			if(ec)
+				return fail(ec, "close");
 		}
 	};
 
@@ -1482,7 +1515,11 @@ namespace webui{
 
 			if(!folder_exist(temp + webui::sep + profile_name)){
 
-				browser::command(browser::browser_path + " -CreateProfile \"WebUI " + temp + webui::sep + profile_name + "\"");
+				#ifdef _WIN32
+					browser::command("cmd /c \"" + browser::browser_path + " -CreateProfile \"WebUI " + temp + webui::sep + profile_name + "\" > nul 2>&1");
+				#else
+					browser::command("sh -c \"" + browser::browser_path + " -CreateProfile \"WebUI " + temp + webui::sep + profile_name + "\" >>/dev/null 2>>/dev/null\"");
+				#endif
 				std::string buf;
 
 				for(unsigned short n = 0; n <= 10; n++){
@@ -1544,13 +1581,13 @@ namespace webui{
 			if(!create_profile_folder(edge))
 				return false;
 
-			std::string arg = " --user-data-dir="  + webui::sep + frofile_path + webui::sep + " --no-proxy-server --app=http://127.0.0.1:";	
+			std::string arg = " --user-data-dir=\"" + frofile_path + "\" --no-proxy-server --app=http://127.0.0.1:";	
 			std::string s_port = std::to_string(port);
 			std::string full(browser::browser_path);
 			full.append(arg);
 			full.append(s_port);
 
-			if(browser::command_browser(full) == 0){
+			if(browser::command_browser("cmd /c \"" + full + "\" > nul 2>&1") == 0){
 
 				browser::CurrentBrowser = edge;
 				return true;
@@ -1579,7 +1616,7 @@ namespace webui{
 			full.append(s_port);
 
 			#ifdef _WIN32
-				if(browser::command_browser("cmd /c \"" + full + "\"") == 0)
+				if(browser::command_browser("cmd /c \"" + full + "\" > nul 2>&1") == 0)
 			#else
 				if(browser::command_browser("sh -c \"" + full + " >>/dev/null 2>>/dev/null\"") == 0)
 			#endif
@@ -1619,7 +1656,7 @@ namespace webui{
 			full.append(arg);
 
 			#ifdef _WIN32
-				if(browser::command_browser("cmd /c \"" + full + "\"") == 0)
+				if(browser::command_browser("cmd /c \"" + full + "\" > nul 2>&1") == 0)
 			#else
 				if(browser::command_browser("sh -c \"" + full + " >>/dev/null 2>>/dev/null\"") == 0)
 			#endif
@@ -1645,14 +1682,14 @@ namespace webui{
 			if(!create_profile_folder(chrome))
 				return false;
 			
-			std::string arg = " --user-data-dir=" + webui::sep + frofile_path + webui::sep + " --disable-gpu --disable-software-rasterizer --no-proxy-server --app=http://127.0.0.1:";	
+			std::string arg = " --user-data-dir=\"" + frofile_path + "\" --disable-gpu --disable-software-rasterizer --no-proxy-server --app=http://127.0.0.1:";	
 			std::string s_port = std::to_string(port);
 			std::string full(browser::browser_path);
 			full.append(arg);
 			full.append(s_port);
 
 			#ifdef _WIN32
-				if(browser::command_browser("cmd /c \"" + full + "\"") == 0)
+				if(browser::command_browser("cmd /c \"" + full + "\" > nul 2>&1") == 0)
 			#else
 				if(browser::command_browser("sh -c \"" + full + " >>/dev/null 2>>/dev/null\"") == 0)
 			#endif
