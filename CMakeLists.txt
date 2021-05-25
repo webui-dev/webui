@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13.0)
 
 # --[ WebUI version ] --------------------------------------------------------------
 
-project(webui VERSION 1.0.11 DESCRIPTION 
+project(webui VERSION 1.0.12 DESCRIPTION 
 "Use your web browser as GUI, and bring web technologies to your desktop app.")
 message("-- [ WebUI version ${CMAKE_PROJECT_VERSION} ]")
 
@@ -15,8 +15,8 @@ if (WIN32)
 
         # Boost GCC/MinGW
         # Example: C:/boost_1_60_0
-        set(Boost_Root "C:/boost_1_75_0_mingw")
-        set(Boost_Lib "C:/boost_1_75_0_mingw/stage/lib")
+        set(Boost_Root "C:/Alif3/boost/include")
+        set(Boost_Lib "C:/Alif3/boost/lib")
 
     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 

@@ -720,9 +720,6 @@ namespace BoostWebServer{
 				// Handle an unknown error
         		if(ec)
 					resource_not_available();
-				
-				// Cache the size since we need it after the move
-        		//auto const size = body.size();
 
 				// Get file data
 				std::ifstream file(path);
@@ -749,6 +746,8 @@ namespace BoostWebServer{
 				}
 				else
 					beast::ostream(response_.body()) << file_data;
+				
+				// this->p_ui->settings.webserver_served = true;
 			}
 			else if(request_.target() == "/"){
 
