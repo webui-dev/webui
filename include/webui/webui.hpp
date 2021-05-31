@@ -33,8 +33,9 @@ namespace webui{
 
 	struct event{
 	
-		unsigned short id = 0;
-		std::string element = "";
+		unsigned short window_id = 0;
+		unsigned short element_id = 0;
+		std::string element_name = "";
 	};
 
 	struct custom_browser_t {
@@ -72,17 +73,21 @@ namespace webui{
             const std::string * html = nullptr;
             const std::string * icon = nullptr;
             std::string icon_type;
+			std::array<void(*)(webui::event e), 1> key_action_all;
+			bool is_bind_all = false;
         } settings;
         void receive(std::vector<std::uint8_t> &packets_v);
         void send(std::vector<std::uint8_t> &packets_v) const;
-        static void event(const std::string& id, const std::string& element);
+        void event(const std::string& id, const std::string& element);
         void websocket_session_clean();
         unsigned short bind(std::string key_id, void(*function_ref)(webui::event e)) const;
+        void bind_all(void(*function_ref)(webui::event e));
         bool window_show(const std::string * html, unsigned short browser);
         void set_window_icon(const std::string * icon_s, const std::string type_s);
 		void allow_multi_access(bool status);
 		void set_root_folder(std::string local_path);
         std::string new_server(const std::string * html);
+		unsigned short get_window_number() const;
         bool window_is_running() const;
         bool any_window_is_running() const;
         void destroy();
@@ -166,6 +171,16 @@ namespace webui{
 		unsigned short bind(const std::string& id, void (* func_ref)(webui::event e)) const{
 
 			return o_win.bind(id, func_ref);
+		}
+
+		unsigned short get_window_id() const{
+
+			return o_win.get_window_number();
+		}
+
+		void bind_all(void (* func_ref)(webui::event e)){
+
+			o_win.bind_all(func_ref);
 		}
 
 		void serve_folder(std::string p){

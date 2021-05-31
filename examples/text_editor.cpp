@@ -39,7 +39,8 @@ const std::string my_html = R"V0G0N(
 		<h2>Text Editor (Beta)</h2>
 		<br>
 		<p>In future, this example will show how to use WebUI for an text editor app.</p>
-		<button id="MyButtonID1">execute welcome() function</button>
+		<button id="MyButtonID1">Click on me!</button>
+		<button id="MyButtonID2">Click on me!</button>
 
 	</body>
 </html>
@@ -50,9 +51,12 @@ const std::string my_favicon = "<?xml version=\"1.0\" ?><svg data-name=\"Layer 1
 
 webui::window my_window;
 
-void welcome(webui::event e){
+void my_all_events(webui::event e){
 
-	std::cout << "Welcome!" << std::endl;
+	std::cout << "Something just happen!" << std::endl;
+	std::cout << "Window ID: " << e.window_id << std::endl;
+	std::cout << "Element ID: " << e.element_id << std::endl;
+	std::cout << "Element Name: " << e.element_name << std::endl << std::endl;
 }
 
 int main(){
@@ -65,8 +69,8 @@ int main(){
 		"image/svg+xml" // image/avif, image/webp, image/apng, image/svg+xml and more..!
 	);
 
-	// Link the HTML button
-	my_window.bind("MyButtonID1", welcome);
+	// Bind all HTML elements
+	my_window.bind_all(my_all_events);
 
 	// Show the window
 	my_window.show(&my_html);
