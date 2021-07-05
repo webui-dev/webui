@@ -2,7 +2,7 @@
 # Info
 set(Info_Title	"WebUI")
 set(Info_Source	"webui.cpp")
-set(Info_App	"webui")
+set(Info_App ${webui_lib})
 
 # --[ WebUI ] -------------------------------------------------------------------
 
@@ -13,26 +13,30 @@ link_directories(${webui_BIN_DIR}/webui)
 
 message("[*] Initializing Boost for ${Info_Title}...")
 
+set(Boost_NO_WARN_NEW_VERSIONS ON)
+
 if (WIN32)
 	set(BOOST_ROOT ${Boost_Root})
 	set(Boost_LIBRARY_DIR ${Boost_Lib})
 	message("[*] Using Boost root: ${BOOST_ROOT}")
 	message("[*] Using Boost lib: ${Boost_LIBRARY_DIR}")
 
-	set(Boost_ARCHITECTURE "-x64")
-	# set(Boost_DEBUG					OFF)
+	set(Boost_ARCHITECTURE 				"-x64")
 	set(Boost_USE_STATIC_LIBS			ON)
-	# set(Boost_USE_MULTITHREADED		ON)
-	# set(Boost_USE_STATIC_RUNTIME		ON)
+	set(Boost_USE_MULTITHREADED			ON)
+	set(Boost_USE_STATIC_RUNTIME		ON)
+	# set(Boost_COMPILER				"-mgw8")
+
 	# set(Boost_DETAILED_FAILURE_MSG	OFF)
+	# set(Boost_DEBUG					OFF)	
 	# set(Boost_THREADAPI             	"win32")
 	# set(Boost_COMPILER				"-vc142")
-	add_definitions( -DBOOST_ALL_NO_LIB )
+	# add_definitions( -DBOOST_ALL_NO_LIB )
 else()
     # set(Boost_DEBUG 					OFF)
-    set(Boost_USE_STATIC_LIBS       	ON)
-    # set(Boost_USE_MULTITHREADED		ON)
-    # set(Boost_USE_STATIC_RUNTIME		ON)
+    set(Boost_USE_STATIC_LIBS       	OFF)
+    set(Boost_USE_MULTITHREADED			ON)
+    set(Boost_USE_STATIC_RUNTIME		OFF)
     # set(Boost_ARCHITECTURE			"-x64")
     # set(Boost_THREADAPI				"pthread")
     # set(Boost_DETAILED_FAILURE_MSG	ON)

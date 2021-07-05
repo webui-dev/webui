@@ -31,8 +31,8 @@ int main(){
 	// automaticaly server the current folder.
 	my_window.serve_folder("");
 
-	// Set WebUI to wait forever!
-	// 0: infinit loop
+	// Set WebUI to wait for first request
+	// 0: infinit wait
 	// n: wait for n seconds
 	webui::set_timeout_sec(0);
 
@@ -51,13 +51,17 @@ int main(){
 
 	std::cout << "Starting WebUI server.." << std::endl;
 	std::cout << "Please goto to this address: " << url << std::endl;
-	std::cout << std::endl << "Wait forever!.." << std::endl;
+	std::cout << std::endl << "Infinite wait.." << std::endl;
 	std::cout << "To stop just press Ctrl + C" << std::endl;
+
+	// Open a window!
+	std::string full_link = webui::get_current_path() + "index.html?webui=" + url + "/webuicore.js";
+	my_window.open_window(full_link, webui::browser::chrome);
 
 	// Loop
 	std::thread ui(webui::loop);
 	ui.join();
-	
+
 	return 0;
 }
 

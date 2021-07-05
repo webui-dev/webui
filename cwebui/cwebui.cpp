@@ -1,5 +1,5 @@
 /*
-	PyWebUI Library
+	cWebUI Library
 	- - - - - - -
 	http://webui.me
 	https://github.com/alifcommunity/webui
@@ -36,7 +36,7 @@ bool py_initialized = false;
 static std::vector<PyObject *> callback_obj_v;
 static std::vector<void (*)()> callback_void_v;
 
-DLLEXPORT void py_handler(webui::event e) {
+DLLEXPORT void c_handler(webui::event e) {
 
     if (!PyCallable_Check(callback_obj_v[e.id])){
 
@@ -62,18 +62,18 @@ DLLEXPORT void py_handler(webui::event e) {
     }
 }
 
-DLLEXPORT void * py_create_window(void) {
+DLLEXPORT void * c_create_window(void) {
 
     return new(std::nothrow) webui::window;
 }
 
-DLLEXPORT void py_destroy_window(void *ptr) {
+DLLEXPORT void c_destroy_window(void *ptr) {
 
     if(ptr)
         delete ptr;
 }
 
-DLLEXPORT int py_show_window(void *ptr, char * html) {
+DLLEXPORT int c_show_window(void *ptr, char * html) {
 
     try {
 
@@ -87,7 +87,7 @@ DLLEXPORT int py_show_window(void *ptr, char * html) {
     }
 }
 
-DLLEXPORT void py_bind_element(void *ptr, char const *id, PyObject *callback_obj, void (*callback_void)()) {
+DLLEXPORT void c_bind_element(void *ptr, char const *id, PyObject *callback_obj, void (*callback_void)()) {
 
     // callback_obj:    python function as PyObject
     // callback_void:   python function as void pointer
@@ -102,7 +102,7 @@ DLLEXPORT void py_bind_element(void *ptr, char const *id, PyObject *callback_obj
         return;
     }
 
-    int elem_id = ref->bind(_id, py_handler);
+    int elem_id = ref->bind(_id, c_handler);
 
     Py_XINCREF(callback_obj);           // Add a reference to new callback
     Py_XDECREF(callback_obj_temp);      // Dispose of previous callback
@@ -112,18 +112,18 @@ DLLEXPORT void py_bind_element(void *ptr, char const *id, PyObject *callback_obj
     callback_void_v.push_back(callback_void);
 }
 
-DLLEXPORT void py_loop (void) {
+DLLEXPORT void c_loop (void) {
 
     std::thread ui(webui::loop);
     ui.join();
 }
 
-DLLEXPORT bool py_any_is_show (void) {
+DLLEXPORT bool c_any_is_show (void) {
 
     return webui::any_is_show();
 }
 
-DLLEXPORT void py_ini (void) {
+DLLEXPORT void c_ini (void) {
 
     if(!py_initialized){
 

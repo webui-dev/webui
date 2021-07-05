@@ -77,4 +77,22 @@
   </div>
 </div>
   </body>
+  
+	<!-- WebUI Core -->
+	<script type="text/javascript">
+		document.addEventListener('DOMContentLoaded', function(event) {
+			if (typeof _webui_ws === 'undefined'){
+				let webui_searchParams = new URLSearchParams(window.location.search);
+				if(webui_searchParams.has('webui')){
+					let webui_url = webui_searchParams.get('webui');
+					var webui_elem = document.createElement("script");
+					webui_elem.type = "text/javascript";
+					webui_elem.src = webui_url;
+					document.getElementsByTagName('head')[0].appendChild(webui_elem);
+				}
+				else alert('Failed to get the WebUI Core link.');
+			}
+		})
+	</script>
+
 </html>

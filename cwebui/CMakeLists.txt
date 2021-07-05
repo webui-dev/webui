@@ -1,10 +1,10 @@
 
 # Info
-set(Info_Title "PyWebUI")
-set(Info_Source ${webui_SOURCE_DIR}/src/webui.cpp "pywebui.cpp")
-set(Info_App "pywebui")
+set(Info_Title "cWebUI")
+set(Info_Source ${webui_SOURCE_DIR}/src/webui.cpp "cwebui.cpp")
+set(Info_App ${cwebui_lib})
 
-# --[ PyWebUI ] -----------------------------------------------------------------
+# --[ cWebUI ] -----------------------------------------------------------------
 
 include_directories(${webui_SOURCE_DIR}/include)
 link_directories(${webui_BIN_DIR}/webui)
@@ -13,29 +13,35 @@ link_directories(${webui_BIN_DIR}/webui)
 
 message("[*] Initializing Boost for ${Info_Title}...")
 
+set(Boost_NO_WARN_NEW_VERSIONS ON)
+
 if (WIN32)
 	set(BOOST_ROOT ${Boost_Root})
 	set(Boost_LIBRARY_DIR ${Boost_Lib})
 	message("[*] Using Boost root: ${BOOST_ROOT}")
 	message("[*] Using Boost lib: ${Boost_LIBRARY_DIR}")
 
-	set(Boost_ARCHITECTURE "-x64")
-	# set(Boost_DEBUG					OFF)
-	# set(Boost_USE_STATIC_LIBS			ON)
-	# set(Boost_USE_MULTITHREADED		ON)
-	# set(Boost_USE_STATIC_RUNTIME		ON)
+	set(Boost_ARCHITECTURE 				"-x64")
+	set(Boost_USE_STATIC_LIBS			ON)
+	set(Boost_USE_MULTITHREADED			ON)
+	set(Boost_USE_STATIC_RUNTIME		ON)
+	# set(Boost_COMPILER				"-mgw8")
+
 	# set(Boost_DETAILED_FAILURE_MSG	OFF)
+	# set(Boost_DEBUG					OFF)	
 	# set(Boost_THREADAPI             	"win32")
 	# set(Boost_COMPILER				"-vc142")
+	# add_definitions( -DBOOST_ALL_NO_LIB )
 else()
     # set(Boost_DEBUG 					OFF)
-    set(Boost_USE_STATIC_LIBS       	ON)
-    # set(Boost_USE_MULTITHREADED		ON)
-    # set(Boost_USE_STATIC_RUNTIME		ON)
+    set(Boost_USE_STATIC_LIBS       	OFF)
+    set(Boost_USE_MULTITHREADED			ON)
+    set(Boost_USE_STATIC_RUNTIME		OFF)
     # set(Boost_ARCHITECTURE			"-x64")
     # set(Boost_THREADAPI				"pthread")
     # set(Boost_DETAILED_FAILURE_MSG	ON)
     # set(Boost_COMPILER				"-gcc")
+	add_definitions( -DBOOST_ALL_NO_LIB )
 endif()
 
 message("[*] Searching for Boost libs...")
@@ -134,7 +140,7 @@ endif()
 # --[ Build ] -------------------------------------------------------------------
 
 # Add the static lib WebUI to our shared
-# lib PyWebUI.
+# lib cWebUI.
 #target_link_libraries(${Info_App} webui)
 
 if(UNIX)
@@ -143,4 +149,4 @@ else()
 	target_link_libraries(${Info_App} PRIVATE ws2_32 wsock32 ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
 endif (UNIX)
 
-configure_file(${webui_SOURCE_DIR}/pywebui/helloworld.py ${CMAKE_CURRENT_BINARY_DIR}/helloworld.py COPYONLY)
+configure_file(${webui_SOURCE_DIR}/cwebui/helloworld.py ${CMAKE_CURRENT_BINARY_DIR}/helloworld.py COPYONLY)

@@ -97,7 +97,7 @@ int main(){
 
 	my_window.bind("MyButtonID1", close);
 
-	// Show window
+	// Show window (Windows Firefox)
 	if(!my_window.show(&my_html, &Windows_Firefox)){
 
 		// Failed to start our custom web browser

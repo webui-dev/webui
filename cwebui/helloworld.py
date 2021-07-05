@@ -1,6 +1,6 @@
 
 # -------------------------------------------------------------------------------
-# PyWebUI
+# cWebUI
 # - - - -
 # http://webui.me
 # https://github.com/alifcommunity/webui
@@ -24,26 +24,26 @@ class WebUI:
         webui_wrapper = None
         try:
             if platform.system() == 'Darwin':
-                self.webui_lib = ctypes.CDLL('pywebui.dylib')
+                self.webui_lib = ctypes.CDLL('cwebui.dylib')
             elif platform.system() == 'Windows':
                 if sys.version_info.major == 3 and sys.version_info.minor == 8:
                     os.chdir(os.getcwd())
                     os.add_dll_directory(os.getcwd())
-                    self.webui_lib = ctypes.CDLL('pywebui.dll')
-                    #self.webui_lib = cdll.LoadLibrary('pywebui.dll')
+                    self.webui_lib = ctypes.CDLL('cwebui.dll')
+                    #self.webui_lib = cdll.LoadLibrary('cwebui.dll')
             elif platform.system() == 'Linux':
                 os.chdir(os.getcwd())
-                self.webui_lib = ctypes.CDLL(os.getcwd() + '/libpywebui.so')
-            webui_wrapper = self.webui_lib.py_create_window
+                self.webui_lib = ctypes.CDLL(os.getcwd() + '/libcwebui.so')
+            webui_wrapper = self.webui_lib.c_create_window
             webui_wrapper.restype = c_void_p
             self.window = c_void_p(webui_wrapper())
-            self.webui_lib.py_ini()
+            self.webui_lib.c_ini()
         except OSError as e:
             print("WebUI Err: %s" % e)
             sys.exit(1)
     def __del__(self):
         if self.window is not None and self.webui_lib is not None:
-            self.webui_lib.py_destroy_window(self.window)
+            self.webui_lib.c_destroy_window(self.window)
     def bind(self, element, func_ref): 
         if self.window is None or self.webui_lib is None:
             return
@@ -60,14 +60,14 @@ class WebUI:
             ctypes.py_object,   # arg 3
             ctypes.c_void_p     # arg 4
         )
-        fun = prototype(('py_bind_element', self.webui_lib))
+        fun = prototype(('c_bind_element', self.webui_lib))
         fun(self.window, element.encode('utf-8'), func_ref, self.cb_fun_list[-1])
     def show(self, html):
         if self.window is not None and self.webui_lib is not None:
-            self.webui_lib.py_show_window(self.window, html.encode('utf-8'))
+            self.webui_lib.c_show_window(self.window, html.encode('utf-8'))
     def loop(self): 
         if self.webui_lib is not None:
-            self.webui_lib.py_loop()
+            self.webui_lib.c_loop()
 # -------------------------------------------------------------------------------
 
 # HTML

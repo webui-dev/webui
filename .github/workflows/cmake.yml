@@ -1,4 +1,4 @@
-name: Build WebUI #& PyWebUI  
+name: Build WebUI #& cWebUI  
 
 on:
   push:

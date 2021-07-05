@@ -134,7 +134,7 @@ Please see examples folder.
 - Windows SDK 10x. You can download it from http://microsoft.com 
 - Microsoft Visual Studio 2019.
 - CMake +3.15.0. You can download it from https://cmake.org/download
-- Python 3.8 (only if you want PyWebUI).
+- Python 3.8 (only if you want cWebUI).
 
 ### Using MSVC
 ```sh
@@ -155,9 +155,9 @@ cmake .. -G "NMake Makefiles"
 nmake
 ```
 
-Build PyWebUI
+Build cWebUI
 ```sh
-nmake pywebui
+nmake cwebui
 ```
 
 ### Using MinGW
@@ -174,7 +174,7 @@ mingw32-make
 - C++20 compiler (GCC/Clang): ```sudo apt install build-essential```
 - Boost lib +1.70.0: ```sudo apt install libboost-all-dev```
 - CMake +3.15.0: ```sudo apt install cmake```
-- Python 3.8 (only if you want PyWebUI).
+- Python 3.8 (only if you want cWebUI).
 
 ```sh
 git clone https://github.com/alifcommunity/webui.git
@@ -186,9 +186,9 @@ make
 sudo make install
 ```
 
-Build PyWebUI if needed
+Build cWebUI if needed
 ```sh
-make pywebui
+make cwebui
 ```
 
 ## Build from source - macOS
