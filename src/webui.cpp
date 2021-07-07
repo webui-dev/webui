@@ -1720,7 +1720,6 @@ namespace webui{
 				if(browser::command_browser("sh -c \"" + full + " >>/dev/null 2>>/dev/null\"") == 0)
 			#endif
 			{
-
 				browser::CurrentBrowser = firefox;
 				return true;
 			}
@@ -1781,7 +1780,7 @@ namespace webui{
 			if(!create_profile_folder(chrome))
 				return false;
 			
-			std::string arg = " --user-data-dir=\"" + frofile_path + "\" --disable-gpu --disable-software-rasterizer --no-proxy-server --app=";
+			std::string arg = " --user-data-dir=\"" + frofile_path + "\" --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --app=";
 			std::string full(browser::browser_path);
 			full.append(arg);
 			full.append(address);
@@ -1802,9 +1801,14 @@ namespace webui{
 		bool start(std::string address, unsigned short browser){
 
 			// Non existing browser
-			if(browser > 99)
+			if(browser > 10)
 				return false;
 			
+			#ifdef __linux__
+				if(address.at(0) == '/')
+					address = "file://" + address;
+			#endif
+
 			if(browser != 0){
 
 				// Specified browser
@@ -1858,7 +1862,7 @@ namespace webui{
 					// Linux
 					if(!start_chrome(address))
 						if(!start_firefox(address))
-							if(!start_edge(paddressort))
+							if(!start_edge(address))
 								if(!start_custom(address))
 									return false;
 									//webui::exit();
