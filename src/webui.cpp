@@ -114,6 +114,8 @@ namespace webui {
 
 					if(_webui_log)
 						console.log('WebUI -> Connected');
+					
+					_webui_listener();
 				};
 
 				_webui_ws.onerror = function(){
@@ -254,7 +256,7 @@ namespace webui {
 			}
 		}
 
-		function SendEvent(name){
+		function _webui_SendEvent(name){
 
 			if(_webui_ws_status && name != ''){
 
@@ -282,56 +284,115 @@ namespace webui {
 			}
 		}
 
-		window.addEventListener("load",function(){
+		function _webui_listener_handler(){
 
 			var elems = document.getElementsByTagName("form");
 			for (i = 0; i < elems.length; i++){
-
 				_webui_ws_status = false;
 				alert('Incompatible HTML.\n\nYour HTML contain <form> elements, wish is not compatible with WebUI. Please remove all those elements.');
-
 				_webui_close(0xFF, '');
 			}
 		
 			elems = document.getElementsByTagName("button");
 			for (i = 0; i < elems.length; i++){
-
 				if(elems[i].id == '')
 					continue;
-
 				if(_webui_log)
 					console.log('WebUI -> Listen -> <Button> -> ' + elems[i].id);
-				
-				elems[i].addEventListener("click", function(){ SendEvent(this.id) });
+				elems[i].addEventListener("click", function(){ _webui_SendEvent(this.id) });
 			}
 			
 			elems = document.getElementsByTagName("div");
 			for (i = 0; i < elems.length; i++){
-
 				if(elems[i].id == '')
 					continue;
-
 				if(_webui_log)
 					console.log('WebUI -> Listen -> <Div> -> ' + elems[i].id);
-				
-				elems[i].addEventListener("click", function(){ SendEvent(this.id) });
+				elems[i].addEventListener("click", function(){ _webui_SendEvent(this.id) });
 			}
 
 			elems = document.getElementsByTagName("li");
 			for (i = 0; i < elems.length; i++){
-
 				if(elems[i].id == '')
 					continue;
-
 				if(_webui_log)
 					console.log('WebUI -> Listen -> <LI> -> ' + elems[i].id);
-				
-				elems[i].addEventListener("click", function(){ SendEvent(this.id) });
+				elems[i].addEventListener("click", function(){ _webui_SendEvent(this.id) });
 			}
-		});	
 
+			elems = document.getElementsByTagName("p");
+			for (i = 0; i < elems.length; i++){
+				if(elems[i].id == '')
+					continue;
+				if(_webui_log)
+					console.log('WebUI -> Listen -> <P> -> ' + elems[i].id);
+				elems[i].addEventListener("click", function(){ _webui_SendEvent(this.id) });
+			}
+
+			elems = document.getElementsByTagName("a");
+			for (i = 0; i < elems.length; i++){
+				if(elems[i].id == '')
+					continue;
+				if(_webui_log)
+					console.log('WebUI -> Listen -> <A> -> ' + elems[i].id);
+				elems[i].addEventListener("click", function(){ _webui_SendEvent(this.id) });
+			}
+
+			elems = document.getElementsByTagName("p");
+			for (i = 0; i < elems.length; i++){
+				if(elems[i].id == '')
+					continue;
+				if(_webui_log)
+					console.log('WebUI -> Listen -> <P> -> ' + elems[i].id);
+				elems[i].addEventListener("click", function(){ _webui_SendEvent(this.id) });
+			}
+
+			elems = document.getElementsByTagName("ul");
+			for (i = 0; i < elems.length; i++){
+				if(elems[i].id == '')
+					continue;
+				if(_webui_log)
+					console.log('WebUI -> Listen -> <UL> -> ' + elems[i].id);
+				elems[i].addEventListener("click", function(){ _webui_SendEvent(this.id) });
+			}
+
+			elems = document.getElementsByTagName("footer");
+			for (i = 0; i < elems.length; i++){
+				if(elems[i].id == '')
+					continue;
+				if(_webui_log)
+					console.log('WebUI -> Listen -> <FOOTER> -> ' + elems[i].id);
+				elems[i].addEventListener("click", function(){ _webui_SendEvent(this.id) });
+			}
+
+			elems = document.getElementsByTagName("nav");
+			for (i = 0; i < elems.length; i++){
+				if(elems[i].id == '')
+					continue;
+				if(_webui_log)
+					console.log('WebUI -> Listen -> <NAV> -> ' + elems[i].id);
+				elems[i].addEventListener("click", function(){ _webui_SendEvent(this.id) });
+			}
+
+			elems = document.getElementsByTagName("span");
+			for (i = 0; i < elems.length; i++){
+				if(elems[i].id == '')
+					continue;
+				if(_webui_log)
+					console.log('WebUI -> Listen -> <SPAN> -> ' + elems[i].id);
+				elems[i].addEventListener("click", function(){ _webui_SendEvent(this.id) });
+			}
+		}
+
+		function _webui_listener(){
+
+			window.addEventListener("load", _webui_listener_handler());
+		}
+
+		// Starting point
 		_webui_start();
 
+		// Check connection
 		setTimeout(function(){
 
 			if(!_webui_ws_status){
@@ -368,7 +429,6 @@ namespace webui {
 			// console.log('WebUI -> CLOSE -> FUNC END');
 			_webui_close(0xFF, '');
 		});
-
 		window.onbeforeunload = function (){
 			_webui_close(0xFF, '');
 		};
@@ -379,7 +439,8 @@ namespace webui {
 		  //e.returnValue = '';
 		});
 
-		if (typeof webui_ready === "function")
+		// Callback
+		if(typeof webui_ready === "function")
 			setTimeout(webui_ready, 0);
 		
 		// - - - - - - - - - - -
