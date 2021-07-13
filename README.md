@@ -132,11 +132,13 @@ Please see examples folder.
 ## Build from source - Windows
 - [ ! ] Microsoft Visual Studio 2017 is not supported. 
 - Windows SDK 10x. You can download it from http://microsoft.com 
-- Microsoft Visual Studio 2019.
-- CMake +3.15.0. You can download it from https://cmake.org/download
+- Microsoft Visual Studio 2019 (or build tools 2019).
+- CMake +3.13.0. You can download it from https://cmake.org/download
+- Boost +1.76
 - Python 3.8 (only if you want cWebUI).
 
 ### Using MSVC
+- First make sure you have Boost +1.76 MSVC version (https://sourceforge.net/projects/boost/files/boost-binaries/1.76.0/boost_1_76_0-msvc-14.2-64.exe/download)
 ```sh
 git clone https://github.com/alifcommunity/webui.git
 cd webui
@@ -146,12 +148,12 @@ cd build
 
 Generate Visual Studio 2019 solution
 ```sh
-cmake .. -G "Visual Studio 16 2019"
+cmake .. -G "Visual Studio 16 2019" -DBOOST_ROOT=C:/local/boost_1_76_0 -DBOOST_LIBRARYDIR=C:/local/boost_1_76_0/lib64-msvc-14.2
 ```
 
 Generate Makefile for Microsoft Visual Studio build tools 2019.
 ```sh
-cmake .. -G "NMake Makefiles"
+cmake .. -G "NMake Makefiles" -DBOOST_ROOT=C:/local/boost_1_76_0 -DBOOST_LIBRARYDIR=C:/local/boost_1_76_0/lib64-msvc-14.2
 nmake
 ```
 
