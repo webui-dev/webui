@@ -16,15 +16,14 @@ message("[*] Initializing Boost for ${Info_Title}...")
 set(Boost_NO_WARN_NEW_VERSIONS ON)
 
 if (WIN32)
-	set(BOOST_ROOT ${Boost_Root})
-	set(Boost_LIBRARY_DIR ${Boost_Lib})
-	message("[*] Using Boost root: ${BOOST_ROOT}")
-	message("[*] Using Boost lib: ${Boost_LIBRARY_DIR}")
-
 	set(Boost_ARCHITECTURE 				"-x64")
 	set(Boost_USE_STATIC_LIBS			ON)
 	set(Boost_USE_MULTITHREADED			ON)
-	set(Boost_USE_STATIC_RUNTIME		ON)
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+		set(Boost_USE_STATIC_RUNTIME		OFF)
+	else()
+		set(Boost_USE_STATIC_RUNTIME		ON)
+	endif()
 	# set(Boost_COMPILER				"-mgw8")
 
 	# set(Boost_DETAILED_FAILURE_MSG	OFF)
@@ -119,6 +118,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# set_property(TARGET ${Info_App} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")
 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+	set(CMAKE_CXX_STANDARD 20)
 	
 endif()
 
@@ -142,7 +142,7 @@ endif (UNIX)
 if(UNIX)
 	message("[*] Initializing debian package...")
 	SET(CPACK_GENERATOR "DEB")
-	SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "KK") #required
+	SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "webui") #required
 	INCLUDE(CPack)
 endif (UNIX)
 

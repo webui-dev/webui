@@ -148,12 +148,12 @@ cd build
 
 Generate Visual Studio 2019 solution
 ```sh
-cmake .. -G "Visual Studio 16 2019" -DBOOST_ROOT=C:/local/boost_1_76_0 -DBOOST_LIBRARYDIR=C:/local/boost_1_76_0/lib64-msvc-14.2
+cmake .. -G "Visual Studio 16 2019" -DBOOST_ROOT=C:/local/boost_1_76_0 -DBOOST_LIBRARYDIR=C:/local/boost_1_76_0/lib64-msvc-14.2 -DCMAKE_BUILD_TYPE:STRING=Release
 ```
 
 Generate Makefile for Microsoft Visual Studio build tools 2019.
 ```sh
-cmake .. -G "NMake Makefiles" -DBOOST_ROOT=C:/local/boost_1_76_0 -DBOOST_LIBRARYDIR=C:/local/boost_1_76_0/lib64-msvc-14.2
+cmake .. -G "NMake Makefiles" -DBOOST_ROOT=C:/local/boost_1_76_0 -DBOOST_LIBRARYDIR=C:/local/boost_1_76_0/lib64-msvc-14.2 -DCMAKE_BUILD_TYPE:STRING=Release
 nmake
 ```
 

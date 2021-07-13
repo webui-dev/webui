@@ -12,14 +12,18 @@ set(Boost_Version_Needed "1.76.0")
 set(Boost_NO_WARN_NEW_VERSIONS ON)
 
 if (WIN32)
-    if(EXISTS "C:/Alif3/")
-
-        # Windows - Boost
-        message("[*] Using Boost embeded with Alif v3 'C:/Alif3/boost'")
-        set(Boost_Root "C:/Alif3/boost/include")
-        set(Boost_Lib "C:/Alif3/boost/lib")
-        
-    endif()
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        if(EXISTS "C:/Alif3/")
+            # Windows - Boost
+            message("[*] Using Boost embeded with Alif v3 'C:/Alif3/boost'")
+            set(Boost_Root "C:/Alif3/boost/include")
+            set(Boost_Lib "C:/Alif3/boost/lib")
+            set(BOOST_ROOT ${Boost_Root})
+            set(Boost_LIBRARY_DIR ${Boost_Lib})
+            message("[*] Using Boost root: ${BOOST_ROOT}")
+            message("[*] Using Boost lib: ${Boost_LIBRARY_DIR}")
+        endif()
+    endif() 
 endif()
 
 # --[ C++ ] ------------------------------------------------------------------------
@@ -55,5 +59,5 @@ add_subdirectory(${webui_SOURCE_DIR}/examples)
 
 # Test
 # include(CTest)
-enable_testing()
-add_subdirectory(${webui_SOURCE_DIR}/test)
+# enable_testing()
+# add_subdirectory(${webui_SOURCE_DIR}/test)
