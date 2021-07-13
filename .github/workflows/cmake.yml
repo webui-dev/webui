@@ -111,7 +111,7 @@ jobs:
           configuration: ${{env.BUILD_TYPE}}
           toolset: msvc142
           static: 1
-          static-runtime: 1
+          static-runtime: 0
           directory: ${{github.workspace}}/boost
 
       - name: Create Build Environment
