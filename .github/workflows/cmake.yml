@@ -125,7 +125,7 @@ jobs:
         shell: cmd
         run: |
              call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-             cmake ${{github.workspace}} -G "NMake Makefiles"
+             cmake ${{github.workspace}} -G "NMake Makefiles" -DCMAKE_BUILD_TYPE:STRING=Release
 
       - name: Build
         working-directory: ${{github.workspace}}/build
