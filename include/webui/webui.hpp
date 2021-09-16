@@ -12,6 +12,7 @@
 #define WEBUI_H
 
 // -- C++ Standard -----------------------------
+#include <array>                        //
 #include <iostream>			//
 #include <string>			//
 #include <vector>			//
