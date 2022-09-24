@@ -23,7 +23,7 @@ jobs:
     runs-on: windows-latest
     
     steps:
-      - uses: actions/@v2
+      - uses: actions/checkout@v2
 
       - name: Build
         working-directory: ${{github.workspace}}/examples/Windows/GCC/
