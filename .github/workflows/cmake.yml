@@ -1,4 +1,4 @@
-name: Build WebUI #& cWebUI  
+name: Build WebUI  
 on:
   push:
   pull_request:
@@ -7,8 +7,6 @@ on:
 
 env:
   BUILD_TYPE: Release
-  BOOST_VER: 1.76.0
-  BOOST_LIBS: date_time filesystem regex
 
 jobs:
   GCC-Linux:
@@ -17,119 +15,30 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Cache Boost
-        uses: actions/cache@v2
-        with:
-          path: '${{ runner.workspace }}/boost_*.tar.gz'
-          key: 'boost-${{env.BOOST_VER}}'
-
-      - name: Build Boost
-        id: boost
-        uses: egor-tensin/build-boost@v1
-        with:
-          version: ${{env.BOOST_VER}}
-          libraries: ${{env.BOOST_LIBS}}
-          platform: x64
-          configuration: ${{env.BUILD_TYPE}}
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-
-      - name: Configure CMake
-        env:
-          BOOST_ROOT: ${{steps.boost.outputs.root}}
-          BOOST_LIBRARYDIR: ${{steps.boost.outputs.librarydir}}
-        working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE
-
       - name: Build
-        working-directory: ${{github.workspace}}/build
-        run: cmake --build .
+        working-directory: ${{github.workspace}}/examples/Linux/GCC/
+        run: make static
 
   MinGW-Windows:
     runs-on: windows-latest
     
     steps:
-      - uses: actions/checkout@v2
-      
-      - name: Cache Boost
-        uses: actions/cache@v2
-        with:
-          path: '${{ runner.workspace }}/boost_*.tar.gz'
-          key: 'boost-${{env.BOOST_VER}}'
-
-      - name: Build Boost
-        id: boost
-        uses: egor-tensin/build-boost@v1
-        with:
-          version: ${{env.BOOST_VER}}
-          libraries: ${{env.BOOST_LIBS}}
-          platform: x64
-          configuration: ${{env.BUILD_TYPE}}
-          toolset: mingw
-          static: 1
-          static-runtime: 1
-          directory: ${{github.workspace}}/boost
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-
-      - name: Configure CMake
-        env:
-          BOOST_ROOT: ${{steps.boost.outputs.root}}
-          BOOST_LIBRARYDIR: ${{steps.boost.outputs.librarydir}}
-        working-directory: ${{github.workspace}}/build
-        shell: cmd
-        run: |
-             cmake ${{github.workspace}} -G "MinGW Makefiles"
+      - uses: actions/@v2
 
       - name: Build
-        working-directory: ${{github.workspace}}/build
+        working-directory: ${{github.workspace}}/examples/Windows/GCC/
         shell: cmd
-        run: |
-             mingw32-make
+        run: mingw32-make static
 
   MSVC-Windows:
     runs-on: windows-latest
     
     steps:
       - uses: actions/checkout@v2
-      
-      - name: Cache Boost
-        uses: actions/cache@v2
-        with:
-          path: '${{ runner.workspace }}/boost_*.tar.gz'
-          key: 'boost-${{env.BOOST_VER}}'
-
-      - name: Build Boost
-        id: boost
-        uses: egor-tensin/build-boost@v1
-        with:
-          version: ${{env.BOOST_VER}}
-          libraries: ${{env.BOOST_LIBS}}
-          platform: x64
-          configuration: ${{env.BUILD_TYPE}}
-          toolset: msvc142
-          static: 1
-          static-runtime: 0
-          directory: ${{github.workspace}}/boost
-
-      - name: Create Build Environment
-        run: cmake -E make_directory ${{github.workspace}}/build
-
-      - name: Configure CMake
-        env:
-          BOOST_ROOT: ${{steps.boost.outputs.root}}
-          BOOST_LIBRARYDIR: ${{steps.boost.outputs.librarydir}}
-        working-directory: ${{github.workspace}}/build
-        shell: cmd
-        run: |
-             call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-             cmake ${{github.workspace}} -G "NMake Makefiles" -DCMAKE_BUILD_TYPE:STRING=Release
 
       - name: Build
-        working-directory: ${{github.workspace}}/build
+        working-directory: ${{github.workspace}}/examples/Windows/MSVC/
         shell: cmd
         run: |
              call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-             nmake
+             nmake static
