@@ -1,21 +1,14 @@
-build/
-
-**/logs
-*/logs
-*.logs
-
-**/exe
-*/exe
+# Bin
 *.exe
+*.dll
+*.so
+*.dylib
+*.a
 
-**/obj
-*/obj
-*.obj
-
-**/o
-*/o
+# Obj
+*.out
 *.o
 
-**/.vscode
-*/.vscode
-*..vscode
+# IDE
+.idea/
+.vscode/
