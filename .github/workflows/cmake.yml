@@ -5,38 +5,32 @@ on:
     branches:
       - main
 
-env:
-  BUILD_TYPE: Release
-
 jobs:
 #   GCC-Linux:
 #     runs-on: ubuntu-latest
-
 #     steps:
 #       - uses: actions/checkout@v2
-
 #       - name: Build
 #         working-directory: ${{github.workspace}}/examples/Linux/GCC/
 #         run: make static
 
   MinGW-Windows:
     runs-on: windows-latest
-    
     steps:
       - uses: actions/checkout@v2
-
-      - name: Build
-        working-directory: ${{github.workspace}}\examples\Windows\GCC\
+      - name: MinGW-Build
         shell: cmd
-        run: mingw32-make static
+        run: |
+          cd examples\Windows\GCC
+          mingw32-make static
 
   MSVC-Windows:
     runs-on: windows-latest
-    
     steps:
-      - uses: egor-tensin/vs-shell@v2
-
-      - name: Build
-        working-directory: ${{github.workspace}}\examples\Windows\MSVC\
+      - uses: actions/checkout@v2
+      - uses: microsoft/setup-msbuild@v1.1
+      - name: MSVC-Build
         shell: cmd
-        run: nmake static
+        run: |
+          cd examples\Windows\MSVC
+          nmake static
