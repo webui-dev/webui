@@ -9,15 +9,15 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  GCC-Linux:
-    runs-on: ubuntu-latest
+#   GCC-Linux:
+#     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v2
+#     steps:
+#       - uses: actions/checkout@v2
 
-      - name: Build
-        working-directory: ${{github.workspace}}/examples/Linux/GCC/
-        run: make static
+#       - name: Build
+#         working-directory: ${{github.workspace}}/examples/Linux/GCC/
+#         run: make static
 
   MinGW-Windows:
     runs-on: windows-latest
@@ -34,11 +34,9 @@ jobs:
     runs-on: windows-latest
     
     steps:
-      - uses: actions/checkout@v2
+      - uses: egor-tensin/vs-shell@v2
 
       - name: Build
         working-directory: ${{github.workspace}}/examples/Windows/MSVC/
         shell: cmd
-        run: |
-             call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-             nmake static
+        run: nmake static
