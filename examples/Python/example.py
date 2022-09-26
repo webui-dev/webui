@@ -41,13 +41,29 @@ my_html = """
 </html>
 """
 
-# a sample function to be called
-# when a specific button has clicked
+# This function get called every time the user click on "MyButton1"
 def check_the_password(e : webui.event):
-	print('Element_id: ' + str(e.element_id))
-	print('Window_id: ' + str(e.window_id))
-	print('Element_name: ' + e.element_name.decode('utf-8'))
-	print('[!] The next coming version will include running JavaScript from Python.')
+
+	# Print some info (optional)
+	# print('Element_id: ' + str(e.element_id))
+	# print('Window_id: ' + str(e.window_id))
+	# print('Element_name: ' + e.element_name.decode('utf-8'))
+
+	# Run JavaScript to get the password
+	res = MyWindow.run_js("return document.getElementById(\"MyInput\").value;")
+
+	# Check for any error
+	if res.error is True:
+		print("JavaScript Error: " + res.data)
+		return
+
+	# Check the password
+	if res.data == "123456":
+		print("Password is correct.")
+		MyWindow.run_js("alert('Good. Password is correct.')")
+	else:
+		print("Wrong password: " + res.data)
+		MyWindow.run_js("alert('Sorry. Wrong password.')")
 
 def close_the_application(e : webui.event):
 	webui.exit()

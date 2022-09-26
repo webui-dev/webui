@@ -54,7 +54,7 @@ void check_the_password(const webui_event_t e) {
 	if(strcmp(password, "123456") == 0) {
 
 		// Correct password
-		js.script = "alert('Password is correct.')";
+		js.script = "alert('Good. Password is correct.')";
 		webui_run_js(my_window, &js);
 	}
 	else {
@@ -63,6 +63,8 @@ void check_the_password(const webui_event_t e) {
 		js.script = "alert('Sorry. Wrong password.')";
 		webui_run_js(my_window, &js);
 	}
+
+	webui_free_js(&js);
 }
 
 void close_the_application(const webui_event_t e){

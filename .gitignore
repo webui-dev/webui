@@ -4,6 +4,10 @@
 *.so
 *.dylib
 *.a
+*.ilk
+*.pdb
+*.lib
+*.exp
 
 # Obj
 *.out
@@ -12,3 +16,6 @@
 # IDE
 .idea/
 .vscode/
+
+# Python
+__pycache__/

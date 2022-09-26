@@ -125,7 +125,7 @@ typedef struct webui_javascript_result_t {
 
 typedef struct webui_javascript_t {
 
-    char *script;
+    char* script;
     unsigned int timeout;
     webui_javascript_result_t result;
 
@@ -181,6 +181,7 @@ typedef struct webui_t {
     webui_browser_t browser;
     bool initialized;
     void (*cb[WEBUI_MAX_ARRAY]) (webui_event_t e);
+    void (*cb_py[WEBUI_MAX_ARRAY])(unsigned int, unsigned int, char*);
 
     // Pointers Tracker
     void *ptr_list[WEBUI_MAX_ARRAY];
@@ -188,6 +189,16 @@ typedef struct webui_t {
     size_t ptr_size[WEBUI_MAX_ARRAY];
 
 } webui_t;
+
+typedef struct webui_javascript_py_t {
+
+    char* script;
+    unsigned int timeout;
+    bool error;
+    unsigned int length;
+    const char* data;
+
+} webui_javascript_py_t;
 
 // -- Definitions --------------------
 
@@ -208,9 +219,11 @@ EXPORT void webui_run_js(webui_window_t* win, webui_javascript_t* javascript);
 EXPORT unsigned int webui_bind(webui_window_t* win, const char* element, void (*func) (webui_event_t e));
 EXPORT void webui_bind_all(webui_window_t* win, void (*func) (webui_event_t e));
 EXPORT bool webui_open(webui_window_t* win, char* url, unsigned int browser);
+EXPORT void webui_free_js(webui_javascript_t* javascript);
 
-// Python wrapper
+// Python Interface
 EXPORT unsigned int webui_bind_py(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*));
+EXPORT void webui_run_js_py(webui_window_t* win, webui_javascript_py_t* js_py);
 
 // Core
 EXPORT void _webui_ini();
