@@ -1,4 +1,4 @@
-# Bin
+# Build
 *.exe
 *.dll
 *.so
@@ -8,8 +8,7 @@
 *.pdb
 *.lib
 *.exp
-
-# Obj
+*.res
 *.out
 *.o
 

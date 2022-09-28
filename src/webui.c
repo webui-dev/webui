@@ -15,7 +15,7 @@
 #include "webui.h"
 
 // -- Heap ----------------------------
-// #define WEBUI_LOG
+#define WEBUI_LOG
 webui_t webui;
 
 // -- JavaScript Bridge ---------------
@@ -297,8 +297,10 @@ static const char* webui_javascript_bridge =
 "}";
 
 // -- Heap ----------------------------
-static const char* webui_html_served = "<html><head><title>Access Denied</title><style>html{-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{background-color:#2F2F2F;font-family:sans-serif;margin:20px;color:#00ff00}a{color:#00ff00}</style></head><body><h2>[ ! ] Access Denied</h2><p>You can't access this window<br>because it's already served.<br><br>The security policy is set to<br>deny multiple requests.</p><br><a href=\"https://www.webui.me\"><small>WebUI Library<small></a></body></html>";
-static const char* webui_html_res_not_available = "<html><head><title>Resource Not Available</title><style>html{-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}body{background-color:#2F2F2F;font-family:sans-serif;margin:20px;color:#00ff00}a{color:#00ff00}</style></head><body><h2>[ ! ] Resource Not Available</h2><p>The requested resource is not available.</p><br><a href=\"https://www.webui.me\"><small>WebUI Library<small></a></body></html>";
+static const char* webui_html_served = "<html><head><title>Access Denied</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Access Denied</h2><p>You can't access this window<br>because it's already served.<br><br>The security policy is set to<br>deny multiple requests.</p><br><a href=\"https://www.webui.me\"><small>WebUI Library<small></a></body></html>";
+static const char* webui_html_res_not_available = "<html><head><title>Resource Not Available</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Resource Not Available</h2><p>The requested resource is not available.</p><br><a href=\"https://www.webui.me\"><small>WebUI Library<small></a></body></html>";
+static const char* webui_deno_not_found = "<html><head><title>Deno Not Found</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Deno Not Found</h2><p>Deno not found on your system.<br>Please download it from <a href=\"https://github.com/denoland/deno/releases\">https://github.com/denoland/deno/releases</a></p><br><a href=\"https://www.webui.me\"><small>WebUI Library<small></a></body></html>";
+static const char* webui_nodejs_not_found = "<html><head><title>Node.js Not Found</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Node.js Not Found</h2><p>Node.js not found on your system.<br>Please download it from <a href=\"https://nodejs.org/en/download/\">https://nodejs.org/en/download/</a></p><br><a href=\"https://www.webui.me\"><small>WebUI Library<small></a></body></html>";
 static const char* webui_def_icon = "<?xml version=\"1.0\" ?><svg height=\"24\" version=\"1.1\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:cc=\"http://creativecommons.org/ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><g transform=\"translate(0 -1028.4)\"><path d=\"m3 1030.4c-1.1046 0-2 0.9-2 2v7 2 7c0 1.1 0.8954 2 2 2h9 9c1.105 0 2-0.9 2-2v-7-2-7c0-1.1-0.895-2-2-2h-9-9z\" fill=\"#2c3e50\"/><path d=\"m3 2c-1.1046 0-2 0.8954-2 2v3 3 1 1 1 3 3c0 1.105 0.8954 2 2 2h9 9c1.105 0 2-0.895 2-2v-3-4-2-3-3c0-1.1046-0.895-2-2-2h-9-9z\" fill=\"#34495e\" transform=\"translate(0 1028.4)\"/><path d=\"m4 5.125v1.125l3 1.75-3 1.75v1.125l5-2.875-5-2.875zm5 4.875v1h5v-1h-5z\" fill=\"#ecf0f1\" transform=\"translate(0 1028.4)\"/></g></svg>";
 static const char* webui_def_icon_type = "image/svg+xml";
 static const char* webui_js_empty = "WEBUI_JS_EMPTY";
@@ -480,6 +482,18 @@ bool _webui_file_exist(char* file) {
     return false;
 }
 
+const char* _webui_get_extension(const char *f) {
+
+    if(f == NULL)
+        return "";
+
+    const char *ext = strrchr(f, '.');
+
+    if(ext == NULL || !ext || ext == f)
+        return "";
+    return ext + 1;
+}
+
 unsigned int _webui_get_run_id() {
 
     #ifdef WEBUI_LOG
@@ -656,6 +670,261 @@ bool _webui_port_is_used(unsigned int port_num) {
     #endif
 }
 
+void _webui_serve_file(webui_window_t* win, struct mg_connection *c, void *ev_data) {
+
+    #ifdef WEBUI_LOG
+        printf("[%d] _webui_serve_file()... \n", win->core.window_number);
+    #endif
+
+    // Serve a normal text based file
+    // send with HTTP 200 status code
+
+    struct mg_http_serve_opts opts = {
+
+        .root_dir = win->path
+    };
+
+    mg_http_serve_dir(c, ev_data, &opts);
+}
+
+bool _webui_deno_exist() {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_deno_exist()... \n");
+    #endif
+
+    static bool found = false;
+
+    if(found)
+        return true;
+
+    #ifdef _WIN32
+        if(system("deno --version > nul 2>&1") == 0)
+    #else
+        if(system("deno --version >>/dev/null 2>>/dev/null") == 0)
+    #endif
+    {
+        found = true;
+        return true;
+    }
+    else
+        return false;
+}
+
+bool _webui_nodejs_exist() {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_nodejs_exist()... \n");
+    #endif
+
+    static bool found = false;
+
+    if(found)
+        return true;
+
+    #ifdef _WIN32
+        if(system("node -v > nul 2>&1") == 0)
+    #else
+        if(system("node -v >>/dev/null 2>>/dev/null") == 0)
+    #endif
+    {
+        found = true;
+        return true;
+    }
+    else
+        return false;
+}
+
+const char* _webui_interpret_command(const char* cmd) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_interpret_command()... \n");
+    #endif
+
+    FILE *runtime = WEBUI_POPEN(cmd, "r");
+
+    if(runtime == NULL)
+        return NULL;
+
+    // Get STDOUT length
+    // int c;
+    // while ((c = fgetc(runtime)) != EOF)
+    //     len++;
+    int len = 1024 * 8;
+
+    // Read STDOUT
+    char* out = (char*) _webui_malloc(len + 1);
+    char* line = (char*) _webui_malloc(1024);
+    while(fgets(line, 1024, runtime) != NULL)
+        strcat(out, line);
+
+    WEBUI_PCLOSE(runtime);
+    _webui_free_mem((void *) &line);
+
+    return (const char*) out;
+}
+
+void _webui_interpret_file(webui_window_t* win, struct mg_connection *c, void *ev_data, char* index) {
+
+    #ifdef WEBUI_LOG
+        printf("[%d] _webui_interpret_file()... \n", win->core.window_number);
+    #endif
+
+    // Run the JavaScript / TypeScript runtime
+    // and send back the output with HTTP 200 status code
+    // otherwise, send the file as a normal text based one
+
+    char* file;
+    char* full_path;
+
+    if(!_webui_is_empty(index)) {
+
+        // Parse index file
+        file = index;
+        full_path = index;
+    }
+    else {
+
+        // Parse other files
+
+        struct mg_http_message *hm = (struct mg_http_message *) ev_data;
+
+        // Get file name
+        file = (char*) _webui_malloc(hm->uri.len + 1);
+        const char* p = hm->uri.ptr;
+        p++; // Skip "/"
+        sprintf(file, "%.*s", (int)(hm->uri.len - 1), p);
+
+        // Get full path
+        full_path = (char*) _webui_malloc(strlen(webui.executable_path) + 1 + strlen(file) + 1);
+        sprintf(full_path, "%s%s%s", webui.executable_path, webui_sep, file);
+
+        if(!_webui_file_exist(full_path)) {
+
+            // File not exist - 404
+            _webui_serve_file(win, c, ev_data);
+
+            _webui_free_mem((void *) &file);
+            _webui_free_mem((void *) &full_path);
+            return;
+        }
+    }
+
+    // Get file extension
+    const char* extension = _webui_get_extension(file);
+
+    if(strcmp(extension, "ts") == 0 || strcmp(extension, "js") == 0) {
+
+        // TypeScript / JavaScript
+
+        if(win->core.runtime == webui.runtime.deno) {
+
+            // Use Deno
+
+            if(_webui_deno_exist()) {
+
+                // Set command
+                char* cmd = (char*) _webui_malloc(64 + strlen(full_path) + 1);
+                #ifdef _WIN32
+                    sprintf(cmd, "Set NO_COLOR=1 & deno run --allow-all 2>&1 \"%s\" ", full_path);
+                #else
+                    sprintf(cmd, "NO_COLOR=1 & deno run --allow-all 2>&1 \"%s\" ", full_path);
+                #endif
+
+                // Run command
+                const char* out = _webui_interpret_command(cmd);
+
+                if(out != NULL) {
+
+                    // Send deno output
+                    mg_http_reply(
+                        c, 200,
+                        "",
+                        out
+                    );
+                }
+                else {
+
+                    // Deno failed.
+                    // Serve as a normal text-based file
+                    _webui_serve_file(win, c, ev_data);
+                }
+
+                _webui_free_mem((void *) &cmd);
+                _webui_free_mem((void *) &out);
+            }
+            else {
+
+                // Deno not installed
+
+                mg_http_reply(
+                    c, 200,
+                    "",
+                    webui_deno_not_found
+                );
+            }
+        }
+        else if(win->core.runtime == webui.runtime.nodejs) {
+
+            // Use Nodejs
+
+            if(_webui_nodejs_exist()) {
+
+                // Set command
+                char* cmd = (char*) _webui_malloc(64 + strlen(full_path) + 1);
+                sprintf(cmd, "node \"%s\" 2>&1 ", full_path);
+
+                // Run command
+                const char* out = _webui_interpret_command(cmd);
+
+                if(out != NULL) {
+
+                    // Send Node.js output
+                    mg_http_reply(
+                        c, 200,
+                        "",
+                        out
+                    );
+                }
+                else {
+
+                    // Node.js failed.
+                    // Serve as a normal text-based file
+                    _webui_serve_file(win, c, ev_data);
+                }
+
+                _webui_free_mem((void *) &cmd);
+                _webui_free_mem((void *) &out);
+            }
+            else {
+
+                // Node.js not installed
+
+                mg_http_reply(
+                    c, 200,
+                    "",
+                    webui_nodejs_not_found
+                );
+            }
+        }
+        else {
+
+            // Unknown runtime
+            // Serve as a normal text-based file
+            _webui_serve_file(win, c, ev_data);
+        }
+    }
+    else {
+
+        // Unknown file extension
+        // Serve as a normal text-based file
+        _webui_serve_file(win, c, ev_data);
+    }
+
+    _webui_free_mem((void *) &file);
+    _webui_free_mem((void *) &full_path);
+}
+
 static void _webui_server_event_handler(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
 
     webui_window_t* win = (webui_window_t *) fn_data;
@@ -747,7 +1016,7 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
         }
         else if(mg_http_match_uri(hm, "/")) {
 
-            // Main HTML
+            // [/]
 
             if(win->core.server_root) {
 
@@ -759,16 +1028,41 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
 
                 win->core.server_handled = true;
 
-                struct mg_http_serve_opts opts = {
+                // Set full path
+                // [Path][Sep][Index File Name][Null]
+                char* index = (char*) _webui_malloc(strlen(webui.executable_path) + 1 + 8 + 1); 
 
-                    .root_dir = win->path
-                };
+                // Index.ts
+                sprintf(index, "%s%sindex.ts", webui.executable_path, webui_sep);
+                if(_webui_file_exist(index)) {
 
-                mg_http_serve_dir(c, ev_data, &opts);
+                    // TypeScript Index
+                    _webui_interpret_file(win, c, ev_data, index);
+
+                   _webui_free_mem((void *) &index);
+                    return;
+                }
+
+                // Index.js
+                sprintf(index, "%s%sindex.js", webui.executable_path, webui_sep);
+                if(_webui_file_exist(index)) {
+
+                    // JavaScript Index
+                    _webui_interpret_file(win, c, ev_data, index);
+
+                    _webui_free_mem((void *) &index);
+                    return;
+                }
+
+                _webui_free_mem((void *) &index);
+                
+                // Index.html
+                // Serve as a normal text-based file
+                _webui_serve_file(win, c, ev_data);
             }
             else {
 
-                // HTML
+                // Main HTML
 
                 if(!win->core.multi_access && win->core.server_handled) {
 
@@ -831,20 +1125,31 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
         }
         else {
 
+            // [/file]
+
             if(win->core.server_root) {
 
-                // Serve local files
+                if(win->core.runtime != webui.runtime.none) {
 
-                #ifdef WEBUI_LOG
-                    printf("[%d] _webui_server_event_handler()... HTML Root file\n", win->core.window_number);
-                #endif
+                    // Interpret file
 
-                struct mg_http_serve_opts opts = {
+                    #ifdef WEBUI_LOG
+                        printf("[%d] _webui_server_event_handler()... HTML Interpret file\n", win->core.window_number);
+                    #endif
 
-                    .root_dir = win->path
-                };
+                    _webui_interpret_file(win, c, ev_data, NULL);
+                }
+                else {
 
-                mg_http_serve_dir(c, ev_data, &opts);
+                    // Serve local files
+
+                    #ifdef WEBUI_LOG
+                        printf("[%d] _webui_server_event_handler()... HTML Root file\n", win->core.window_number);
+                    #endif
+
+                    // Serve as a normal text-based file
+                    _webui_serve_file(win, c, ev_data);
+                }
             }
             else {
 
@@ -1429,7 +1734,7 @@ int _webui_cmd_sync(char* cmd) {
     return system(cmd);
 }
 
-bool _webui_browser_start_chrome(webui_window_t* win, char* address) {
+bool _webui_browser_start_chrome(webui_window_t* win, const char* address) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_browser_start_chrome([%s])... \n", address);
@@ -1469,7 +1774,7 @@ bool _webui_browser_start_chrome(webui_window_t* win, char* address) {
         return false;
 }
 
-bool _webui_browser_start_custom(webui_window_t* win, char* address) {
+bool _webui_browser_start_custom(webui_window_t* win, const char* address) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_browser_start_custom([%s])... \n", address);
@@ -1509,7 +1814,7 @@ bool _webui_browser_start_custom(webui_window_t* win, char* address) {
         return false;
 }
 
-bool _webui_browser_start_firefox(webui_window_t* win, char* address) {
+bool _webui_browser_start_firefox(webui_window_t* win, const char* address) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_browser_start_firefox([%s])... \n", address);
@@ -1546,7 +1851,7 @@ bool _webui_browser_start_firefox(webui_window_t* win, char* address) {
         return false;
 }
 
-bool _webui_browser_start_edge(webui_window_t* win, char* address) {
+bool _webui_browser_start_edge(webui_window_t* win, const char* address) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_browser_start_edge([%s])... \n", address);
@@ -1577,7 +1882,7 @@ bool _webui_browser_start_edge(webui_window_t* win, char* address) {
         return false;
 }
 
-bool _webui_browser_start(webui_window_t* win, char* address, unsigned int browser) {
+bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int browser) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_browser_start([%s], [%d])... \n", address, browser);
@@ -1817,14 +2122,20 @@ unsigned int _webui_window_get_window_number(webui_window_t* win) {
     return win->core.window_number;
 }
 
-const char* webui_new_server(webui_window_t* win, const char* html) {
+const char* webui_new_server(webui_window_t* win, const char* path, const char* index_html) {
 
     #ifdef WEBUI_LOG
         printf("[%d] webui_new_server()... \n", win->core.window_number);
     #endif
+
+    // Root folder to serve
+    webui_set_root_folder(win, path);
     
-    // 100 is to start a new server only
-    webui_show(win, html, 100);
+    // 99 is a non-existing browser
+    // this is to prevent any browser 
+    // from running. We want only to
+    // run a web-server right now.
+    webui_show(win, index_html, 99);
 
     // Wait for server to start
     for(unsigned int n = 0; n < 2000; n++) {
@@ -2041,7 +2352,7 @@ void _webui_window_event(webui_window_t* win, char* element_id, char* element) {
 void _webui_window_send(webui_window_t* win, char* packet, size_t packets_size) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] _webui_window_send([%.*s], [%d])... [ ", win->core.window_number, packets_size, packet, packets_size);
+        printf("[%d] _webui_window_send([%.*s], [%d])... [ ", win->core.window_number, (int)packets_size, packet, (int)packets_size);
             _webui_print_hex(packet, packets_size);
         printf("]\n");
     #endif
@@ -2159,7 +2470,7 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
     }
 }
 
-bool webui_open(webui_window_t* win, char* url, unsigned int browser) {
+bool webui_open(webui_window_t* win, const char* url, unsigned int browser) {
 
     #ifdef WEBUI_LOG
         printf("[0] webui_open()... \n");
@@ -2336,6 +2647,14 @@ unsigned int _webui_get_free_port() {
     return port;
 }
 
+void webui_runtime(webui_window_t* win, unsigned int runtime, bool status) {
+
+    if(runtime != webui.runtime.deno && runtime != webui.runtime.nodejs)
+        win->core.runtime = webui.runtime.none;
+    else
+        win->core.runtime = runtime;
+}
+
 void _webui_ini() {
 
     #ifdef WEBUI_LOG
@@ -2347,16 +2666,19 @@ void _webui_ini() {
 
     // Initializing
     memset(&webui, 0x0, sizeof(webui_t));
-    webui.initialized       = true;
-    webui.use_timeout       = true;
-    webui.startup_timeout   = 10; // Seconds
-    webui.timeout_extra     = true;
-    webui.browser.chrome    = 1;
-    webui.browser.firefox   = 2;
-    webui.browser.edge      = 3;
-    webui.browser.safari    = 4;
-    webui.browser.chromium  = 5;
-    webui.browser.custom    = 99;
+    webui.initialized           = true;
+    webui.use_timeout           = true;
+    webui.startup_timeout       = 10; // Seconds
+    webui.timeout_extra         = true;
+    webui.browser.chrome        = 1;
+    webui.browser.firefox       = 2;
+    webui.browser.edge          = 3;
+    webui.browser.safari        = 4;
+    webui.browser.chromium      = 5;
+    webui.browser.custom        = 99;
+    webui.runtime.deno      = 1;
+    webui.runtime.nodejs    = 2;
+    webui.executable_path       = _webui_get_current_path();
 }
 
 unsigned int _webui_get_cb_index(char* element_id) {

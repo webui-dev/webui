@@ -56,6 +56,8 @@
     #include <tchar.h>
     #define WEBUI_GET_CURRENT_DIR _getcwd
     #define WEBUI_FILE_EXIST _access
+    #define WEBUI_POPEN _popen
+    #define WEBUI_PCLOSE _pclose
 #endif
 
 // -- Linux -----------------------------------
@@ -64,6 +66,8 @@
     #include <unistd.h>
     #define WEBUI_GET_CURRENT_DIR getcwd
     #define WEBUI_FILE_EXIST _access
+    #define WEBUI_POPEN popen
+    #define WEBUI_PCLOSE pclose
 #endif
 
 // -- macOS -----------------------------------
@@ -105,6 +109,8 @@ typedef struct webui_window_core_t {
     char* browser_path;
     char* profile_path;
     unsigned int connections;
+
+    unsigned int runtime;
 
 } webui_window_core_t;
 
@@ -159,6 +165,14 @@ typedef struct webui_browser_t {
 
 } webui_browser_t;
 
+typedef struct webui_runtime_t {
+
+    unsigned int none;      // 0
+    unsigned int deno;      // 1
+    unsigned int nodejs;    // 2
+
+} webui_runtime_t;
+
 typedef struct webui_t {
 
     unsigned int servers;
@@ -179,9 +193,11 @@ typedef struct webui_t {
     struct mg_mgr* mg_mgrs[WEBUI_MAX_ARRAY];
     struct mg_connection* mg_connections[WEBUI_MAX_ARRAY];
     webui_browser_t browser;
+    webui_runtime_t runtime;
     bool initialized;
     void (*cb[WEBUI_MAX_ARRAY]) (webui_event_t e);
     void (*cb_py[WEBUI_MAX_ARRAY])(unsigned int, unsigned int, char*);
+    char* executable_path;
 
     // Pointers Tracker
     void *ptr_list[WEBUI_MAX_ARRAY];
@@ -212,14 +228,15 @@ EXPORT bool webui_show(webui_window_t* win, const char* html, unsigned int brows
 EXPORT void webui_set_icon(webui_window_t* win, const char* icon_s, const char* type_s);
 EXPORT void webui_allow_multi_access(webui_window_t* win, bool status);
 EXPORT bool webui_set_root_folder(webui_window_t* win, const char* path);
-EXPORT const char* webui_new_server(webui_window_t* win, const char* html);
+EXPORT const char* webui_new_server(webui_window_t* win, const char* path, const char* index_html);
 EXPORT void webui_close(webui_window_t* win);
 EXPORT bool webui_is_show(webui_window_t* win);
 EXPORT void webui_run_js(webui_window_t* win, webui_javascript_t* javascript);
 EXPORT unsigned int webui_bind(webui_window_t* win, const char* element, void (*func) (webui_event_t e));
 EXPORT void webui_bind_all(webui_window_t* win, void (*func) (webui_event_t e));
-EXPORT bool webui_open(webui_window_t* win, char* url, unsigned int browser);
+EXPORT bool webui_open(webui_window_t* win, const char* url, unsigned int browser);
 EXPORT void webui_free_js(webui_javascript_t* javascript);
+EXPORT void webui_runtime(webui_window_t* win, unsigned int runtime, bool status);
 
 // Python Interface
 EXPORT unsigned int webui_bind_py(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*));
@@ -247,11 +264,11 @@ EXPORT bool _webui_browser_exist(webui_window_t* win, unsigned int browser);
 EXPORT char* _webui_browser_get_temp_path(unsigned int browser);
 EXPORT bool _webui_browser_folder_exist(char* folder);
 EXPORT bool _webui_browser_create_profile_folder(webui_window_t* win, unsigned int browser);
-EXPORT bool _webui_browser_start_edge(webui_window_t* win, char* address);
-EXPORT bool _webui_browser_start_firefox(webui_window_t* win, char* address);
-EXPORT bool _webui_browser_start_custom(webui_window_t* win, char* address);
-EXPORT bool _webui_browser_start_chrome(webui_window_t* win, char* address);
-EXPORT bool _webui_browser_start(webui_window_t* win, char* address, unsigned int browser);
+EXPORT bool _webui_browser_start_edge(webui_window_t* win, const char* address);
+EXPORT bool _webui_browser_start_firefox(webui_window_t* win, const char* address);
+EXPORT bool _webui_browser_start_custom(webui_window_t* win, const char* address);
+EXPORT bool _webui_browser_start_chrome(webui_window_t* win, const char* address);
+EXPORT bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int browser);
 #ifdef _WIN32
     EXPORT DWORD WINAPI _webui_cb(LPVOID _arg);
 #else
