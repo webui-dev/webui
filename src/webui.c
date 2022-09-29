@@ -1704,23 +1704,69 @@ void _webui_browser_clean() {
     // future run.
 }
 
-int _webui_cmd_async(char* cmd) {
+#ifdef _WIN32
+    DWORD WINAPI _webui_cmd_async_browser_detect_proc_task(LPVOID _arg)
+#else
+    void _webui_cmd_async_browser_detect_proc_task(void* _arg)
+#endif
+{
+    webui_cmd_async_t* arg = (webui_cmd_async_t*) _arg;
 
     #ifdef WEBUI_LOG
-        printf("[0] _webui_cmd_async([%s])... \n", cmd);
+        printf("[%d] _webui_cmd_async_browser_detect_proc_task()... \n", arg->win->core.window_number);
     #endif
 
-    // ASync Command (Background running)
-    #ifdef _WIN32
-        // char _cmd[1024];
-        // sprintf(_cmd, "START \"\" %s", cmd);
-        WinExec(cmd, SW_HIDE);
-    #else
-        if(!fork()) {
-            system(cmd);
-            return 0;
-        }
+    // Run command
+    system(arg->cmd);
+
+    // Free memory
+    _webui_free_mem((void *) &arg->cmd);
+
+    // Close app
+    webui_exit();
+
+    return 0;
+}
+
+int _webui_cmd_async_browser(webui_window_t* win, char* cmd) {
+
+    #ifdef WEBUI_LOG
+        printf("[%d] _webui_cmd_async_browser([%s])... \n", win->core.window_number, cmd);
     #endif
+
+    if(win->core.detect_process_close) {
+
+        // ASync Command (Background running)
+        // and free window connection if process (browser) stop
+
+        webui_cmd_async_t* arg = (webui_cmd_async_t*) _webui_malloc(sizeof(webui_cmd_async_t));
+        arg->win = win;
+        arg->cmd = (char*) _webui_malloc(strlen(cmd) + 1);
+        strcpy(arg->cmd, cmd);
+
+        #ifdef _WIN32
+            HANDLE user_fun_thread = CreateThread(NULL, 0, _webui_cmd_async_browser_detect_proc_task, (void *) arg, 0, NULL);
+            CloseHandle(user_fun_thread); 
+        #else
+            // Create posix thread ...
+        #endif
+    }
+    else {
+
+        // ASync Command (Background running)
+        
+        #ifdef _WIN32
+            // char _cmd[1024];
+            // sprintf(_cmd, "START \"\" %s", cmd);
+            // system(_cmd);
+            WinExec(cmd, SW_HIDE);
+        #else
+            if(!fork()) {
+                system(cmd);
+                return 0;
+            }
+        #endif
+    }
 
     return 0;
 }
@@ -1760,11 +1806,11 @@ bool _webui_browser_start_chrome(webui_window_t* win, const char* address) {
     #ifdef _WIN32
         char parm[1024];
         sprintf(parm, "cmd /c \"%s\" > nul 2>&1", full);
-        if(_webui_cmd_async(parm) == 0)
+        if(_webui_cmd_async_browser(win, parm) == 0)
     #else
         char parm[1024];
         sprintf(parm, "%s >>/dev/null 2>>/dev/null", full);
-        if(_webui_cmd_async(parm) == 0)
+        if(_webui_cmd_async_browser(win, parm) == 0)
     #endif
     {
         win->core.CurrentBrowser = webui.browser.chrome;
@@ -1800,11 +1846,11 @@ bool _webui_browser_start_custom(webui_window_t* win, const char* address) {
     #ifdef _WIN32
         char parm[1024];
         sprintf(parm, "cmd /c \"%s\" > nul 2>&1", full);
-        if(_webui_cmd_async(parm) == 0)
+        if(_webui_cmd_async_browser(win, parm) == 0)
     #else
         char parm[1024];
         sprintf(parm, "%s >>/dev/null 2>>/dev/null", full);
-        if(_webui_cmd_async(parm) == 0)
+        if(_webui_cmd_async_browser(win, parm) == 0)
     #endif
     {
         win->core.CurrentBrowser = webui.browser.custom;
@@ -1837,11 +1883,11 @@ bool _webui_browser_start_firefox(webui_window_t* win, const char* address) {
     #ifdef _WIN32
         char parm[1024];
         sprintf(parm, "cmd /c \"%s\" > nul 2>&1", full);
-        if(_webui_cmd_async(parm) == 0)
+        if(_webui_cmd_async_browser(win, parm) == 0)
     #else
         char parm[1024];
         sprintf(parm, "%s >>/dev/null 2>>/dev/null", full);
-        if(_webui_cmd_async(parm) == 0)
+        if(_webui_cmd_async_browser(win, parm) == 0)
     #endif
     {
         win->core.CurrentBrowser = webui.browser.firefox;
@@ -1873,7 +1919,7 @@ bool _webui_browser_start_edge(webui_window_t* win, const char* address) {
 
     char parm[1024];
     sprintf(parm, "cmd /c \"%s\" > nul 2>&1", full);
-    if(_webui_cmd_async(parm) == 0) {
+    if(_webui_cmd_async_browser(win, parm) == 0) {
 
         win->core.CurrentBrowser = webui.browser.edge;
         return true;
@@ -2080,16 +2126,19 @@ void webui_close(webui_window_t* win) {
         printf("[%d] webui_close()... \n", win->core.window_number);
     #endif
 
-    // Prepare packets
-    char* packet = (char*) _webui_malloc(4);
-    packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
-    packet[1] = WEBUI_HEADER_CLOSE;     // Type
-    packet[2] = 0;                      // ID
-    packet[3] = 0;                      // Data
+    if(win->core.connected) {
 
-    // Send packets
-    _webui_window_send(win, packet, 4);
-    _webui_free_mem((void *) &packet);
+        // Prepare packets
+        char* packet = (char*) _webui_malloc(4);
+        packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
+        packet[1] = WEBUI_HEADER_CLOSE;     // Type
+        packet[2] = 0;                      // ID
+        packet[3] = 0;                      // Data
+
+        // Send packets
+        _webui_window_send(win, packet, 4);
+        _webui_free_mem((void *) &packet);
+    }
 }
 
 bool webui_is_show(webui_window_t* win) {
@@ -2473,11 +2522,21 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
 bool webui_open(webui_window_t* win, const char* url, unsigned int browser) {
 
     #ifdef WEBUI_LOG
-        printf("[0] webui_open()... \n");
+        printf("[%d] webui_open()... \n", win->core.window_number);
     #endif
 
     // Just open an app-mode window using the link
+    webui_set_timeout(0);
     return _webui_browser_start(win, url, browser);
+}
+
+void webui_detect_process_close(webui_window_t* win, bool status) {
+
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_detect_process_close()... \n", win->core.window_number);
+    #endif
+
+    win->core.detect_process_close = status;
 }
 
 char* _webui_get_current_path() {
@@ -2647,7 +2706,7 @@ unsigned int _webui_get_free_port() {
     return port;
 }
 
-void webui_runtime(webui_window_t* win, unsigned int runtime, bool status) {
+void webui_runtime(webui_window_t* win, unsigned int runtime) {
 
     if(runtime != webui.runtime.deno && runtime != webui.runtime.nodejs)
         win->core.runtime = webui.runtime.none;

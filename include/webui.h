@@ -93,24 +93,20 @@ typedef struct webui_window_core_t {
     bool is_bind_all;
     char* url;
     void (*cb_all[1]) (webui_event_t e);
-
-    #ifdef _WIN32
-        HANDLE server_thread;
-    #else
-        unsigned int server_thread;
-    #endif
-
-    // Pointing to external user data
     const char* html;
     const char* icon;
     const char* icon_type;
-
     unsigned int CurrentBrowser;
     char* browser_path;
     char* profile_path;
     unsigned int connections;
-
     unsigned int runtime;
+    bool detect_process_close;
+    #ifdef _WIN32
+        HANDLE server_thread;
+    #else
+        unsigned int server_thread;
+    #endif    
 
 } webui_window_core_t;
 
@@ -144,6 +140,13 @@ typedef struct webui_cb_t {
     char* element_name;
 
 } webui_cb_t;
+
+typedef struct webui_cmd_async_t {
+
+    webui_window_t* win;
+    char* cmd;
+
+} webui_cmd_async_t;
 
 typedef struct webui_custom_browser_t {
 
@@ -236,7 +239,8 @@ EXPORT unsigned int webui_bind(webui_window_t* win, const char* element, void (*
 EXPORT void webui_bind_all(webui_window_t* win, void (*func) (webui_event_t e));
 EXPORT bool webui_open(webui_window_t* win, const char* url, unsigned int browser);
 EXPORT void webui_free_js(webui_javascript_t* javascript);
-EXPORT void webui_runtime(webui_window_t* win, unsigned int runtime, bool status);
+EXPORT void webui_runtime(webui_window_t* win, unsigned int runtime);
+EXPORT void webui_detect_process_close(webui_window_t* win, bool status);
 
 // Python Interface
 EXPORT unsigned int webui_bind_py(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*));
@@ -258,7 +262,7 @@ EXPORT void _webui_window_event(webui_window_t* win, char* element_id, char* ele
 EXPORT unsigned int _webui_window_get_window_number(webui_window_t* win);
 EXPORT void _webui_window_open(webui_window_t* win, char* link, unsigned int browser);
 EXPORT int _webui_cmd_sync(char* cmd);
-EXPORT int _webui_cmd_async(char* cmd);
+EXPORT int _webui_cmd_async_browser(webui_window_t* win, char* cmd);
 EXPORT void _webui_browser_clean();
 EXPORT bool _webui_browser_exist(webui_window_t* win, unsigned int browser);
 EXPORT char* _webui_browser_get_temp_path(unsigned int browser);
@@ -271,8 +275,10 @@ EXPORT bool _webui_browser_start_chrome(webui_window_t* win, const char* address
 EXPORT bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int browser);
 #ifdef _WIN32
     EXPORT DWORD WINAPI _webui_cb(LPVOID _arg);
+    EXPORT DWORD WINAPI _webui_cmd_async_browser_task(LPVOID _arg);
 #else
     EXPORT void _webui_cb(void* _arg);
+    EXPORT void _webui_cmd_async_browser_task(void* _arg);
 #endif
 
 #endif /* _WEBUI_H */
