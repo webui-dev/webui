@@ -1,53 +1,5 @@
 # Build WebUI 2
 
-## Windows
+To build WebUI you will need a `C99` compiler capabalities, which mean any C compiler.  You don't need any third-party library.
 
-- **Build Tools for Microsoft Visual Studio**
-```sh
-git clone https://github.com/alifcommunity/webui.git
-cd webui\build\Windows\MSVC
-nmake
-```
-
-- **MinGW**
-```sh
-git clone https://github.com/alifcommunity/webui.git
-cd webui\build\Windows\GCC
-mingw32-make
-```
-
-- **TCC**
-```sh
-git clone https://github.com/alifcommunity/webui.git
-cd webui\build\Windows\TCC
-mingw32-make
-```
-
-- **Clang**
-```sh
-coming soon
-```
-
-## Linux
-
-- **GCC**
-```sh
-coming soon
-```
-
-- **TCC**
-```sh
-coming soon
-```
-
-- **Clang**
-```sh
-coming soon
-```
-
-## macOS
-
-- **Clang**
-```sh
-coming soon
-```
+[Windows](https://github.com/alifcommunity/webui/tree/main/build/Windows)
