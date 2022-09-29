@@ -1,4 +1,4 @@
-# WebUI 2
+# WebUI 2.x
 
 ![ScreenShot](screenshot.png)
 
