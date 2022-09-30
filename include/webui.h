@@ -262,11 +262,12 @@ EXPORT void _webui_window_event(webui_window_t* win, char* element_id, char* ele
 EXPORT unsigned int _webui_window_get_window_number(webui_window_t* win);
 EXPORT void _webui_window_open(webui_window_t* win, char* link, unsigned int browser);
 EXPORT int _webui_cmd_sync(char* cmd);
-EXPORT int _webui_cmd_async_browser(webui_window_t* win, char* cmd);
+EXPORT int _webui_cmd_async(char* cmd);
+EXPORT int _webui_run_browser(webui_window_t* win, char* cmd);
 EXPORT void _webui_browser_clean();
 EXPORT bool _webui_browser_exist(webui_window_t* win, unsigned int browser);
 EXPORT char* _webui_browser_get_temp_path(unsigned int browser);
-EXPORT bool _webui_browser_folder_exist(char* folder);
+EXPORT bool _webui_folder_exist(char* folder);
 EXPORT bool _webui_browser_create_profile_folder(webui_window_t* win, unsigned int browser);
 EXPORT bool _webui_browser_start_edge(webui_window_t* win, const char* address);
 EXPORT bool _webui_browser_start_firefox(webui_window_t* win, const char* address);
@@ -275,10 +276,10 @@ EXPORT bool _webui_browser_start_chrome(webui_window_t* win, const char* address
 EXPORT bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int browser);
 #ifdef _WIN32
     EXPORT DWORD WINAPI _webui_cb(LPVOID _arg);
-    EXPORT DWORD WINAPI _webui_cmd_async_browser_task(LPVOID _arg);
+    EXPORT DWORD WINAPI _webui_run_browser_task(LPVOID _arg);
 #else
     EXPORT void _webui_cb(void* _arg);
-    EXPORT void _webui_cmd_async_browser_task(void* _arg);
+    EXPORT void _webui_run_browser_task(void* _arg);
 #endif
 
 #endif /* _WEBUI_H */

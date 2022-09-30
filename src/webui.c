@@ -236,7 +236,7 @@ static const char* webui_javascript_bridge =
 "setTimeout(function () { \n"
 "    if (!_webui_ws_status) { \n"
 "        document.body.style.filter = \"contrast(1%)\"; \n"
-"        alert(\"WebUI failed to find the background application.\"); \n"
+"        alert(\"WebUI failed to connect to the background application.\"); \n"
 "        if (!_webui_log) webui_close_window(); \n"
 "    } \n"
 "}, 1e3); \n"
@@ -698,12 +698,8 @@ bool _webui_deno_exist() {
     if(found)
         return true;
 
-    #ifdef _WIN32
-        if(system("deno --version > nul 2>&1") == 0)
-    #else
-        if(system("deno --version >>/dev/null 2>>/dev/null") == 0)
-    #endif
-    {
+    if(_webui_cmd_sync("deno --version") == 0) {
+
         found = true;
         return true;
     }
@@ -722,12 +718,8 @@ bool _webui_nodejs_exist() {
     if(found)
         return true;
 
-    #ifdef _WIN32
-        if(system("node -v > nul 2>&1") == 0)
-    #else
-        if(system("node -v >>/dev/null 2>>/dev/null") == 0)
-    #endif
-    {
+    if(_webui_cmd_sync("node -v") == 0) {
+
         found = true;
         return true;
     }
@@ -741,7 +733,11 @@ const char* _webui_interpret_command(const char* cmd) {
         printf("[0] _webui_interpret_command()... \n");
     #endif
 
-    FILE *runtime = WEBUI_POPEN(cmd, "r");
+    // Redirect stderr to stdout
+    char cmd_redirected[1024];
+    sprintf(cmd_redirected, "%s 2>&1", cmd);
+
+    FILE *runtime = WEBUI_POPEN(cmd_redirected, "r");
 
     if(runtime == NULL)
         return NULL;
@@ -826,9 +822,9 @@ void _webui_interpret_file(webui_window_t* win, struct mg_connection *c, void *e
                 // Set command
                 char* cmd = (char*) _webui_malloc(64 + strlen(full_path) + 1);
                 #ifdef _WIN32
-                    sprintf(cmd, "Set NO_COLOR=1 & deno run --allow-all 2>&1 \"%s\" ", full_path);
+                    sprintf(cmd, "Set NO_COLOR=1 & deno run --allow-all \"%s\"", full_path);
                 #else
-                    sprintf(cmd, "NO_COLOR=1 & deno run --allow-all 2>&1 \"%s\" ", full_path);
+                    sprintf(cmd, "NO_COLOR=1 & deno run --allow-all \"%s\"", full_path);
                 #endif
 
                 // Run command
@@ -872,7 +868,7 @@ void _webui_interpret_file(webui_window_t* win, struct mg_connection *c, void *e
 
                 // Set command
                 char* cmd = (char*) _webui_malloc(64 + strlen(full_path) + 1);
-                sprintf(cmd, "node \"%s\" 2>&1 ", full_path);
+                sprintf(cmd, "node \"%s\"", full_path);
 
                 // Run command
                 const char* out = _webui_interpret_command(cmd);
@@ -1359,88 +1355,99 @@ bool _webui_browser_create_profile_folder(webui_window_t* win, unsigned int brow
 
     char* temp = _webui_browser_get_temp_path(browser);
 
+    // Chrome
+    // No need to create a folder
     if(browser == webui.browser.chrome) {
 
-        sprintf(win->core.profile_path, "%s%sWebUIChromeProfile", temp, webui_sep);
+        sprintf(win->core.profile_path, "%s%s.WebUI%sWebUIChromeProfile", temp, webui_sep, webui_sep);
         return true;
     }
     
+    // Edge
+    // No need to create a folder
     if(browser == webui.browser.edge) {
 
-        sprintf(win->core.profile_path, "%s%sWebUIEdgeProfile", temp, webui_sep);
+        sprintf(win->core.profile_path, "%s%s.WebUI%sWebUIEdgeProfile", temp, webui_sep, webui_sep);
         return true;
     }
 
-    char* profile_name = "";
+    // Firefox
+    // We need to create a folder
+    if(browser == webui.browser.firefox) {
 
-    if(browser == webui.browser.firefox)
-        profile_name = "WebUIFirefoxProfile";
+        char* profile_name = "WebUIFirefoxProfile";
 
-    char parm[1024];
-    sprintf(parm, "%s%s%s", temp, webui_sep, profile_name);
-    if(!_webui_browser_folder_exist(parm)) {
-
-        #ifdef _WIN32
-            sprintf(parm, "cmd /c \"%s -CreateProfile \"WebUI %s%s%s\"\" > nul 2>&1", win->core.browser_path, temp, webui_sep, profile_name);
-            _webui_cmd_sync(parm);
-        #else
-            sprintf(parm, "%s -CreateProfile \"WebUI %s%s%s\"", win->core.browser_path, temp, webui_sep, profile_name);
-            _webui_cmd_sync(parm); // we can't do escaping to redirect error .. todo 
-        #endif
+        char firefox_profile_path[1024];
+        sprintf(firefox_profile_path, "%s%s.WebUI%s%s", temp, webui_sep, webui_sep, profile_name);
 
         char buf[1024];
-        sprintf(buf, "%s%s%s", temp, webui_sep, profile_name);
+        
+        if(!_webui_folder_exist(buf)) {
 
-        // Wait 10 second while slow PC create the folder..
-        for(unsigned int n = 0; n <= (webui.startup_timeout * 4); n++) {
+            #ifdef _WIN32
+                sprintf(buf, "%s -CreateProfile \"WebUI %s\"", win->core.browser_path, firefox_profile_path);
+                _webui_cmd_sync(buf);
+            #else
+                sprintf(buf, "%s -CreateProfile \"WebUI %s\"", win->core.browser_path, firefox_profile_path);
+                _webui_cmd_sync(buf);
+            #endif
 
-            if(_webui_browser_folder_exist(buf))
-                break;
-            
-            _webui_sleep(250);
+            // Wait 10 second while slow PC create the folder..
+            for(unsigned int n = 0; n <= (webui.startup_timeout * 4); n++) {
+
+                if(_webui_folder_exist(firefox_profile_path))
+                    break;
+                
+                _webui_sleep(250);
+            }
+
+            if(!_webui_folder_exist(firefox_profile_path))
+                return false;
+
+            // prefs.js
+            FILE *file;
+            sprintf(buf, "%s%sprefs.js", firefox_profile_path, webui_sep);
+            file = fopen(buf, "a");
+            if(file == NULL)
+                return false;
+            fputs("user_pref(\"toolkit.legacyUserProfileCustomizations.stylesheets\", true); ", file);
+            fputs("user_pref(\"browser.shell.checkDefaultBrowser\", false); ", file);
+            fputs("user_pref(\"browser.tabs.warnOnClose\", false); ", file);
+            fclose(file);
+
+            // userChrome.css
+            sprintf(buf, "\"%s%schrome%s\"", firefox_profile_path, webui_sep, webui_sep);
+            if(!_webui_folder_exist(buf)) {
+
+                sprintf(buf, "mkdir \"%s%schrome%s\"", firefox_profile_path, webui_sep, webui_sep);
+                _webui_cmd_sync(buf); // Create directory
+            }
+            sprintf(buf, "%s%schrome%suserChrome.css", firefox_profile_path, webui_sep, webui_sep, webui_sep);
+            file = fopen(buf, "a");
+            if(file == NULL)
+                return false;
+            #ifdef _WIN32
+                fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}", file);
+            #elif __APPLE__
+                fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}", file);
+            #else
+                fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}", file);
+            #endif
+            fclose(file);
+
+            sprintf(win->core.profile_path, "%s%s%s", temp, webui_sep, profile_name);
         }
 
-        if(!_webui_browser_folder_exist(buf))
-            return false;
-
-        // prefs.js
-        FILE *file;
-        char file_path[1024];
-        sprintf(file_path, "%s%s%s%sprefs.js", temp, webui_sep, profile_name, webui_sep);
-        file = fopen(file_path, "a");
-        if(file == NULL)
-            return false;
-        fputs("user_pref(\"toolkit.legacyUserProfileCustomizations.stylesheets\", true); ", file);
-        fputs("user_pref(\"browser.shell.checkDefaultBrowser\", false); ", file);
-        fputs("user_pref(\"browser.tabs.warnOnClose\", false); ", file);
-        fclose(file);
-
-        // userChrome.css
-        sprintf(file_path, "mkdir \"%s%s%s%schrome%s\"", temp, webui_sep, profile_name, webui_sep, webui_sep);
-        _webui_cmd_sync(file_path); // Create directory
-        sprintf(file_path, "%s%s%s%schrome%suserChrome.css", temp, webui_sep, profile_name, webui_sep, webui_sep);
-        file = fopen(file_path, "a");
-        if(file == NULL)
-            return false;
-        #ifdef _WIN32
-            fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}", file);
-        #elif __APPLE__
-            fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}", file);
-        #else
-            fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}", file);
-        #endif
-        fclose(file);
-
-        sprintf(win->core.profile_path, "%s%s%s", temp, webui_sep, profile_name);
+        return true;
     }
 
-    return true;
+    return false;
 }
 
-bool _webui_browser_folder_exist(char* folder) {
+bool _webui_folder_exist(char* folder) {
 
     #ifdef WEBUI_LOG
-        printf("[0] _webui_browser_folder_exist([%s])... \n", folder);
+        printf("[0] _webui_folder_exist([%s])... \n", folder);
     #endif
 
     #if defined(_MSC_VER)
@@ -1592,7 +1599,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
 
             // Firefox on Linux
 
-            if(_webui_cmd_sync("firefox -v >>/dev/null 2>>/dev/null") == 0) {
+            if(_webui_cmd_sync("firefox -v") == 0) {
 
                 sprintf(win->core.browser_path, "firefox");
                 return true;
@@ -1641,7 +1648,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
         #else
 
             // Chrome on Linux
-            if(_webui_cmd_sync("google-chrome --version >>/dev/null 2>>/dev/null") == 0) {
+            if(_webui_cmd_sync("google-chrome --version") == 0) {
 
                 sprintf(win->core.browser_path, "google-chrome");
                 return true;
@@ -1704,20 +1711,71 @@ void _webui_browser_clean() {
     // future run.
 }
 
+int _webui_cmd_sync(char* cmd) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_cmd_sync([%s])... \n", cmd);
+    #endif
+
+    // Run a sync command in silence
+    // and return exit code
+
+    char buf[1024];
+
+    #ifdef _WIN32
+        sprintf(buf, "cmd /c \"%s\" > nul 2>&1 ", cmd);
+    #else
+        sprintf(buf, "%s >>/dev/null 2>>/dev/null ", cmd);
+    #endif
+
+    return system(buf);
+}
+
+int _webui_cmd_async(char* cmd) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_cmd_async([%s])... \n", cmd);
+    #endif
+
+    // Run a async command in silence
+    // and return immediately
+
+    char buf[1024];
+    int res = 0;
+
+    #ifdef _WIN32
+        // Make command async
+        sprintf(buf, "START \"\" %s", cmd);
+        // Run in silent
+        res = _webui_cmd_sync(buf);
+    #else
+        // Make command async
+        if(fork() >= 0) {
+            // Run in silent
+            _webui_cmd_sync(cmd);
+            return 0;
+        }
+        else
+            res = 1;
+    #endif
+
+    return res;
+}
+
 #ifdef _WIN32
-    DWORD WINAPI _webui_cmd_async_browser_detect_proc_task(LPVOID _arg)
+    DWORD WINAPI _webui_run_browser_detect_proc_task(LPVOID _arg)
 #else
-    void _webui_cmd_async_browser_detect_proc_task(void* _arg)
+    void _webui_run_browser_detect_proc_task(void* _arg)
 #endif
 {
     webui_cmd_async_t* arg = (webui_cmd_async_t*) _arg;
 
     #ifdef WEBUI_LOG
-        printf("[%d] _webui_cmd_async_browser_detect_proc_task()... \n", arg->win->core.window_number);
+        printf("[%d] _webui_run_browser_detect_proc_task()... \n", arg->win->core.window_number);
     #endif
 
     // Run command
-    system(arg->cmd);
+    _webui_cmd_sync(arg->cmd);
 
     // Free memory
     _webui_free_mem((void *) &arg->cmd);
@@ -1728,16 +1786,18 @@ void _webui_browser_clean() {
     return 0;
 }
 
-int _webui_cmd_async_browser(webui_window_t* win, char* cmd) {
+int _webui_run_browser(webui_window_t* win, char* cmd) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] _webui_cmd_async_browser([%s])... \n", win->core.window_number, cmd);
+        printf("[%d] _webui_run_browser([%s])... \n", win->core.window_number, cmd);
     #endif
+
+    int res = 0;
 
     if(win->core.detect_process_close) {
 
-        // ASync Command (Background running)
-        // and free window connection if process (browser) stop
+        // Run a async command and free window
+        // connection when process (browser) stop
 
         webui_cmd_async_t* arg = (webui_cmd_async_t*) _webui_malloc(sizeof(webui_cmd_async_t));
         arg->win = win;
@@ -1745,39 +1805,22 @@ int _webui_cmd_async_browser(webui_window_t* win, char* cmd) {
         strcpy(arg->cmd, cmd);
 
         #ifdef _WIN32
-            HANDLE user_fun_thread = CreateThread(NULL, 0, _webui_cmd_async_browser_detect_proc_task, (void *) arg, 0, NULL);
+            HANDLE user_fun_thread = CreateThread(NULL, 0, _webui_run_browser_detect_proc_task, (void *) arg, 0, NULL);
             CloseHandle(user_fun_thread); 
         #else
             // Create posix thread ...
         #endif
+
+        // TODO: We need to set 'res = 1' if _webui_run_browser_detect_proc_task() fails. 
     }
     else {
 
-        // ASync Command (Background running)
-        
-        #ifdef _WIN32
-            // char _cmd[1024];
-            // sprintf(_cmd, "START \"\" %s", cmd);
-            // system(_cmd);
-            WinExec(cmd, SW_HIDE);
-        #else
-            if(!fork()) {
-                system(cmd);
-                return 0;
-            }
-        #endif
+        // Run a async command
+
+        res = _webui_cmd_async(cmd);
     }
 
-    return 0;
-}
-
-int _webui_cmd_sync(char* cmd) {
-
-    #ifdef WEBUI_LOG
-        printf("[0] _webui_cmd_sync([%s])... \n", cmd);
-    #endif
-
-    return system(cmd);
+    return res;
 }
 
 bool _webui_browser_start_chrome(webui_window_t* win, const char* address) {
@@ -1803,16 +1846,8 @@ bool _webui_browser_start_chrome(webui_window_t* win, const char* address) {
     char full[1024];
     sprintf(full, "%s%s%s", win->core.browser_path, arg, address);
 
-    #ifdef _WIN32
-        char parm[1024];
-        sprintf(parm, "cmd /c \"%s\" > nul 2>&1", full);
-        if(_webui_cmd_async_browser(win, parm) == 0)
-    #else
-        char parm[1024];
-        sprintf(parm, "%s >>/dev/null 2>>/dev/null", full);
-        if(_webui_cmd_async_browser(win, parm) == 0)
-    #endif
-    {
+    if(_webui_run_browser(win, full) == 0) {
+
         win->core.CurrentBrowser = webui.browser.chrome;
         return true;
     }
@@ -1843,16 +1878,8 @@ bool _webui_browser_start_custom(webui_window_t* win, const char* address) {
     else
         sprintf(full, "%s %s", webui.custom_browser->app, webui.custom_browser->arg);
 
-    #ifdef _WIN32
-        char parm[1024];
-        sprintf(parm, "cmd /c \"%s\" > nul 2>&1", full);
-        if(_webui_cmd_async_browser(win, parm) == 0)
-    #else
-        char parm[1024];
-        sprintf(parm, "%s >>/dev/null 2>>/dev/null", full);
-        if(_webui_cmd_async_browser(win, parm) == 0)
-    #endif
-    {
+    if(_webui_run_browser(win, full) == 0) {
+
         win->core.CurrentBrowser = webui.browser.custom;
         return true;
     }
@@ -1878,18 +1905,10 @@ bool _webui_browser_start_firefox(webui_window_t* win, const char* address) {
         return false;
 
     char full[1024];
-    sprintf(full, "%s -P WebUI -private -no-remote -new-instance %s", win->core.browser_path, address);
+    sprintf(full, "%s -P WebUI -private -new-window %s", win->core.browser_path, address);
 
-    #ifdef _WIN32
-        char parm[1024];
-        sprintf(parm, "cmd /c \"%s\" > nul 2>&1", full);
-        if(_webui_cmd_async_browser(win, parm) == 0)
-    #else
-        char parm[1024];
-        sprintf(parm, "%s >>/dev/null 2>>/dev/null", full);
-        if(_webui_cmd_async_browser(win, parm) == 0)
-    #endif
-    {
+    if(_webui_run_browser(win, full) == 0) {
+
         win->core.CurrentBrowser = webui.browser.firefox;
         return true;
     }
@@ -1917,9 +1936,7 @@ bool _webui_browser_start_edge(webui_window_t* win, const char* address) {
     char full[1024];
     sprintf(full, "%s --user-data-dir=\"%s\" --no-proxy-server --app=%s", win->core.browser_path, win->core.profile_path, address);
 
-    char parm[1024];
-    sprintf(parm, "cmd /c \"%s\" > nul 2>&1", full);
-    if(_webui_cmd_async_browser(win, parm) == 0) {
+    if(_webui_run_browser(win, full) == 0) {
 
         win->core.CurrentBrowser = webui.browser.edge;
         return true;
@@ -2574,36 +2591,55 @@ void webui_exit() {
 void webui_loop() {
 
     #ifdef WEBUI_LOG
-        printf("[0] webui_loop()... \n");
+        printf("[L] webui_loop()... \n");
     #endif
 
     if(webui.use_timeout) {
 
-        // Wait for a specific time
+        #ifdef WEBUI_LOG
+            printf("[L] webui_loop() -> Using timeout %d second\n", webui.startup_timeout);
+        #endif
 
         // TODO: Loop trough all win
         // if(win->core.CurrentBrowser < 1)
         //     return;
         
-        // Wait one time while user 
-        // browser is starting!
+        // Wait for browser to start
         _webui_wait_for_startup();
 
         if(webui.wait_for_socket_window) {
 
-            while(webui.servers > 0){
-            
-                _webui_sleep(100);
+            #ifdef WEBUI_LOG
+                printf("[L] webui_loop() -> Wait for connected socket window...\n");
+            #endif
+
+            while(webui.servers > 0) {
+
                 // printf("[%d/%d]", webui.servers, webui.connections);
+                _webui_sleep(100);
             }
+        }
+        else {
+
+            #ifdef WEBUI_LOG
+                printf("[L] webui_loop() -> Ignore connected socket window.\n");
+            #endif
         }
     }
     else {
+
+        #ifdef WEBUI_LOG
+            printf("[L] webui_loop() -> Infinite loop...\n", webui.startup_timeout);
+        #endif
 
         // Infinite wait
         while(!webui.exit_now)
             _webui_sleep(100);
     }
+
+    #ifdef WEBUI_LOG
+        printf("[L] webui_loop() -> Loop finished.\n", webui.startup_timeout);
+    #endif
 
     _webui_browser_clean();
 }
@@ -2632,13 +2668,19 @@ void _webui_wait_for_startup() {
         return;
 
     // Wait for a specific time
-    for(unsigned int n = 0; n <= (webui.startup_timeout * 1000); n++) {
+    for(unsigned int n = 0; n <= (webui.startup_timeout * 10); n++) {
 
         if(webui.connections > 0)
             break;
         
-        _webui_sleep(1);
+        // We should wait 100ms but the server thread
+        // may add 3 second extras to the main loop.
+        _webui_sleep(50);
     }
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_wait_for_startup() -> Finish.\n");
+    #endif
 }
 
 void webui_set_timeout(unsigned int second) {
@@ -2727,7 +2769,7 @@ void _webui_ini() {
     memset(&webui, 0x0, sizeof(webui_t));
     webui.initialized           = true;
     webui.use_timeout           = true;
-    webui.startup_timeout       = 10; // Seconds
+    webui.startup_timeout       = 5; // Seconds
     webui.timeout_extra         = true;
     webui.browser.chrome        = 1;
     webui.browser.firefox       = 2;
