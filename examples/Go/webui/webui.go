@@ -45,3 +45,8 @@ func ini() {
 
 	defer syscall.FreeLibrary(dll_webui)
 }
+
+func webui_test() (res int) {
+
+	return 0
+}
