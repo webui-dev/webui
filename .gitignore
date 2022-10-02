@@ -11,6 +11,7 @@
 *.res
 *.out
 *.o
+*.def
 
 # IDE
 .idea/

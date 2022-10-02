@@ -1,6 +1,7 @@
 # WebUI Library
 # Windows - Tiny C Compiler
 
+SHELL=CMD
 SOURCE=../../../src
 INCLUDE=../../../include
 EXAMPLES=../../../examples

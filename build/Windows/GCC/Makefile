@@ -1,6 +1,7 @@
 # WebUI Library
 # Windows - GNU Compiler Collection
 
+SHELL=CMD
 SOURCE=../../../src
 INCLUDE=../../../include
 EXAMPLES=../../../examples
