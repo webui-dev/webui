@@ -1,3 +1,11 @@
+// WebUI Library 2.0.0
+//
+// http://webui.me
+// https://github.com/alifcommunity/webui
+//
+// Licensed under GNU General Public License v3.0.
+// Copyright (C)2022 Hassan DRAGA <https://github.com/hassandraga>.
+
 package main
 
 //--[WebUI]-------------------------------------
