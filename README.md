@@ -4,15 +4,15 @@
 
 [![Build Status](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master)](https://github.com/alifcommunity/webui)
 
-Bring the power of web browsers with the web technologies into you GUI, using your favorit programming language in the backend, and HTML/JS/CSS in the frontend.
+Bring the power of web browsers with the web technologies into your GUI, using your favourite programming language in the backend, and HTML/JS/CSS in the frontend.
 
 ## Why WebUI?
 
-Web technology is everywhere, and the web browsers have everything a modern UI need. While all other "WebView" based GUI libraries can not provide all features like a real web browser provides, WebUI use any installed web browser to give you the full power of a web browser. WebUI is fully written in C, and the final result library is completely independent an does not need any third-party library.
+Web technology is everywhere, and the web browsers have everything a modern UI need. While all other "WebView" based GUI libraries can not provide all features like a real web browser provides, WebUI use any installed web browser to give you the full power of a web browser. WebUI is fully written in C, and the final result library is completely independent and does not need any third-party library.
 
 ## How its work?
 
-WebUI use a WebSocket communication in binary mode between the web browser (UI) and your application. Your application will receive click events. And of course you can send/receive data or execute JavaScript from your favorit programming language. 
+WebUI use a WebSocket communication in binary mode between the web browser (UI) and your application. Your application will receive click events. And of course you can send/receive data or execute JavaScript from your favourite programming language. 
 
 ## Features
 
@@ -37,7 +37,7 @@ WebUI use a WebSocket communication in binary mode between the web browser (UI) 
 
 ## Supported Browser
 
-| OS | Browser  | Status |
+| OS | Browser | Status |
 | ------ | ------ | ------ |
 | Windows | Firefox | ✔️ |
 | Windows | Chrome | ✔️ |
