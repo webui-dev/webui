@@ -57,8 +57,8 @@ WebUI use a WebSocket communication in binary mode between the web browser (UI) 
 | Python | ✔️ |
 | JavaScript | ✔️ |
 | TypeScript | ✔️ |
-| Go | *coming soon* |
-| Rust | *coming soon* |
+| Go | ✔️ |
+| Rust | 94% |
 | Java | *coming soon* |
 | Nim | *coming soon* |
 | Perl | *coming soon* |
