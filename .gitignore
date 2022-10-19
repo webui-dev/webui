@@ -19,3 +19,7 @@
 
 # Python
 __pycache__/
+
+# Rust
+target/
+*.lock

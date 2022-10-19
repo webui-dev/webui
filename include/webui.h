@@ -29,7 +29,7 @@
 #define WEBUI_MAX_BUF           (512000)    // 512 Kb max dynamic memory allocation
 #define WEBUI_DEFAULT_PATH      "."         // Default root path
 
-// -- C STD -----------------------------------
+// -- C STD ---------------------------
 #include <stdbool.h>
 #include <inttypes.h>
 #include <assert.h>
@@ -45,7 +45,7 @@
     #include <dirent.h>
 #endif
 
-// -- Windows ---------------------------------
+// -- Windows -------------------------
 #ifdef _WIN32
     // #include <SDKDDKVer.h> // Fix _WIN32_WINNT warning
     #include <winsock2.h>
@@ -60,7 +60,7 @@
     #define WEBUI_PCLOSE _pclose
 #endif
 
-// -- Linux -----------------------------------
+// -- Linux ---------------------------
 #ifdef __linux__
     #include <pthread.h> // POSIX threading
     #include <unistd.h>
@@ -70,7 +70,7 @@
     #define WEBUI_PCLOSE pclose
 #endif
 
-// -- macOS -----------------------------------
+// -- macOS ---------------------------
 // ...
 
 struct webui_window_t;
@@ -131,7 +131,7 @@ typedef struct webui_javascript_result_t {
 
 typedef struct webui_javascript_t {
 
-    char* script;
+    const char* script;
     unsigned int timeout;
     webui_javascript_result_t result;
 
@@ -203,27 +203,15 @@ typedef struct webui_t {
     webui_runtime_t runtime;
     bool initialized;
     void (*cb[WEBUI_MAX_ARRAY]) (webui_event_t* e);
-    void (*cb_py[WEBUI_MAX_ARRAY])(unsigned int, unsigned int, char*);
+    void (*cb_int[WEBUI_MAX_ARRAY])(unsigned int, unsigned int, char*);
     char* executable_path;
-
-    // Pointers Tracker
     void *ptr_list[WEBUI_MAX_ARRAY];
     size_t ptr_position;
     size_t ptr_size[WEBUI_MAX_ARRAY];
 
 } webui_t;
 
-typedef struct webui_javascript_py_t {
-
-    char* script;
-    unsigned int timeout;
-    bool error;
-    unsigned int length;
-    const char* data;
-
-} webui_javascript_py_t;
-
-// -- Definitions --------------------
+// -- Definitions ---------------------
 
 EXPORT webui_t webui;
 EXPORT void webui_loop();
@@ -247,9 +235,22 @@ EXPORT void webui_free_js(webui_javascript_t* javascript);
 EXPORT void webui_runtime(webui_window_t* win, unsigned int runtime);
 EXPORT void webui_detect_process_close(webui_window_t* win, bool status);
 
-// Python Interface
-EXPORT unsigned int webui_bind_py(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*));
-EXPORT void webui_run_js_py(webui_window_t* win, webui_javascript_py_t* js_py);
+// -- Interface -----------------------
+// To help other languages to use WebUI
+
+typedef struct webui_javascript_int_t {
+
+    char* script;
+    unsigned int timeout;
+    bool error;
+    unsigned int length;
+    const char* data;
+
+} webui_javascript_int_t;
+
+EXPORT unsigned int webui_bind_int(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*));
+EXPORT void webui_run_js_int(webui_window_t* win, const char* script, unsigned int timeout, bool* error, unsigned int* length, char* data);
+EXPORT void webui_run_js_int_struct(webui_window_t* win, webui_javascript_int_t* js_int);
 
 // Core
 EXPORT void _webui_ini();
