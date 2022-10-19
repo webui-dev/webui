@@ -4,25 +4,36 @@
 all: release
 
 debug:
-	@echo Build WebUI (Debug Static)...
+#	Static with Debug info
+	@echo Build WebUI Library (Debug Static)...
 	@cl /Zi /Fomongoose.obj /c /EHsc "../../../src/mongoose.c" /I "../../../include" 1>NUL 2>&1
 	@cl /Zi /Fowebui.obj /c /EHsc "../../../src/webui.c" /I "../../../include" 1>NUL 2>&1
 	@lib /OUT:webui-2-static-x64.lib webui.obj mongoose.obj 1>NUL 2>&1
-	@echo Build WebUI (Debug Dynamic)...
+#	Dynamic with Debug info
+	@echo Build WebUI Library (Debug Dynamic)...
 	@cl /Zi /Fomongoose.obj /c /EHsc "../../../src/mongoose.c" /I "../../../include" 1>NUL 2>&1
 	@cl /Zi /Fowebui.obj /c /EHsc "../../../src/webui.c" /I "../../../include" 1>NUL 2>&1
 	@link /DLL /OUT:webui-2-x64.dll webui.obj mongoose.obj 1>NUL 2>&1
+#	Clean
+	@- del *.obj >nul 2>&1
 	@echo Done.
 
 release:
-	@echo Build WebUI (Release Static)...
+#	Static Release
+	@echo Build WebUI Library (Release Static)...
 	@cl /Fomongoose.obj /c /EHsc "../../../src/mongoose.c" /I "../../../include" 1>NUL 2>&1
 	@cl /Fowebui.obj /c /EHsc "../../../src/webui.c" /I "../../../include" 1>NUL 2>&1
 	@lib /OUT:webui-2-static-x64.lib webui.obj mongoose.obj 1>NUL 2>&1
-	@echo Build WebUI (Release Dynamic)...
+#	Dynamic Release
+	@echo Build WebUI Library (Release Dynamic)...
 	@cl /Fomongoose.obj /c /EHsc "../../../src/mongoose.c" /I "../../../include" 1>NUL 2>&1
 	@cl /Fowebui.obj /c /EHsc "../../../src/webui.c" /I "../../../include" 1>NUL 2>&1
 	@link /DLL /OUT:webui-2-x64.dll webui.obj mongoose.obj 1>NUL 2>&1
+#	Clean
+	@- del *.obj >nul 2>&1
+	@- del *.ilk >nul 2>&1
+	@- del *.pdb >nul 2>&1
+	@- del *.exp >nul 2>&1
 	@echo Done.
 
 clean:

@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.0
+    WebUI Library 2.0.1
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -26,7 +26,7 @@
 #define WEBUI_MAX_ARRAY         (32)        // Max thread, servers, windows..
 #define WEBUI_MIN_PORT          (8080)      // Minimum socket port
 #define WEBUI_MAX_PORT          (8335)      // Should be less than 65535
-#define WEBUI_MAX_BUF           (512000)    // 512 Kb max dynamic memory
+#define WEBUI_MAX_BUF           (512000)    // 512 Kb max dynamic memory allocation
 #define WEBUI_DEFAULT_PATH      "."         // Default root path
 
 // -- C STD -----------------------------------
@@ -73,11 +73,14 @@
 // -- macOS -----------------------------------
 // ...
 
+struct webui_window_t;
+
 typedef struct webui_event_t {
 
     unsigned int window_id;
     unsigned int element_id;
     char* element_name;
+    struct webui_window_t* window;
 
 } webui_event_t;
 
@@ -92,8 +95,9 @@ typedef struct webui_window_core_t {
     unsigned int server_port;
     bool is_bind_all;
     char* url;
-    void (*cb_all[1]) (webui_event_t e);
+    void (*cb_all[1]) (webui_event_t* e);
     const char* html;
+    const char* html_cpy;
     const char* icon;
     const char* icon_type;
     unsigned int CurrentBrowser;
@@ -189,7 +193,7 @@ typedef struct webui_t {
     bool use_timeout;
     bool timeout_extra;
     bool exit_now;
-    char* run_responses[WEBUI_MAX_ARRAY];
+    const char* run_responses[WEBUI_MAX_ARRAY];
     bool run_done[WEBUI_MAX_ARRAY];
     bool run_error[WEBUI_MAX_ARRAY];
     unsigned int run_last_id;
@@ -198,7 +202,7 @@ typedef struct webui_t {
     webui_browser_t browser;
     webui_runtime_t runtime;
     bool initialized;
-    void (*cb[WEBUI_MAX_ARRAY]) (webui_event_t e);
+    void (*cb[WEBUI_MAX_ARRAY]) (webui_event_t* e);
     void (*cb_py[WEBUI_MAX_ARRAY])(unsigned int, unsigned int, char*);
     char* executable_path;
 
@@ -228,6 +232,7 @@ EXPORT bool webui_any_window_is_open();
 EXPORT void webui_set_timeout(unsigned int second);
 EXPORT webui_window_t* webui_new_window();
 EXPORT bool webui_show(webui_window_t* win, const char* html, unsigned int browser);
+EXPORT bool webui_copy_show(webui_window_t* win, const char* html, unsigned int browser);
 EXPORT void webui_set_icon(webui_window_t* win, const char* icon_s, const char* type_s);
 EXPORT void webui_allow_multi_access(webui_window_t* win, bool status);
 EXPORT bool webui_set_root_folder(webui_window_t* win, const char* path);
@@ -235,8 +240,8 @@ EXPORT const char* webui_new_server(webui_window_t* win, const char* path, const
 EXPORT void webui_close(webui_window_t* win);
 EXPORT bool webui_is_show(webui_window_t* win);
 EXPORT void webui_run_js(webui_window_t* win, webui_javascript_t* javascript);
-EXPORT unsigned int webui_bind(webui_window_t* win, const char* element, void (*func) (webui_event_t e));
-EXPORT void webui_bind_all(webui_window_t* win, void (*func) (webui_event_t e));
+EXPORT unsigned int webui_bind(webui_window_t* win, const char* element, void (*func) (webui_event_t* e));
+EXPORT void webui_bind_all(webui_window_t* win, void (*func) (webui_event_t* e));
 EXPORT bool webui_open(webui_window_t* win, const char* url, unsigned int browser);
 EXPORT void webui_free_js(webui_javascript_t* javascript);
 EXPORT void webui_runtime(webui_window_t* win, unsigned int runtime);
@@ -259,14 +264,14 @@ EXPORT char* _webui_get_current_path();
 EXPORT void _webui_window_receive(webui_window_t* win, const char* packet, size_t len);
 EXPORT void _webui_window_send(webui_window_t* win, char* packet, size_t packets_size);
 EXPORT void _webui_window_event(webui_window_t* win, char* element_id, char* element);
-EXPORT unsigned int _webui_window_get_window_number(webui_window_t* win);
+EXPORT unsigned int _webui_window_get_number(webui_window_t* win);
 EXPORT void _webui_window_open(webui_window_t* win, char* link, unsigned int browser);
 EXPORT int _webui_cmd_sync(char* cmd);
 EXPORT int _webui_cmd_async(char* cmd);
 EXPORT int _webui_run_browser(webui_window_t* win, char* cmd);
 EXPORT void _webui_browser_clean();
 EXPORT bool _webui_browser_exist(webui_window_t* win, unsigned int browser);
-EXPORT char* _webui_browser_get_temp_path(unsigned int browser);
+EXPORT const char* _webui_browser_get_temp_path(unsigned int browser);
 EXPORT bool _webui_folder_exist(char* folder);
 EXPORT bool _webui_browser_create_profile_folder(webui_window_t* win, unsigned int browser);
 EXPORT bool _webui_browser_start_edge(webui_window_t* win, const char* address);

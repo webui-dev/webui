@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.0
+    WebUI Library 2.0.1
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -14,13 +14,15 @@
 // -- WebUI ---------------------------
 #include "webui.h"
 
+// -- Log -----------------------------
+// #define WEBUI_LOG
+
 // -- Heap ----------------------------
-#define WEBUI_LOG
 webui_t webui;
 
 // -- JavaScript Bridge ---------------
-// Uncompressed version to allow debugging
-// in the browser using the builtin dev-tools
+// This is a uncompressed version to make the debugging
+// more easy in the browser using the builtin dev-tools
 static const char* webui_javascript_bridge = 
 "var _webui_log = false; \n"
 "var _webui_ws; \n"
@@ -305,6 +307,7 @@ static const char* webui_def_icon = "<?xml version=\"1.0\" ?><svg height=\"24\" 
 static const char* webui_def_icon_type = "image/svg+xml";
 static const char* webui_js_empty = "WEBUI_JS_EMPTY";
 static const char* webui_js_timeout = "WEBUI_JS_TIMEOUT";
+static const char* webui_empty_string = ""; // .text
 
 #ifdef _WIN32
     static const char* webui_sep = "\\";
@@ -485,12 +488,12 @@ bool _webui_file_exist(char* file) {
 const char* _webui_get_extension(const char *f) {
 
     if(f == NULL)
-        return "";
+        return webui_empty_string;
 
     const char *ext = strrchr(f, '.');
 
     if(ext == NULL || !ext || ext == f)
-        return "";
+        return webui_empty_string;
     return ext + 1;
 }
 
@@ -1081,6 +1084,8 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
 
                     // Send main HTML
 
+                    
+
                     #ifdef WEBUI_LOG
                         printf("[%d] _webui_server_event_handler()... HTML Main\n", win->core.window_number);
                     #endif
@@ -1353,7 +1358,7 @@ bool _webui_browser_create_profile_folder(webui_window_t* win, unsigned int brow
         return true;
     }
 
-    char* temp = _webui_browser_get_temp_path(browser);
+    const char* temp = _webui_browser_get_temp_path(browser);
 
     // Chrome
     // No need to create a folder
@@ -1464,7 +1469,7 @@ bool _webui_folder_exist(char* folder) {
     return false;
 }
 
-char* _webui_browser_get_temp_path(unsigned int browser) {
+const char* _webui_browser_get_temp_path(unsigned int browser) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_browser_get_temp_path([%d])... \n", browser);
@@ -1476,11 +1481,11 @@ char* _webui_browser_get_temp_path(unsigned int browser) {
             char* WinUserProfile = NULL;
             size_t sz = 0;
             if(_dupenv_s(&WinUserProfile, &sz, "USERPROFILE") != 0 || WinUserProfile == NULL)
-                return "";
+                return webui_empty_string;
         #else
             char* WinUserProfile = getenv("USERPROFILE"); // _dupenv_s
             if(WinUserProfile == NULL)
-                return "";
+                return webui_empty_string;
         #endif
     #endif
 
@@ -1519,7 +1524,7 @@ char* _webui_browser_get_temp_path(unsigned int browser) {
     }
     
     _webui_panic();
-    return "";
+    return webui_empty_string;
 }
 
 bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
@@ -2179,10 +2184,10 @@ bool webui_any_window_is_open() {
     return false;
 }
 
-unsigned int _webui_window_get_window_number(webui_window_t* win) {
+unsigned int _webui_window_get_number(webui_window_t* win) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] _webui_window_get_window_number()... \n", win->core.window_number);
+        printf("[%d] _webui_window_get_number()... \n", win->core.window_number);
     #endif
     
     return win->core.window_number;
@@ -2257,6 +2262,8 @@ void webui_set_icon(webui_window_t* win, const char* icon_s, const char* type_s)
 
 bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
 
+    
+
     #ifdef WEBUI_LOG
         printf("[%d] webui_show([%.*s..], [%d])... \n", win->core.window_number, 3, html, browser);
     #endif
@@ -2283,7 +2290,6 @@ bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
         CloseHandle(thread);
 
         // Run browser
-        
         if(!_webui_browser_start(win, win->core.url, browser))
             return false;
     }
@@ -2308,7 +2314,28 @@ bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
     return true;
 }
 
-void webui_bind_all(webui_window_t* win, void (*func) (webui_event_t e)) {
+bool webui_copy_show(webui_window_t* win, const char* html, unsigned int browser) {
+
+    // Copy HTML, And show the window
+
+    // Free
+    if(win->core.html_cpy != NULL)
+        _webui_free_mem((void *) &win->core.html_cpy);
+    
+    // Allocate
+    char* cpy = (char*) webui_empty_string;
+    size_t len = strlen(html);
+    if(len > 1) {
+
+        char* cpy = _webui_malloc(len + 1);
+        memcpy(cpy, html, len);
+    }
+    
+    // Show window
+    return webui_show(win, cpy, browser);
+}
+
+void webui_bind_all(webui_window_t* win, void (*func) (webui_event_t* e)) {
 
     #ifdef WEBUI_LOG
         printf("[%d] webui_bind_all([*])... \n", win->core.window_number);
@@ -2318,10 +2345,10 @@ void webui_bind_all(webui_window_t* win, void (*func) (webui_event_t e)) {
     win->core.is_bind_all = true;
 }
 
-unsigned int webui_bind(webui_window_t* win, const char* element, void (*func) (webui_event_t e)) {
+unsigned int webui_bind(webui_window_t* win, const char* element, void (*func) (webui_event_t* e)) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_bind([%s], [*])... \n", win->core.window_number, element);
+        printf("[%d] webui_bind([%s], [%p])... \n", win->core.window_number, element, func);
     #endif
 
     char* element_id = _webui_malloc(strlen(element));
@@ -2365,6 +2392,7 @@ unsigned int webui_bind(webui_window_t* win, const char* element, void (*func) (
     webui_event_t e;
     e.window_id = arg->win->core.window_number;
     e.element_name = arg->element_name;
+    e.window = arg->win;
 
     unsigned int cb_index = _webui_get_cb_index(arg->element_id);
 
@@ -2373,14 +2401,14 @@ unsigned int webui_bind(webui_window_t* win, const char* element, void (*func) (
 
         // User cb
         e.element_id = cb_index;
-        webui.cb[cb_index](e);        
+        webui.cb[cb_index](&e);
     }
 
     // General user cb
     if(arg->win->core.is_bind_all && arg->win->core.cb_all[0] != NULL) {
 
         e.element_id = 0;
-        arg->win->core.cb_all[0](e);
+        arg->win->core.cb_all[0](&e);
     }
 
     #ifdef WEBUI_LOG
@@ -2444,7 +2472,21 @@ bool _webui_get_data(const char* packet, size_t packet_len, unsigned int pos, si
         printf("[0] _webui_get_data()... \n");
     #endif
 
+    if((pos + 1) > packet_len) {
+
+        *data = NULL;
+        data_len = 0;
+        return false;
+    }
+
     *data = (char*) _webui_malloc((packet_len - pos) + 1);
+
+    // Check mem
+    if(*data == NULL) {
+
+        data_len = 0;
+        return false;
+    }
 
     // Copy data part
     char* p = *data;
@@ -2459,6 +2501,8 @@ bool _webui_get_data(const char* packet, size_t packet_len, unsigned int pos, si
     if(*data_len < 1) {
 
         _webui_free_mem((void *) data);
+        *data = NULL;
+        data_len = 0;
         return false;
     }
 
@@ -2507,31 +2551,44 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
         // 3: [Error]
         // 4: [Data]
 
-        // Get data part
-        char* data;
-        size_t data_len;
-        if(!_webui_get_data(packet, len, 4, &data_len, &data))
-            return;
-
         // Get pipe id
         unsigned char run_id = packet[2];
         if(run_id < 0x01) {
 
-            _webui_free_mem((void *) &data);
+            // Fatal.
+            // The pipe ID is not valid
+            // we can't send the ready signal to webui_run_js()
             return;
         }
+
+        // Get data part
+        char* data;
+        size_t data_len;
+        bool data_status = _webui_get_data(packet, len, 4, &data_len, &data);
 
         // Get js-error
         bool error = true;
         if((unsigned char) packet[3] == 0x00)
             error = false;
 
-        // Set pipe
+        // Initialize pipe
         _webui_free_mem((void *) &webui.run_responses[run_id]);
-        webui.run_error[run_id] = error;
-        webui.run_responses[run_id] = data;
 
-        // Ready signal
+        // Set pipe
+        if(data_status && data_len > 0) {
+
+            webui.run_error[run_id] = error;
+            webui.run_responses[run_id] = data;
+        }
+        else {
+
+            // Empty Result
+
+            webui.run_error[run_id] = error;
+            webui.run_responses[run_id] = webui_empty_string;
+        }
+
+        // Send ready signal to webui_run_js()
         webui.run_done[run_id] = true;
     }
 }
@@ -2544,6 +2601,7 @@ bool webui_open(webui_window_t* win, const char* url, unsigned int browser) {
 
     // Just open an app-mode window using the link
     webui_set_timeout(0);
+    webui_detect_process_close(win, true);
     return _webui_browser_start(win, url, browser);
 }
 
@@ -2821,14 +2879,14 @@ unsigned int _webui_set_cb_index(char* element_id) {
     return 0;
 }
 
-// --[Python Wrapper]---------------
+// --[Python Interface]---------------
 
-void webui_bind_py_handler(const webui_event_t e) {
+void webui_bind_py_handler(webui_event_t* e) {
 
-    unsigned int cb_index = e.element_id;
+    unsigned int cb_index = e->element_id;
 
     if(cb_index > 0 && webui.cb_py[cb_index] != NULL)
-        webui.cb_py[cb_index](e.element_id, e.window_id, e.element_name);
+        webui.cb_py[cb_index](e->element_id, e->window_id, e->element_name);
 }
 
 unsigned int webui_bind_py(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*)) {

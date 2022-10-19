@@ -15,7 +15,7 @@
 // Alternatively, you can license this software under a commercial
 // license, as set out in https://www.mongoose.ws/licensing/
 //
-// SPDX-License-Identifier: GPL-2.0 or commercial
+// SPDX-License-Identifier: GPL-2.0-only or commercial
 
 #ifndef MONGOOSE_H
 #define MONGOOSE_H
@@ -70,6 +70,9 @@ extern "C" {
 #endif
 #endif  // !defined(MG_ARCH)
 
+// http://esr.ibiblio.org/?p=5095
+#define MG_BIG_ENDIAN (*(uint16_t *)"\0\xff" < 0x100)
+
 
 
 
@@ -97,10 +100,6 @@ extern "C" {
 #include <nx_bsd.h>
 #include <nx_port.h>
 #include <tx_port.h>
-
-#ifdef __REDLIB__
-#define va_copy(d, s) __builtin_va_copy(d, s)
-#endif
 
 #define PATH_MAX FX_MAXIMUM_PATH
 #define MG_DIRSEP '\\'
@@ -292,6 +291,12 @@ struct timeval {
 #endif
 #ifndef EINTR
 #define EINTR pdFREERTOS_ERRNO_EINTR
+#endif
+
+// FreeRTOS-TCP uses non-standard semantics for listen() backlog size. It is
+// not a backlog size for pending SYN connections, but a max socket number
+#ifndef MG_SOCK_LISTEN_BACKLOG_SIZE
+#define MG_SOCK_LISTEN_BACKLOG_SIZE 128
 #endif
 
 #endif  // MG_ARCH == MG_ARCH_FREERTOS_TCP
@@ -563,13 +568,6 @@ typedef int socklen_t;
 #define sleep(x) Sleep(x)
 #define mkdir(a, b) _mkdir(a)
 
-#ifndef va_copy
-#ifdef __va_copy
-#define va_copy __va_copy
-#else
-#define va_copy(x, y) (x) = (y)
-#endif
-#endif
 #ifndef S_ISDIR
 #define S_ISDIR(x) (((x) &_S_IFMT) == _S_IFDIR)
 #endif
@@ -583,12 +581,12 @@ typedef int socklen_t;
 
 #if MG_ARCH == MG_ARCH_ZEPHYR
 
-#include <zephyr.h>
+#include <zephyr/kernel.h>
 
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <net/socket.h>
+#include <zephyr/net/socket.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -599,6 +597,9 @@ typedef int socklen_t;
 #include <time.h>
 
 #define MG_PUTCHAR(x) printk("%c", x)
+#ifndef strdup
+#define strdup(s) ((char *) mg_strdup(mg_str(s)).ptr)
+#endif
 #define strerror(x) zsock_gai_strerror(x)
 #define FD_CLOEXEC 0
 #define F_SETFD 0
@@ -655,7 +656,7 @@ int sscanf(const char *, const char *, ...);
 #endif
 
 #ifndef MG_ENABLE_MD5
-#define MG_ENABLE_MD5 0
+#define MG_ENABLE_MD5 1
 #endif
 
 // Set MG_ENABLE_WINSOCK=0 for Win32 builds with external IP stack (like LWIP)
@@ -993,6 +994,7 @@ enum {
   MG_EV_RESOLVE,     // Host name is resolved        NULL
   MG_EV_CONNECT,     // Connection established       NULL
   MG_EV_ACCEPT,      // Connection accepted          NULL
+  MG_EV_TLS_HS,      // TLS handshake succeeded      NULL
   MG_EV_READ,        // Data received from socket    long *bytes_read
   MG_EV_WRITE,       // Data written to socket       long *bytes_written
   MG_EV_CLOSE,       // Connection closed            NULL
@@ -1005,7 +1007,7 @@ enum {
   MG_EV_MQTT_MSG,    // MQTT PUBLISH received        struct mg_mqtt_message *
   MG_EV_MQTT_OPEN,   // MQTT CONNACK received        int *connack_status_code
   MG_EV_SNTP_TIME,   // SNTP time received           uint64_t *epoch_millis
-  MG_EV_USER,        // Starting ID for user events
+  MG_EV_USER         // Starting ID for user events
 };
 
 
@@ -1094,7 +1096,7 @@ struct mg_connection *mg_wrapfd(struct mg_mgr *mgr, int fd,
 void mg_connect_resolved(struct mg_connection *);
 bool mg_send(struct mg_connection *, const void *, size_t);
 size_t mg_printf(struct mg_connection *, const char *fmt, ...);
-size_t mg_vprintf(struct mg_connection *, const char *fmt, va_list ap);
+size_t mg_vprintf(struct mg_connection *, const char *fmt, va_list *ap);
 char *mg_straddr(struct mg_addr *, char *, size_t);
 bool mg_aton(struct mg_str str, struct mg_addr *addr);
 char *mg_ntoa(const struct mg_addr *addr, char *buf, size_t len);

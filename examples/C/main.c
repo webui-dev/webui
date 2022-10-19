@@ -1,7 +1,7 @@
-
 /*
     WebUI Library 2.x
-    
+    C99 Example
+
     http://webui.me
     https://github.com/alifcommunity/webui
 
@@ -16,18 +16,18 @@ webui_window_t* my_window;
 
 // UI HTML
 const char* my_html = "<!DOCTYPE html>"
-"<html><head><title>WebUI 2.0 Example</title>"
+"<html><head><title>WebUI 2 - C99 Example</title>"
 "<style>body{color: white; background: #0F2027;"
 "background: -webkit-linear-gradient(to right, #2C5364, #203A43, #0F2027);"
 "background: linear-gradient(to right, #2C5364, #203A43, #0F2027);"
 "text-align:center; font-size: 18px; font-family: sans-serif;}</style></head><body>"
-"<h1>WebUI 2.0 Example</h1><br>"
+"<h1>WebUI 2 - C99 Example</h1><br>"
 "<input type=\"password\" id=\"MyInput\"><br><br>"
 "<button id=\"MyButton1\">Check Password</button> - <button id=\"MyButton2\">Exit</button>"
 "</body></html>";
 
 // Check the password function
-void check_the_password(const webui_event_t e) {
+void check_the_password(webui_event_t* e) {
 
 	// This function get called every time the user click on "MyButton1"
 
@@ -64,10 +64,11 @@ void check_the_password(const webui_event_t e) {
 		webui_run_js(my_window, &js);
 	}
 
+	// Free data resources
 	webui_free_js(&js);
 }
 
-void close_the_application(const webui_event_t e){
+void close_the_application(webui_event_t* e){
 
 	// Close all opened windows
 	webui_exit();
