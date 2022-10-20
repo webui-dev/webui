@@ -1,18 +1,12 @@
-# WebUI 2.x
+# WebUI
 
-![ScreenShot](screenshot.png)
+<img src="https://img.shields.io/circleci/project/github/badges/shields/master">
 
 [![Build Status](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master)](https://github.com/alifcommunity/webui)
 
-Bring the power of web browsers with the web technologies into your GUI, using your favourite programming language in the backend, and HTML/JS/CSS in the frontend.
+Use any web browser as GUI, with your preferred language in the backend, and HTML/JS/TS/CSS in the frontend.
 
-## Why WebUI?
-
-Web technology is everywhere, and the web browsers have everything a modern UI need. While all other "WebView" based GUI libraries can not provide all features like a real web browser provides, WebUI use any installed web browser to give you the full power of a web browser. WebUI is fully written in C, and the final result library is completely independent and does not need any third-party library.
-
-## How its work?
-
-WebUI use a WebSocket communication in binary mode between the web browser (UI) and your application. Your application will receive click events. And of course you can send/receive data or execute JavaScript from your favourite programming language. 
+![ScreenShot](screenshot.png)
 
 ## Features
 
@@ -21,7 +15,7 @@ WebUI use a WebSocket communication in binary mode between the web browser (UI) 
 - Fast binary communication (*App--WebUI--Browser*)
 - One header file
 - Multiplatform & Multi Browser
-- Private browser user-profiles
+- Use private browser profile for safety
 - Customized app mode look & feel
 
 ## Build
@@ -33,7 +27,8 @@ WebUI use a WebSocket communication in binary mode between the web browser (UI) 
  - [C](https://github.com/alifcommunity/webui/tree/main/examples/C)
  - [Python](https://github.com/alifcommunity/webui/tree/main/examples/Python)
  - [TypeScript / JavaScript](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript)
- - Go
+ - [Go](https://github.com/alifcommunity/webui/tree/main/examples/Go/hello_world)
+ - [Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust/hello_world)
 
 ## Supported Browser
 
@@ -58,7 +53,7 @@ WebUI use a WebSocket communication in binary mode between the web browser (UI) 
 | JavaScript | ✔️ |
 | TypeScript | ✔️ |
 | Go | ✔️ |
-| Rust | 94% |
+| Rust | 94% (*[Need help](https://github.com/alifcommunity/webui/issues/24)*) |
 | Java | *coming soon* |
 | Nim | *coming soon* |
 | Perl | *coming soon* |
