@@ -1,42 +1,27 @@
 
 # WebUI Examples - C
 
-The makefile build the WebUI library for you, then build the C example. You will need one of those C compiler, no dependencies is needed.
+To build the C example you will need one of those C compilers, no dependencies is needed.
 
 ## Windows
 
-- **Build Tools for Microsoft Visual Studio - Release**
+- **Build Tools for Microsoft Visual Studio**
 ```sh
-cd examples\C\Windows\MSVC
+git clone https://github.com/alifcommunity/webui.git
+cd webui\examples\C\Windows\MSVC
 nmake
 ```
 
-- **Build Tools for Microsoft Visual Studio - Debug**
+- **MinGW**
 ```sh
-cd examples\C\Windows\MSVC
-nmake debug
-```
-
-- **MinGW - Release**
-```sh
-cd examples\C\Windows\gcc
+git clone https://github.com/alifcommunity/webui.git
+cd webui\examples\C\Windows\GCC
 mingw32-make
 ```
 
-- **MinGW - Debug**
+- **TCC**
 ```sh
-cd examples\C\Windows\gcc
-mingw32-make debug
-```
-
-- **TCC - Release**
-```sh
-cd examples\C\Windows\tcc
-mingw32-make debug
-```
-
-- **TCC - Debug**
-```sh
-cd examples\C\Windows\tcc
-mingw32-make debug
+git clone https://github.com/alifcommunity/webui.git
+cd webui\examples\C\Windows\TCC
+mingw32-make
 ```
