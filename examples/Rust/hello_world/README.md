@@ -1,7 +1,8 @@
 # WebUI Examples - Rust
 
 ```sh
-cd examples\Rust\hello_world
+git clone https://github.com/alifcommunity/webui.git
+cd webui\examples\Rust\hello_world
 cargo clean
 cargo build
 cargo run
