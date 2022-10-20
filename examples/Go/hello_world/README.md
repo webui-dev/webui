@@ -1,6 +1,7 @@
-# WebUI Examples - Go
+# WebUI Examples - Golang
 
 ```sh
-cd examples\Go\hello_world
+git clone https://github.com/alifcommunity/webui.git
+cd webui\examples\Go\hello_world
 go build
 ```
