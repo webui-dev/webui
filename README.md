@@ -1,8 +1,6 @@
 # WebUI
 
-<img src="https://img.shields.io/circleci/project/github/badges/shields/master">
-
-[![Build Status](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master)](https://github.com/alifcommunity/webui)
+<img src="https://img.shields.io/circleci/project/github/badges/shields/master"> [![Build Status](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master)](https://github.com/alifcommunity/webui)
 
 Use any web browser as GUI, with your preferred language in the backend, and HTML/JS/TS/CSS in the frontend.
 
@@ -63,3 +61,7 @@ Use any web browser as GUI, with your preferred language in the backend, and HTM
 ### License
 
 GNU General Public License v3.0
+
+### Stargazers
+
+[![Stargazers repo roster for @alifcommunity/webui](https://reporoster.com/stars/alifcommunity/webui)](https://github.com/alifcommunity/webui/stargazers)
