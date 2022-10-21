@@ -1,8 +1,6 @@
 # WebUI
 
-[![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
-
-<img src="https://img.shields.io/circleci/project/github/badges/shields/master"> [![Build Status](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master)](https://github.com/alifcommunity/webui/issues)
+[![Website](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://webui.me/) [![Website](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://webui.me/) [![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
 
 Use any web browser as GUI, with your preferred language in the backend, and HTML/JS/TS/CSS in the frontend.
 
