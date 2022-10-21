@@ -206,7 +206,7 @@ typedef struct webui_t {
     void (*cb_int[WEBUI_MAX_ARRAY])(unsigned int, unsigned int, char*);
     char* executable_path;
     void *ptr_list[WEBUI_MAX_ARRAY];
-    size_t ptr_position;
+    unsigned int ptr_position;
     size_t ptr_size[WEBUI_MAX_ARRAY];
 
 } webui_t;
@@ -267,8 +267,8 @@ EXPORT void _webui_window_send(webui_window_t* win, char* packet, size_t packets
 EXPORT void _webui_window_event(webui_window_t* win, char* element_id, char* element);
 EXPORT unsigned int _webui_window_get_number(webui_window_t* win);
 EXPORT void _webui_window_open(webui_window_t* win, char* link, unsigned int browser);
-EXPORT int _webui_cmd_sync(char* cmd);
-EXPORT int _webui_cmd_async(char* cmd);
+EXPORT int _webui_cmd_sync(char* cmd, bool show);
+EXPORT int _webui_cmd_async(char* cmd, bool show);
 EXPORT int _webui_run_browser(webui_window_t* win, char* cmd);
 EXPORT void _webui_browser_clean();
 EXPORT bool _webui_browser_exist(webui_window_t* win, unsigned int browser);
@@ -283,6 +283,7 @@ EXPORT bool _webui_browser_start(webui_window_t* win, const char* address, unsig
 #ifdef _WIN32
     EXPORT DWORD WINAPI _webui_cb(LPVOID _arg);
     EXPORT DWORD WINAPI _webui_run_browser_task(LPVOID _arg);
+    EXPORT int _webui_system_win32(char* cmd, bool show);
 #else
     EXPORT void _webui_cb(void* _arg);
     EXPORT void _webui_run_browser_task(void* _arg);

@@ -24,12 +24,11 @@ webui_t webui;
 // This is a uncompressed version to make the debugging
 // more easy in the browser using the builtin dev-tools
 static const char* webui_javascript_bridge = 
-"var _webui_log = false; \n"
+"const _webui_log = false; \n"
 "var _webui_ws; \n"
 "var _webui_ws_status = false; \n"
 "var _webui_action8 = new Uint8Array(1); \n"
 "var _webui_action_val; \n"
-"var _webui_allow_close = false; \n"
 "function _webui_close(vbyte, v) { \n"
 "    _webui_ws_status = false; \n"
 "    _webui_action8[0] = vbyte; \n"
@@ -42,9 +41,9 @@ static const char* webui_javascript_bridge =
 "function _webui_start() { \n"
 "    if (\"WebSocket\" in window) { \n"
 "        _webui_ws = new WebSocket(\"ws://localhost:\" + _webui_port + \"/_ws\"); \n"
-"        _webui_ws.binaryType = \"blob\"; \n"
+"        _webui_ws.binaryType = \"arraybuffer\"; \n"
 "        _webui_ws.onopen = function () { \n"
-"            _webui_ws.binaryType = \"blob\"; \n"
+"            _webui_ws.binaryType = \"arraybuffer\"; \n"
 "            _webui_ws_status = true; \n"
 "            if (_webui_log) console.log(\"WebUI -> Connected\"); \n"
 "            _webui_listener(); \n"
@@ -65,18 +64,15 @@ static const char* webui_javascript_bridge =
 "            } \n"
 "        }; \n"
 "        _webui_ws.onmessage = function (evt) { \n"
-"            var reader; \n"
-"            var buffer8; \n"
-"            reader = new FileReader(); \n"
-"            reader.readAsArrayBuffer(evt.data); \n"
-"            reader.addEventListener(\"loadend\", function (e) { \n"
-"                buffer8 = new Uint8Array(e.target.result); \n"
-"                if (buffer8.length < 1) return; \n"
+"                const buffer8 = new Uint8Array(evt.data); \n"
+"                if (buffer8.length < 4) return; \n"
 "                if (buffer8[0] !== 255) { \n"
-"                    if (_webui_log) console.log(\"WebUI -> Invalid flag -> 0x\" + buffer8[0] + \" 0x\" + buffer8[1] + \" 0x\" + buffer8[2]); \n"
+"                    if (_webui_log) console.log(\"WebUI -> Invalid flag -> 0x\" + buffer8[0] + \n"
+"                                   \" 0x\" + buffer8[1] + \" 0x\" + buffer8[2]); \n"
 "                    return; \n"
 "                } \n"
-"                if (_webui_log) console.log(\"WebUI -> Flag -> 0x\" + buffer8[0] + \" 0x\" + buffer8[1] + \" 0x\" + buffer8[2]); \n"
+"                if (_webui_log) console.log(\"WebUI -> Flag -> 0x\" + buffer8[0] + \" 0x\" + \n"
+"                                               buffer8[1] + \" 0x\" + buffer8[2]); \n"
 "                var len = buffer8.length - 3; \n"
 "                if (buffer8[buffer8.length - 1] === 0) \n"
 "                   len--; // Null terminated byte can break eval() \n"
@@ -118,7 +114,6 @@ static const char* webui_javascript_bridge =
 "                        console.log(\"WebUI -> JS -> Sent response -> [\" + FunReturn + \"] (\" + buf + \")\"); \n"
 "                    } \n"
 "                } \n"
-"            }); \n"
 "        }; \n"
 "    } else { \n"
 "        alert(\"Sorry. WebSocket not supported by your Browser.\"); \n"
@@ -269,7 +264,6 @@ static const char* webui_javascript_bridge =
 "} \n"
 "function webui_close_window() { \n"
 "    _webui_freez_ui(); \n"
-"    _webui_allow_close = true; \n"
 "    if (_webui_ws_status) _webui_close(255, \"\"); \n"
 "    else window.close(); \n"
 "} \n"
@@ -703,7 +697,7 @@ bool _webui_deno_exist() {
     if(found)
         return true;
 
-    if(_webui_cmd_sync("deno --version") == 0) {
+    if(_webui_cmd_sync("deno --version", false) == 0) {
 
         found = true;
         return true;
@@ -723,7 +717,7 @@ bool _webui_nodejs_exist() {
     if(found)
         return true;
 
-    if(_webui_cmd_sync("node -v") == 0) {
+    if(_webui_cmd_sync("node -v", false) == 0) {
 
         found = true;
         return true;
@@ -1277,23 +1271,23 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
                     unsigned int n = 0;
                     do {
 
-                        mg_mgr_poll(&mgr, 500);
+                        mg_mgr_poll(&mgr, 1);
                         if(win->core.connected)
                             break;
                         
-                        if(webui.timeout_extra && n >= (timeout * 2) && !extra_used) {
+                        if(webui.timeout_extra && win->core.server_handled && !extra_used) {
 
-                            // At this moment we reached the timeout
-                            // but if the browser is started and HTML
-                            // is handled, then let's wait more to give
+                            // At this moment the browser is started and HTML
+                            // is handled, so, let's reset the timer to give
                             // the WebSocket an extra time to connect
+
                             n = 0;
                             extra_used = true;
                         }
                         else n++;
 
-                    } while(n <= (timeout * 2));
-
+                    } while(n <= (timeout * 100));
+                    
                     if(!win->core.connected)
                         stop = true;
                 }
@@ -1302,7 +1296,7 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
                     for(;;) {
 
                         // Wait forever for disconnection
-                        mg_mgr_poll(&mgr, 500);
+                        mg_mgr_poll(&mgr, 1);
                         if(!win->core.connected)
                             break;
                     }
@@ -1319,7 +1313,7 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
 
             // Wait forever
             for(;;)
-                mg_mgr_poll(&mgr, 500);
+                mg_mgr_poll(&mgr, 1);
         }
     }
 
@@ -1391,10 +1385,10 @@ bool _webui_browser_create_profile_folder(webui_window_t* win, unsigned int brow
 
             #ifdef _WIN32
                 sprintf(buf, "%s -CreateProfile \"WebUI %s\"", win->core.browser_path, firefox_profile_path);
-                _webui_cmd_sync(buf);
+                _webui_cmd_sync(buf, false);
             #else
                 sprintf(buf, "%s -CreateProfile \"WebUI %s\"", win->core.browser_path, firefox_profile_path);
-                _webui_cmd_sync(buf);
+                _webui_cmd_sync(buf, false);
             #endif
 
             // Wait 10 second while slow PC create the folder..
@@ -1425,9 +1419,9 @@ bool _webui_browser_create_profile_folder(webui_window_t* win, unsigned int brow
             if(!_webui_folder_exist(buf)) {
 
                 sprintf(buf, "mkdir \"%s%schrome%s\"", firefox_profile_path, webui_sep, webui_sep);
-                _webui_cmd_sync(buf); // Create directory
+                _webui_cmd_sync(buf, false); // Create directory
             }
-            sprintf(buf, "%s%schrome%suserChrome.css", firefox_profile_path, webui_sep, webui_sep, webui_sep);
+            sprintf(buf, "%s%schrome%suserChrome.css", firefox_profile_path, webui_sep, webui_sep);
             file = fopen(buf, "a");
             if(file == NULL)
                 return false;
@@ -1456,7 +1450,7 @@ bool _webui_folder_exist(char* folder) {
     #endif
 
     #if defined(_MSC_VER)
-        if(GetFileAttributes(folder) != INVALID_FILE_ATTRIBUTES)
+        if(GetFileAttributesA(folder) != INVALID_FILE_ATTRIBUTES)
             return true;
     #else
         DIR* dir = opendir(folder);
@@ -1593,7 +1587,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
         #elif __APPLE__
             
             // Firefox on macOS
-            if(_webui_cmd_sync("open -R -a \"firefox\"") == 0) {
+            if(_webui_cmd_sync("open -R -a \"firefox\"", false) == 0) {
 
                 sprintf(win->core.browser_path, "/Applications/Firefox.app/Contents/MacOS/firefox");
                 return true;
@@ -1604,7 +1598,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
 
             // Firefox on Linux
 
-            if(_webui_cmd_sync("firefox -v") == 0) {
+            if(_webui_cmd_sync("firefox -v", false) == 0) {
 
                 sprintf(win->core.browser_path, "firefox");
                 return true;
@@ -1643,7 +1637,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
         #elif __APPLE__
 
             // Chrome on macOS
-            if(_webui_cmd_sync("open -R -a \"Google Chrome\"") == 0) {
+            if(_webui_cmd_sync("open -R -a \"Google Chrome\"", false) == 0) {
 
                 sprintf(win->core.browser_path, "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome");
                 return true;
@@ -1653,7 +1647,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
         #else
 
             // Chrome on Linux
-            if(_webui_cmd_sync("google-chrome --version") == 0) {
+            if(_webui_cmd_sync("google-chrome --version", false) == 0) {
 
                 sprintf(win->core.browser_path, "google-chrome");
                 return true;
@@ -1716,33 +1710,80 @@ void _webui_browser_clean() {
     // future run.
 }
 
-int _webui_cmd_sync(char* cmd) {
+#ifdef _WIN32
+    int _webui_system_win32(char* cmd, bool show) {
+
+        #ifdef WEBUI_LOG
+            printf("[0] _webui_system_win32([%s], [%d])... \n", cmd, show);
+        #endif
+
+        DWORD Return = 0;
+        DWORD CreationFlags = CREATE_NO_WINDOW;
+
+        if(show)
+            CreationFlags = SW_SHOW;
+
+        STARTUPINFOA si;
+        PROCESS_INFORMATION pi;
+        ZeroMemory(&si, sizeof(si));
+        si.cb = sizeof(si);
+        ZeroMemory(&pi, sizeof(pi));
+        if (!CreateProcessA(
+            NULL,               // No module name (use command line)
+            cmd,                // Command line
+            NULL,               // Process handle not inheritable
+            NULL,               // Thread handle not inheritable
+            FALSE,              // Set handle inheritance to FALSE
+            CreationFlags,      // Creation flags
+            NULL,               // Use parent's environment block
+            NULL,               // Use parent's starting directory 
+            &si,                // Pointer to STARTUP INFO structure
+            &pi))               // Pointer to PROCESS_INFORMATION structure
+        {
+            // CreateProcess failed
+            return -1;
+        }
+
+        SetFocus(pi.hProcess);
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        GetExitCodeProcess(pi.hProcess, &Return);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+
+        if (Return == 0)
+            return 0;
+        else
+            return -1;
+    }
+#endif
+
+int _webui_cmd_sync(char* cmd, bool show) {
 
     #ifdef WEBUI_LOG
-        printf("[0] _webui_cmd_sync([%s])... \n", cmd);
+        printf("[0] _webui_cmd_sync([%s], [%d])... \n", cmd, show);
     #endif
 
-    // Run a sync command in silence
-    // and return exit code
+    // Run sync command and
+    // return the exit code
 
     char buf[1024];
 
     #ifdef _WIN32
         sprintf(buf, "cmd /c \"%s\" > nul 2>&1 ", cmd);
+        return _webui_system_win32(buf, show);
     #else
         sprintf(buf, "%s >>/dev/null 2>>/dev/null ", cmd);
+        return system(buf);
     #endif
-
-    return system(buf);
 }
 
-int _webui_cmd_async(char* cmd) {
+int _webui_cmd_async(char* cmd, bool show) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_cmd_async([%s])... \n", cmd);
     #endif
 
-    // Run a async command in silence
+    // Run a async command
     // and return immediately
 
     char buf[1024];
@@ -1751,13 +1792,11 @@ int _webui_cmd_async(char* cmd) {
     #ifdef _WIN32
         // Make command async
         sprintf(buf, "START \"\" %s", cmd);
-        // Run in silent
-        res = _webui_cmd_sync(buf);
+        res = _webui_cmd_sync(buf, show);
     #else
         // Make command async
         if(fork() >= 0) {
-            // Run in silent
-            _webui_cmd_sync(cmd);
+            _webui_cmd_sync(cmd, show);
             return 0;
         }
         else
@@ -1780,7 +1819,7 @@ int _webui_cmd_async(char* cmd) {
     #endif
 
     // Run command
-    _webui_cmd_sync(arg->cmd);
+    _webui_cmd_sync(arg->cmd, false);
 
     // Free memory
     _webui_free_mem((void *) &arg->cmd);
@@ -1801,8 +1840,8 @@ int _webui_run_browser(webui_window_t* win, char* cmd) {
 
     if(win->core.detect_process_close) {
 
-        // Run a async command and free window
-        // connection when process (browser) stop
+        // Run a async command, and close the app
+        // when the process exit
 
         webui_cmd_async_t* arg = (webui_cmd_async_t*) _webui_malloc(sizeof(webui_cmd_async_t));
         arg->win = win;
@@ -1816,13 +1855,12 @@ int _webui_run_browser(webui_window_t* win, char* cmd) {
             // Create posix thread ...
         #endif
 
-        // TODO: We need to set 'res = 1' if _webui_run_browser_detect_proc_task() fails. 
+        // TODO: We need to set 'res = -1' when _webui_run_browser_detect_proc_task() fails. 
     }
     else {
 
         // Run a async command
-
-        res = _webui_cmd_async(cmd);
+        res = _webui_cmd_async(cmd, false);
     }
 
     return res;
@@ -2685,7 +2723,7 @@ void webui_loop() {
     else {
 
         #ifdef WEBUI_LOG
-            printf("[L] webui_loop() -> Infinite loop...\n", webui.startup_timeout);
+            printf("[L] webui_loop() -> Infinite loop...\n");
         #endif
 
         // Infinite wait
@@ -2694,7 +2732,7 @@ void webui_loop() {
     }
 
     #ifdef WEBUI_LOG
-        printf("[L] webui_loop() -> Loop finished.\n", webui.startup_timeout);
+        printf("[L] webui_loop() -> Loop finished.\n");
     #endif
 
     _webui_browser_clean();
@@ -2833,8 +2871,8 @@ void _webui_ini() {
     webui.browser.safari        = 4;
     webui.browser.chromium      = 5;
     webui.browser.custom        = 99;
-    webui.runtime.deno      = 1;
-    webui.runtime.nodejs    = 2;
+    webui.runtime.deno          = 1;
+    webui.runtime.nodejs        = 2;
     webui.executable_path       = _webui_get_current_path();
 }
 
@@ -2930,3 +2968,31 @@ void webui_run_js_int_struct(webui_window_t* win, webui_javascript_int_t* js_int
     js_int->error = js.result.error;
     js_int->length = js.result.length;
 }
+
+#ifdef _WIN32
+	BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
+
+        switch(fdwReason) {
+
+            case DLL_PROCESS_ATTACH:
+                // Initialize once for each new process.
+                // Return FALSE to fail DLL load.
+                break;
+
+            case DLL_THREAD_ATTACH:
+                // Do thread-specific initialization.
+                break;
+
+            case DLL_THREAD_DETACH:
+                // Do thread-specific cleanup.
+                break;
+
+            case DLL_PROCESS_DETACH:
+                // Perform any necessary cleanup.
+                webui_exit();
+                break;
+        }
+
+        return TRUE;
+    }
+#endif
