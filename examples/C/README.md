@@ -3,7 +3,7 @@
 
 To build the C example you will need one of those C compilers, no dependencies is needed.
 
-## Windows
+### Windows
 
 - **Build Tools for Microsoft Visual Studio**
 ```sh

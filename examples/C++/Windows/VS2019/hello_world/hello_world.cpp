@@ -1,6 +1,6 @@
 /*
 	WebUI Library 2.x
-	C99 Visual Studio Example
+	C++ Visual Studio Example
 
 	http://webui.me
 	https://github.com/alifcommunity/webui
@@ -9,19 +9,21 @@
 	Copyright (C)2022 Hassan DRAGA <https://github.com/hassandraga>.
 */
 
-#include "webui.h"
+extern "C" {
+	#include <webui.h>
+}
 
 // Window struct
 webui_window_t* my_window;
 
 // UI HTML
 const char* my_html = "<!DOCTYPE html>"
-"<html><head><title>WebUI 2 - C99 Visual Studio Example</title>"
+"<html><head><title>WebUI 2 - C++ Visual Studio Example</title>"
 "<style>body{color: white; background: #0F2027;"
 "background: -webkit-linear-gradient(to right, #8d4887, #521b4e, #3e073a);"
 "background: linear-gradient(to right, #8d4887, #521b4e, #3e073a);"
 "text-align:center; font-size: 18px; font-family: sans-serif;}</style></head><body>"
-"<h1>WebUI 2 - C99 Visual Studio Example</h1><br>"
+"<h1>WebUI 2 - C++ Visual Studio Example</h1><br>"
 "<input type=\"password\" id=\"MyInput\"><br><br>"
 "<button id=\"MyButton1\">Check Password</button> - <button id=\"MyButton2\">Exit</button>"
 "</body></html>";
@@ -31,10 +33,9 @@ void check_the_password(webui_event_t* e) {
 
 	// This function get called every time the user click on "MyButton1"
 
-	webui_javascript_t js = {
-		.script = " return document.getElementById(\"MyInput\").value; ",
-		.timeout = 3
-	};
+	webui_javascript_t js;
+	js.script = " return document.getElementById(\"MyInput\").value; ";
+	js.timeout = 3;
 
 	// Run the JavaScript on the UI (Web Browser)
 	webui_run_js(my_window, &js);

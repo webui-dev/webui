@@ -23,6 +23,7 @@ Use any web browser as GUI, with your preferred language in the backend, and HTM
 ## Examples
 
  - [C](https://github.com/alifcommunity/webui/tree/main/examples/C)
+ - [C++](https://github.com/alifcommunity/webui/tree/main/examples/C++)
  - [Python](https://github.com/alifcommunity/webui/tree/main/examples/Python)
  - [TypeScript / JavaScript](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript)
  - [Go](https://github.com/alifcommunity/webui/tree/main/examples/Go/hello_world)
@@ -46,7 +47,7 @@ Use any web browser as GUI, with your preferred language in the backend, and HTM
 | Language | Status |
 | ------ | ------ |
 | C | ✔️ |
-| C++ | 94% |
+| C++ | ✔️ |
 | Python | ✔️ |
 | JavaScript | ✔️ |
 | TypeScript | ✔️ |

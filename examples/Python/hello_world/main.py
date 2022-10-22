@@ -8,11 +8,9 @@
 # Licensed under GNU General Public License v3.0.
 # Copyright (C)2022 Hassan DRAGA <https://github.com/hassandraga>.
 
-import webui
-
-# Set the WebUI dynamic library location (Optional)
-# Default is the same folder, otherwise use this option
-webui.set_library_path("../../../build/Windows/MSVC")
+# Install WebUI 2
+# pip install --upgrade webui2
+from webui import webui
 
 # Create a global window object
 MyWindow = webui.window()

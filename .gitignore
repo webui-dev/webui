@@ -22,6 +22,8 @@ Release/
 
 # Python
 __pycache__/
+dist/
+webui2.egg-info/
 
 # Rust
 target/

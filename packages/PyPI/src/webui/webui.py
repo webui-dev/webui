@@ -14,7 +14,7 @@ from ctypes import *
 import shutil
 
 WebUI = None
-WebUI_Path = os.getcwd()
+WebUI_Path = os.path.dirname(__file__)
 
 # Event
 class event:
@@ -40,6 +40,7 @@ class javascript:
 	length = 0
 	data = ""
 
+# The window class
 class window:
 
 	window = None
@@ -53,7 +54,7 @@ class window:
 			load_library()
 			# Check library if correctly loaded
 			if WebUI is None:
-				print('Please download the latest library from https://webui.me')
+				print('Please download the latest WebUI dynamic library from https://webui.me')
 				sys.exit(1)
 			# Create new WebUI window
 			webui_wrapper = None

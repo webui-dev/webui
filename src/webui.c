@@ -2097,7 +2097,7 @@ void webui_run_js(webui_window_t* win, webui_javascript_t* javascript) {
 
         _webui_free_mem((void *) &javascript->result.data);
         javascript->result.data = webui_js_empty;
-        javascript->result.length = strlen(webui_js_empty);
+        javascript->result.length = (unsigned int) strlen(webui_js_empty);
         javascript->result.error = true;
         return;
     }
@@ -2105,7 +2105,7 @@ void webui_run_js(webui_window_t* win, webui_javascript_t* javascript) {
     // Initializing js result
     _webui_free_mem((void *) &javascript->result.data);
     javascript->result.data = webui_js_timeout;
-    javascript->result.length = strlen(webui_js_timeout);
+    javascript->result.length = (unsigned int) strlen(webui_js_timeout);
     javascript->result.error = true;
     
     // Initializing pipe
@@ -2152,7 +2152,7 @@ void webui_run_js(webui_window_t* win, webui_javascript_t* javascript) {
     if(webui.run_responses[run_id] != NULL) {
 
         javascript->result.data = webui.run_responses[run_id];
-        javascript->result.length = strlen(webui.run_responses[run_id]);
+        javascript->result.length = (unsigned int) strlen(webui.run_responses[run_id]);
         javascript->result.error = webui.run_error[run_id];
     }
 }

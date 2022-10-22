@@ -1,27 +1,29 @@
 /*
-	WebUI Library 2.x
-	C99 Visual Studio Example
+    WebUI Library 2.x
+    C++ Example
 
-	http://webui.me
-	https://github.com/alifcommunity/webui
+    http://webui.me
+    https://github.com/alifcommunity/webui
 
-	Licensed under GNU General Public License v3.0.
-	Copyright (C)2022 Hassan DRAGA <https://github.com/hassandraga>.
+    Licensed under GNU General Public License v3.0.
+    Copyright (C)2022 Hassan DRAGA <https://github.com/hassandraga>.
 */
 
-#include "webui.h"
+extern "C"{
+    #include "webui.h"
+}
 
 // Window struct
 webui_window_t* my_window;
 
 // UI HTML
 const char* my_html = "<!DOCTYPE html>"
-"<html><head><title>WebUI 2 - C99 Visual Studio Example</title>"
+"<html><head><title>WebUI 2 - C++ Example</title>"
 "<style>body{color: white; background: #0F2027;"
-"background: -webkit-linear-gradient(to right, #8d4887, #521b4e, #3e073a);"
-"background: linear-gradient(to right, #8d4887, #521b4e, #3e073a);"
+"background: -webkit-linear-gradient(to right, #6b5597, #5c437c, #250a36);"
+"background: linear-gradient(to right, #6b5597, #5c437c, #250a36);"
 "text-align:center; font-size: 18px; font-family: sans-serif;}</style></head><body>"
-"<h1>WebUI 2 - C99 Visual Studio Example</h1><br>"
+"<h1>WebUI 2 - C++ Example</h1><br>"
 "<input type=\"password\" id=\"MyInput\"><br><br>"
 "<button id=\"MyButton1\">Check Password</button> - <button id=\"MyButton2\">Exit</button>"
 "</body></html>";
@@ -31,16 +33,15 @@ void check_the_password(webui_event_t* e) {
 
 	// This function get called every time the user click on "MyButton1"
 
-	webui_javascript_t js = {
-		.script = " return document.getElementById(\"MyInput\").value; ",
-		.timeout = 3
-	};
+	webui_javascript_t js;
+	js.script = " return document.getElementById(\"MyInput\").value; ";
+	js.timeout = 3;
 
-	// Run the JavaScript on the UI (Web Browser)
+    // Run the JavaScript on the UI (Web Browser)
 	webui_run_js(my_window, &js);
 
 	// Check if there is any JavaScript error
-	if (js.result.error) {
+	if(js.result.error) {
 
 		printf("JavaScript Error: %s\n", js.result.data);
 		return;
@@ -51,7 +52,7 @@ void check_the_password(webui_event_t* e) {
 	printf("Password: %s\n", password);
 
 	// Check the password
-	if (strcmp(password, "123456") == 0) {
+	if(strcmp(password, "123456") == 0) {
 
 		// Correct password
 		js.script = "alert('Good. Password is correct.')";
@@ -68,7 +69,7 @@ void check_the_password(webui_event_t* e) {
 	webui_free_js(&js);
 }
 
-void close_the_application(webui_event_t* e) {
+void close_the_application(webui_event_t* e){
 
 	// Close all opened windows
 	webui_exit();
@@ -77,23 +78,24 @@ void close_the_application(webui_event_t* e) {
 int main() {
 
 	// Create a window
-	my_window = webui_new_window();
-
+    my_window = webui_new_window();
+    
 	// Bind HTML elements with functions
 	webui_bind(my_window, "MyButton1", check_the_password);
 	webui_bind(my_window, "MyButton2", close_the_application);
 
-	// Show the window
-	if (!webui_show(my_window, my_html, webui.browser.chrome))	// Run the window on Chrome
+    // Show the window
+	if(!webui_show(my_window, my_html, webui.browser.chrome))	// Run the window on Chrome
 		webui_show(my_window, my_html, webui.browser.any);		// If not, run on any other installed web browser
 
-	// Wait until all windows get closed
+    // Wait until all windows get closed
 	webui_loop();
 
-	return 0;
+    return 0;
 }
 
-int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow) {
-
-	main();
-}
+#if defined(_MSC_VER)
+	int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow) {
+		main();
+	}
+#endif

@@ -1,8 +1,20 @@
 
 # WebUI Examples - Python
 
-To use WebUI in your Python script, you will need to [build](https://github.com/alifcommunity/webui/tree/main/build) the WebUI library first using your favorite C compiler, then copy into this folder the dynamic WebUI library, `webui-2-x64.dll` on Windows, or `webui-2-x64.so` on Linux. Or, instead of coping the lib you can specify the path in your python script `webui.set_library_path("path/to/webui")`
+To use WebUI in your Python script, you will need to install it using pip, `pip install --upgrade webui2`. The source code of the Python WebUI module is [here](https://github.com/alifcommunity/webui/tree/main/packages/PyPI/src/webui)
 
 ```sh
-python main.py
+pip install --upgrade webui2
+```
+
+```python
+from webui import webui
+MyWindow = webui.window()
+MyWindow.bind('MyID', my_function)
+MyWindow.show("MyHTML")
+webui.loop()
+```
+
+```sh
+python test.py
 ```
