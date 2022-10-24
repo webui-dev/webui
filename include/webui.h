@@ -58,16 +58,23 @@
     #define WEBUI_FILE_EXIST _access
     #define WEBUI_POPEN _popen
     #define WEBUI_PCLOSE _pclose
+    #define WEBUI_MAX_PATH MAX_PATH
 #endif
 
 // -- Linux ---------------------------
 #ifdef __linux__
     #include <pthread.h> // POSIX threading
     #include <unistd.h>
+    #include <limits.h>
+    #include <dirent.h>
+    #include <sys/socket.h>
+    #include <fcntl.h>
+    #include <poll.h>
     #define WEBUI_GET_CURRENT_DIR getcwd
-    #define WEBUI_FILE_EXIST _access
+    #define WEBUI_FILE_EXIST access
     #define WEBUI_POPEN popen
     #define WEBUI_PCLOSE pclose
+    #define WEBUI_MAX_PATH PATH_MAX
 #endif
 
 // -- macOS ---------------------------
@@ -109,7 +116,7 @@ typedef struct webui_window_core_t {
     #ifdef _WIN32
         HANDLE server_thread;
     #else
-        unsigned int server_thread;
+        pthread_t server_thread;
     #endif    
 
 } webui_window_core_t;
@@ -285,8 +292,8 @@ EXPORT bool _webui_browser_start(webui_window_t* win, const char* address, unsig
     EXPORT DWORD WINAPI _webui_run_browser_task(LPVOID _arg);
     EXPORT int _webui_system_win32(char* cmd, bool show);
 #else
-    EXPORT void _webui_cb(void* _arg);
-    EXPORT void _webui_run_browser_task(void* _arg);
+    EXPORT void* _webui_cb(void* _arg);
+    EXPORT void* _webui_run_browser_task(void* _arg);
 #endif
 
 #endif /* _WEBUI_H */

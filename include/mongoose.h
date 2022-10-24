@@ -611,9 +611,9 @@ int sscanf(const char *, const char *, ...);
 #endif
 
 
-#ifndef MG_ENABLE_LOG
-#define MG_ENABLE_LOG 1
-#endif
+//#ifndef MG_ENABLE_LOG
+//#define MG_ENABLE_LOG 1
+//#endif
 
 #ifndef MG_ENABLE_MIP
 #define MG_ENABLE_MIP 0
