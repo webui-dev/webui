@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.1
+    WebUI Library 2.0.2
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -60,7 +60,6 @@
     #define WEBUI_PCLOSE _pclose
     #define WEBUI_MAX_PATH MAX_PATH
 #endif
-
 // -- Linux ---------------------------
 #ifdef __linux__
     #include <pthread.h> // POSIX threading
@@ -76,11 +75,16 @@
     #define WEBUI_PCLOSE pclose
     #define WEBUI_MAX_PATH PATH_MAX
 #endif
-
 // -- macOS ---------------------------
 // ...
 
 struct webui_window_t;
+
+typedef struct webui_timer_t {
+
+    struct timespec start;
+    struct timespec now;
+} webui_timer_t;
 
 typedef struct webui_event_t {
 
@@ -88,7 +92,6 @@ typedef struct webui_event_t {
     unsigned int element_id;
     char* element_name;
     struct webui_window_t* window;
-
 } webui_event_t;
 
 typedef struct webui_window_core_t {
@@ -117,15 +120,13 @@ typedef struct webui_window_core_t {
         HANDLE server_thread;
     #else
         pthread_t server_thread;
-    #endif    
-
+    #endif
 } webui_window_core_t;
 
 typedef struct webui_window_t {
 
     webui_window_core_t core;
     char* path;
-
 } webui_window_t;
 
 typedef struct webui_javascript_result_t {
@@ -133,7 +134,6 @@ typedef struct webui_javascript_result_t {
     bool error;
     unsigned int length;
     const char* data;
-
 } webui_javascript_result_t;
 
 typedef struct webui_javascript_t {
@@ -141,7 +141,6 @@ typedef struct webui_javascript_t {
     const char* script;
     unsigned int timeout;
     webui_javascript_result_t result;
-
 } webui_javascript_t;
 
 typedef struct webui_cb_t {
@@ -149,14 +148,12 @@ typedef struct webui_cb_t {
     webui_window_t* win;
     char* element_id;
     char* element_name;
-
 } webui_cb_t;
 
 typedef struct webui_cmd_async_t {
 
     webui_window_t* win;
     char* cmd;
-
 } webui_cmd_async_t;
 
 typedef struct webui_custom_browser_t {
@@ -164,7 +161,6 @@ typedef struct webui_custom_browser_t {
     char* app;
     char* arg;
     bool auto_link;
-
 } webui_custom_browser_t;
 
 typedef struct webui_browser_t {
@@ -176,7 +172,6 @@ typedef struct webui_browser_t {
     unsigned int safari;    // 4
     unsigned int chromium;  // 5
     unsigned int custom;    // 99
-
 } webui_browser_t;
 
 typedef struct webui_runtime_t {
@@ -184,7 +179,6 @@ typedef struct webui_runtime_t {
     unsigned int none;      // 0
     unsigned int deno;      // 1
     unsigned int nodejs;    // 2
-
 } webui_runtime_t;
 
 typedef struct webui_t {
@@ -215,7 +209,6 @@ typedef struct webui_t {
     void *ptr_list[WEBUI_MAX_ARRAY];
     unsigned int ptr_position;
     size_t ptr_size[WEBUI_MAX_ARRAY];
-
 } webui_t;
 
 // -- Definitions ---------------------
@@ -244,7 +237,6 @@ EXPORT void webui_detect_process_close(webui_window_t* win, bool status);
 
 // -- Interface -----------------------
 // To help other languages to use WebUI
-
 typedef struct webui_javascript_int_t {
 
     char* script;
@@ -252,9 +244,7 @@ typedef struct webui_javascript_int_t {
     bool error;
     unsigned int length;
     const char* data;
-
 } webui_javascript_int_t;
-
 EXPORT unsigned int webui_bind_int(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*));
 EXPORT void webui_run_js_int(webui_window_t* win, const char* script, unsigned int timeout, bool* error, unsigned int* length, char* data);
 EXPORT void webui_run_js_int_struct(webui_window_t* win, webui_javascript_int_t* js_int);
@@ -287,6 +277,10 @@ EXPORT bool _webui_browser_start_firefox(webui_window_t* win, const char* addres
 EXPORT bool _webui_browser_start_custom(webui_window_t* win, const char* address);
 EXPORT bool _webui_browser_start_chrome(webui_window_t* win, const char* address);
 EXPORT bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int browser);
+EXPORT long _webui_timer_diff(struct timespec *start, struct timespec *end);
+EXPORT void _webui_timer_start(webui_timer_t* t);
+EXPORT bool _webui_timer_is_end(webui_timer_t* t, unsigned int ms);
+EXPORT void _webui_timer_clock_gettime(struct timespec *spec);
 #ifdef _WIN32
     EXPORT DWORD WINAPI _webui_cb(LPVOID _arg);
     EXPORT DWORD WINAPI _webui_run_browser_task(LPVOID _arg);

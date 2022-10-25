@@ -1,4 +1,4 @@
-# WebUI Library 2.0.1
+# WebUI Library 2.0.2
 #
 # http://webui.me
 # https://github.com/alifcommunity/webui
@@ -102,7 +102,7 @@ class window:
 		if WebUI is None:
 			err_library_not_found('show')
 			return
-		WebUI.webui_show(self.window, html.encode('utf-8'))
+		WebUI.webui_show(self.window, html.encode('utf-8'), 0)
 	
 	def close(self):
 		global WebUI

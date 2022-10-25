@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.1
+    WebUI Library 2.0.2
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -445,6 +445,42 @@ void _webui_sleep(long unsigned int ms) {
     #endif
 }
 
+long _webui_timer_diff(struct timespec *start, struct timespec *end) {
+
+    return ((end->tv_sec * 1000) +
+        (end->tv_nsec / 1000000)) -
+        ((start->tv_sec * 1000) +
+        (start->tv_nsec / 1000000));
+}
+
+void _webui_timer_clock_gettime(struct timespec *spec) {
+
+    #ifdef _WIN32
+        __int64 wintime;
+        GetSystemTimeAsFileTime((FILETIME*)&wintime);
+        wintime      -= ((__int64)116444736000000000);
+        spec->tv_sec  = wintime / ((__int64)10000000);
+        spec->tv_nsec = wintime % ((__int64)10000000) * 100;
+    #else
+        clock_gettime(CLOCK_MONOTONIC, spec);
+    #endif
+}
+
+void _webui_timer_start(webui_timer_t* t) {
+    
+    _webui_timer_clock_gettime(&t->start);
+}
+
+bool _webui_timer_is_end(webui_timer_t* t, unsigned int ms) {
+    
+    _webui_timer_clock_gettime(&t->now);
+
+    long def = _webui_timer_diff(&t->start, &t->now);
+    if (def > ms)
+        return true;
+    return false;
+}
+
 #ifdef WEBUI_LOG
     void _webui_print_hex(const char* data, size_t len) {
 
@@ -502,224 +538,45 @@ unsigned int _webui_get_run_id() {
     return ++webui.run_last_id;
 }
 
-#ifdef __linux__
-    bool _webui_socket_test_connect_mg(unsigned int port_num) {
-
-        struct mg_mgr mgr;
-        struct mg_connection *c;
-        mg_mgr_init(&mgr);
-
-        char url[32];
-        sprintf(url, "localhost:%d", port_num);
-
-        c = mg_connect(&mgr, url, NULL, NULL);
-        if(c == NULL) {
-
-            mg_close_conn(c);
-            mg_mgr_free(&mgr);
-            return false;
-        }
-        
-        // Cleaning
-        mg_close_conn(c);
-        mg_mgr_free(&mgr);
-
-        // Connection Success
-        return true;
-    }
-
-    int connect_ms(int sockfd, const struct sockaddr *addr, socklen_t addrlen, unsigned int timeout_ms) {
-
-        #ifdef WEBUI_LOG
-            printf("[0] connect_ms([%d] ms)... \n", timeout_ms);
-        #endif
-
-        int rc = 0;
-        int sockfd_flags_before = 0;
-
-        if((sockfd_flags_before = fcntl(sockfd, F_GETFL, 0) < 0))
-            return -1;
-        
-        if(fcntl(sockfd, F_SETFL, sockfd_flags_before | O_NONBLOCK) < 0)
-            return -1;
-        
-        // Start connecting (asynchronously)
-        do {
-
-            if (connect(sockfd, addr, addrlen)<0) {
-
-                // Did connect return an error? If so, we'll fail.
-                if ((errno != EWOULDBLOCK) && (errno != EINPROGRESS))
-                    rc = -1;
-                else {
-
-                    // Otherwise, we'll wait for it to complete.
-                    // Set a deadline timestamp 'timeout' ms from now (needed b/c poll can be interrupted)
-
-                    struct timespec now;
-                    if(clock_gettime(CLOCK_MONOTONIC, &now) < 0) {
-                        rc = -1;
-                        break;
-                    }
-
-                    struct timespec deadline = {
-                        .tv_sec = now.tv_sec,
-                        .tv_nsec = now.tv_nsec + timeout_ms * 1000000l
-                    };
-
-                    // Wait for the connection to complete.
-                    do {
-
-                        // Calculate how long until the deadline
-                        if(clock_gettime(CLOCK_MONOTONIC, &now) < 0) {
-
-                            rc = -1;
-                            break;
-                        }
-
-                        int ms_until_deadline = (int)((deadline.tv_sec  - now.tv_sec)*1000l + (deadline.tv_nsec - now.tv_nsec)/1000000l);
-
-                        if(ms_until_deadline<0) {
-                            
-                            rc = 0;
-                            break;
-                        }
-
-                        // Wait for connect to complete (or for the timeout deadline)
-                        struct pollfd pfds[] = {
-                            {
-                                .fd = sockfd,
-                                .events = POLLOUT
-                            }
-                        };
-
-                        rc = poll(pfds, 1, ms_until_deadline);
-
-                        // If poll 'succeeded', make sure it *really* succeeded
-                        if( rc > 0) {
-
-                            int error = 0;
-                            socklen_t len = sizeof(error);
-                            int retval = getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len);
-
-                            if(retval==0)
-                                errno = error;
-
-                            if(error!=0)
-                                rc = -1;
-                        }
-                    }
-
-                    // If poll was interrupted, try again.
-                    while(rc == -1 && errno == EINTR);
-
-                    // Did poll timeout? If so, fail.
-                    if(rc == 0) {
-
-                        errno = ETIMEDOUT;
-                        rc = -1;
-                    }
-                }
-            }
-        } while(0);
-
-        // Restore original O_NONBLOCK state
-        if(fcntl(sockfd, F_SETFL, sockfd_flags_before) < 0)
-            return -1;
-        
-        // Success
-        return rc;
-    }
-#endif
-
-bool _webui_socket_test_connect(unsigned int port_num) {
+bool _webui_socket_test_listen_mg(unsigned int port_num) {
 
     #ifdef WEBUI_LOG
-        printf("[0] _webui_socket_test_connect([%d])... \n", port_num);
+        printf("[0] _webui_socket_test_listen_mg([%d])... \n", port_num);
     #endif
 
-    // TODO: Detect if port is failed to connect but it's used
-    // We should tray to bind() to make sure.
+    struct mg_connection *c;
+    struct mg_mgr mgr;
+    mg_mgr_init(&mgr);
 
-    #ifdef _WIN32
-        // -- Win32 ---------------------
-        WSADATA wsaData;
-        SOCKET ConnectSocket = INVALID_SOCKET;
-        struct addrinfo *result = NULL, hints;
-        unsigned int iResult;
-        // Initialize Winsock
-        iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
-        if(iResult != 0)
-            return false;
-        ZeroMemory(&hints, sizeof(hints));
-        hints.ai_family = AF_UNSPEC;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_protocol = IPPROTO_TCP;
-        char the_port[16];
-        sprintf(the_port, "%d", port_num);
-        iResult = getaddrinfo("localhost", the_port, &hints, &result);
-        if(iResult != 0) {
-            freeaddrinfo(result);
-            WSACleanup();
-            return false;
-        }
-        ConnectSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-        if(ConnectSocket == INVALID_SOCKET) {
-            freeaddrinfo(result);
-            WSACleanup();
-            return false;
-        }
-        iResult = connect(ConnectSocket, result->ai_addr, (unsigned int)result->ai_addrlen);
-        if(iResult == SOCKET_ERROR || ConnectSocket == INVALID_SOCKET) {
-            closesocket(ConnectSocket);
-            freeaddrinfo(result);
-            WSACleanup();
-            return false;
-        }
-        // Cleaning
-        closesocket(ConnectSocket);
-        freeaddrinfo(result);
-        WSACleanup();
-        // Connection Success
-        return true;
-    #else
-        int sockfd;
-        struct sockaddr_in serv_addr;
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0) {
-            // Opening socket failed
-            return false;
-        }
-        bzero((char *) &serv_addr, sizeof(serv_addr));
-        serv_addr.sin_family = AF_INET;
-        // Leave [serv_addr.sin_addr.s_addr] empty to use localhost
-        serv_addr.sin_port = htons(port_num);
-        if(connect_ms(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr), 100) != 0) {
-            // Connection Failed
-            close(sockfd);
-            return false;
-        }
-        else {
-            // Connection Success
-            close(sockfd);
-            return true;
-        }
-    #endif
+    char url[32];
+    sprintf(url, "http://localhost:%d", port_num);
+
+    if((c = mg_http_listen(&mgr, url, NULL, &mgr)) == NULL) {
+
+        // Cannot listen
+        mg_mgr_free(&mgr);
+        return false;
+    }
+
+    // Listening success
+    mg_mgr_free(&mgr);
+
+    return true;
 }
 
-bool _webui_socket_test_listen(unsigned int port_num) {
+#ifdef _WIN32
+    bool _webui_socket_test_listen_win32(unsigned int port_num) {
 
-    #ifdef WEBUI_LOG
-        printf("[0] _webui_socket_test_listen([%d])... \n", port_num);
-    #endif
+        #ifdef WEBUI_LOG
+            printf("[0] _webui_socket_test_listen_win32([%d])... \n", port_num);
+        #endif
 
-    #ifdef _WIN32
-        // -- Win32 ---------------------
         WSADATA wsaData;
         unsigned int iResult;
         SOCKET ListenSocket = INVALID_SOCKET;
         struct addrinfo *result = NULL;
         struct addrinfo hints;
+
         // Initialize Winsock
         iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
         if(iResult != 0) {
@@ -731,6 +588,7 @@ bool _webui_socket_test_listen(unsigned int port_num) {
         hints.ai_socktype = SOCK_STREAM;
         hints.ai_protocol = IPPROTO_TCP;
         hints.ai_flags = AI_PASSIVE;
+
         // Resolve the server address and port
         char the_port[16];
         sprintf(the_port, "%d", port_num);
@@ -739,6 +597,7 @@ bool _webui_socket_test_listen(unsigned int port_num) {
             WSACleanup();
             return false;
         }
+
         // Create a SOCKET for the server to listen for client connections.
         ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
         if(ListenSocket == INVALID_SOCKET) {
@@ -746,6 +605,7 @@ bool _webui_socket_test_listen(unsigned int port_num) {
             WSACleanup();
             return false;
         }
+
         // Setup the TCP listening socket
         iResult = bind(ListenSocket, result->ai_addr, (unsigned int)result->ai_addrlen);
         if(iResult == SOCKET_ERROR) {
@@ -754,36 +614,16 @@ bool _webui_socket_test_listen(unsigned int port_num) {
             WSACleanup();
             return false;
         }
+
         // Clean
         freeaddrinfo(result);
         closesocket(ListenSocket);
         WSACleanup();
+
         // Listening Success
         return true;
-    #else
-        int sockfd, connfd, len;
-        struct sockaddr_in servaddr, cli;
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if(sockfd < 0) {
-            return false;
-        }
-        bzero(&servaddr, sizeof(servaddr));
-        servaddr.sin_family = AF_INET;
-        servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-        servaddr.sin_port = htons(port_num);
-        if((bind(sockfd, (struct sockaddr*) &servaddr, sizeof(servaddr))) != 0) {
-            close(sockfd);
-            return false;
-        }
-        if((listen(sockfd, 5)) != 0) {
-            close(sockfd);
-            return false;
-        }
-        // Listening Success
-        return true;
-        close(sockfd);
-    #endif
-}
+    }
+#endif
 
 bool _webui_port_is_used(unsigned int port_num) {
 
@@ -792,34 +632,15 @@ bool _webui_port_is_used(unsigned int port_num) {
     #endif
 
     #ifdef _WIN32
-        // -- Win32 ---------------------
-
-        // Connect test
-        // if(_webui_socket_test_connect(port_num))
-        //     return true;
-
-        // Connect test MG
-        // if(_webui_socket_test_connect_mg(port_num))
-        //     return true;
-        
         // Listener test
-        if(!_webui_socket_test_listen(port_num))
-            return true; // Port is busy
-
-        // Port is not in use
-        return false;
+        if(!_webui_socket_test_listen_win32(port_num))
+            return true; // Port is already used
+        return false; // Port is not in use
     #else
-        // Connect test
-        // if(_webui_socket_test_connect(port_num))
-        //    return true;
-        
-        // Connect test MG
-        // if(_webui_socket_test_connect_mg(port_num))
-        //    return true;
-
-        // Listener test
-        if(!_webui_socket_test_listen(port_num))
-            return true; // Port is busy
+        // Listener test MG
+        if(!_webui_socket_test_listen_mg(port_num))
+            return true; // Port is already used
+        return false; // Port is not in use
     #endif
 }
 
@@ -1410,37 +1231,54 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
     mg_mgr_init(&mgr);
     webui.mg_mgrs[win->core.window_number] = &mgr;
 
-    if(mg_http_listen(&mgr, win->core.url, _webui_server_event_handler, (void *) win) != NULL) {
+    if(mg_http_listen(&mgr, win->core.url, _webui_server_event_handler, (void *)win) != NULL) {
+
+        #ifdef WEBUI_LOG
+            printf("[%d] [Thread] webui_server_start(%s)... Listening success\n", win->core.window_number, win->core.url);
+        #endif
 
         if(webui.use_timeout) {
 
             bool stop = false;
-            bool extra_used = false;
 
             for(;;) {
 
                 if(!win->core.server_handled) {
 
                     // Wait for first connection
-                    unsigned int n = 0;
-                    do {
+                    webui_timer_t timer;
+                    _webui_timer_start(&timer);
+                    while(1) {
 
+                        // Stop if window is connected
                         mg_mgr_poll(&mgr, 1);
                         if(win->core.connected)
                             break;
+
+                        // Stop if timer is finished
+                        if(_webui_timer_is_end(&timer, (timeout * 1000)))
+                            break;
+                    }
+
+                    if(!win->core.connected && webui.timeout_extra && win->core.server_handled) {
+
+                        // At this moment the browser is already started and HTML
+                        // is already handled, so, let's wait more time to give
+                        // the WebSocket an extra time to connect
                         
-                        if(webui.timeout_extra && win->core.server_handled && !extra_used) {
+                        _webui_timer_start(&timer);
+                        while(1) {
 
-                            // At this moment the browser is started and HTML
-                            // is handled, so, let's reset the timer to give
-                            // the WebSocket an extra time to connect
+                            // Stop if window is connected
+                            mg_mgr_poll(&mgr, 1);
+                            if(win->core.connected)
+                                break;
 
-                            n = 0;
-                            extra_used = true;
+                            // Stop if timer is finished
+                            if(_webui_timer_is_end(&timer, (timeout * 1000)))
+                                break;
                         }
-                        else n++;
-
-                    } while(n <= (timeout * 100));
+                    }
                     
                     if(!win->core.connected)
                         stop = true;
@@ -1469,6 +1307,12 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
             for(;;)
                 mg_mgr_poll(&mgr, 1);
         }
+    }
+    else {
+
+        #ifdef WEBUI_LOG
+            printf("[%d] [Thread] webui_server_start(%s)... Listening failed\n", win->core.window_number, win->core.url);
+        #endif
     }
 
     // Stop server
@@ -1608,11 +1452,9 @@ bool _webui_folder_exist(char* folder) {
     #else
         DIR* dir = opendir(folder);
         if(dir) {
-            printf("[0] _webui_folder_exist([%s])... TTTTTTTTTTTTTTT \n", folder);
             closedir(dir);
             return true;
         }
-        printf("[0] _webui_folder_exist([%s])... NOOOOOOOOOOOOOOOOO \n", folder);
     #endif
 
     return false;
@@ -2042,7 +1884,7 @@ bool _webui_browser_start_chrome(webui_window_t* win, const char* address) {
         return false;
     
     char arg[1024];
-    sprintf(arg, " --user-data-dir=\"%s\" --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --app=", win->core.profile_path);
+    sprintf(arg, " --user-data-dir=\"%s\" --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --app=", win->core.profile_path);
 
     char full[1024];
     sprintf(full, "%s%s%s", win->core.browser_path, arg, address);
@@ -2998,7 +2840,7 @@ unsigned int _webui_get_free_port() {
             if(_webui_port_is_used(port))
                 port++; // Port used by an external app
             else
-                break; // Port ready to use
+                break; // Port is free
         }
     }
 
@@ -3111,9 +2953,9 @@ void webui_run_js_int(webui_window_t* win, const char* script, unsigned int time
     #endif
 
     webui_javascript_t js = {
-		.script = script,
-		.timeout = timeout
-	};
+        .script = script,
+        .timeout = timeout
+    };
 
     webui_run_js(win, &js);
     
@@ -3129,9 +2971,9 @@ void webui_run_js_int_struct(webui_window_t* win, webui_javascript_int_t* js_int
     #endif
 
     webui_javascript_t js = {
-		.script = js_int->script,
-		.timeout = js_int->timeout
-	};
+        .script = js_int->script,
+        .timeout = js_int->timeout
+    };
 
     webui_run_js(win, &js);
     
@@ -3141,7 +2983,7 @@ void webui_run_js_int_struct(webui_window_t* win, webui_javascript_int_t* js_int
 }
 
 #ifdef _WIN32
-	BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
+    BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         switch(fdwReason) {
 

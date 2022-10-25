@@ -1,6 +1,6 @@
 package webui
 
-// WebUI Library 2.0.1
+// WebUI Library 2.0.2
 //
 // http://webui.me
 // https://github.com/alifcommunity/webui
@@ -9,10 +9,11 @@ package webui
 // Copyright (C)2022 Hassan DRAGA <https://github.com/hassandraga>.
 
 /*
+// [?] Change the library path as you need
 #cgo CFLAGS: -I ./ -I ../../../../include
-#cgo windows LDFLAGS: -L ./ -L ../../../../build/Windows/GCC/ -lwebui-2-static-x64 -lws2_32
-#cgo darwin LDFLAGS: -L ./ -L ../../../../build/macOS/Clang/ -lwebui-2-static-x64
-#cgo linux LDFLAGS: -L ./ -L ../../../../build/Linux/GCC/ -lwebui-2-static-x64
+#cgo windows LDFLAGS: -L ./ -L ../../../../build/Windows/GCC/ -L ../../../../build/Windows/MSVC/ -lwebui-2-static-x64 -lws2_32
+#cgo darwin LDFLAGS: -L ./ -L ../../../../build/macOS/GCC/ -L ../../../../build/macOS/Clang/ -lwebui-2-static-x64 -lpthread
+#cgo linux LDFLAGS: -L ./ -L ../../../../build/Linux/GCC/ -L ../../../../build/Linux/Clang/ -lwebui-2-static-x64 -lpthread
 #include <webui.h>
 extern void webui_go_handler(webui_window_t* _window, unsigned int _element_id, unsigned int _window_id, char* _element_name);
 static void webui_bind_go_handler(webui_event_t* e) {
