@@ -36,8 +36,8 @@ Use any web browser as GUI, with your preferred language in the backend, and HTM
 | Windows | Firefox | ✔️ |
 | Windows | Chrome | ✔️ |
 | Windows | Edge | ✔️ |
-| Linux | Firefox | *coming soon* |
-| Linux | Chrome | *coming soon* |
+| Linux | Firefox | ✔️ |
+| Linux | Chrome | ✔️ |
 | macOS | Firefox | *coming soon* |
 | macOS | Chrome | *coming soon* |
 | macOS | Safari | *coming soon* |
