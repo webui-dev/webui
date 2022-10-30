@@ -11,13 +11,20 @@
 
 mod Webui;
 
-fn close_the_application (_e: Webui::webui_event_t) {
+fn close_the_application (e: Webui::Event) {
 
+    // The Rust wrapper still under development...
+
+    /*
     Webui::Exit();
+    */
 }
 
-fn check_the_password (e: Webui::webui_event_t) {
+fn check_the_password (e: Webui::Event) {
 
+    // The Rust wrapper still under development...
+    
+    /*
     // Script to get the text value
     let mut js = Webui::JavaScript {
 
@@ -29,7 +36,7 @@ fn check_the_password (e: Webui::webui_event_t) {
     };
 
     // Run the script
-    Webui::RunJavaScript(e.window, &mut js);
+    Webui::RunJavaScript(e.Window, &mut js);
 
     // Check if any error
     if !js.error {
@@ -42,6 +49,7 @@ fn check_the_password (e: Webui::webui_event_t) {
         // There is an error in our script
         println!("JavaScript Error: {}", js.data);
     }
+    */
 }
 
 fn main() {
@@ -69,7 +77,7 @@ fn main() {
     Webui::Show(my_window, my_html, Webui::Chrome);
 
     // Wait until all windows get closed
-    Webui::Loop();        
+    Webui::Wait();        
 
     println!("Bye.");
 }

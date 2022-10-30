@@ -1,6 +1,6 @@
 package webui
 
-// WebUI Library 2.0.2
+// WebUI Library 2.0.3
 //
 // http://webui.me
 // https://github.com/alifcommunity/webui
@@ -76,7 +76,7 @@ func webui_go_handler(_window *C.webui_window_t, _element_id C.uint, _window_id 
 func RunJavaScript(window *C.webui_window_t, js *JavaScript) {
 
 	// Interface
-	c_js := C.webui_javascript_int_t{
+	c_js := C.webui_script_interface_t{
 		script:  C.CString(js.Script),
 		timeout: 30, // uint(js.Timeout),
 		error:   C.bool(false),
@@ -84,7 +84,7 @@ func RunJavaScript(window *C.webui_window_t, js *JavaScript) {
 		// data:    C.CString(nil),
 	}
 
-	C.webui_run_js_int_struct(window, &c_js)
+	C.webui_script_interface_struct(window, &c_js)
 
 	js.Error = bool(c_js.error)
 	js.Data = C.GoString(c_js.data)
@@ -106,9 +106,9 @@ func Show(window *C.webui_window_t, html string, browser uint) {
 	C.webui_show(window, c_html, C.uint(browser))
 }
 
-func Loop() {
+func Wait() {
 
-	C.webui_loop()
+	C.webui_wait()
 }
 
 func Bind(window *C.webui_window_t, element string, callback func(Event)) {

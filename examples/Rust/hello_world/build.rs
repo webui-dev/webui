@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.2
+    WebUI Library 2.0.3
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -18,4 +18,5 @@ fn main() {
     
     // WebUI static library name
     println!("cargo:rustc-link-lib=webui-2-static-x64");
+    println!("cargo:rustc-link-lib=user32");
 }

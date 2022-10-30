@@ -12,7 +12,7 @@ Use any web browser as GUI, with your preferred language in the backend, and HTM
 - Lightweight and small memory footprint
 - Fast binary communication (*App--WebUI--Browser*)
 - One header file
-- Multiplatform & Multi Browser
+- Multi-platform & Multi-Browser
 - Use private browser profile for safety
 - Customized app mode look & feel
 

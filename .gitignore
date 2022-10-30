@@ -28,3 +28,6 @@ webui2.egg-info/
 # Rust
 target/
 *.lock
+
+# Broken NTFS
+nul

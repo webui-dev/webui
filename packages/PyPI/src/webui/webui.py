@@ -1,4 +1,4 @@
-# WebUI Library 2.0.2
+# WebUI Library 2.0.3
 #
 # http://webui.me
 # https://github.com/alifcommunity/webui
@@ -21,9 +21,10 @@ class event:
 	element_id = 0
 	window_id = 0
 	element_name = ""
+	window = None
 
 # WebUI C-Struct
-class webui_javascript_int_t(ctypes.Structure):
+class webui_script_interface_t(ctypes.Structure):
 	_fields_ = [
 		("script", c_char_p),
 		("timeout", c_uint),
@@ -62,7 +63,7 @@ class window:
 			webui_wrapper.restype = c_void_p
 			self.window = c_void_p(webui_wrapper())
 			# Initializing events() to be called from WebUI Library
-			py_fun = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p)
+			py_fun = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint, ctypes.c_char_p, ctypes.c_void_p)
 			self.c_events = py_fun(self.events)
 		except OSError as e:
 			print("WebUI Exception: %s" % e)
@@ -73,7 +74,7 @@ class window:
 		if self.window is not None and WebUI is not None:
 			WebUI.webui_close(self.window)
 	
-	def events(self, element_id, window_id, element_name):
+	def events(self, element_id, window_id, element_name, window):
 		if self.cb_fun_list[int(element_id)] is None:
 			print('WebUI Error: Callback is None.')
 			return
@@ -81,6 +82,7 @@ class window:
 		e.element_id = element_id
 		e.window_id = window_id
 		e.element_name = element_name
+		e.window = window
 		self.cb_fun_list[element_id](e)
 
 	def bind(self, element, func):
@@ -91,7 +93,7 @@ class window:
 		if WebUI is None:
 			err_library_not_found('bind')
 			return
-		cb_index = int(WebUI.webui_bind_int(self.window, element.encode('utf-8'), self.c_events))
+		cb_index = int(WebUI.webui_bind_interface(self.window, element.encode('utf-8'), self.c_events))
 		self.cb_fun_list.insert(cb_index, func)
 	
 	def show(self, html):
@@ -120,7 +122,7 @@ class window:
 			err_library_not_found('show')
 			return
 		# Create Struct
-		js = webui_javascript_int_t()
+		js = webui_script_interface_t()
 		# Initializing
 		js.script = ctypes.c_char_p(script.encode('utf-8'))
 		js.timeout = ctypes.c_uint(timeout)
@@ -135,7 +137,7 @@ class window:
 		res.length = 7
 		res.data = "UNKNOWN"		
 		# Run JavaScript
-		WebUI.webui_run_js_int_struct(self.window, ctypes.byref(js))
+		WebUI.webui_script_interface_struct(self.window, ctypes.byref(js))
 		res.length = int(js.length)
 		res.data = js.data.decode('utf-8')
 		res.error = js.error
@@ -208,12 +210,12 @@ def exit():
 	WebUI.webui_exit()
 
 # Wait until all windows get closed
-def loop():
+def wait():
 	global WebUI
 	if WebUI is None:
-		err_library_not_found('loop')
+		err_library_not_found('wait')
 		return
-	WebUI.webui_loop()
+	WebUI.webui_wait()
 	try:
 		shutil.rmtree(os.getcwd() + '/__intcache__/')
 	except OSError:

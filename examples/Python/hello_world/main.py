@@ -10,7 +10,9 @@
 
 # Install WebUI 2
 # pip install --upgrade webui2
-from webui import webui
+# from webui import webui
+
+import webui
 
 # Create a global window object
 MyWindow = webui.window()
@@ -108,7 +110,7 @@ def main():
 	MyWindow.show(login_html)
 
 	# Wait until all windows are closed
-	webui.loop()
+	webui.wait()
 
 	print('Bye.')
 

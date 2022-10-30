@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.2
+    WebUI Library 2.0.3
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -24,7 +24,7 @@ webui_t webui;
 // This is a uncompressed version to make the debugging
 // more easy in the browser using the builtin dev-tools
 static const char* webui_javascript_bridge = 
-"const _webui_log = false; \n"
+"var _webui_log = false; \n"
 "var _webui_ws; \n"
 "var _webui_ws_status = false; \n"
 "var _webui_action8 = new Uint8Array(1); \n"
@@ -75,7 +75,7 @@ static const char* webui_javascript_bridge =
 "                                               buffer8[1] + \" 0x\" + buffer8[2]); \n"
 "                var len = buffer8.length - 3; \n"
 "                if(buffer8[buffer8.length - 1] === 0) \n"
-"                   len--; // Null terminated byte can break eval() \n"
+"                   len--; // Null byte (0x00) can break eval() \n"
 "                data8 = new Uint8Array(len); \n"
 "                for (i = 0; i < len; i++) data8[i] = buffer8[i + 3]; \n"
 "                var data8utf8 = new TextDecoder(\"utf-8\").decode(data8); \n"
@@ -1711,7 +1711,7 @@ void _webui_browser_clean() {
     int _webui_system_win32(char* cmd, bool show) {
 
         #ifdef WEBUI_LOG
-            printf("[0] _webui_system_win32([%s], [%d])... \n", cmd, show);
+            printf("[0] _webui_system_win32()... \n");
         #endif
 
         DWORD Return = 0;
@@ -1757,7 +1757,7 @@ void _webui_browser_clean() {
 int _webui_cmd_sync(char* cmd, bool show) {
 
     #ifdef WEBUI_LOG
-        printf("[0] _webui_cmd_sync([%s], [%d])... \n", cmd, show);
+        printf("[0] _webui_cmd_sync()... \n");
     #endif
 
     // Run sync command and
@@ -1767,9 +1767,15 @@ int _webui_cmd_sync(char* cmd, bool show) {
 
     #ifdef _WIN32
         sprintf(buf, "cmd /c \"%s\" > nul 2>&1 ", cmd);
+        #ifdef WEBUI_LOG
+            printf("[0] _webui_cmd_sync() -> Running [%s] \n", buf);
+        #endif
         return _webui_system_win32(buf, show);
     #else
         sprintf(buf, "%s >>/dev/null 2>>/dev/null ", cmd);
+        #ifdef WEBUI_LOG
+            printf("[0] _webui_cmd_sync() -> Running [%s] \n", buf);
+        #endif
         int r =  system(buf);
         r = (r != -1 && r != 127 && WIFEXITED(r)) ? WEXITSTATUS(r) : -1;
         return r;
@@ -1779,7 +1785,7 @@ int _webui_cmd_sync(char* cmd, bool show) {
 int _webui_cmd_async(char* cmd, bool show) {
 
     #ifdef WEBUI_LOG
-        printf("[0] _webui_cmd_async([%s])... \n", cmd);
+        printf("[0] _webui_cmd_async()... \n");
     #endif
 
     // Run a async command
@@ -1831,7 +1837,7 @@ int _webui_cmd_async(char* cmd, bool show) {
 int _webui_run_browser(webui_window_t* win, char* cmd) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] _webui_run_browser([%s])... \n", win->core.window_number, cmd);
+        printf("[%d] _webui_run_browser()... \n", win->core.window_number);
     #endif
 
     int res = 0;
@@ -2073,35 +2079,35 @@ void _webui_window_open(webui_window_t* win, char* link, unsigned int browser) {
     _webui_browser_start(win, link, browser);
 }
 
-void webui_free_js(webui_javascript_t* javascript) {
+void webui_free_script(webui_script_t* script) {
 
-    _webui_free_mem((void *) &javascript->result.data);
-    _webui_free_mem((void *) &javascript->script);
-    memset(javascript, 0x00, sizeof(webui_javascript_t));
+    _webui_free_mem((void *) &script->result.data);
+    _webui_free_mem((void *) &script->script);
+    memset(script, 0x00, sizeof(webui_script_t));
 }
 
-void webui_run_js(webui_window_t* win, webui_javascript_t* javascript) {
+void webui_script(webui_window_t* win, webui_script_t* script) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_run_js([%s])... \n", win->core.window_number, javascript->script);
+        printf("[%d] webui_script([%s])... \n", win->core.window_number, script->script);
     #endif
 
-    size_t js_len = strlen(javascript->script);
+    size_t js_len = strlen(script->script);
 
     if(js_len < 1) {
 
-        _webui_free_mem((void *) &javascript->result.data);
-        javascript->result.data = webui_js_empty;
-        javascript->result.length = (unsigned int) strlen(webui_js_empty);
-        javascript->result.error = true;
+        _webui_free_mem((void *) &script->result.data);
+        script->result.data = webui_js_empty;
+        script->result.length = (unsigned int) strlen(webui_js_empty);
+        script->result.error = true;
         return;
     }
 
     // Initializing js result
-    _webui_free_mem((void *) &javascript->result.data);
-    javascript->result.data = webui_js_timeout;
-    javascript->result.length = (unsigned int) strlen(webui_js_timeout);
-    javascript->result.error = true;
+    _webui_free_mem((void *) &script->result.data);
+    script->result.data = webui_js_timeout;
+    script->result.length = (unsigned int) strlen(webui_js_timeout);
+    script->result.error = true;
     
     // Initializing pipe
     unsigned int run_id = _webui_get_run_id();
@@ -2116,14 +2122,14 @@ void webui_run_js(webui_window_t* win, webui_javascript_t* javascript) {
     packet[1] = WEBUI_HEADER_JS;        // Type
     packet[2] = run_id;                 // ID
     for(unsigned int i = 0; i < js_len; i++)     // Data
-        packet[i + 3] = javascript->script[i];
+        packet[i + 3] = script->script[i];
     
     // Send packets
     _webui_window_send(win, packet, packet_len);
     _webui_free_mem((void *) &packet);
 
     // Wait for UI response
-    if(javascript->timeout < 1 || javascript->timeout > 86400) {
+    if(script->timeout < 1 || script->timeout > 86400) {
 
         for(;;) {
 
@@ -2135,7 +2141,7 @@ void webui_run_js(webui_window_t* win, webui_javascript_t* javascript) {
     }
     else {
 
-        for(unsigned int n = 0; n <= (javascript->timeout * 1000); n++) {
+        for(unsigned int n = 0; n <= (script->timeout * 1000); n++) {
 
             if(webui.run_done[run_id])
                 break;
@@ -2146,9 +2152,9 @@ void webui_run_js(webui_window_t* win, webui_javascript_t* javascript) {
 
     if(webui.run_responses[run_id] != NULL) {
 
-        javascript->result.data = webui.run_responses[run_id];
-        javascript->result.length = (unsigned int) strlen(webui.run_responses[run_id]);
-        javascript->result.error = webui.run_error[run_id];
+        script->result.data = webui.run_responses[run_id];
+        script->result.length = (unsigned int) strlen(webui.run_responses[run_id]);
+        script->result.error = webui.run_error[run_id];
     }
 }
 
@@ -2205,10 +2211,10 @@ bool webui_is_show(webui_window_t* win) {
     return win->core.connected;
 }
 
-bool webui_any_window_is_open() {
+bool webui_is_any_window_running() {
 
     #ifdef WEBUI_LOG
-        printf("[0] webui_any_window_is_open()... \n");
+        printf("[0] webui_is_any_window_running()... \n");
     #endif
     
     if(webui.connections > 0)
@@ -2296,7 +2302,7 @@ void webui_set_icon(webui_window_t* win, const char* icon_s, const char* type_s)
 bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_show([%.*s..], [%d])... \n", win->core.window_number, 3, html, browser);
+        printf("[%d] webui_show([%.*s...], [%d])... \n", win->core.window_number, 4, html, browser);
     #endif
 
     // Initializing
@@ -2356,7 +2362,7 @@ bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
     return true;
 }
 
-bool webui_copy_show(webui_window_t* win, const char* html, unsigned int browser) {
+bool webui_show_cpy(webui_window_t* win, const char* html, unsigned int browser) {
 
     // Copy HTML, And show the window
 
@@ -2605,7 +2611,7 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
 
             // Fatal.
             // The pipe ID is not valid
-            // we can't send the ready signal to webui_run_js()
+            // we can't send the ready signal to webui_script()
             return;
         }
 
@@ -2636,7 +2642,7 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
             webui.run_responses[run_id] = webui_empty_string;
         }
 
-        // Send ready signal to webui_run_js()
+        // Send ready signal to webui_script()
         webui.run_done[run_id] = true;
     }
 }
@@ -2649,14 +2655,14 @@ bool webui_open(webui_window_t* win, const char* url, unsigned int browser) {
 
     // Just open an app-mode window using the link
     webui_set_timeout(0);
-    webui_detect_process_close(win, true);
+    webui_wait_process(win, true);
     return _webui_browser_start(win, url, browser);
 }
 
-void webui_detect_process_close(webui_window_t* win, bool status) {
+void webui_wait_process(webui_window_t* win, bool status) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_detect_process_close()... \n", win->core.window_number);
+        printf("[%d] webui_wait_process()... \n", win->core.window_number);
     #endif
 
     win->core.detect_process_close = status;
@@ -2695,16 +2701,37 @@ void webui_exit() {
     webui.exit_now = true;
 }
 
-void webui_loop() {
+bool webui_is_app_running() {
 
     #ifdef WEBUI_LOG
-        printf("[L] webui_loop()... \n");
+        printf("[0] webui_app_exit()... \n");
+    #endif
+    
+    if(webui.use_timeout) {
+        if(webui.wait_for_socket_window) {
+            if(webui.servers > 0)
+                return true;
+            return false;
+        }
+    }
+    else {
+        if(!webui.exit_now)
+            return true;
+        return false;
+    }
+    return false;
+}
+
+void webui_wait() {
+
+    #ifdef WEBUI_LOG
+        printf("[L] webui_wait()... \n");
     #endif
 
     if(webui.use_timeout) {
 
         #ifdef WEBUI_LOG
-            printf("[L] webui_loop() -> Using timeout %d second\n", webui.startup_timeout);
+            printf("[L] webui_wait() -> Using timeout %d second\n", webui.startup_timeout);
         #endif
 
         // TODO: Loop trough all win
@@ -2717,7 +2744,7 @@ void webui_loop() {
         if(webui.wait_for_socket_window) {
 
             #ifdef WEBUI_LOG
-                printf("[L] webui_loop() -> Wait for connected socket window...\n");
+                printf("[L] webui_wait() -> Wait for connected socket window...\n");
             #endif
 
             while(webui.servers > 0) {
@@ -2729,14 +2756,14 @@ void webui_loop() {
         else {
 
             #ifdef WEBUI_LOG
-                printf("[L] webui_loop() -> Ignore connected socket window.\n");
+                printf("[L] webui_wait() -> Ignore connected socket window.\n");
             #endif
         }
     }
     else {
 
         #ifdef WEBUI_LOG
-            printf("[L] webui_loop() -> Infinite loop...\n");
+            printf("[L] webui_wait() -> Infinite loop...\n");
         #endif
 
         // Infinite wait
@@ -2745,7 +2772,7 @@ void webui_loop() {
     }
 
     #ifdef WEBUI_LOG
-        printf("[L] webui_loop() -> Loop finished.\n");
+        printf("[L] webui_wait() -> Loop finished.\n");
     #endif
 
     _webui_browser_clean();
@@ -2855,7 +2882,7 @@ unsigned int _webui_get_free_port() {
     return port;
 }
 
-void webui_runtime(webui_window_t* win, unsigned int runtime) {
+void webui_script_runtime(webui_window_t* win, unsigned int runtime) {
 
     if(runtime != webui.runtime.deno && runtime != webui.runtime.nodejs)
         win->core.runtime = webui.runtime.none;
@@ -2935,10 +2962,10 @@ void webui_bind_int_handler(webui_event_t* e) {
     unsigned int cb_index = e->element_id;
 
     if(cb_index > 0 && webui.cb_int[cb_index] != NULL)
-        webui.cb_int[cb_index](e->element_id, e->window_id, e->element_name);
+        webui.cb_int[cb_index](e->element_id, e->window_id, e->element_name, e->window);
 }
 
-unsigned int webui_bind_int(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*)) {
+unsigned int webui_bind_interface(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*, webui_window_t*)) {
 
     unsigned int cb_index = webui_bind(win, element, webui_bind_int_handler);
     webui.cb_int[cb_index] = func;
@@ -2946,36 +2973,36 @@ unsigned int webui_bind_int(webui_window_t* win, const char* element, void (*fun
     return cb_index;
 }
 
-void webui_run_js_int(webui_window_t* win, const char* script, unsigned int timeout, bool* error, unsigned int* length, char* data) {
+void webui_script_interface(webui_window_t* win, const char* script, unsigned int timeout, bool* error, unsigned int* length, char* data) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_run_js_int()... \n", win->core.window_number);
+        printf("[%d] webui_script_interface()... \n", win->core.window_number);
     #endif
 
-    webui_javascript_t js = {
+    webui_script_t js = {
         .script = script,
         .timeout = timeout
     };
 
-    webui_run_js(win, &js);
+    webui_script(win, &js);
     
     data = (char*) js.result.data;
     *error = js.result.error;
     *length = js.result.length;
 }
 
-void webui_run_js_int_struct(webui_window_t* win, webui_javascript_int_t* js_int) {
+void webui_script_interface_struct(webui_window_t* win, webui_script_interface_t* js_int) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_run_js_int_struct()... \n", win->core.window_number);
+        printf("[%d] webui_script_interface_struct()... \n", win->core.window_number);
     #endif
 
-    webui_javascript_t js = {
+    webui_script_t js = {
         .script = js_int->script,
         .timeout = js_int->timeout
     };
 
-    webui_run_js(win, &js);
+    webui_script(win, &js);
     
     js_int->data = js.result.data;
     js_int->error = js.result.error;

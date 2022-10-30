@@ -20,20 +20,20 @@ int main() {
 	// Chose your preferable runtime for .js files
 	// Deno: webui.runtime.deno
 	// Node.js: webui.runtime.nodejs
-	webui_runtime(my_window, webui.runtime.deno);
+	webui_script_runtime(my_window, webui.runtime.deno);
 
 	// Create a new web server using WebUI
 	const char* url = webui_new_server(my_window, "", NULL);
 
 	// Stop when the browser process get closed.
-	webui_detect_process_close(my_window, true);
+	webui_wait_process(my_window, true);
 
     // Show the window
 	if(!webui_open(my_window, url, webui.browser.chrome))	// Run the window on Chrome
 		webui_open(my_window, url, webui.browser.any);		// If not, run on any other installed web browser
 
     // Wait until all windows get closed
-	webui_loop();
+	webui_wait();
 
     return 0;
 }

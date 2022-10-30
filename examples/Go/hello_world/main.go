@@ -30,9 +30,9 @@ const login_html string = `<!DOCTYPE html>
     <br>
     <input type="password" id="MyInput" OnKeyUp="document.getElementById('err').innerHTML='&nbsp;';" autocomplete="off">
     <br>
-	<h3 id="err" style="color: #dbdd52">&nbsp;</h3>
+    <h3 id="err" style="color: #dbdd52">&nbsp;</h3>
     <br>
-	<button id="CheckPassword">Check Password</button> - <button id="Exit">Exit</button>
+    <button id="CheckPassword">Check Password</button> - <button id="Exit">Exit</button>
   </body>
 </html>`
 
@@ -56,7 +56,7 @@ const dashboard_html string = `<!DOCTYPE html>
     <h1>Welcome !</h1>
     <br>
     <br>
-	<button id="Exit">Exit</button>
+    <button id="Exit">Exit</button>
   </body>
 </html>`
 
@@ -110,7 +110,7 @@ func main() {
 	webui.Show(my_window, login_html, webui.AnyBrowser)
 
 	// Loop
-	webui.Loop()
+	webui.Wait()
 
 	fmt.Println("Bye.")
 }
