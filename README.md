@@ -8,17 +8,28 @@ Use any web browser as GUI, with your preferred language in the backend, and HTM
 
 ## Features
 
-- Pure C & Independent (*No need for any third-party library*)
-- Lightweight and small memory footprint
-- Fast binary communication (*App--WebUI--Browser*)
+- Written in Pure C
+- Fully Independent (*No need for any third-party library*)
+- Lightweight (*~160 Kb using TCC*) & Small memory footprint
+- Fast WS binary communication (*App--WebUI--Browser*)
 - One header file
 - Multi-platform & Multi-Browser
-- Use private browser profile for safety
-- Customized app mode look & feel
+- Using private profile for safety
+
+## Comparison
+
+![ScreenShot](webui_diagram.png)
+
+|  | WebView | Qt | WebUI |
+| ------ | ------ | ------ | ------ |
+| Dependencies on Windows | *Windows APIs, WebView2* | QtCore, QtGui, QtWidgets | *No need* |
+| Dependencies on Linux | *GTK3, WebKitGTK* | QtCore, QtGui, QtWidgets | *No need* |
+| Dependencies on macOS | *Cocoa, WebKit* | QtCore, QtGui, QtWidgets | *No need* |
 
 ## Build
 
  - [Windows](https://github.com/alifcommunity/webui/tree/main/build/Windows)
+ - [Linux](https://github.com/alifcommunity/webui/tree/main/build/Linux)
 
 ## Examples
 
