@@ -592,7 +592,7 @@ bool _webui_socket_test_listen_mg(unsigned int port_num) {
         // Resolve the server address and port
         char the_port[16];
         sprintf(the_port, "%d", port_num);
-        iResult = getaddrinfo("localhost", the_port, &hints, &result);
+        iResult = getaddrinfo("127.0.0.1", the_port, &hints, &result);
         if(iResult != 0) {
             WSACleanup();
             return false;

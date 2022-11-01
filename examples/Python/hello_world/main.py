@@ -8,81 +8,72 @@
 # Licensed under GNU General Public License v3.0.
 # Copyright (C)2022 Hassan DRAGA <https://github.com/hassandraga>.
 
-# Install WebUI 2
+# Install WebUI
 # pip install --upgrade webui2
-# from webui import webui
 
-import webui
-
-# Create a global window object
-MyWindow = webui.window()
+from webui import webui
 
 # HTML
 login_html = """
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>WebUI 2 - Python Example</title>
-    <style>
-      body {
-        color: white;
-        background: #0F2027;
-        background: -webkit-linear-gradient(to right, #4e99bb, #2c91b5, #07587a);
-        background: linear-gradient(to right, #4e99bb, #2c91b5, #07587a);
-        text-align: center;
-        font-size: 18px;
-        font-family: sans-serif;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>WebUI 2 - Python Example</h1>
-    <br>
-    <input type="password" id="MyInput" OnKeyUp="document.getElementById('err').innerHTML='&nbsp;';" autocomplete="off">
-    <br>
+	<head>
+		<title>WebUI 2 - Python Example</title>
+		<style>
+			body {
+				color: white;
+				background: #0F2027;
+				background: -webkit-linear-gradient(to right, #4e99bb, #2c91b5, #07587a);
+				background: linear-gradient(to right, #4e99bb, #2c91b5, #07587a);
+				text-align: center;
+				font-size: 18px;
+				font-family: sans-serif;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>WebUI 2 - Python Example</h1>
+		<br>
+		<input type="password" id="MyInput" OnKeyUp="document.getElementById('err').innerHTML='&nbsp;';" autocomplete="off">
+		<br>
 	<h3 id="err" style="color: #dbdd52">&nbsp;</h3>
-    <br>
+		<br>
 	<button id="CheckPassword">Check Password</button> - <button id="Exit">Exit</button>
-  </body>
+	</body>
 </html>
 """
 
 dashboard_html = """
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Dashboard</title>
-    <style>
-      body {
-        color: white;
-        background: #0F2027;
-        background: -webkit-linear-gradient(to right, #4e99bb, #2c91b5, #07587a);
-        background: linear-gradient(to right, #4e99bb, #2c91b5, #07587a);
-        text-align: center;
-        font-size: 18px;
-        font-family: sans-serif;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Welcome !</h1>
-    <br>
-    <br>
+	<head>
+		<title>Dashboard</title>
+		<style>
+			body {
+				color: white;
+				background: #0F2027;
+				background: -webkit-linear-gradient(to right, #4e99bb, #2c91b5, #07587a);
+				background: linear-gradient(to right, #4e99bb, #2c91b5, #07587a);
+				text-align: center;
+				font-size: 18px;
+				font-family: sans-serif;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Welcome !</h1>
+		<br>
+		<br>
 	<button id="Exit">Exit</button>
-  </body>
+	</body>
 </html>
 """
 
 # This function get called every time the user click on "MyButton1"
 def check_the_password(e : webui.event):
 
-	# Print some info (optional)
-	# print('Element_id: ' + str(e.element_id))
-	# print('Window_id: ' + str(e.window_id))
-	# print('Element_name: ' + e.element_name.decode('utf-8'))
-
 	# Run JavaScript to get the password
-	res = MyWindow.run_js("return document.getElementById(\"MyInput\").value;")
+	res = e.window.run_js("return document.getElementById(\"MyInput\").value;")
 
 	# Check for any error
 	if res.error is True:
@@ -92,15 +83,18 @@ def check_the_password(e : webui.event):
 	# Check the password
 	if res.data == "123456":
 		print("Password is correct.")
-		MyWindow.show(dashboard_html)
+		e.window.show(dashboard_html)
 	else:
 		print("Wrong password: " + res.data)
-		MyWindow.run_js(" document.getElementById('err').innerHTML = 'Sorry. Wrong password'; ")
+		e.window.run_js(" document.getElementById('err').innerHTML = 'Sorry. Wrong password'; ")
 
 def close_the_application(e : webui.event):
 	webui.exit()
 
 def main():
+
+	# Create a window object
+	MyWindow = webui.window()
 
 	# Bind am HTML element ID with a python function
 	MyWindow.bind('CheckPassword', check_the_password)
@@ -115,4 +109,4 @@ def main():
 	print('Bye.')
 
 if __name__ == "__main__":
-    main()
+	main()

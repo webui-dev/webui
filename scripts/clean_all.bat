@@ -1,6 +1,6 @@
 @echo off
 
-Set CurrentPath=%CD%
+Set CurrentPath=%CD%\..\
 
 echo.
 echo Clean all...

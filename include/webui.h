@@ -47,6 +47,7 @@
 
 // -- Windows -------------------------
 #ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
     // #include <SDKDDKVer.h> // Fix _WIN32_WINNT warning
     #include <winsock2.h>
     #include <windows.h>

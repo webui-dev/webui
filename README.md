@@ -1,10 +1,18 @@
 # WebUI
 
-[![Website](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://webui.me/) [![Website](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://webui.me/) [![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
+[![Website](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://github.com/alifcommunity/webui) [![Website](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://github.com/alifcommunity/webui/issues) [![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
 
-Use any web browser as GUI, with your preferred language in the backend, and HTML/JS/TS/CSS in the frontend.
+> Use any web browser as GUI, with your preferred language in the backend, and HTML/JS/TS/CSS in the frontend.
 
 ![ScreenShot](screenshot.png)
+
+> :warning: **Notice**:
+> 
+> * WebUI it's not a web-server solution or a framework, but it's an easy-embeddable tool to use any installed web browser as a user interface.
+> 
+> * We are currently writing documentation.
+> 
+> * WebUI is not ready yet for production release.
 
 ## Features
 
@@ -22,9 +30,9 @@ Use any web browser as GUI, with your preferred language in the backend, and HTM
 
 |  | WebView | Qt | WebUI |
 | ------ | ------ | ------ | ------ |
-| Dependencies on Windows | *Windows APIs, WebView2* | QtCore, QtGui, QtWidgets | *No need* |
-| Dependencies on Linux | *GTK3, WebKitGTK* | QtCore, QtGui, QtWidgets | *No need* |
-| Dependencies on macOS | *Cocoa, WebKit* | QtCore, QtGui, QtWidgets | *No need* |
+| Dependencies on Windows | *Windows APIs, WebView2* | *QtCore, QtGui, QtWidgets* | *No need* |
+| Dependencies on Linux | *GTK3, WebKitGTK* | *QtCore, QtGui, QtWidgets* | *No need* |
+| Dependencies on macOS | *Cocoa, WebKit* | *QtCore, QtGui, QtWidgets* | *No need* |
 
 ## Build
 
@@ -63,16 +71,11 @@ Use any web browser as GUI, with your preferred language in the backend, and HTM
 | JavaScript | ✔️ |
 | TypeScript | ✔️ |
 | Go | ✔️ |
-| Rust | 94% (*[Need help](https://github.com/alifcommunity/webui/issues/24)*) |
-| Java | *coming soon* |
-| Nim | *coming soon* |
-| Perl | *coming soon* |
-| Ruby | *coming soon* |
-| Scala | *coming soon* |
+| Rust | ✔️ |
 
 ### License
 
-GNU General Public License v3.0
+> GNU General Public License v3.0
 
 ### Stargazers
 

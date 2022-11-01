@@ -11,26 +11,17 @@
 
 mod Webui;
 
-fn close_the_application (e: Webui::Event) {
+fn close_the_application (_e: Webui::Event) {
 
-    // The Rust wrapper still under development...
-
-    /*
     Webui::Exit();
-    */
 }
 
 fn check_the_password (e: Webui::Event) {
 
-    // The Rust wrapper still under development...
-    
-    /*
     // Script to get the text value
     let mut js = Webui::JavaScript {
-
         timeout: 10,
         script: "return document.getElementById(\"MyInput\").value;".to_string(),
-
         data: "".to_string(),
         error: false,
     };
@@ -43,13 +34,24 @@ fn check_the_password (e: Webui::Event) {
 
         // Check the password
         println!("Password: {}", js.data);
+        if js.data == "123456" {
+            
+            // Password is correct
+            js.script = "alert('Good. The password is correct');".to_string();
+            Webui::RunJavaScript(e.Window, &mut js);
+        }
+        else {
+
+            // Wrong password
+            js.script = "alert('Sorry. Wrong password');".to_string();
+            Webui::RunJavaScript(e.Window, &mut js);
+        }
     }
     else {
 
         // There is an error in our script
         println!("JavaScript Error: {}", js.data);
     }
-    */
 }
 
 fn main() {

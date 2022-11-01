@@ -22,6 +22,7 @@ class event:
 	window_id = 0
 	element_name = ""
 	window = None
+	c_window = None
 
 # WebUI C-Struct
 class webui_script_interface_t(ctypes.Structure):
@@ -82,7 +83,8 @@ class window:
 		e.element_id = element_id
 		e.window_id = window_id
 		e.element_name = element_name
-		e.window = window
+		e.window = self
+		e.c_window = window
 		self.cb_fun_list[element_id](e)
 
 	def bind(self, element, func):
@@ -104,8 +106,18 @@ class window:
 		if WebUI is None:
 			err_library_not_found('show')
 			return
-		WebUI.webui_show(self.window, html.encode('utf-8'), 0)
+		WebUI.webui_show_cpy(self.window, html.encode('utf-8'), 0)
 	
+	def open(self, url):
+		global WebUI
+		if self.window is None:
+			err_window_is_none('open')
+			return
+		if WebUI is None:
+			err_library_not_found('open')
+			return
+		WebUI.webui_open(self.window, url.encode('utf-8'), 0)
+
 	def close(self):
 		global WebUI
 		if WebUI is None:

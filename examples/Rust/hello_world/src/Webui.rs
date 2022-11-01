@@ -301,7 +301,8 @@ extern "C" {
 extern "C" {
     pub fn webui_script_interface_struct(
         win: *mut webui_window_t,
-        js_int: *mut webui_script_interface_t,
+        //js_int: *mut webui_script_interface_t,
+        js_int: &webui_script_interface_t,
     );
 }
 extern "C" {
@@ -495,8 +496,8 @@ pub struct Event {
 	pub Window:         *mut webui_window_t,
 }
 
-// TODO: Create list of function (2-dimensional array)
-// pub mut func_list: [[Option::<fn(e: Event) -> ()>; 64]; 64] = [[None; 64]; 64];
+// List of Rust user functions (2-dimensional array)
+static mut func_list: [[Option::<fn(e: Event) -> ()>; 64]; 64] = [[None; 64]; 64];
 
 pub fn RunJavaScript(win: *mut webui_window_t, js: &mut JavaScript) {
 
@@ -507,22 +508,18 @@ pub fn RunJavaScript(win: *mut webui_window_t, js: &mut JavaScript) {
         let script_c_str = CString::new(script_cpy).unwrap();
         let script_c_char: *const c_char = script_c_str.as_ptr() as *const c_char;
 
-        // Interface
-        let script: *const ::std::os::raw::c_char = script_c_char;
-        let timeout: ::std::os::raw::c_uint = js.timeout;
-        let mut error: bool = false;
-        let mut length: ::std::os::raw::c_uint = 0;
-        let data = CString::new("").expect("");
+        let script: webui_script_interface_t = webui_script_interface_t {
+            timeout: js.timeout,
+            script: script_c_char as *mut i8,
+            data: script_c_char, // 'data' TODO: Should be null
+            error: false,
+            length: 0,
+        };
 
-        // Pointers
-        let error_ptr: *mut bool = &mut error;
-        let length_ptr: *mut ::std::os::raw::c_uint = &mut length;
-        let data_ptr = data.into_raw();
+        webui_script_interface_struct(win, &script);
 
-        webui_script_interface(win, script, timeout, error_ptr, length_ptr, data_ptr);
-
-        js.error = error;
-        js.data = char_to_string(data_ptr);
+        js.error = script.error;
+        js.data = char_to_string(script.data);
     }
 }
 
@@ -576,14 +573,12 @@ fn events_handler (element_id: ::std::os::raw::c_uint, window_id: ::std::os::raw
         Window: Window,
     };
 
-    println!("You clicked on this element:");
-    println!("element_id = {}", E.ElementId);
-    println!("window_id = {}", E.WindowId);
-    println!("element_name = {}", E.ElementName);
-    println!("The Rust wrapper still under development... ");
-
-    // TODO: Call user cb
-    // (func_list[WindowId][ElementId]).expect("non-null function pointer")(E);
+    // Call the Rust user function
+    let WindowId_64 = WindowId as usize;
+    let ElementId_64 = ElementId as usize;
+    unsafe {
+        (func_list[WindowId_64][ElementId_64]).expect("non-null function pointer")(E);
+    }
 }
 
 pub fn Bind(win: *mut webui_window_t, element: &str, func: fn(e: Event)) {
@@ -600,8 +595,11 @@ pub fn Bind(win: *mut webui_window_t, element: &str, func: fn(e: Event)) {
         let window_id: ::std::os::raw::c_uint = _webui_window_get_number(win);
 	    let cb_index: ::std::os::raw::c_uint = webui_bind_interface(win, element_c_char, f);
 
-        // TODO: Add user cb to the list
-        // let uf: Option<fn(e: Event)> = Some(func);
-        // func_list[window_id][cb_index] = uf;
+        let window_id_64 = window_id as usize;
+        let cb_index_64 = cb_index as usize;
+
+        // Add the Rust user function to the list
+        let user_cb: Option<fn(e: Event)> = Some(func);
+        func_list[window_id_64][cb_index_64] = user_cb;
     }
 }

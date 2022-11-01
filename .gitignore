@@ -12,6 +12,7 @@
 *.out
 *.o
 *.def
+*.obj
 
 # IDE
 .idea/
