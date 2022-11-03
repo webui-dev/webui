@@ -2184,10 +2184,10 @@ void webui_close(webui_window_t* win) {
     }
 }
 
-bool webui_is_show(webui_window_t* win) {
+bool webui_is_shown(webui_window_t* win) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_is_show()... \n", win->core.window_number);
+        printf("[%d] webui_is_shown()... \n", win->core.window_number);
     #endif
 
     return win->core.connected;
@@ -2214,20 +2214,21 @@ unsigned int _webui_window_get_number(webui_window_t* win) {
     return win->core.window_number;
 }
 
-const char* webui_new_server(webui_window_t* win, const char* path, const char* index_html) {
+const char* webui_new_server(webui_window_t* win, const char* path) {
 
     #ifdef WEBUI_LOG
         printf("[%d] webui_new_server()... \n", win->core.window_number);
     #endif
 
     // Root folder to serve
-    webui_set_root_folder(win, path);
+    if(!_webui_set_root_folder(win, path))
+        return webui_empty_string;
     
     // 99 is a non-existing browser
     // this is to prevent any browser 
     // from running. We want only to
     // run a web-server right now.
-    webui_show(win, index_html, 99);
+    webui_show(win, NULL, 99);
 
     // Wait for server to start
     for(unsigned int n = 0; n < 2000; n++) {
@@ -2241,13 +2242,13 @@ const char* webui_new_server(webui_window_t* win, const char* path, const char* 
     return (const char*) win->core.url;
 }
 
-bool webui_set_root_folder(webui_window_t* win, const char* path) {
+bool _webui_set_root_folder(webui_window_t* win, const char* path) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_set_root_folder([%s])... \n", win->core.window_number, path);
+        printf("[%d] _webui_set_root_folder([%s])... \n", win->core.window_number, path);
     #endif
 
-    if(strlen(path) > WEBUI_MAX_PATH)
+    if(path != NULL & strlen(path) > WEBUI_MAX_PATH)
         return false;
 
     win->core.server_root = true;
@@ -2257,15 +2258,15 @@ bool webui_set_root_folder(webui_window_t* win, const char* path) {
     else
         sprintf(win->path, "%s", path);
     
-    webui_allow_multi_access(win, true);
+    webui_multi_access(win, true);
 
     return true;
 }
 
-void webui_allow_multi_access(webui_window_t* win, bool status) {
+void webui_multi_access(webui_window_t* win, bool status) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_allow_multi_access([%d])... \n", win->core.window_number, status);
+        printf("[%d] webui_multi_access([%d])... \n", win->core.window_number, status);
     #endif
 
     win->core.multi_access = status;
@@ -2281,6 +2282,11 @@ void webui_set_icon(webui_window_t* win, const char* icon_s, const char* type_s)
     win->core.icon_type = type_s;
 }
 
+bool webui_refresh(webui_window_t* win, const char* html) {
+
+    return webui_show(win, html, 0);
+}
+
 bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
 
     #ifdef WEBUI_LOG
@@ -2288,11 +2294,11 @@ bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
     #endif
 
     // Initializing
-    win->core.html = html;
+    win->core.html = html == NULL ? webui_empty_string : html;
     win->core.server_handled = false;
     webui.wait_for_socket_window = true;
 
-    if(!webui_is_show(win)) {
+    if(!webui_is_shown(win)) {
 
         // Start a new window
 
@@ -2637,14 +2643,14 @@ bool webui_open(webui_window_t* win, const char* url, unsigned int browser) {
 
     // Just open an app-mode window using the link
     webui_set_timeout(0);
-    webui_wait_process(win, true);
+    _webui_wait_process(win, true);
     return _webui_browser_start(win, url, browser);
 }
 
-void webui_wait_process(webui_window_t* win, bool status) {
+void _webui_wait_process(webui_window_t* win, bool status) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_wait_process()... \n", win->core.window_number);
+        printf("[%d] _webui_wait_process()... \n", win->core.window_number);
     #endif
 
     win->core.detect_process_close = status;

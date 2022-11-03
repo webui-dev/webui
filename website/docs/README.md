@@ -1,67 +1,29 @@
-# WebUI
+# WebUI Documentation
 
-![ScreenShot](_media/screenshot.png)
+#### Use any web browser as GUI, with your preferred language in the backend, and HTML/JS/TS/CSS in the frontend.
 
-> Bring the power of web browsers with the web technologies into you GUI, using your favorit programming language in the backend, and HTML/JS/CSS in the frontend.
+![ScreenShot](data/screenshot.png)
 
-## Why WebUI?
+> :warning: **Notice**:
+> 
+> * WebUI it's not a web-server solution or a framework, but it's an easy-embeddable tool to use any installed web browser as a user interface.
+> 
+> * WebUI is not ready yet for production release.
 
-Web technology is everywhere, and the web browsers have everything a modern UI need. While all other "WebView" based GUI libraries can not provide all features like a real web browser provides, WebUI use any installed web browser to give you the full power of a web browser. WebUI is fully written in C, and the final result library is completely independent an does not need any third-party library.
+## UI & The Web Technologies
 
-## How its work?
+Web application UI design is not just about how a product looks but how it works. Using web technologies in your UI makes your product modern and professional, And a well-designed web application will help you make a solid first impression on potential customers. Great web application design also assists you in nurturing leads and increasing conversions. In addition, it makes navigating and using your web app easier for your users.
 
-WebUI use a WebSocket communication in binary mode between the web browser (UI) and your application. Your application will receive click events. And of course you can send/receive data or execute JavaScript from your favorit programming language. 
+## Why a web browser?
+
+Today's web browsers have everything a modern UI needs. Web browsers are very sophisticated and optimized. Therefore, using it as a GUI will be an excellent choice. While old legacy GUI lib is complex and outdated, a WebView-based app is still an option. However, a WebView needs a huge SDK to build and many dependencies to run, and it can only provide some features like a real web browser. That is why WebUI uses real web browsers to give you full features of comprehensive web technologies while keeping your software lightweight and portable.
 
 ## Features
 
-- Pure C & Independent (*No need for any third-party library*)
-- Lightweight and small memory footprint
-- Fast binary communication (*App--WebUI--Browser*)
+- Written in Pure C
+- Fully Independent (*No need for any third-party library*)
+- Lightweight (*~160 Kb using TCC*) & Small memory footprint
+- Fast WS binary communication (*App--WebUI--Browser*)
 - One header file
-- Multiplatform & Multi Browser
-- Private browser user-profiles
-- Customized app mode look & feel
-
-## Build
-
- - [GitHub -> Windows](https://github.com/alifcommunity/webui/tree/main/build/Windows)
-
-## Examples
-
- - [GitHub -> C](https://github.com/alifcommunity/webui/tree/main/examples/C)
- - [GitHub -> Python](https://github.com/alifcommunity/webui/tree/main/examples/Python)
- - [GitHub -> TypeScript / JavaScript](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript)
-
-## Supported Browser
-
-| OS | Browser  | Status |
-| ------ | ------ | ------ |
-| Windows | Firefox | ✔️ |
-| Windows | Chrome | ✔️ |
-| Windows | Edge | ✔️ |
-| Linux | Firefox | *coming soon* |
-| Linux | Chrome | *coming soon* |
-| macOS | Firefox | *coming soon* |
-| macOS | Chrome | *coming soon* |
-| macOS | Safari | *coming soon* |
-
-## Supported Language
-
-| Language | Status |
-| ------ | ------ |
-| C | ✔️ |
-| C++ | 94% |
-| Python | ✔️ |
-| JavaScript | ✔️ |
-| TypeScript | ✔️ |
-| Go | 60% |
-| Rust | *coming soon* |
-| Java | *coming soon* |
-| Nim | *coming soon* |
-| Perl | *coming soon* |
-| Ruby | *coming soon* |
-| Scala | *coming soon* |
-
-### License
-
-GNU General Public License v3.0
+- Multi-platform & Multi-Browser
+- Using private profile for safety

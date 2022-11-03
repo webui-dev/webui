@@ -195,10 +195,10 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn webui_allow_multi_access(win: *mut webui_window_t, status: bool);
+    pub fn webui_multi_access(win: *mut webui_window_t, status: bool);
 }
 extern "C" {
-    pub fn webui_set_root_folder(
+    pub fn _webui_set_root_folder(
         win: *mut webui_window_t,
         path: *const ::std::os::raw::c_char,
     ) -> bool;
@@ -207,14 +207,13 @@ extern "C" {
     pub fn webui_new_server(
         win: *mut webui_window_t,
         path: *const ::std::os::raw::c_char,
-        index_html: *const ::std::os::raw::c_char,
     ) -> *const ::std::os::raw::c_char;
 }
 extern "C" {
     pub fn webui_close(win: *mut webui_window_t);
 }
 extern "C" {
-    pub fn webui_is_show(win: *mut webui_window_t) -> bool;
+    pub fn webui_is_shown(win: *mut webui_window_t) -> bool;
 }
 extern "C" {
     pub fn webui_script(
@@ -257,7 +256,7 @@ extern "C" {
     );
 }
 extern "C" {
-    pub fn webui_wait_process(win: *mut webui_window_t, status: bool);
+    pub fn _webui_wait_process(win: *mut webui_window_t, status: bool);
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

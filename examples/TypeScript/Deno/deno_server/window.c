@@ -24,9 +24,6 @@ int main(int argc, char* argv[]) {
 	webui_window_t* my_window;
 	my_window = webui_new_window();
 
-	// Stop when the browser process get closed.
-	webui_wait_process(my_window, true);
-
     // Show the window
 	if(!webui_open(my_window, url, webui.browser.chrome))	// Run the window on Chrome
 		webui_open(my_window, url, webui.browser.any);		// If not, run on any other installed web browser

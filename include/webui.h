@@ -196,20 +196,19 @@ EXPORT bool webui_is_app_running();
 EXPORT void webui_set_timeout(unsigned int second);
 EXPORT webui_window_t* webui_new_window();
 EXPORT bool webui_show(webui_window_t* win, const char* html, unsigned int browser);
+EXPORT bool webui_refresh(webui_window_t* win, const char* html);
 EXPORT bool webui_show_cpy(webui_window_t* win, const char* html, unsigned int browser);
 EXPORT void webui_set_icon(webui_window_t* win, const char* icon_s, const char* type_s);
-EXPORT void webui_allow_multi_access(webui_window_t* win, bool status);
-EXPORT bool webui_set_root_folder(webui_window_t* win, const char* path);
-EXPORT const char* webui_new_server(webui_window_t* win, const char* path, const char* index_html);
+EXPORT void webui_multi_access(webui_window_t* win, bool status);
+EXPORT const char* webui_new_server(webui_window_t* win, const char* path);
 EXPORT void webui_close(webui_window_t* win);
-EXPORT bool webui_is_show(webui_window_t* win);
+EXPORT bool webui_is_shown(webui_window_t* win);
 EXPORT void webui_script(webui_window_t* win, webui_script_t* script);
 EXPORT unsigned int webui_bind(webui_window_t* win, const char* element, void (*func) (webui_event_t* e));
 EXPORT void webui_bind_all(webui_window_t* win, void (*func) (webui_event_t* e));
 EXPORT bool webui_open(webui_window_t* win, const char* url, unsigned int browser);
 EXPORT void webui_free_script(webui_script_t* script);
 EXPORT void webui_script_runtime(webui_window_t* win, unsigned int runtime);
-EXPORT void webui_wait_process(webui_window_t* win, bool status);
 
 // -- Interface -----------------------
 // Used by other languages to create WebUI wrappers
@@ -256,6 +255,8 @@ EXPORT long _webui_timer_diff(struct timespec *start, struct timespec *end);
 EXPORT void _webui_timer_start(webui_timer_t* t);
 EXPORT bool _webui_timer_is_end(webui_timer_t* t, unsigned int ms);
 EXPORT void _webui_timer_clock_gettime(struct timespec *spec);
+EXPORT bool _webui_set_root_folder(webui_window_t* win, const char* path);
+EXPORT void _webui_wait_process(webui_window_t* win, bool status);
 #ifdef _WIN32
     EXPORT DWORD WINAPI _webui_cb(LPVOID _arg);
     EXPORT DWORD WINAPI _webui_run_browser_task(LPVOID _arg);

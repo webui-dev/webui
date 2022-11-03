@@ -11,21 +11,6 @@
 
 #include "webui.h"
 
-// Window struct
-webui_window_t* my_window;
-
-// UI HTML
-const char* my_html = "<!DOCTYPE html>"
-"<html><head><title>WebUI 2 - C99 Example</title>"
-"<style>body{color: white; background: #0F2027;"
-"background: -webkit-linear-gradient(to right, #2C5364, #203A43, #0F2027);"
-"background: linear-gradient(to right, #2C5364, #203A43, #0F2027);"
-"text-align:center; font-size: 18px; font-family: sans-serif;}</style></head><body>"
-"<h1>WebUI 2 - C99 Example</h1><br>"
-"<input type=\"password\" id=\"MyInput\"><br><br>"
-"<button id=\"MyButton1\">Check Password</button> - <button id=\"MyButton2\">Exit</button>"
-"</body></html>";
-
 // Check the password function
 void check_the_password(webui_event_t* e) {
 
@@ -37,7 +22,7 @@ void check_the_password(webui_event_t* e) {
 	};
 
     // Run the JavaScript on the UI (Web Browser)
-	webui_script(my_window, &js);
+	webui_script(e->window, &js);
 
 	// Check if there is any JavaScript error
 	if(js.result.error) {
@@ -55,13 +40,13 @@ void check_the_password(webui_event_t* e) {
 
 		// Correct password
 		js.script = "alert('Good. Password is correct.')";
-		webui_script(my_window, &js);
+		webui_script(e->window, &js);
 	}
 	else {
 
 		// Wrong password
 		js.script = "alert('Sorry. Wrong password.')";
-		webui_script(my_window, &js);
+		webui_script(e->window, &js);
 	}
 
 	// Free data resources
@@ -76,8 +61,20 @@ void close_the_application(webui_event_t* e){
 
 int main() {
 
+	// HTML
+	const char* my_html = "<!DOCTYPE html>"
+	"<html><head><title>WebUI 2 - C99 Example</title>"
+	"<style>body{color: white; background: #0F2027;"
+	"background: -webkit-linear-gradient(to right, #2C5364, #203A43, #0F2027);"
+	"background: linear-gradient(to right, #2C5364, #203A43, #0F2027);"
+	"text-align:center; font-size: 18px; font-family: sans-serif;}</style></head><body>"
+	"<h1>WebUI 2 - C99 Example</h1><br>"
+	"<input type=\"password\" id=\"MyInput\"><br><br>"
+	"<button id=\"MyButton1\">Check Password</button> - <button id=\"MyButton2\">Exit</button>"
+	"</body></html>";
+
 	// Create a window
-    my_window = webui_new_window();
+    webui_window_t* my_window = webui_new_window();
     
 	// Bind HTML elements with functions
 	webui_bind(my_window, "MyButton1", check_the_password);
