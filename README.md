@@ -73,14 +73,14 @@ Today's web browsers have everything a modern UI needs. Web browsers are very so
 
 | Language | Status | Link |
 | ------ | ------ | ------ |
-| C | ✔️ | https://github.com/alifcommunity/webui/tree/main/examples/C |
-| C++ | ✔️ | https://github.com/alifcommunity/webui/tree/main/examples/C%2B%2B |
-| Python | ✔️ | https://github.com/alifcommunity/webui/tree/main/examples/Python |
-| JavaScript | ✔️ | https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Nodejs |
-| TypeScript | ✔️ | https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Deno |
-| Go | ✔️ | https://github.com/alifcommunity/webui/tree/main/examples/Go |
-| Rust | ✔️ | https://github.com/alifcommunity/webui/tree/main/examples/Rust |
-| V | ✔️ | https://github.com/malisipi/vwebui |
+| C | ✔️ | [./examples/C](https://github.com/alifcommunity/webui/tree/main/examples/C) |
+| C++ | ✔️ | [./examples/C++](https://github.com/alifcommunity/webui/tree/main/examples/C%2B%2B) |
+| Python | ✔️ | [./examples/Python](https://github.com/alifcommunity/webui/tree/main/examples/Python) |
+| JavaScript | ✔️ | [./examples/TypeScript/Nodejs](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Nodejs) |
+| TypeScript | ✔️ | [./examples/TypeScript/Deno](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Deno) |
+| Go | ✔️ | [./examples/Go](https://github.com/alifcommunity/webui/tree/main/examples/Go) |
+| Rust | ✔️ | [./examples/Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust) |
+| V | ✔️ | [malisipi/vwebui](https://github.com/malisipi/vwebui) |
 
 ### License
 
