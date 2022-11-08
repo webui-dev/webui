@@ -6,19 +6,20 @@ on:
       - main
 
 jobs:
-#   GCC-Linux:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v2
-#       - name: Build
-#         working-directory: ${{github.workspace}}/examples/Linux/GCC/
-#         run: make static
+  GCC-Linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Linux-GCC-Build
+        run: |
+          cd build/Linux/GCC
+          make
 
   MinGW-Windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
-      - name: MinGW-Build
+      - name: Windows-MinGW-Build
         shell: cmd
         run: |
           cd build/Windows/GCC
@@ -29,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: microsoft/setup-msbuild@v1.1
-      - name: MSVC-Build
+      - name: Windows-MSVC-Build
         shell: cmd
         run: |
           cd build/Windows/MSVC
