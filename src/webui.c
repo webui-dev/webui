@@ -379,10 +379,12 @@ long _webui_timer_diff(struct timespec *start, struct timespec *end) {
         // printf("[0] _webui_timer_diff()... \n");
     #endif
 
-    return ((end->tv_sec * 1000) +
-        (end->tv_nsec / 1000000)) -
-        ((start->tv_sec * 1000) +
-        (start->tv_nsec / 1000000));
+    return (
+        (long)(end->tv_sec * 1000) +
+        (long)(end->tv_nsec / 1000000)) -
+        ((long)(start->tv_sec * 1000) +
+        (long)(start->tv_nsec / 1000000)
+    );
 }
 
 void _webui_timer_clock_gettime(struct timespec *spec) {
@@ -2887,7 +2889,12 @@ unsigned int _webui_get_free_port() {
         printf("[0] _webui_get_free_port()... \n");
     #endif
 
-    srand(time(NULL));
+    #ifdef _WIN32
+        srand((unsigned int)time(NULL));
+    #else
+        srand(time(NULL));
+    #endif
+
     unsigned int port = (rand() % (WEBUI_MAX_PORT + 1 - WEBUI_MIN_PORT)) + WEBUI_MIN_PORT;
 
     for(unsigned int i = WEBUI_MIN_PORT; i <= WEBUI_MAX_PORT; i++) {
