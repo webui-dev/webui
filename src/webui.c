@@ -278,6 +278,8 @@ void _webui_ptr_add(void *p, size_t size) {
         webui.ptr_list[webui.ptr_position] = p;
         webui.ptr_size[webui.ptr_position] = size;
         webui.ptr_position++;
+        if (webui.ptr_position >= WEBUI_MAX_ARRAY)
+            webui.ptr_position = (WEBUI_MAX_ARRAY - 1);
     }
 }
 
@@ -302,7 +304,7 @@ void _webui_free_mem(void **p) {
         }
     }
 
-    for(unsigned int i = webui.ptr_position; i >= 0; i--) {
+    for(int i = webui.ptr_position; i >= 0; i--) {
 
         if(webui.ptr_list[i] == NULL) {
 
