@@ -19,6 +19,11 @@ import sys
 sys.path.append('../../../packages/PyPI/src/webui')
 import webui
 
+# Use the local WebUI Dynamic lib
+# For instructions on compiling it please visit:
+# https://github.com/alifcommunity/webui/tree/main/build
+webui.set_library_path('../../../build/Windows/MSVC')
+
 # HTML
 html = """
 <!DOCTYPE html>
@@ -54,7 +59,7 @@ def test(e : webui.event):
 	# Print some info (optional)
 	print('Element_id: ' + str(e.element_id))
 	print('Window_id: ' + str(e.window_id))
-	print('Element_name: ' + e.element_name.decode('utf-8'))
+	print('Element_name: ' + e.element_name)
 
 	# Run JavaScript to get the password
 	res = e.window.run_js("return document.getElementById(\"MyInput\").value;")
@@ -74,11 +79,11 @@ def main():
 	MyWindow = webui.window()
 
 	# Bind am HTML element ID with a python function
-	MyWindow.bind('TestID', test)
+	MyWindow.bind_all(test)
 	MyWindow.bind('ExitID', close)
 
 	# Show the window
-	MyWindow.show(html)
+	MyWindow.show(html, webui.browser.any)
 
 	# Wait until all windows are closed
 	webui.wait()

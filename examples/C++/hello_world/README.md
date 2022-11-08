@@ -18,3 +18,19 @@ git clone https://github.com/alifcommunity/webui.git
 cd webui\examples\C++\Windows\GCC
 mingw32-make
 ```
+
+### Linux
+
+- **GCC**
+```sh
+git clone https://github.com/alifcommunity/webui.git
+cd webui/examples/C++/Linux/GCC
+make
+```
+
+- **Clang**
+```sh
+git clone https://github.com/alifcommunity/webui.git
+cd webui/examples/C++/Linux/Clang
+make
+```

@@ -15,18 +15,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\..\include\webui.h">
+    <ClInclude Include="..\..\..\..\..\..\include\webui.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\..\include\mongoose.h">
+    <ClInclude Include="..\..\..\..\..\..\include\mongoose.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\..\src\webui.c">
+    <ClCompile Include="..\..\..\..\..\..\src\webui.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\..\src\mongoose.c">
+    <ClCompile Include="..\..\..\..\..\..\src\mongoose.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

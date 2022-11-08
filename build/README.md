@@ -3,3 +3,4 @@
 To build the WebUI you will need a `C99` compiler. No dependencies is needed.
 
 [Windows](https://github.com/alifcommunity/webui/tree/main/build/Windows)
+[Linux](https://github.com/alifcommunity/webui/tree/main/build/Linux)

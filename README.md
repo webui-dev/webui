@@ -42,6 +42,10 @@ Today's web browsers have everything a modern UI needs. Web browsers are very so
 | Dependencies on Linux | *GTK3, WebKitGTK* | *QtCore, QtGui, QtWidgets* | *No need* |
 | Dependencies on macOS | *Cocoa, WebKit* | *QtCore, QtGui, QtWidgets* | *No need* |
 
+## Documentation
+
+ - [Online Documentation](https://webui.me/docs/)
+
 ## Build
 
  - [Windows](https://github.com/alifcommunity/webui/tree/main/build/Windows)
@@ -74,13 +78,13 @@ Today's web browsers have everything a modern UI needs. Web browsers are very so
 
 | Language | Status | Link |
 | ------ | ------ | ------ |
-| C | ✔️ | [./examples/C](https://github.com/alifcommunity/webui/tree/main/examples/C) |
-| C++ | ✔️ | [./examples/C++](https://github.com/alifcommunity/webui/tree/main/examples/C%2B%2B) |
-| Python | ✔️ | [./examples/Python](https://github.com/alifcommunity/webui/tree/main/examples/Python) |
-| JavaScript | ✔️ | [./examples/TypeScript/Nodejs](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Nodejs) |
-| TypeScript | ✔️ | [./examples/TypeScript/Deno](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Deno) |
-| Go | ✔️ | [./examples/Go](https://github.com/alifcommunity/webui/tree/main/examples/Go) |
-| Rust | ✔️ | [./examples/Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust) |
+| C | ✔️ | [examples/C](https://github.com/alifcommunity/webui/tree/main/examples/C) |
+| C++ | ✔️ | [examples/C++](https://github.com/alifcommunity/webui/tree/main/examples/C%2B%2B) |
+| Python | ✔️ | [examples/Python](https://github.com/alifcommunity/webui/tree/main/examples/Python) |
+| JavaScript | ✔️ | [examples/TypeScript/Nodejs](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Nodejs) |
+| TypeScript | ✔️ | [examples/TypeScript/Deno](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Deno) |
+| Go | ✔️ | [examples/Go](https://github.com/alifcommunity/webui/tree/main/examples/Go) |
+| Rust | ✔️ | [examples/Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust) |
 | V | ✔️ | [malisipi/vwebui](https://github.com/malisipi/vwebui) |
 
 ### License

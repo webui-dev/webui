@@ -66,7 +66,7 @@ void check_the_password(webui_event_t* e) {
 	}
 
 	// Free data resources
-	webui_free_script(&js);
+	webui_script_cleanup(&js);
 }
 
 void close_the_application(webui_event_t* e){

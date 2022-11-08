@@ -1,4 +1,4 @@
-// WebUI Library 2.0.3
+// WebUI Library 2.0.4
 //
 // http://webui.me
 // https://github.com/alifcommunity/webui
@@ -8,7 +8,7 @@
 
 import { existsSync } from "https://deno.land/std/fs/mod.ts";
 
-const version = '2.0.3';
+const version = '2.0.4';
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 let lib_loaded = false;

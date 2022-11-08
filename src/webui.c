@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.3
+    WebUI Library 2.0.4
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -20,7 +20,7 @@
 // -- Heap ----------------------------
 webui_t webui;
 
-// -- JavaScript Bridge ---------------
+// -- WebUI JS-Bridge ---------
 // This is a uncompressed version to make the debugging
 // more easy in the browser using the builtin dev-tools
 static const char* webui_javascript_bridge = 
@@ -50,7 +50,7 @@ static const char* webui_javascript_bridge =
 "        }; \n"
 "        _webui_ws.onerror = function () { \n"
 "            if(_webui_log) console.log(\"WebUI -> Connection error\"); \n"
-"            _webui_close(255, \"\"); \n"
+"            _webui_close(255, ''); \n"
 "        }; \n"
 "        _webui_ws.onclose = function (evt) { \n"
 "            _webui_ws_status = false; \n"
@@ -82,7 +82,7 @@ static const char* webui_javascript_bridge =
 "                if(buffer8[1] === 252) { \n"
 "                    _webui_close(252, data8utf8); \n"
 "                } else if(buffer8[1] === 251) { \n"
-"                    _webui_close(251, \"\"); \n"
+"                    _webui_close(251, ''); \n"
 "                } else if(buffer8[1] === 254) { \n"
 "                    data8utf8 = data8utf8.replace(/(?:\\r\\n|\\r|\\n)/g, \"\\\\n\"); \n"
 "                    if(_webui_log) console.log(\"WebUI -> JS -> Run -> \" + data8utf8); \n"
@@ -121,7 +121,7 @@ static const char* webui_javascript_bridge =
 "    } \n"
 "} \n"
 "function _webui_SendEvent(name) { \n"
-"    if(_webui_ws_status && name != \"\") { \n"
+"    if(_webui_ws_status && name != '') { \n"
 "        var Name8 = new TextEncoder(\"utf-8\").encode(name); \n"
 "        var Event8 = new Uint8Array(3 + Name8.length); \n"
 "        Event8[0] = 255; \n"
@@ -136,94 +136,6 @@ static const char* webui_javascript_bridge =
 "            buf = buf + \"]\"; \n"
 "            console.log(\"WebUI -> Event -> Send -> [\" + name + \"] (\" + buf + \")\"); \n"
 "        } \n"
-"    } \n"
-"} \n"
-"function _webui_listener_handler() { \n"
-"    var elems = document.getElementsByTagName(\"form\"); \n"
-"    for (i = 0; i < elems.length; i++) { \n"
-"        _webui_ws_status = false; \n"
-"        alert(\"Incompatible HTML.\\n\\nYour HTML contain <form> elements, wish is not compatible with WebUI. Please remove all those elements.\"); \n"
-"        _webui_close(255, \"\"); \n"
-"    } \n"
-"    elems = document.getElementsByTagName(\"button\"); \n"
-"    for (i = 0; i < elems.length; i++) { \n"
-"        if(elems[i].id == \"\") continue; \n"
-"        if(_webui_log) console.log(\"WebUI -> Listen -> <Button> -> \" + elems[i].id); \n"
-"        elems[i].addEventListener(\"click\", function () { \n"
-"            _webui_SendEvent(this.id); \n"
-"        }); \n"
-"    } \n"
-"    elems = document.getElementsByTagName(\"div\"); \n"
-"    for (i = 0; i < elems.length; i++) { \n"
-"        if(elems[i].id == \"\") continue; \n"
-"        if(_webui_log) console.log(\"WebUI -> Listen -> <Div> -> \" + elems[i].id); \n"
-"        elems[i].addEventListener(\"click\", function () { \n"
-"            _webui_SendEvent(this.id); \n"
-"        }); \n"
-"    } \n"
-"    elems = document.getElementsByTagName(\"li\"); \n"
-"    for (i = 0; i < elems.length; i++) { \n"
-"        if(elems[i].id == \"\") continue; \n"
-"        if(_webui_log) console.log(\"WebUI -> Listen -> <LI> -> \" + elems[i].id); \n"
-"        elems[i].addEventListener(\"click\", function () { \n"
-"            _webui_SendEvent(this.id); \n"
-"        }); \n"
-"    } \n"
-"    elems = document.getElementsByTagName(\"p\"); \n"
-"    for (i = 0; i < elems.length; i++) { \n"
-"        if(elems[i].id == \"\") continue; \n"
-"        if(_webui_log) console.log(\"WebUI -> Listen -> <P> -> \" + elems[i].id); \n"
-"        elems[i].addEventListener(\"click\", function () { \n"
-"            _webui_SendEvent(this.id); \n"
-"        }); \n"
-"    } \n"
-"    elems = document.getElementsByTagName(\"a\"); \n"
-"    for (i = 0; i < elems.length; i++) { \n"
-"        if(elems[i].id == \"\") continue; \n"
-"        if(_webui_log) console.log(\"WebUI -> Listen -> <A> -> \" + elems[i].id); \n"
-"        elems[i].addEventListener(\"click\", function () { \n"
-"            _webui_SendEvent(this.id); \n"
-"        }); \n"
-"    } \n"
-"    elems = document.getElementsByTagName(\"p\"); \n"
-"    for (i = 0; i < elems.length; i++) { \n"
-"        if(elems[i].id == \"\") continue; \n"
-"        if(_webui_log) console.log(\"WebUI -> Listen -> <P> -> \" + elems[i].id); \n"
-"        elems[i].addEventListener(\"click\", function () { \n"
-"            _webui_SendEvent(this.id); \n"
-"        }); \n"
-"    } \n"
-"    elems = document.getElementsByTagName(\"ul\"); \n"
-"    for (i = 0; i < elems.length; i++) { \n"
-"        if(elems[i].id == \"\") continue; \n"
-"        if(_webui_log) console.log(\"WebUI -> Listen -> <UL> -> \" + elems[i].id); \n"
-"        elems[i].addEventListener(\"click\", function () { \n"
-"            _webui_SendEvent(this.id); \n"
-"        }); \n"
-"    } \n"
-"    elems = document.getElementsByTagName(\"footer\"); \n"
-"    for (i = 0; i < elems.length; i++) { \n"
-"        if(elems[i].id == \"\") continue; \n"
-"        if(_webui_log) console.log(\"WebUI -> Listen -> <FOOTER> -> \" + elems[i].id); \n"
-"        elems[i].addEventListener(\"click\", function () { \n"
-"            _webui_SendEvent(this.id); \n"
-"        }); \n"
-"    } \n"
-"    elems = document.getElementsByTagName(\"nav\"); \n"
-"    for (i = 0; i < elems.length; i++) { \n"
-"        if(elems[i].id == \"\") continue; \n"
-"        if(_webui_log) console.log(\"WebUI -> Listen -> <NAV> -> \" + elems[i].id); \n"
-"        elems[i].addEventListener(\"click\", function () { \n"
-"            _webui_SendEvent(this.id); \n"
-"        }); \n"
-"    } \n"
-"    elems = document.getElementsByTagName(\"span\"); \n"
-"    for (i = 0; i < elems.length; i++) { \n"
-"        if(elems[i].id == \"\") continue; \n"
-"        if(_webui_log) console.log(\"WebUI -> Listen -> <SPAN> -> \" + elems[i].id); \n"
-"        elems[i].addEventListener(\"click\", function () { \n"
-"            _webui_SendEvent(this.id); \n"
-"        }); \n"
 "    } \n"
 "} \n"
 "function _webui_listener() { \n"
@@ -246,10 +158,10 @@ static const char* webui_javascript_bridge =
 "    } \n"
 "}); \n"
 "window.addEventListener(\"beforeunload\", function (e) { \n"
-"    _webui_close(255, \"\"); \n"
+"    _webui_close(255, ''); \n"
 "}); \n"
 "window.onbeforeunload = function () { \n"
-"    _webui_close(255, \"\"); \n"
+"    _webui_close(255, ''); \n"
 "}; \n"
 "document.addEventListener(\"contextmenu\", function (e) {}); \n"
 "if(typeof webui_ready === \"function\") setTimeout(webui_ready, 1); \n"
@@ -264,7 +176,7 @@ static const char* webui_javascript_bridge =
 "} \n"
 "function webui_close_window() { \n"
 "    _webui_freez_ui(); \n"
-"    if(_webui_ws_status) _webui_close(255, \"\"); \n"
+"    if(_webui_ws_status) _webui_close(255, ''); \n"
 "    else window.close(); \n"
 "} \n"
 "function webui_event(event_name) { \n"
@@ -290,13 +202,25 @@ static const char* webui_javascript_bridge =
 "        buf = buf + \"]\"; \n"
 "        console.log(\"WebUI -> Send Event -> [\" + event_name + \"] (\" + buf + \")\"); \n"
 "    } \n"
-"}";
+"} \n"
+"function _webui_listener_handler() { \n"
+"    Object.keys(window).forEach(key=>{ \n"
+"        if(/^on(click)/.test(key)) { \n"
+"            window.addEventListener(key.slice(2),event=>{ \n"
+"                if(event.target.id !== '') { \n"
+"                    if(_webui_bind_all || _webui_bind_list.includes(_webui_win_num + '/' + event.target.id)) \n"
+"                        _webui_SendEvent(event.target.id); \n"
+"                } \n"
+"            }); \n"
+"        } \n"
+"    }); \n"
+"} \n";
 
 // -- Heap ----------------------------
-static const char* webui_html_served = "<html><head><title>Access Denied</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Access Denied</h2><p>You can't access this window<br>because it's already served.<br><br>The security policy is set to<br>deny multiple requests.</p><br><a href=\"https://www.webui.me\"><small>WebUI Library<small></a></body></html>";
-static const char* webui_html_res_not_available = "<html><head><title>Resource Not Available</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Resource Not Available</h2><p>The requested resource is not available.</p><br><a href=\"https://www.webui.me\"><small>WebUI Library<small></a></body></html>";
-static const char* webui_deno_not_found = "<html><head><title>Deno Not Found</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Deno Not Found</h2><p>Deno not found on your system.<br>Please download it from <a href=\"https://github.com/denoland/deno/releases\">https://github.com/denoland/deno/releases</a></p><br><a href=\"https://www.webui.me\"><small>WebUI Library<small></a></body></html>";
-static const char* webui_nodejs_not_found = "<html><head><title>Node.js Not Found</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Node.js Not Found</h2><p>Node.js not found on your system.<br>Please download it from <a href=\"https://nodejs.org/en/download/\">https://nodejs.org/en/download/</a></p><br><a href=\"https://www.webui.me\"><small>WebUI Library<small></a></body></html>";
+static const char* webui_html_served = "<html><head><title>Access Denied</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Access Denied</h2><p>You can't access this content<br>because it's already processed.<br><br>The current security policy denies<br>multiple requests.</p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
+static const char* webui_html_res_not_available = "<html><head><title>Resource Not Available</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Resource Not Available</h2><p>The requested resource is not available.</p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
+static const char* webui_deno_not_found = "<html><head><title>Deno Not Found</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Deno Not Found</h2><p>Deno is not found on this system.<br>Please download it from <a href=\"https://github.com/denoland/deno/releases\">https://github.com/denoland/deno/releases</a></p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
+static const char* webui_nodejs_not_found = "<html><head><title>Node.js Not Found</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Node.js Not Found</h2><p>Node.js is not found on this system.<br>Please download it from <a href=\"https://nodejs.org/en/download/\">https://nodejs.org/en/download/</a></p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
 static const char* webui_def_icon = "<?xml version=\"1.0\" ?><svg height=\"24\" version=\"1.1\" width=\"24\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:cc=\"http://creativecommons.org/ns#\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"><g transform=\"translate(0 -1028.4)\"><path d=\"m3 1030.4c-1.1046 0-2 0.9-2 2v7 2 7c0 1.1 0.8954 2 2 2h9 9c1.105 0 2-0.9 2-2v-7-2-7c0-1.1-0.895-2-2-2h-9-9z\" fill=\"#2c3e50\"/><path d=\"m3 2c-1.1046 0-2 0.8954-2 2v3 3 1 1 1 3 3c0 1.105 0.8954 2 2 2h9 9c1.105 0 2-0.895 2-2v-3-4-2-3-3c0-1.1046-0.895-2-2-2h-9-9z\" fill=\"#34495e\" transform=\"translate(0 1028.4)\"/><path d=\"m4 5.125v1.125l3 1.75-3 1.75v1.125l5-2.875-5-2.875zm5 4.875v1h5v-1h-5z\" fill=\"#ecf0f1\" transform=\"translate(0 1028.4)\"/></g></svg>";
 static const char* webui_def_icon_type = "image/svg+xml";
 static const char* webui_js_empty = "WEBUI_JS_EMPTY";
@@ -309,9 +233,11 @@ static const char* webui_empty_string = ""; // .text
     static const char* webui_sep = "/";
 #endif
 
+#define WEBUI_NON_EXIST_BROWSER (100)
+
 // -- Functions -----------------------
 bool _webui_ptr_exist(void *p) {
-
+    
     #ifdef WEBUI_LOG
         // printf("[0] _webui_ptr_exist()... \n");
     #endif
@@ -329,7 +255,7 @@ bool _webui_ptr_exist(void *p) {
 }
 
 void _webui_ptr_add(void *p, size_t size) {
-
+    
     #ifdef WEBUI_LOG
         // printf("[0] _webui_ptr_add()... \n");
     #endif
@@ -356,7 +282,7 @@ void _webui_ptr_add(void *p, size_t size) {
 }
 
 void _webui_free_mem(void **p) {
-
+    
     #ifdef WEBUI_LOG
         // printf("[0] _webui_free_mem()... \n");
     #endif
@@ -389,7 +315,7 @@ void _webui_free_mem(void **p) {
 }
 
 void _webui_panic() {
-
+    
     #ifdef WEBUI_LOG
         printf("[0] _webui_panic()... \n");
     #endif
@@ -398,7 +324,7 @@ void _webui_panic() {
 }
 
 void* _webui_malloc(size_t size) {
-
+    
     #ifdef WEBUI_LOG
         // printf("[0] _webui_malloc([%d])... \n", size);
     #endif
@@ -433,7 +359,7 @@ void* _webui_malloc(size_t size) {
 }
 
 void _webui_sleep(long unsigned int ms) {
-
+    
     #ifdef WEBUI_LOG
         // printf("[0] _webui_sleep([%d])... \n", ms);
     #endif
@@ -447,6 +373,10 @@ void _webui_sleep(long unsigned int ms) {
 
 long _webui_timer_diff(struct timespec *start, struct timespec *end) {
 
+    #ifdef WEBUI_LOG
+        // printf("[0] _webui_timer_diff()... \n");
+    #endif
+
     return ((end->tv_sec * 1000) +
         (end->tv_nsec / 1000000)) -
         ((start->tv_sec * 1000) +
@@ -454,6 +384,10 @@ long _webui_timer_diff(struct timespec *start, struct timespec *end) {
 }
 
 void _webui_timer_clock_gettime(struct timespec *spec) {
+
+    #ifdef WEBUI_LOG
+        // printf("[0] _webui_timer_clock_gettime()... \n");
+    #endif
 
     #ifdef _WIN32
         __int64 wintime;
@@ -467,15 +401,23 @@ void _webui_timer_clock_gettime(struct timespec *spec) {
 }
 
 void _webui_timer_start(webui_timer_t* t) {
+
+    #ifdef WEBUI_LOG
+        // printf("[0] _webui_timer_start()... \n");
+    #endif
     
     _webui_timer_clock_gettime(&t->start);
 }
 
 bool _webui_timer_is_end(webui_timer_t* t, unsigned int ms) {
+
+    #ifdef WEBUI_LOG
+        // printf("[0] _webui_timer_is_end()... \n");
+    #endif
     
     _webui_timer_clock_gettime(&t->now);
 
-    long def = _webui_timer_diff(&t->start, &t->now);
+    unsigned int def = (unsigned int) _webui_timer_diff(&t->start, &t->now);
     if (def > ms)
         return true;
     return false;
@@ -497,6 +439,10 @@ bool _webui_is_empty(const char* s) {
     #ifdef WEBUI_LOG
         // printf("[0] _webui_is_empty()... \n");
     #endif
+    
+    #ifdef WEBUI_LOG
+        // printf("[0] _webui_is_empty()... \n");
+    #endif
 
     if((s != NULL) && (s[0] != '\0'))
         return false;
@@ -504,7 +450,7 @@ bool _webui_is_empty(const char* s) {
 }
 
 bool _webui_file_exist(char* file) {
-
+    
     #ifdef WEBUI_LOG
         printf("[0] _webui_file_exist([%s])... \n", file);
     #endif
@@ -517,12 +463,16 @@ bool _webui_file_exist(char* file) {
     return false;
 }
 
-const char* _webui_get_extension(const char *f) {
+const char* _webui_get_extension(const char*f) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_get_extension()... \n");
+    #endif
 
     if(f == NULL)
         return webui_empty_string;
 
-    const char *ext = strrchr(f, '.');
+    const char*ext = strrchr(f, '.');
 
     if(ext == NULL || !ext || ext == f)
         return webui_empty_string;
@@ -530,7 +480,7 @@ const char* _webui_get_extension(const char *f) {
 }
 
 unsigned int _webui_get_run_id() {
-
+    
     #ifdef WEBUI_LOG
         printf("[0] _webui_get_run_id()... \n");
     #endif
@@ -539,7 +489,7 @@ unsigned int _webui_get_run_id() {
 }
 
 bool _webui_socket_test_listen_mg(unsigned int port_num) {
-
+    
     #ifdef WEBUI_LOG
         printf("[0] _webui_socket_test_listen_mg([%d])... \n", port_num);
     #endif
@@ -566,7 +516,7 @@ bool _webui_socket_test_listen_mg(unsigned int port_num) {
 
 #ifdef _WIN32
     bool _webui_socket_test_listen_win32(unsigned int port_num) {
-
+    
         #ifdef WEBUI_LOG
             printf("[0] _webui_socket_test_listen_win32([%d])... \n", port_num);
         #endif
@@ -591,10 +541,10 @@ bool _webui_socket_test_listen_mg(unsigned int port_num) {
 
         // Resolve the server address and port
         char the_port[16];
-        sprintf(the_port, "%d", port_num);
-        iResult = getaddrinfo("127.0.0.1", the_port, &hints, &result);
+        sprintf(&the_port[0], "%d", port_num);
+        iResult = getaddrinfo("127.0.0.1", &the_port[0], &hints, &result);
         if(iResult != 0) {
-            WSACleanup();
+            // WSACleanup();
             return false;
         }
 
@@ -602,7 +552,7 @@ bool _webui_socket_test_listen_mg(unsigned int port_num) {
         ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
         if(ListenSocket == INVALID_SOCKET) {
             freeaddrinfo(result);
-            WSACleanup();
+            // WSACleanup();
             return false;
         }
 
@@ -611,14 +561,16 @@ bool _webui_socket_test_listen_mg(unsigned int port_num) {
         if(iResult == SOCKET_ERROR) {
             freeaddrinfo(result);
             closesocket(ListenSocket);
-            WSACleanup();
+            shutdown(ListenSocket, SD_BOTH);
+            // WSACleanup();
             return false;
         }
 
         // Clean
         freeaddrinfo(result);
         closesocket(ListenSocket);
-        WSACleanup();
+        shutdown(ListenSocket, SD_BOTH);
+        // WSACleanup();
 
         // Listening Success
         return true;
@@ -626,7 +578,7 @@ bool _webui_socket_test_listen_mg(unsigned int port_num) {
 #endif
 
 bool _webui_port_is_used(unsigned int port_num) {
-
+    
     #ifdef WEBUI_LOG
         printf("[0] _webui_port_is_used([%d])... \n", port_num);
     #endif
@@ -662,7 +614,7 @@ void _webui_serve_file(webui_window_t* win, struct mg_connection *c, void *ev_da
 }
 
 bool _webui_deno_exist() {
-
+    
     #ifdef WEBUI_LOG
         printf("[0] _webui_deno_exist()... \n");
     #endif
@@ -682,7 +634,7 @@ bool _webui_deno_exist() {
 }
 
 bool _webui_nodejs_exist() {
-
+    
     #ifdef WEBUI_LOG
         printf("[0] _webui_nodejs_exist()... \n");
     #endif
@@ -702,7 +654,7 @@ bool _webui_nodejs_exist() {
 }
 
 const char* _webui_interpret_command(const char* cmd) {
-
+    
     #ifdef WEBUI_LOG
         printf("[0] _webui_interpret_command()... \n");
     #endif
@@ -895,10 +847,52 @@ void _webui_interpret_file(webui_window_t* win, struct mg_connection *c, void *e
     _webui_free_mem((void *) &full_path);
 }
 
+const char* _webui_generate_js_bridge(webui_window_t* win) {
+
+    #ifdef WEBUI_LOG
+        printf("[%d] _webui_generate_js_bridge()... \n", win->core.window_number);
+    #endif
+
+    // Calculate the cb size
+    size_t cb_mem_size = 256; // To hold `const _webui_bind_list = ["elem1", "elem2",];`
+    for(unsigned int i = 1; i < WEBUI_MAX_ARRAY; i++)
+        if(!_webui_is_empty(webui.html_elements[i]))
+            cb_mem_size += strlen(webui.html_elements[i]) + 3;
+    
+    // Generate the cb-all flag
+    char* event_cb_js_array = (char*) _webui_malloc(cb_mem_size);
+    strcat(event_cb_js_array, "\n const _webui_bind_all = ");
+    if(win->core.is_bind_all && win->core.cb_all[0] != NULL)
+        strcat(event_cb_js_array, "true; \n");
+    else
+        strcat(event_cb_js_array, "false; \n");
+    
+    // Generate the cb array
+    strcat(event_cb_js_array, "const _webui_bind_list = [");
+    for(unsigned int i = 1; i < WEBUI_MAX_ARRAY; i++) {
+        if(!_webui_is_empty(webui.html_elements[i])) {
+            strcat(event_cb_js_array, "\"");
+            strcat(event_cb_js_array, webui.html_elements[i]);
+            strcat(event_cb_js_array, "\",");
+        }
+    }
+    strcat(event_cb_js_array, "] \n");
+
+    // Generate the full WebUI JS-Bridge
+    size_t len = cb_mem_size + strlen(webui_javascript_bridge) + 1;
+    char* js = (char*) _webui_malloc(len);
+    sprintf(js, 
+        "_webui_port = %d; \n _webui_win_num = %d; \n %s \n %s \n",
+        win->core.server_port, win->core.window_number, event_cb_js_array, webui_javascript_bridge
+    );
+
+    return js;
+}
+
 static void _webui_server_event_handler(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
 
     webui_window_t* win = (webui_window_t *) fn_data;
-
+    
     #ifdef WEBUI_LOG
         // printf("[%d] _webui_server_event_handler()... \n", win->core.window_number);
     #endif
@@ -923,19 +917,14 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
         } 
         else if(mg_http_match_uri(hm, "/webui.js")) {
 
-            // WebUI Bridge
+            // WebUI JS-Bridge
 
             #ifdef WEBUI_LOG
                 printf("[%d] _webui_server_event_handler()... HTML WebUI JS\n", win->core.window_number);
             #endif
 
             // Generate JavaScript bridge
-            size_t len = 64 + strlen(webui_javascript_bridge);
-            char* js = (char *) _webui_malloc(len);
-            sprintf(js, 
-                "_webui_port = %d; \n %s \n",
-                win->core.server_port, webui_javascript_bridge
-            );
+            const char* js = _webui_generate_js_bridge(win);
 
             // Header
             // Content-Type: text/javascript
@@ -1060,14 +1049,26 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
                     #endif
 
                     win->core.server_handled = true;
+                    char* html = (char*) webui_empty_string;
 
-                    // Inject JavaScript bridge into HTML
-                    size_t len = strlen(win->core.html) + 6 + strlen(webui_javascript_bridge) + 128;
-                    char* html = (char *) _webui_malloc(len);
-                    sprintf(html, 
-                        "%s \n <script type = \"text/javascript\"> \n _webui_port = %d; \n %s \n </script>",
-                        win->core.html, win->core.server_port, webui_javascript_bridge
-                    );
+                    if(win->core.html != NULL) {
+
+                        if(strstr(win->core.html, "</html>") != NULL) {
+
+                            // Generate the full WebUI JS-Bridge
+                            const char* js = _webui_generate_js_bridge(win);
+
+                            // Inject WebUI JS-Bridge into HTML
+                            size_t len = strlen(win->core.html) + strlen(js) + 512;
+                            html = (char*) _webui_malloc(len);
+                            sprintf(html, 
+                                "%s \n <script type = \"text/javascript\"> \n %s \n </script>",
+                                win->core.html, js
+                            );
+
+                            _webui_free_mem((void *) &js);
+                        }
+                    }
 
                     // // HTTP Header
                     // char header[512];
@@ -1214,7 +1215,7 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
 #endif
 {
     webui_window_t* win = (webui_window_t*) arg;
-
+    
     #ifdef WEBUI_LOG
         printf("[%d] [Thread] webui_server_start(%s)... \n", win->core.window_number, win->core.url);
     #endif
@@ -1423,11 +1424,11 @@ bool _webui_browser_create_profile_folder(webui_window_t* win, unsigned int brow
             if(file == NULL)
                 return false;
             #ifdef _WIN32
-                fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}@-moz-document url(chrome://browser/content/browser.xhtml){:root:not([sizemode=\"fullscreen\"]) > head{display: block;position: fixed;width: calc(200vw - 440px);text-align: left;z-index: 9;pointer-events: none;}head > *{ display: none }head > title{display: -moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: hidden;text-overflow: ellipsis;}}", file);
+                fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}@-moz-document url(chrome://browser/content/browser.xhtml) {:root:not([sizemode=\"fullscreen\"]) > head{display: block;position: fixed;width: calc(200vw - 440px);text-align: left;z-index: 9;pointer-events: none;}head > *{ display: none }head > title{display: -moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: hidden;text-overflow: ellipsis;}}", file);
             #elif __APPLE__
-                fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}@-moz-document url(chrome://browser/content/browser.xhtml){:root:not([sizemode=\"fullscreen\"]) > head{display: block;position: fixed;width: calc(200vw - 440px);text-align: left;z-index: 9;pointer-events: none;}head > *{ display: none }head > title{display: -moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: hidden;text-overflow: ellipsis;}}", file);
+                fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}@-moz-document url(chrome://browser/content/browser.xhtml) {:root:not([sizemode=\"fullscreen\"]) > head{display: block;position: fixed;width: calc(200vw - 440px);text-align: left;z-index: 9;pointer-events: none;}head > *{ display: none }head > title{display: -moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: hidden;text-overflow: ellipsis;}}", file);
             #else
-                fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}@-moz-document url(chrome://browser/content/browser.xhtml){:root:not([sizemode=\"fullscreen\"]) > head{display: block;position: fixed;width: calc(200vw - 440px);text-align: left;z-index: 9;pointer-events: none;}head > *{ display: none }head > title{display: -moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: hidden;text-overflow: ellipsis;}}", file);
+                fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}@-moz-document url(chrome://browser/content/browser.xhtml) {:root:not([sizemode=\"fullscreen\"]) > head{display: block;position: fixed;width: calc(200vw - 440px);text-align: left;z-index: 9;pointer-events: none;}head > *{ display: none }head > title{display: -moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: hidden;text-overflow: ellipsis;}}", file);
             #endif
             fclose(file);
 
@@ -1683,10 +1684,9 @@ void _webui_browser_clean() {
         printf("[0] _webui_browser_clean()... \n");
     #endif
 
-    //TODO: Clean profile folders
-    // Remove browser profile folders if needed
-    // or keep it to save window positions for
-    // future run.
+    // Let's keep the web browser profile folder
+    // to let the browser remember the window position
+    // and size. This function is for future use is needed.
 }
 
 #ifdef _WIN32
@@ -1800,14 +1800,24 @@ int _webui_cmd_async(char* cmd, bool show) {
         printf("[%d] _webui_run_browser_detect_proc_task()... \n", arg->win->core.window_number);
     #endif
 
+    // Prevent the main loop from closing
+    webui.servers++;
+
     // Run command
     _webui_cmd_sync(arg->cmd, false);
+
+    #ifdef WEBUI_LOG
+        printf("[%d] _webui_run_browser_detect_proc_task() -> Process closed.\n", arg->win->core.window_number);
+    #endif
 
     // Free memory
     _webui_free_mem((void *) &arg->cmd);
 
-    // Close app
-    webui_exit();
+    // The browser process just get closed
+    // let the main loop break if there is
+    // no other running browser process, or
+    // if there is not connected WS left.
+    webui.servers--;
 
     #ifdef _WIN32
         return 0;
@@ -1826,8 +1836,8 @@ int _webui_run_browser(webui_window_t* win, char* cmd) {
 
     if(win->core.detect_process_close) {
 
-        // Run a async command, and close the app
-        // when the process exit
+        // Detect window closing event by the browser
+        // process, instead of the WS connection status
 
         webui_cmd_async_t* arg = (webui_cmd_async_t*) _webui_malloc(sizeof(webui_cmd_async_t));
         arg->win = win;
@@ -1836,7 +1846,8 @@ int _webui_run_browser(webui_window_t* win, char* cmd) {
 
         #ifdef _WIN32
             HANDLE user_fun_thread = CreateThread(NULL, 0, _webui_run_browser_detect_proc_task, (void *) arg, 0, NULL);
-            CloseHandle(user_fun_thread); 
+            if (user_fun_thread != NULL)
+                CloseHandle(user_fun_thread);
         #else
             pthread_t thread;
             pthread_create(&thread, NULL, &_webui_run_browser_detect_proc_task, (void *) arg);
@@ -2061,7 +2072,7 @@ void _webui_window_open(webui_window_t* win, char* link, unsigned int browser) {
     _webui_browser_start(win, link, browser);
 }
 
-void webui_free_script(webui_script_t* script) {
+void webui_script_cleanup(webui_script_t* script) {
 
     _webui_free_mem((void *) &script->result.data);
     _webui_free_mem((void *) &script->script);
@@ -2073,6 +2084,8 @@ void webui_script(webui_window_t* win, webui_script_t* script) {
     #ifdef WEBUI_LOG
         printf("[%d] webui_script([%s])... \n", win->core.window_number, script->script);
     #endif
+
+    _webui_init();
 
     size_t js_len = strlen(script->script);
 
@@ -2146,7 +2159,7 @@ webui_window_t* webui_new_window() {
         printf("[0] webui_new_window()... \n");
     #endif
 
-    _webui_ini();
+    _webui_init();
 
     webui_window_t* win = (webui_window_t*) _webui_malloc(sizeof(webui_window_t));
 
@@ -2155,7 +2168,7 @@ webui_window_t* webui_new_window() {
     win->core.browser_path = (char*) _webui_malloc(1024);
     win->core.profile_path = (char*) _webui_malloc(1024);
     win->path = (char*) _webui_malloc(WEBUI_MAX_PATH);
-
+    
     #ifdef WEBUI_LOG
         printf("[0] webui_new_window() -> New window @ %p\n", win);
     #endif
@@ -2168,6 +2181,8 @@ void webui_close(webui_window_t* win) {
     #ifdef WEBUI_LOG
         printf("[%d] webui_close()... \n", win->core.window_number);
     #endif
+
+    _webui_init();
 
     if(win->core.connected) {
 
@@ -2198,6 +2213,8 @@ bool webui_is_any_window_running() {
     #ifdef WEBUI_LOG
         printf("[0] webui_is_any_window_running()... \n");
     #endif
+
+    _webui_init();
     
     if(webui.connections > 0)
         return true;
@@ -2220,18 +2237,23 @@ const char* webui_new_server(webui_window_t* win, const char* path) {
         printf("[%d] webui_new_server()... \n", win->core.window_number);
     #endif
 
+    _webui_init();
+
     // Root folder to serve
     if(!_webui_set_root_folder(win, path))
         return webui_empty_string;
     
-    // 99 is a non-existing browser
-    // this is to prevent any browser 
-    // from running. We want only to
-    // run a web-server right now.
-    webui_show(win, NULL, 99);
+    // Prevent the server from using
+    // timeout mode (wait for connection)
+    // webui_set_timeout(0);
+    
+    // WEBUI_NON_EXIST_BROWSER is to prevent
+    // any browser from running. Because We want 
+    // only to run a web-server right now.
+    webui_show(win, NULL, WEBUI_NON_EXIST_BROWSER);
 
     // Wait for server to start
-    for(unsigned int n = 0; n < 2000; n++) {
+    for(unsigned int n = 0; n < 500; n++) {
 
         if(win->core.server_running)
             break;
@@ -2248,7 +2270,7 @@ bool _webui_set_root_folder(webui_window_t* win, const char* path) {
         printf("[%d] _webui_set_root_folder([%s])... \n", win->core.window_number, path);
     #endif
 
-    if(path != NULL & strlen(path) > WEBUI_MAX_PATH)
+    if((path == NULL) || (strlen(path) > WEBUI_MAX_PATH))
         return false;
 
     win->core.server_root = true;
@@ -2287,16 +2309,28 @@ bool webui_refresh(webui_window_t* win, const char* html) {
     return webui_show(win, html, 0);
 }
 
+bool webui_refresh_cpy(webui_window_t* win, const char* html) {
+
+    return webui_show_cpy(win, html, 0);
+}
+
 bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_show([%.*s...], [%d])... \n", win->core.window_number, 4, html, browser);
+        printf("[%d] webui_show(html, [%d])... \n", win->core.window_number, browser);
+        printf("- - -[HTML]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", html);
     #endif
+
+    _webui_init();
 
     // Initializing
     win->core.html = html == NULL ? webui_empty_string : html;
     win->core.server_handled = false;
     webui.wait_for_socket_window = true;
+
+    // Detect window closing event by the browser
+    // process, instead of the WS connection status
+    _webui_wait_process(win, true);
 
     if(!webui_is_shown(win)) {
 
@@ -2310,7 +2344,8 @@ bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
         sprintf(win->core.url, "http://localhost:%d", port);
 
         // Run browser
-        if(!_webui_browser_start(win, win->core.url, browser)) {
+        bool browser_started = _webui_browser_start(win, win->core.url, browser);
+        if(browser != WEBUI_NON_EXIST_BROWSER && !browser_started) {
 
             // Browser not available
             _webui_free_port(win->core.server_port);
@@ -2321,7 +2356,8 @@ bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
         #ifdef _WIN32
             HANDLE thread = CreateThread(NULL, 0, webui_server_start, (void *) win, 0, NULL);
             win->core.server_thread = thread;
-            CloseHandle(thread);  
+            if (thread != NULL)
+                CloseHandle(thread);
         #elif __linux__
             pthread_t thread;
             pthread_create(&thread, NULL, &webui_server_start, (void *) win);
@@ -2352,6 +2388,10 @@ bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
 
 bool webui_show_cpy(webui_window_t* win, const char* html, unsigned int browser) {
 
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_show_cpy(html, [%d])... \n", win->core.window_number, browser);
+    #endif
+
     // Copy HTML, And show the window
 
     // Free
@@ -2371,7 +2411,7 @@ bool webui_show_cpy(webui_window_t* win, const char* html, unsigned int browser)
     return webui_show(win, cpy, browser);
 }
 
-void webui_bind_all(webui_window_t* win, void (*func) (webui_event_t* e)) {
+void webui_bind_all(webui_window_t* win, void (*func)(webui_event_t* e)) {
 
     #ifdef WEBUI_LOG
         printf("[%d] webui_bind_all([*])... \n", win->core.window_number);
@@ -2381,11 +2421,13 @@ void webui_bind_all(webui_window_t* win, void (*func) (webui_event_t* e)) {
     win->core.is_bind_all = true;
 }
 
-unsigned int webui_bind(webui_window_t* win, const char* element, void (*func) (webui_event_t* e)) {
+unsigned int webui_bind(webui_window_t* win, const char* element, void (*func)(webui_event_t* e)) {
 
     #ifdef WEBUI_LOG
         printf("[%d] webui_bind([%s], [%p])... \n", win->core.window_number, element, func);
     #endif
+
+    _webui_init();
 
     char* element_id = _webui_malloc(strlen(element));
     sprintf(element_id, "%d/%s", win->core.window_number, element);
@@ -2432,17 +2474,17 @@ unsigned int webui_bind(webui_window_t* win, const char* element, void (*func) (
 
     unsigned int cb_index = _webui_get_cb_index(arg->element_id);
 
-    // Check if cb exist
+    // Check for bind
     if(cb_index > 0 && webui.cb[cb_index] != NULL) {
 
-        // User cb
+        // Call user cb
         e.element_id = cb_index;
         webui.cb[cb_index](&e);
     }
+    // Check for bind-all
+    else if(arg->win->core.is_bind_all && arg->win->core.cb_all[0] != NULL) {
 
-    // General user cb
-    if(arg->win->core.is_bind_all && arg->win->core.cb_all[0] != NULL) {
-
+        // Call user cb
         e.element_id = 0;
         arg->win->core.cb_all[0](&e);
     }
@@ -2477,7 +2519,8 @@ void _webui_window_event(webui_window_t* win, char* element_id, char* element) {
 
     #ifdef _WIN32
         HANDLE user_fun_thread = CreateThread(NULL, 0, _webui_cb, (void *) arg, 0, NULL);
-        CloseHandle(user_fun_thread); 
+        if(user_fun_thread != NULL)
+            CloseHandle(user_fun_thread); 
     #else
         pthread_t thread;
         pthread_create(&thread, NULL, &_webui_cb, (void *) arg);
@@ -2642,7 +2685,7 @@ bool webui_open(webui_window_t* win, const char* url, unsigned int browser) {
     #endif
 
     // Just open an app-mode window using the link
-    webui_set_timeout(0);
+    // webui_set_timeout(0);
     _webui_wait_process(win, true);
     return _webui_browser_start(win, url, browser);
 }
@@ -2692,8 +2735,10 @@ void webui_exit() {
 bool webui_is_app_running() {
 
     #ifdef WEBUI_LOG
-        printf("[0] webui_app_exit()... \n");
+        printf("[0] webui_is_app_running()... \n");
     #endif
+
+    _webui_init();
     
     if(webui.use_timeout) {
         if(webui.wait_for_socket_window) {
@@ -2716,6 +2761,8 @@ void webui_wait() {
         printf("[L] webui_wait()... \n");
     #endif
 
+    _webui_init();
+
     if(webui.use_timeout) {
 
         #ifdef WEBUI_LOG
@@ -2732,7 +2779,7 @@ void webui_wait() {
         if(webui.wait_for_socket_window) {
 
             #ifdef WEBUI_LOG
-                printf("[L] webui_wait() -> Wait for connected socket window...\n");
+                printf("[L] webui_wait() -> Wait for connected UI...\n");
             #endif
 
             while(webui.servers > 0) {
@@ -2811,6 +2858,8 @@ void webui_set_timeout(unsigned int second) {
         printf("[0] webui_set_timeout([%d])... \n", second);
     #endif
 
+    _webui_init();
+
     if(second < 1)
         webui.use_timeout = false;
     else {
@@ -2836,7 +2885,8 @@ unsigned int _webui_get_free_port() {
         printf("[0] _webui_get_free_port()... \n");
     #endif
 
-    unsigned int port = WEBUI_MIN_PORT;
+    srand(time(NULL));
+    unsigned int port = (rand() % (WEBUI_MAX_PORT + 1 - WEBUI_MIN_PORT)) + WEBUI_MIN_PORT;
 
     for(unsigned int i = WEBUI_MIN_PORT; i <= WEBUI_MAX_PORT; i++) {
 
@@ -2850,12 +2900,15 @@ unsigned int _webui_get_free_port() {
         }
 
         if(found)
-            port++; // Port used by local window
+            // Port used by local window
+            port = (rand() % (WEBUI_MAX_PORT + 1 - WEBUI_MIN_PORT)) + WEBUI_MIN_PORT;
         else {
             if(_webui_port_is_used(port))
-                port++; // Port used by an external app
+                // Port used by an external app
+                port = (rand() % (WEBUI_MAX_PORT + 1 - WEBUI_MIN_PORT)) + WEBUI_MIN_PORT;
             else
-                break; // Port is free
+                // Port is free
+                break;
         }
     }
 
@@ -2872,20 +2925,26 @@ unsigned int _webui_get_free_port() {
 
 void webui_script_runtime(webui_window_t* win, unsigned int runtime) {
 
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_script_runtime(%d)... \n", win->core.window_number, runtime);
+    #endif
+
+    _webui_init();
+
     if(runtime != webui.runtime.deno && runtime != webui.runtime.nodejs)
         win->core.runtime = webui.runtime.none;
     else
         win->core.runtime = runtime;
 }
 
-void _webui_ini() {
+void _webui_init() {
+
+    if(webui.initialized)
+        return;    
 
     #ifdef WEBUI_LOG
-        printf("[0] _webui_ini()... \n");
+        printf("[0] _webui_init()... \n");
     #endif
-    
-    if(webui.initialized)
-        return;
 
     // Initializing
     memset(&webui, 0x0, sizeof(webui_t));
@@ -2953,12 +3012,28 @@ void webui_bind_int_handler(webui_event_t* e) {
         webui.cb_int[cb_index](e->element_id, e->window_id, e->element_name, e->window);
 }
 
+void webui_bind_int_all_handler(webui_event_t* e) {
+
+    if(webui.cb_int_all[0] != NULL)
+        webui.cb_int_all[0](e->element_id, e->window_id, e->element_name, e->window);
+}
+
 unsigned int webui_bind_interface(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*, webui_window_t*)) {
 
-    unsigned int cb_index = webui_bind(win, element, webui_bind_int_handler);
-    webui.cb_int[cb_index] = func;
+    if(_webui_is_empty(element)) {
 
-    return cb_index;
+        // Bind All
+        webui_bind_all(win, webui_bind_int_all_handler);
+        webui.cb_int_all[0] = func;
+        return 0;
+    }
+    else {
+
+        // Bind
+        unsigned int cb_index = webui_bind(win, element, webui_bind_int_handler);
+        webui.cb_int[cb_index] = func;
+        return cb_index;
+    }
 }
 
 void webui_script_interface(webui_window_t* win, const char* script, unsigned int timeout, bool* error, unsigned int* length, char* data) {
@@ -3005,6 +3080,7 @@ void webui_script_interface_struct(webui_window_t* win, webui_script_interface_t
             case DLL_PROCESS_ATTACH:
                 // Initialize once for each new process.
                 // Return FALSE to fail DLL load.
+                _webui_init();
                 break;
 
             case DLL_THREAD_ATTACH:

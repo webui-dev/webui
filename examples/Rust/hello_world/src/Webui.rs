@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.3
+    WebUI Library 2.0.4
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -247,7 +247,7 @@ extern "C" {
     ) -> bool;
 }
 extern "C" {
-    pub fn webui_free_script(script: *mut webui_script_t);
+    pub fn webui_script_cleanup(script: *mut webui_script_t);
 }
 extern "C" {
     pub fn webui_script_runtime(
@@ -308,7 +308,7 @@ extern "C" {
     pub fn webui_TEST(win: *mut webui_window_t);
 }
 extern "C" {
-    pub fn _webui_ini();
+    pub fn _webui_init();
 }
 extern "C" {
     pub fn _webui_get_cb_index(
