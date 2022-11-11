@@ -24,10 +24,10 @@
 #define WEBUI_HEADER_SWITCH     0xFC        // Frontend refresh
 #define WEBUI_HEADER_CLOSE      0xFB        // Close window
 #define WEBUI_HEADER_CALL_FUNC  0xFA        // Call a backend function
-#define WEBUI_MAX_ARRAY         (32)        // Max thread, servers, windows..
-#define WEBUI_MIN_PORT          (8080)      // Minimum socket port
-#define WEBUI_MAX_PORT          (8335)      // Should be less than 65535
-#define WEBUI_MAX_BUF           (512000)    // 512 Kb max dynamic memory allocation
+#define WEBUI_MAX_ARRAY         (1024)      // Max threads, servers, windows, pointers..
+#define WEBUI_MIN_PORT          (10000)     // Minimum socket port
+#define WEBUI_MAX_PORT          (65500)     // Should be less than 65535
+#define WEBUI_MAX_BUF           (1024000)   // 1024 Kb max dynamic memory allocation
 #define WEBUI_DEFAULT_PATH      "."         // Default root path
 
 // -- C STD ---------------------------
@@ -165,6 +165,7 @@ typedef struct webui_runtime_t {
 typedef struct webui_t {
     unsigned int servers;
     unsigned int connections;
+    unsigned int process;
     webui_custom_browser_t *custom_browser;
     bool wait_for_socket_window;
     char* html_elements[WEBUI_MAX_ARRAY];
@@ -247,7 +248,7 @@ EXPORT void _webui_window_open(webui_window_t* win, char* link, unsigned int bro
 EXPORT int _webui_cmd_sync(char* cmd, bool show);
 EXPORT int _webui_cmd_async(char* cmd, bool show);
 EXPORT int _webui_run_browser(webui_window_t* win, char* cmd);
-EXPORT void _webui_browser_clean();
+EXPORT void _webui_clean();
 EXPORT bool _webui_browser_exist(webui_window_t* win, unsigned int browser);
 EXPORT const char* _webui_browser_get_temp_path(unsigned int browser);
 EXPORT bool _webui_folder_exist(char* folder);

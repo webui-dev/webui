@@ -390,7 +390,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
-    pub fn _webui_browser_clean();
+    pub fn _webui_clean();
 }
 extern "C" {
     pub fn _webui_browser_exist(

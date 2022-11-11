@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>WebUI - Serve a Folder Example (C99)</title>
+        <style>
+            body {
+                color: white;
+                background: #0F2027;
+                background: -webkit-linear-gradient(to right, #3e6983, #314562, #10273e);
+                background: linear-gradient(to right, #3e6983, #314562, #10273e);
+                text-align: center;
+                font-size: 18px;
+                font-family: sans-serif;
+            }
+        </style>
+    </head>
+    <body>
+        <h3 id="title">Serve a Folder Example (C99)</h3>
+        <br>
+        <p id="description">You can edit the HTML/CSS files as you need,<br>also you can config WebUI to use Deno or Nodejs runtime for your JS/TS files.</p>
+        <button id="test">Call all_clicks()</button>
+    </body>
+
+    <!-- Connect this window with the background app -->
+    <!-- Please note 'webui.js' is not a real file on the disk, but it's embedded in the WebUI server -->
+    <script src="/webui.js"></script>
+</html>
