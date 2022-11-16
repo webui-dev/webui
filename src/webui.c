@@ -1715,6 +1715,12 @@ void _webui_clean() {
         DWORD Return = 0;
         DWORD CreationFlags = CREATE_NO_WINDOW;
 
+        /*
+        We should not kill this process, because may had many child
+        process of other WebUI app instances. Unfortunately, this is
+        how modern browsers save memory by combine all windows into one
+        single parent process, and we can't control this behavior.
+
         // Automatically close the browser process when the
         // parent process (this app) get closed. If this fail
         // webui.js will try to close the window.
@@ -1722,6 +1728,7 @@ void _webui_clean() {
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION ExtendedInfo = { 0 };
         ExtendedInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION | JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
         SetInformationJobObject(JobObject, JobObjectExtendedLimitInformation, &ExtendedInfo, sizeof(ExtendedInfo));
+        */
 
         if(show)
             CreationFlags = SW_SHOW;
@@ -1748,7 +1755,7 @@ void _webui_clean() {
         }
 
         SetFocus(pi.hProcess);
-        AssignProcessToJobObject(JobObject, pi.hProcess);
+        // AssignProcessToJobObject(JobObject, pi.hProcess);
         WaitForSingleObject(pi.hProcess, INFINITE);
         GetExitCodeProcess(pi.hProcess, &Return);
         CloseHandle(pi.hProcess);
@@ -2806,7 +2813,9 @@ void webui_wait() {
 
             while(webui.servers > 0) {
 
-                printf("[%d/%d]", webui.servers, webui.connections);
+                #ifdef WEBUI_LOG
+                    // printf("[%d/%d]", webui.servers, webui.connections);
+                #endif
                 _webui_sleep(100);
             }
         }
