@@ -199,13 +199,17 @@ WebUI waits a couple of seconds to let the web browser start and connect, you ca
 ```python
 # Wait 10 seconds for the web browser to start
 webui.set_timeout(10)
-webui.wait()	# After 10 seconds, if the web browser
-				# did not start yet, this function will return
+
+# After 10 seconds, if the web browser did
+# not start yet, wait() will return
+webui.wait()
 ```
 ```python
 # Wait forever.
 webui.set_timeout(0)
-webui.wait() # this function will never end
+
+# wait() will never end
+webui.wait()
 ```
 
 ### Multi Access

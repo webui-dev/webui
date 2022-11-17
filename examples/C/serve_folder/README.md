@@ -1,6 +1,8 @@
 
 # WebUI Examples - C
 
+This example shows how to serve a folder to read HTML files in real time instead of embedding HTML in the app
+
 To build the C example you will need one of those C compilers, no dependencies is needed.
 
 ### Windows
@@ -8,21 +10,21 @@ To build the C example you will need one of those C compilers, no dependencies i
 - **Build Tools for Microsoft Visual Studio**
 ```sh
 git clone https://github.com/alifcommunity/webui.git
-cd webui\examples\C\hello_world\Windows\MSVC
+cd webui\examples\C\serve_folder\Windows\MSVC
 nmake
 ```
 
 - **MinGW**
 ```sh
 git clone https://github.com/alifcommunity/webui.git
-cd webui\examples\C\hello_world\Windows\GCC
+cd webui\examples\C\serve_folder\Windows\GCC
 mingw32-make
 ```
 
 - **TCC**
 ```sh
 git clone https://github.com/alifcommunity/webui.git
-cd webui\examples\C\hello_world\Windows\TCC
+cd webui\examples\C\serve_folder\Windows\TCC
 mingw32-make
 ```
 
@@ -31,13 +33,13 @@ mingw32-make
 - **GCC**
 ```sh
 git clone https://github.com/alifcommunity/webui.git
-cd webui/examples/C/hello_world/Linux/GCC
+cd webui/examples/C/serve_folder/Linux/GCC
 make
 ```
 
 - **Clang**
 ```sh
 git clone https://github.com/alifcommunity/webui.git
-cd webui/examples/C/hello_world/Linux/Clang
+cd webui/examples/C/serve_folder/Linux/Clang
 make
 ```

@@ -249,13 +249,17 @@ WebUI waits a couple of seconds to let the web browser start and connect, you ca
 ```c
 // Wait 10 seconds for the web browser to start
 webui_set_timeout(10);
-webui_wait();   // After 10 seconds, if the web browser
-                // did not start yet, this function will return
+
+// After 10 seconds, if the web browser did
+// not start yet, webui_wait() will return
+webui_wait();
 ```
 ```c
 // Wait forever.
 webui_set_timeout(0);
-webui_wait(); // this function will never end
+
+// webui_wait() will never end
+webui_wait();
 ```
 
 ---

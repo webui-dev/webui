@@ -1,48 +1,19 @@
 @echo off
 
-Set CurrentPath=%CD%\..\
+Set RootPath=%CD%\..\
+cd "%RootPath%"
 
 echo.
 echo Clean all...
 
-cd build\Windows\MSVC
-nmake clean
-cd "%CurrentPath%"
-
-cd build\Windows\GCC
-mingw32-make clean
-cd "%CurrentPath%"
-
-cd build\Windows\TCC
-mingw32-make clean
-cd "%CurrentPath%"
-
-cd examples\C\hello_world\Windows\MSVC
-nmake clean
-cd "%CurrentPath%"
-
-cd examples\C\hello_world\Windows\GCC
-mingw32-make clean
-cd "%CurrentPath%"
-
-cd examples\C\hello_world\Windows\TCC
-mingw32-make clean
-cd "%CurrentPath%"
-
-cd examples\C++\hello_world\Windows\MSVC
-nmake clean
-cd "%CurrentPath%"
-
-cd examples\C++\hello_world\Windows\GCC
-mingw32-make clean
-cd "%CurrentPath%"
-
-cd examples\Go\hello_world\
-go clean -modcache
-go clean --cache
-go clean
-cd "%CurrentPath%"
-
-cd examples\Rust\hello_world
-cargo clean
-cd "%CurrentPath%"
+DEL /Q /F /S "*.exe" >nul 2>&1
+DEL /Q /F /S "*.dll" >nul 2>&1
+DEL /Q /F /S "*.lib" >nul 2>&1
+DEL /Q /F /S "*.o" >nul 2>&1
+DEL /Q /F /S "*.a" >nul 2>&1
+DEL /Q /F /S "*.def" >nul 2>&1
+DEL /Q /F /S "*.exp" >nul 2>&1
+DEL /Q /F /S "*.pdb" >nul 2>&1
+DEL /Q /F /S "*.ilk" >nul 2>&1
+DEL /Q /F /S "*.obj" >nul 2>&1
+DEL /Q /F /S "*.res" >nul 2>&1

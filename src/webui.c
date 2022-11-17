@@ -36,29 +36,29 @@ static const char* webui_javascript_bridge =
 "    _webui_ws.close(); \n"
 "} \n"
 "function _webui_freez_ui() { \n"
-"    document.body.style.filter = \"contrast(1%)\"; \n"
+"    document.body.style.filter = 'contrast(1%)'; \n"
 "} \n"
 "function _webui_start() { \n"
-"    if(\"WebSocket\" in window) { \n"
-"        _webui_ws = new WebSocket(\"ws://localhost:\" + _webui_port + \"/_ws\"); \n"
-"        _webui_ws.binaryType = \"arraybuffer\"; \n"
+"    if('WebSocket' in window) { \n"
+"        _webui_ws = new WebSocket('ws://localhost:' + _webui_port + '/_ws'); \n"
+"        _webui_ws.binaryType = 'arraybuffer'; \n"
 "        _webui_ws.onopen = function () { \n"
-"            _webui_ws.binaryType = \"arraybuffer\"; \n"
+"            _webui_ws.binaryType = 'arraybuffer'; \n"
 "            _webui_ws_status = true; \n"
-"            if(_webui_log) console.log(\"WebUI -> Connected\"); \n"
+"            if(_webui_log) console.log('WebUI -> Connected'); \n"
 "            _webui_listener(); \n"
 "        }; \n"
 "        _webui_ws.onerror = function () { \n"
-"            if(_webui_log) console.log(\"WebUI -> Connection error\"); \n"
+"            if(_webui_log) console.log('WebUI -> Connection error'); \n"
 "            _webui_close(255, ''); \n"
 "        }; \n"
 "        _webui_ws.onclose = function (evt) { \n"
 "            _webui_ws_status = false; \n"
 "            if(_webui_action8[0] == 252) { \n"
-"                if(_webui_log) console.log(\"WebUI -> Switch URL\"); \n"
+"                if(_webui_log) console.log('WebUI -> Switch URL'); \n"
 "                window.location.replace(_webui_action_val); \n"
 "            } else { \n"
-"                if(_webui_log) console.log(\"WebUI -> Connection lost [\" + evt.code + \"][\" + evt.reason + \"]\"); \n"
+"                if(_webui_log) console.log('WebUI -> Connection lost [' + evt.code + '][' + evt.reason + ']'); \n"
 "                if(!_webui_log) window.close(); \n"
 "                else _webui_freez_ui(); \n"
 "            } \n"
@@ -67,32 +67,32 @@ static const char* webui_javascript_bridge =
 "                const buffer8 = new Uint8Array(evt.data); \n"
 "                if(buffer8.length < 4) return; \n"
 "                if(buffer8[0] !== 255) { \n"
-"                    if(_webui_log) console.log(\"WebUI -> Invalid flag -> 0x\" + buffer8[0] + \n"
-"                                   \" 0x\" + buffer8[1] + \" 0x\" + buffer8[2]); \n"
+"                    if(_webui_log) console.log('WebUI -> Invalid flag -> 0x' + buffer8[0] + \n"
+"                                   ' 0x' + buffer8[1] + ' 0x' + buffer8[2]); \n"
 "                    return; \n"
 "                } \n"
-"                if(_webui_log) console.log(\"WebUI -> Flag -> 0x\" + buffer8[0] + \" 0x\" + \n"
-"                                               buffer8[1] + \" 0x\" + buffer8[2]); \n"
+"                if(_webui_log) console.log('WebUI -> Flag -> 0x' + buffer8[0] + ' 0x' + \n"
+"                                               buffer8[1] + ' 0x' + buffer8[2]); \n"
 "                var len = buffer8.length - 3; \n"
 "                if(buffer8[buffer8.length - 1] === 0) \n"
 "                   len--; // Null byte (0x00) can break eval() \n"
 "                data8 = new Uint8Array(len); \n"
 "                for (i = 0; i < len; i++) data8[i] = buffer8[i + 3]; \n"
-"                var data8utf8 = new TextDecoder(\"utf-8\").decode(data8); \n"
+"                var data8utf8 = new TextDecoder('utf-8').decode(data8); \n"
 "                if(buffer8[1] === 252) { \n"
 "                    _webui_close(252, data8utf8); \n"
 "                } else if(buffer8[1] === 251) { \n"
 "                    _webui_close(251, ''); \n"
 "                } else if(buffer8[1] === 254) { \n"
 "                    data8utf8 = data8utf8.replace(/(?:\\r\\n|\\r|\\n)/g, \"\\\\n\"); \n"
-"                    if(_webui_log) console.log(\"WebUI -> JS -> Run -> \" + data8utf8); \n"
-"                    var FunReturn = \"undefined\"; \n"
+"                    if(_webui_log) console.log('WebUI -> JS -> Run -> ' + data8utf8); \n"
+"                    var FunReturn = 'undefined'; \n"
 "                    var FunError = false; \n"
 "                    try { FunReturn = eval('(() => {' + data8utf8 + '})()'); } catch (e) { FunError = true; FunReturn = e.message } \n"
-"                    if(typeof FunReturn === \"undefined\" || FunReturn === undefined) FunReturn = \"undefined\"; \n"
-"                    if(_webui_log && !FunError) console.log(\"WebUI -> JS -> Return -> \" + FunReturn); \n"
-"                    if(_webui_log && FunError) console.log(\"WebUI -> JS -> Return Error -> \" + FunReturn); \n"
-"                    var FunReturn8 = new TextEncoder(\"utf-8\").encode(FunReturn); \n"
+"                    if(typeof FunReturn === 'undefined' || FunReturn === undefined) FunReturn = 'undefined'; \n"
+"                    if(_webui_log && !FunError) console.log('WebUI -> JS -> Return -> ' + FunReturn); \n"
+"                    if(_webui_log && FunError) console.log('WebUI -> JS -> Return Error -> ' + FunReturn); \n"
+"                    var FunReturn8 = new TextEncoder('utf-8').encode(FunReturn); \n"
 "                    var Return8 = new Uint8Array(4 + FunReturn8.length); \n"
 "                    Return8[0] = 255; \n"
 "                    Return8[1] = 254; \n"
@@ -101,28 +101,25 @@ static const char* webui_javascript_bridge =
 "                    else Return8[3] = 0; \n"
 "                    var p = -1; \n"
 "                    for (i = 4; i < FunReturn8.length + 4; i++) Return8[i] = FunReturn8[++p]; \n"
-"                    if(Return8[0] !== 255) { \n"
-"                        if(_webui_log) console.log(\"WebUI -> JS -> Generate response failed -> 0x\" + buffer8[0] + \" 0x\" +  \n"
-"                                                       buffer8[1] + \" 0x\" + buffer8[2]); \n"
+"                    if(Return8[0] !== 255) \n"
 "                        return; \n"
-"                    } \n"
 "                    if(_webui_ws_status) _webui_ws.send(Return8.buffer); \n"
 "                    if(_webui_log) { \n"
-"                        var buf = \"[ \"; \n"
-"                        for (i = 0; i < Return8.length; i++) buf = buf + \"0x\" + Return8[i] + \" \"; \n"
-"                        buf = buf + \"]\"; \n"
-"                        console.log(\"WebUI -> JS -> Sent response -> [\" + FunReturn + \"] (\" + buf + \")\"); \n"
+"                        var buf = '[ '; \n"
+"                        for (i = 0; i < Return8.length; i++) buf = buf + '0x' + Return8[i] + ' '; \n"
+"                        buf = buf + ']'; \n"
+"                        console.log('WebUI -> JS -> Sent response -> [' + FunReturn + '] (' + buf + ')'); \n"
 "                    } \n"
 "                } \n"
 "        }; \n"
 "    } else { \n"
-"        alert(\"Sorry. WebSocket not supported by your Browser.\"); \n"
+"        alert('Sorry. WebSocket not supported by your Browser.'); \n"
 "        if(!_webui_log) webui_close_window(); \n"
 "    } \n"
 "} \n"
 "function _webui_SendEvent(name) { \n"
 "    if(_webui_ws_status && name != '') { \n"
-"        var Name8 = new TextEncoder(\"utf-8\").encode(name); \n"
+"        var Name8 = new TextEncoder('utf-8').encode(name); \n"
 "        var Event8 = new Uint8Array(3 + Name8.length); \n"
 "        Event8[0] = 255; \n"
 "        Event8[1] = 253; \n"
@@ -131,25 +128,25 @@ static const char* webui_javascript_bridge =
 "        for (i = 3; i < Name8.length + 3; i++) Event8[i] = Name8[++p]; \n"
 "        if(_webui_ws_status) _webui_ws.send(Event8.buffer); \n"
 "        if(_webui_log) { \n"
-"            var buf = \"[ \"; \n"
-"            for (i = 0; i < Event8.length; i++) buf = buf + \"0x\" + Event8[i] + \" \"; \n"
-"            buf = buf + \"]\"; \n"
-"            console.log(\"WebUI -> Event -> Send -> [\" + name + \"] (\" + buf + \")\"); \n"
+"            var buf = '[ '; \n"
+"            for (i = 0; i < Event8.length; i++) buf = buf + '0x' + Event8[i] + ' '; \n"
+"            buf = buf + ']'; \n"
+"            console.log('WebUI -> Event -> Send -> [' + name + '] (' + buf + ')'); \n"
 "        } \n"
 "    } \n"
 "} \n"
 "function _webui_listener() { \n"
-"    window.addEventListener(\"load\", _webui_listener_handler()); \n"
+"    window.addEventListener('load', _webui_listener_handler()); \n"
 "} \n"
 "_webui_start(); \n"
 "setTimeout(function () { \n"
 "    if(!_webui_ws_status) { \n"
-"        document.body.style.filter = \"contrast(1%)\"; \n"
-"        alert(\"WebUI failed to connect to the background application.\"); \n"
+"        document.body.style.filter = 'contrast(1%)'; \n"
+"        alert('WebUI failed to connect to the background application.'); \n"
 "        if(!_webui_log) webui_close_window(); \n"
 "    } \n"
 "}, 1e3); \n"
-"document.addEventListener(\"keydown\", function (e) { \n"
+"document.addEventListener('keydown', function (e) { \n"
 "    if(e.keyCode === 116) { \n"
 "        e.preventDefault(); \n"
 "        e.returnValue = false; \n"
@@ -157,20 +154,20 @@ static const char* webui_javascript_bridge =
 "        return false; \n"
 "    } \n"
 "}); \n"
-"window.addEventListener(\"beforeunload\", function (e) { \n"
+"window.addEventListener('beforeunload', function (e) { \n"
 "    _webui_close(255, ''); \n"
 "}); \n"
 "window.onbeforeunload = function () { \n"
 "    _webui_close(255, ''); \n"
 "}; \n"
-"document.addEventListener(\"contextmenu\", function (e) {}); \n"
-"if(typeof webui_ready === \"function\") setTimeout(webui_ready, 1); \n"
+"document.addEventListener('contextmenu', function (e) {}); \n"
+"if(typeof webui_ready === 'function') setTimeout(webui_ready, 1); \n"
 "function webui_debug(status) { \n"
 "    if(status) { \n"
-"        console.log(\"WebUI -> Debug log enabled.\"); \n"
+"        console.log('WebUI -> Debug log enabled.'); \n"
 "        _webui_log = true; \n"
 "    } else { \n"
-"        console.log(\"WebUI -> Debug log disabled.\"); \n"
+"        console.log('WebUI -> Debug log disabled.'); \n"
 "        _webui_log = false; \n"
 "    } \n"
 "} \n"
@@ -181,26 +178,24 @@ static const char* webui_javascript_bridge =
 "} \n"
 "function webui_event(event_name) { \n"
 "    if(!_webui_ws_status) { \n"
-"        console.log(\"WebUI -> Send Event -> Failed because status is disconnected.\"); \n"
+"        console.log('WebUI -> Send Event -> Failed because status is disconnected.'); \n"
 "        return; \n"
 "    } \n"
-"    var event_name8 = new TextEncoder(\"utf-8\").encode(event_name); \n"
+"    var event_name8 = new TextEncoder('utf-8').encode(event_name); \n"
 "    var SendEvent8 = new Uint8Array(3 + event_name8.length); \n"
 "    SendEvent8[0] = 255; \n"
 "    SendEvent8[1] = 250; \n"
 "    SendEvent8[2] = 0; \n"
 "    var p = -1; \n"
 "    for (i = 3; i < event_name8.length + 3; i++) SendEvent8[i] = event_name8[++p]; \n"
-"    if(SendEvent8[0] !== 255) { \n"
-"        if(_webui_log) console.log(\"WebUI -> Send Event -> Generate header failed -> 0x\" + SendEvent8[0] + \" 0x\" + SendEvent8[1] + \" 0x\" + SendEvent8[2]); \n"
+"    if(SendEvent8[0] !== 255) \n"
 "        return; \n"
-"    } \n"
 "    if(_webui_ws_status) _webui_ws.send(SendEvent8.buffer); \n"
 "    if(_webui_log) { \n"
-"        var buf = \"[ \"; \n"
-"        for (i = 0; i < SendEvent8.length; i++) buf = buf + \"0x\" + SendEvent8[i] + \" \"; \n"
-"        buf = buf + \"]\"; \n"
-"        console.log(\"WebUI -> Send Event -> [\" + event_name + \"] (\" + buf + \")\"); \n"
+"        var buf = '[ '; \n"
+"        for (i = 0; i < SendEvent8.length; i++) buf = buf + '0x' + SendEvent8[i] + ' '; \n"
+"        buf = buf + ']'; \n"
+"        console.log('WebUI -> Send Event -> [' + event_name + '] (' + buf + ')'); \n"
 "    } \n"
 "} \n"
 "function _webui_listener_handler() { \n"
@@ -949,6 +944,8 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
             // Send favicon
 
             if(win->core.icon) {
+
+                // Custom icon
                 
                 // TODO: Add core.icon_type to the header
 
@@ -962,7 +959,14 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
                     win->core.icon
                 );
             }
+            else if(win->core.server_root) {
+
+                // Local icon file
+                _webui_serve_file(win, c, ev_data);
+            }
             else {
+
+                // Default embedded icon
 
                 // TODO: Use webui_def_icon_type
 
@@ -1294,7 +1298,7 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
 
                         // Wait forever for disconnection
                         mg_mgr_poll(&mgr, 1);
-                        if(!win->core.connected)
+                        if(!win->core.connected || webui.exit_now)
                             break;
                     }
 
@@ -1309,8 +1313,12 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
         else {
 
             // Wait forever
-            for(;;)
+            for(;;) {
+
                 mg_mgr_poll(&mgr, 1);
+                if(webui.exit_now)
+                    break;
+            }
         }
     }
     else {
@@ -1682,15 +1690,19 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
     return false;
 }
 
-void _webui_browser_clean() {
+void _webui_clean() {
 
     #ifdef WEBUI_LOG
-        printf("[0] _webui_browser_clean()... \n");
+        printf("[0] _webui_clean()... \n");
     #endif
 
     // Let's keep the web browser profile folder
     // to let the browser remember the window position
     // and size. This function is for future use is needed.
+
+    // Let's give other threads more time to safely exit
+    // and finish their cleaning up.
+    _webui_sleep(250);
 }
 
 #ifdef _WIN32
@@ -1702,6 +1714,21 @@ void _webui_browser_clean() {
 
         DWORD Return = 0;
         DWORD CreationFlags = CREATE_NO_WINDOW;
+
+        /*
+        We should not kill this process, because may had many child
+        process of other WebUI app instances. Unfortunately, this is
+        how modern browsers save memory by combine all windows into one
+        single parent process, and we can't control this behavior.
+
+        // Automatically close the browser process when the
+        // parent process (this app) get closed. If this fail
+        // webui.js will try to close the window.
+        HANDLE JobObject = CreateJobObject(NULL, NULL);
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION ExtendedInfo = { 0 };
+        ExtendedInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION | JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        SetInformationJobObject(JobObject, JobObjectExtendedLimitInformation, &ExtendedInfo, sizeof(ExtendedInfo));
+        */
 
         if(show)
             CreationFlags = SW_SHOW;
@@ -1728,6 +1755,7 @@ void _webui_browser_clean() {
         }
 
         SetFocus(pi.hProcess);
+        // AssignProcessToJobObject(JobObject, pi.hProcess);
         WaitForSingleObject(pi.hProcess, INFINITE);
         GetExitCodeProcess(pi.hProcess, &Return);
         CloseHandle(pi.hProcess);
@@ -1752,7 +1780,7 @@ int _webui_cmd_sync(char* cmd, bool show) {
     char buf[1024];
 
     #ifdef _WIN32
-        sprintf(buf, "cmd /c \"%s\" > nul 2>&1 ", cmd);
+        sprintf(buf, "cmd /c \"%s\" > nul 2>&1", cmd);
         #ifdef WEBUI_LOG
             printf("[0] _webui_cmd_sync() -> Running [%s] \n", buf);
         #endif
@@ -1805,7 +1833,7 @@ int _webui_cmd_async(char* cmd, bool show) {
     #endif
 
     // Prevent the main loop from closing
-    webui.servers++;
+    webui.process++;
 
     // Run command
     _webui_cmd_sync(arg->cmd, false);
@@ -1819,9 +1847,11 @@ int _webui_cmd_async(char* cmd, bool show) {
 
     // The browser process just get closed
     // let the main loop break if there is
-    // no other running browser process, or
-    // if there is not connected WS left.
-    webui.servers--;
+    // no other running browser process.
+    webui.process--;
+    _webui_sleep(3000);
+    if(webui.process < 1 && !arg->win->core.connected)
+        webui.exit_now = true;
 
     #ifdef _WIN32
         return 0;
@@ -1951,7 +1981,7 @@ bool _webui_browser_start_firefox(webui_window_t* win, const char* address) {
         return false;
 
     char full[1024];
-    sprintf(full, "%s -P WebUI -private -new-window %s", win->core.browser_path, address);
+    sprintf(full, "%s -P WebUI -purgecaches -new-window -private-window %s", win->core.browser_path, address);
 
     if(_webui_run_browser(win, full) == 0) {
 
@@ -2174,7 +2204,7 @@ webui_window_t* webui_new_window() {
     win->path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     
     #ifdef WEBUI_LOG
-        printf("[0] webui_new_window() -> New window @ %p\n", win);
+        printf("[0] webui_new_window() -> New window @ 0x%p\n", win);
     #endif
 
     return win;
@@ -2428,7 +2458,7 @@ void webui_bind_all(webui_window_t* win, void (*func)(webui_event_t* e)) {
 unsigned int webui_bind(webui_window_t* win, const char* element, void (*func)(webui_event_t* e)) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_bind([%s], [%p])... \n", win->core.window_number, element, func);
+        printf("[%d] webui_bind([%s], [0x%p])... \n", win->core.window_number, element, func);
     #endif
 
     _webui_init();
@@ -2732,7 +2762,6 @@ void webui_exit() {
     #endif
 
     webui.wait_for_socket_window = false;
-    webui.servers = 0;
     webui.exit_now = true;
 }
 
@@ -2773,10 +2802,6 @@ void webui_wait() {
             printf("[L] webui_wait() -> Using timeout %d second\n", webui.startup_timeout);
         #endif
 
-        // TODO: Loop trough all win
-        // if(win->core.CurrentBrowser < 1)
-        //     return;
-        
         // Wait for browser to start
         _webui_wait_for_startup();
 
@@ -2788,21 +2813,26 @@ void webui_wait() {
 
             while(webui.servers > 0) {
 
-                // printf("[%d/%d]", webui.servers, webui.connections);
+                #ifdef WEBUI_LOG
+                    // printf("[%d/%d]", webui.servers, webui.connections);
+                #endif
                 _webui_sleep(100);
             }
         }
         else {
 
+            // Probably the app didn't use the show() function
+            // so, there is no window (web browser) running.
+
             #ifdef WEBUI_LOG
-                printf("[L] webui_wait() -> Ignore connected socket window.\n");
+                printf("[L] webui_wait() -> Ignoring connected UI.\n");
             #endif
         }
     }
     else {
 
         #ifdef WEBUI_LOG
-            printf("[L] webui_wait() -> Infinite loop...\n");
+            printf("[L] webui_wait() -> Infinite wait...\n");
         #endif
 
         // Infinite wait
@@ -2811,10 +2841,11 @@ void webui_wait() {
     }
 
     #ifdef WEBUI_LOG
-        printf("[L] webui_wait() -> Loop finished.\n");
+        printf("[L] webui_wait() -> Wait finished.\n");
     #endif
 
-    _webui_browser_clean();
+    // Final cleaning
+    _webui_clean();
 }
 
 void _webui_free_port(unsigned int port) {
@@ -2846,8 +2877,8 @@ void _webui_wait_for_startup() {
         if(webui.connections > 0)
             break;
         
-        // We should wait 100ms but the server thread
-        // may add 3 second extras to the main loop.
+        // We should wait 100ms, but the server thread
+        // may add an extras 3 second to the main loop.
         _webui_sleep(50);
     }
 
