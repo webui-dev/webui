@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.4
+    WebUI Library 2.0.5
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -17,7 +17,7 @@
     #define EXPORT extern
 #endif
 
-#define WEBUI_VERSION           "2.0.4"     // Version
+#define WEBUI_VERSION           "2.0.5"     // Version
 #define WEBUI_HEADER_SIGNATURE  0xFF        // All packets should start with this 8bit
 #define WEBUI_HEADER_JS         0xFE        // Javascript result in frontend
 #define WEBUI_HEADER_CLICK      0xFD        // Click event
@@ -123,6 +123,8 @@ typedef struct webui_event_t {
     unsigned int element_id;
     char* element_name;
     webui_window_t* window;
+    void* data;
+    unsigned int data_len;
 } webui_event_t;
 typedef struct webui_javascript_result_t {
     bool error;
@@ -136,8 +138,10 @@ typedef struct webui_script_t {
 } webui_script_t;
 typedef struct webui_cb_t {
     webui_window_t* win;
-    char* element_id;
+    char* webui_internal_id;
     char* element_name;
+    void* data;
+    unsigned int data_len;
 } webui_cb_t;
 typedef struct webui_cmd_async_t {
     webui_window_t* win;
@@ -216,6 +220,9 @@ EXPORT void webui_bind_all(webui_window_t* win, void (*func)(webui_event_t* e));
 EXPORT bool webui_open(webui_window_t* win, const char* url, unsigned int browser);
 EXPORT void webui_script_cleanup(webui_script_t* script);
 EXPORT void webui_script_runtime(webui_window_t* win, unsigned int runtime);
+EXPORT int webui_as_int(webui_event_t* e);
+EXPORT const char* webui_as_string(webui_event_t* e);
+EXPORT bool webui_as_bool(webui_event_t* e);
 
 // -- Interface -----------------------
 // Used by other languages to create WebUI wrappers
@@ -232,8 +239,8 @@ EXPORT void webui_script_interface_struct(webui_window_t* win, webui_script_inte
 
 // Core
 EXPORT void _webui_init();
-EXPORT unsigned int _webui_get_cb_index(char* element);
-EXPORT unsigned int _webui_set_cb_index(char* element);
+EXPORT unsigned int _webui_get_cb_index(char* webui_internal_id);
+EXPORT unsigned int _webui_set_cb_index(char* webui_internal_id);
 EXPORT unsigned int _webui_get_free_port();
 EXPORT unsigned int _webui_get_new_window_number();
 EXPORT void _webui_wait_for_startup();
@@ -242,7 +249,7 @@ EXPORT void _webui_set_custom_browser(webui_custom_browser_t* p);
 EXPORT char* _webui_get_current_path();
 EXPORT void _webui_window_receive(webui_window_t* win, const char* packet, size_t len);
 EXPORT void _webui_window_send(webui_window_t* win, char* packet, size_t packets_size);
-EXPORT void _webui_window_event(webui_window_t* win, char* element_id, char* element);
+EXPORT void _webui_window_event(webui_window_t* win, char* element_id, char* element, void* data, unsigned int data_len);
 EXPORT unsigned int _webui_window_get_number(webui_window_t* win);
 EXPORT void _webui_window_open(webui_window_t* win, char* link, unsigned int browser);
 EXPORT int _webui_cmd_sync(char* cmd, bool show);
@@ -265,6 +272,7 @@ EXPORT void _webui_timer_clock_gettime(struct timespec *spec);
 EXPORT bool _webui_set_root_folder(webui_window_t* win, const char* path);
 EXPORT void _webui_wait_process(webui_window_t* win, bool status);
 EXPORT const char* _webui_generate_js_bridge(webui_window_t* win);
+EXPORT void _webui_print_hex(const char* data, size_t len);
 #ifdef _WIN32
     EXPORT DWORD WINAPI _webui_cb(LPVOID _arg);
     EXPORT DWORD WINAPI _webui_run_browser_task(LPVOID _arg);
