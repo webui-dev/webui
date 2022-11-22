@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.4
+    WebUI Library 2.0.5
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -27,15 +27,21 @@ static const char* webui_javascript_bridge =
 "var _webui_log = false; \n"
 "var _webui_ws; \n"
 "var _webui_ws_status = false; \n"
-"var _webui_action8 = new Uint8Array(1); \n"
-"var _webui_action_val; \n"
-"function _webui_close(vbyte, v) { \n"
+"var _webui_close_reason = 0; \n"
+"var _webui_close_value; \n"
+"const _WEBUI_SIGNATURE = 255; \n"
+"const _WEBUI_JS = 254; \n"
+"const _WEBUI_CLICK = 253; \n"
+"const _WEBUI_SWITCH = 252; \n"
+"const _WEBUI_CLOSE = 251; \n"
+"const _WEBUI_FUNCTION = 250; \n"
+"function _webui_close(reason = 0, value = 0) { \n"
 "    _webui_ws_status = false; \n"
-"    _webui_action8[0] = vbyte; \n"
-"    _webui_action_val = v; \n"
+"    _webui_close_reason = reason; \n"
+"    _webui_close_value = value; \n"
 "    _webui_ws.close(); \n"
 "} \n"
-"function _webui_freez_ui() { \n"
+"function _webui_freeze_ui() { \n"
 "    document.body.style.filter = 'contrast(1%)'; \n"
 "} \n"
 "function _webui_start() { \n"
@@ -45,108 +51,137 @@ static const char* webui_javascript_bridge =
 "        _webui_ws.onopen = function () { \n"
 "            _webui_ws.binaryType = 'arraybuffer'; \n"
 "            _webui_ws_status = true; \n"
-"            if(_webui_log) console.log('WebUI -> Connected'); \n"
-"            _webui_listener(); \n"
+"            if(_webui_log) \n"
+"                console.log('WebUI -> Connected'); \n"
+"            _webui_clicks_listener(); \n"
 "        }; \n"
 "        _webui_ws.onerror = function () { \n"
-"            if(_webui_log) console.log('WebUI -> Connection error'); \n"
-"            _webui_close(255, ''); \n"
+"            if(_webui_log) \n"
+"                console.log('WebUI -> Connection Failed'); \n"
+"            _webui_freeze_ui(); \n"
 "        }; \n"
 "        _webui_ws.onclose = function (evt) { \n"
 "            _webui_ws_status = false; \n"
-"            if(_webui_action8[0] == 252) { \n"
-"                if(_webui_log) console.log('WebUI -> Switch URL'); \n"
-"                window.location.replace(_webui_action_val); \n"
+"            if(_webui_close_reason === _WEBUI_SWITCH) { \n"
+"                if(_webui_log) \n"
+"                    console.log('WebUI -> Refresh UI'); \n"
+"                window.location.replace(_webui_close_value); \n"
 "            } else { \n"
-"                if(_webui_log) console.log('WebUI -> Connection lost [' + evt.code + '][' + evt.reason + ']'); \n"
+"                if(_webui_log) \n"
+"                    console.log('WebUI -> Connection lost (' + evt.code + ')'); \n"
 "                if(!_webui_log) window.close(); \n"
-"                else _webui_freez_ui(); \n"
+"                else _webui_freeze_ui(); \n"
 "            } \n"
 "        }; \n"
 "        _webui_ws.onmessage = function (evt) { \n"
 "                const buffer8 = new Uint8Array(evt.data); \n"
 "                if(buffer8.length < 4) return; \n"
-"                if(buffer8[0] !== 255) { \n"
-"                    if(_webui_log) console.log('WebUI -> Invalid flag -> 0x' + buffer8[0] + \n"
-"                                   ' 0x' + buffer8[1] + ' 0x' + buffer8[2]); \n"
+"                if(buffer8[0] !== _WEBUI_SIGNATURE) \n"
 "                    return; \n"
-"                } \n"
-"                if(_webui_log) console.log('WebUI -> Flag -> 0x' + buffer8[0] + ' 0x' + \n"
-"                                               buffer8[1] + ' 0x' + buffer8[2]); \n"
 "                var len = buffer8.length - 3; \n"
 "                if(buffer8[buffer8.length - 1] === 0) \n"
 "                   len--; // Null byte (0x00) can break eval() \n"
 "                data8 = new Uint8Array(len); \n"
 "                for (i = 0; i < len; i++) data8[i] = buffer8[i + 3]; \n"
 "                var data8utf8 = new TextDecoder('utf-8').decode(data8); \n"
-"                if(buffer8[1] === 252) { \n"
-"                    _webui_close(252, data8utf8); \n"
-"                } else if(buffer8[1] === 251) { \n"
-"                    _webui_close(251, ''); \n"
-"                } else if(buffer8[1] === 254) { \n"
+"                // Process Command \n"
+"                if(buffer8[1] === _WEBUI_SWITCH) { \n"
+"                    _webui_close(_WEBUI_SWITCH, data8utf8); \n"
+"                } else if(buffer8[1] === _WEBUI_CLOSE) { \n"
+"                    _webui_close(_WEBUI_CLOSE); \n"
+"                } else if(buffer8[1] === _WEBUI_JS) { \n"
 "                    data8utf8 = data8utf8.replace(/(?:\\r\\n|\\r|\\n)/g, \"\\\\n\"); \n"
-"                    if(_webui_log) console.log('WebUI -> JS -> Run -> ' + data8utf8); \n"
+"                    if(_webui_log) \n"
+"                        console.log('WebUI -> JS [' + data8utf8 + ']'); \n"
 "                    var FunReturn = 'undefined'; \n"
 "                    var FunError = false; \n"
 "                    try { FunReturn = eval('(() => {' + data8utf8 + '})()'); } catch (e) { FunError = true; FunReturn = e.message } \n"
 "                    if(typeof FunReturn === 'undefined' || FunReturn === undefined) FunReturn = 'undefined'; \n"
-"                    if(_webui_log && !FunError) console.log('WebUI -> JS -> Return -> ' + FunReturn); \n"
-"                    if(_webui_log && FunError) console.log('WebUI -> JS -> Return Error -> ' + FunReturn); \n"
+"                    if(_webui_log && !FunError) console.log('WebUI -> JS -> Return [' + FunReturn + ']'); \n"
+"                    if(_webui_log && FunError) console.log('WebUI -> JS -> Error [' + FunReturn + ']'); \n"
 "                    var FunReturn8 = new TextEncoder('utf-8').encode(FunReturn); \n"
 "                    var Return8 = new Uint8Array(4 + FunReturn8.length); \n"
-"                    Return8[0] = 255; \n"
-"                    Return8[1] = 254; \n"
+"                    Return8[0] = _WEBUI_SIGNATURE; \n"
+"                    Return8[1] = _WEBUI_JS; \n"
 "                    Return8[2] = buffer8[2]; \n"
 "                    if(FunError) Return8[3] = 1; \n"
 "                    else Return8[3] = 0; \n"
 "                    var p = -1; \n"
 "                    for (i = 4; i < FunReturn8.length + 4; i++) Return8[i] = FunReturn8[++p]; \n"
-"                    if(Return8[0] !== 255) \n"
-"                        return; \n"
 "                    if(_webui_ws_status) _webui_ws.send(Return8.buffer); \n"
-"                    if(_webui_log) { \n"
-"                        var buf = '[ '; \n"
-"                        for (i = 0; i < Return8.length; i++) buf = buf + '0x' + Return8[i] + ' '; \n"
-"                        buf = buf + ']'; \n"
-"                        console.log('WebUI -> JS -> Sent response -> [' + FunReturn + '] (' + buf + ')'); \n"
-"                    } \n"
 "                } \n"
 "        }; \n"
 "    } else { \n"
 "        alert('Sorry. WebSocket not supported by your Browser.'); \n"
-"        if(!_webui_log) webui_close_window(); \n"
+"        window.close(); \n"
 "    } \n"
 "} \n"
-"function _webui_SendEvent(name) { \n"
-"    if(_webui_ws_status && name != '') { \n"
-"        var Name8 = new TextEncoder('utf-8').encode(name); \n"
-"        var Event8 = new Uint8Array(3 + Name8.length); \n"
-"        Event8[0] = 255; \n"
-"        Event8[1] = 253; \n"
-"        Event8[2] = 0; \n"
-"        var p = -1; \n"
-"        for (i = 3; i < Name8.length + 3; i++) Event8[i] = Name8[++p]; \n"
-"        if(_webui_ws_status) _webui_ws.send(Event8.buffer); \n"
-"        if(_webui_log) { \n"
-"            var buf = '[ '; \n"
-"            for (i = 0; i < Event8.length; i++) buf = buf + '0x' + Event8[i] + ' '; \n"
-"            buf = buf + ']'; \n"
-"            console.log('WebUI -> Event -> Send -> [' + name + '] (' + buf + ')'); \n"
+"function _webui_clicks_listener() { \n"
+"    Object.keys(window).forEach(key=>{ \n"
+"        if(/^on(click)/.test(key)) { \n"
+"            window.addEventListener(key.slice(2),event=>{ \n"
+"                if(event.target.id !== '') { \n"
+"                    if(_webui_bind_all || _webui_bind_list.includes(_webui_win_num + '/' + event.target.id)) \n"
+"                        _webui_send_click(event.target.id); \n"
+"                } \n"
+"            }); \n"
 "        } \n"
+"    }); \n"
+"} \n"
+"function _webui_send_click(elem) { \n"
+"    if(_webui_ws_status && elem !== '') { \n"
+"        var elem8 = new TextEncoder('utf-8').encode(elem); \n"
+"        var packet = new Uint8Array(3 + elem8.length); \n"
+"        packet[0] = _WEBUI_SIGNATURE; \n"
+"        packet[1] = _WEBUI_CLICK; \n"
+"        packet[2] = 0; \n"
+"        var p = -1; \n"
+"        for (i = 3; i < elem8.length + 3; i++) \n"
+"            packet[i] = elem8[++p]; \n"
+"        _webui_ws.send(packet.buffer); \n"
+"        if(_webui_log) \n"
+"            console.log('WebUI -> Click [' + elem + ']'); \n"
 "    } \n"
 "} \n"
-"function _webui_listener() { \n"
-"    window.addEventListener('load', _webui_listener_handler()); \n"
-"} \n"
-"_webui_start(); \n"
-"setTimeout(function () { \n"
-"    if(!_webui_ws_status) { \n"
-"        document.body.style.filter = 'contrast(1%)'; \n"
-"        alert('WebUI failed to connect to the background application.'); \n"
-"        if(!_webui_log) webui_close_window(); \n"
+" // -- APIs -------------------------- \n"
+"function webui_fn(fn, value) { \n"
+"    if(_webui_ws_status && fn !== '') { \n"
+"        if(typeof value === 'string') { var value8 = new TextEncoder('utf-8').encode(value); } \n"
+"        else if(typeof value === 'number') { var value8 = new TextEncoder('utf-8').encode(value); } \n"
+"        else if(typeof value === 'boolean') { var v = 0; if(value) v = 1; var value8 = new TextEncoder('utf-8').encode(v); } \n"
+"        else { var value8 = new TextEncoder('utf-8').encode('undefined'); } \n"
+"        const fn8 = new TextEncoder('utf-8').encode(fn); \n"
+"        var packet = new Uint8Array(3 + fn8.length + 1 + value8.length + 1); \n"
+"        packet[0] = _WEBUI_SIGNATURE; \n"
+"        packet[1] = _WEBUI_FUNCTION; \n"
+"        packet[2] = 0; \n"
+"        var p = -1; \n"
+"        var i = 3; \n"
+"        for (; i < (3 + fn8.length); i++) \n"
+"            packet[i] = fn8[++p]; \n"
+"        packet[i] = 0; \n"
+"        i++; \n"
+"        p = -1; \n"
+"        for (; i < (3 + fn8.length + 1 + value8.length); i++) \n"
+"            packet[i] = value8[++p]; \n"
+"        packet[i] = 0; \n"
+"        _webui_ws.send(packet.buffer); \n"
+"        if(_webui_log) \n"
+"            console.log('WebUI -> Func [' + fn + ']'); \n"
 "    } \n"
-"}, 1e3); \n"
+"} \n"
+"function webui_log(status) { \n"
+"    if(status) { \n"
+"        console.log('WebUI -> Log Enabled.'); \n"
+"        _webui_log = true; \n"
+"    } else { \n"
+"        console.log('WebUI -> Log Disabled.'); \n"
+"        _webui_log = false; \n"
+"    } \n"
+"} \n"
+" // -- DOM --------------------------- \n"
 "document.addEventListener('keydown', function (e) { \n"
+"    // Disable F5 \n"
 "    if(e.keyCode === 116) { \n"
 "        e.preventDefault(); \n"
 "        e.returnValue = false; \n"
@@ -154,62 +189,18 @@ static const char* webui_javascript_bridge =
 "        return false; \n"
 "    } \n"
 "}); \n"
-"window.addEventListener('beforeunload', function (e) { \n"
-"    _webui_close(255, ''); \n"
-"}); \n"
 "window.onbeforeunload = function () { \n"
-"    _webui_close(255, ''); \n"
+"   _webui_ws.close(); \n"
 "}; \n"
-"document.addEventListener('contextmenu', function (e) {}); \n"
-"if(typeof webui_ready === 'function') setTimeout(webui_ready, 1); \n"
-"function webui_debug(status) { \n"
-"    if(status) { \n"
-"        console.log('WebUI -> Debug log enabled.'); \n"
-"        _webui_log = true; \n"
-"    } else { \n"
-"        console.log('WebUI -> Debug log disabled.'); \n"
-"        _webui_log = false; \n"
-"    } \n"
-"} \n"
-"function webui_close_window() { \n"
-"    _webui_freez_ui(); \n"
-"    if(_webui_ws_status) _webui_close(255, ''); \n"
-"    else window.close(); \n"
-"} \n"
-"function webui_event(event_name) { \n"
+"setTimeout(function () { \n"
 "    if(!_webui_ws_status) { \n"
-"        console.log('WebUI -> Send Event -> Failed because status is disconnected.'); \n"
-"        return; \n"
+"        _webui_freeze_ui(); \n"
+"        alert('WebUI failed to connect to the background application. Please try again.'); \n"
+"        if(!_webui_log) \n"
+"            window.close(); \n"
 "    } \n"
-"    var event_name8 = new TextEncoder('utf-8').encode(event_name); \n"
-"    var SendEvent8 = new Uint8Array(3 + event_name8.length); \n"
-"    SendEvent8[0] = 255; \n"
-"    SendEvent8[1] = 250; \n"
-"    SendEvent8[2] = 0; \n"
-"    var p = -1; \n"
-"    for (i = 3; i < event_name8.length + 3; i++) SendEvent8[i] = event_name8[++p]; \n"
-"    if(SendEvent8[0] !== 255) \n"
-"        return; \n"
-"    if(_webui_ws_status) _webui_ws.send(SendEvent8.buffer); \n"
-"    if(_webui_log) { \n"
-"        var buf = '[ '; \n"
-"        for (i = 0; i < SendEvent8.length; i++) buf = buf + '0x' + SendEvent8[i] + ' '; \n"
-"        buf = buf + ']'; \n"
-"        console.log('WebUI -> Send Event -> [' + event_name + '] (' + buf + ')'); \n"
-"    } \n"
-"} \n"
-"function _webui_listener_handler() { \n"
-"    Object.keys(window).forEach(key=>{ \n"
-"        if(/^on(click)/.test(key)) { \n"
-"            window.addEventListener(key.slice(2),event=>{ \n"
-"                if(event.target.id !== '') { \n"
-"                    if(_webui_bind_all || _webui_bind_list.includes(_webui_win_num + '/' + event.target.id)) \n"
-"                        _webui_SendEvent(event.target.id); \n"
-"                } \n"
-"            }); \n"
-"        } \n"
-"    }); \n"
-"} \n";
+"}, 1500); \n"
+"window.addEventListener('load', _webui_start()); \n";
 
 // -- Heap ----------------------------
 static const char* webui_html_served = "<html><head><title>Access Denied</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Access Denied</h2><p>You can't access this content<br>because it's already processed.<br><br>The current security policy denies<br>multiple requests.</p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
@@ -220,7 +211,7 @@ static const char* webui_def_icon = "<?xml version=\"1.0\" ?><svg height=\"24\" 
 static const char* webui_def_icon_type = "image/svg+xml";
 static const char* webui_js_empty = "WEBUI_JS_EMPTY";
 static const char* webui_js_timeout = "WEBUI_JS_TIMEOUT";
-static const char* webui_empty_string = ""; // .text
+static const char* const webui_empty_string = ""; // In case the optimization is disabled
 
 #ifdef _WIN32
     static const char* webui_sep = "\\";
@@ -2463,27 +2454,27 @@ unsigned int webui_bind(webui_window_t* win, const char* element, void (*func)(w
 
     _webui_init();
 
-    char* element_id = _webui_malloc(strlen(element));
-    sprintf(element_id, "%d/%s", win->core.window_number, element);
+    char* webui_internal_id = _webui_malloc(strlen(element));
+    sprintf(webui_internal_id, "%d/%s", win->core.window_number, element);
 
-    unsigned int cb_index = _webui_get_cb_index(element_id);
+    unsigned int cb_index = _webui_get_cb_index(webui_internal_id);
 
     if(cb_index > 0) {
 
         // Replace a reference
         webui.cb[cb_index] = func;
 
-        _webui_free_mem((void *) &element_id);
+        _webui_free_mem((void *) &webui_internal_id);
     }
     else {
 
         // New reference
-        cb_index = _webui_set_cb_index(element_id);
+        cb_index = _webui_set_cb_index(webui_internal_id);
 
         if(cb_index > 0)
             webui.cb[cb_index] = func;
         else
-            _webui_free_mem((void *) &element_id);
+            _webui_free_mem((void *) &webui_internal_id);
     }
 
     return cb_index;
@@ -2505,8 +2496,10 @@ unsigned int webui_bind(webui_window_t* win, const char* element, void (*func)(w
     e.window_id = arg->win->core.window_number;
     e.element_name = arg->element_name;
     e.window = arg->win;
+    e.data = arg->data;
+    e.data_len = arg->data_len;
 
-    unsigned int cb_index = _webui_get_cb_index(arg->element_id);
+    unsigned int cb_index = _webui_get_cb_index(arg->webui_internal_id);
 
     // Check for bind
     if(cb_index > 0 && webui.cb[cb_index] != NULL) {
@@ -2528,7 +2521,7 @@ unsigned int webui_bind(webui_window_t* win, const char* element, void (*func)(w
     #endif    
 
     // Free
-    _webui_free_mem((void *) &arg->element_id);
+    _webui_free_mem((void *) &arg->webui_internal_id);
     _webui_free_mem((void *) &arg->element_name);
     _webui_free_mem((void *) &arg);
 
@@ -2539,17 +2532,22 @@ unsigned int webui_bind(webui_window_t* win, const char* element, void (*func)(w
     #endif
 }
 
-void _webui_window_event(webui_window_t* win, char* element_id, char* element) {
+void _webui_window_event(webui_window_t* win, char* webui_internal_id, char* element, void* data, unsigned int data_len) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] _webui_window_event([%s], [%s])... \n", win->core.window_number, element_id, element);
+        printf("[%d] _webui_window_event([%s], [%s])... \n", win->core.window_number, webui_internal_id, element);
     #endif
 
     // Create a thread, and call the used cb function
     webui_cb_t* arg = (webui_cb_t*) _webui_malloc(sizeof(webui_cb_t));
     arg->win = win;
-    arg->element_id = element_id;
+    arg->webui_internal_id = webui_internal_id;
     arg->element_name = element;
+    if(data != NULL)
+        arg->data = data;
+    else
+        arg->data = (void*) webui_empty_string;
+    arg->data_len = data_len;
 
     #ifdef _WIN32
         HANDLE user_fun_thread = CreateThread(NULL, 0, _webui_cb, (void *) arg, 0, NULL);
@@ -2639,26 +2637,33 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
     if((unsigned char) packet[0] != WEBUI_HEADER_SIGNATURE || len < 4)
         return;
 
-    if((unsigned char) packet[1] == WEBUI_HEADER_CLICK || (unsigned char) packet[1] == WEBUI_HEADER_CALL_FUNC) {
+    if((unsigned char) packet[1] == WEBUI_HEADER_CLICK) {
 
-        // Click Event / Call Function
+        // Click Event
 
         // 0: [Signature]
         // 1: [Type]
         // 2: [Null]
         // 3: [Data]
 
-        // Get data part
-        char* data;
-        size_t data_len;
-        if(!_webui_get_data(packet, len, 3, &data_len, &data))
+        // Get html element id
+        char* element;
+        size_t element_len;
+        if(!_webui_get_data(packet, len, 3, &element_len, &element))
             return;
 
-        size_t element_id_len = 3 + 1 + data_len + 1; // [win num][/][name][null]
-        char* element_id = (char*) _webui_malloc(element_id_len);
-        sprintf(element_id, "%d/%s", win->core.window_number, data);
+        // Generate WebUI internal id
+        size_t element_id_len = 3 + 1 + element_len + 1; // [win num][/][name][null]
+        char* webui_internal_id = (char*) _webui_malloc(element_id_len);
+        sprintf(webui_internal_id, "%d/%s", win->core.window_number, element);
 
-        _webui_window_event(win, element_id, data);
+        _webui_window_event(
+            win,                // Window
+            webui_internal_id,  // WebUI Internal ID
+            element,            // User HTML ID
+            NULL,               // User Custom Data
+            0                   // User Data Len
+        );
     }
     else if((unsigned char) packet[1] == WEBUI_HEADER_JS) {
 
@@ -2702,7 +2707,6 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
         else {
 
             // Empty Result
-
             webui.run_error[run_id] = error;
             webui.run_responses[run_id] = webui_empty_string;
         }
@@ -2710,6 +2714,61 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
         // Send ready signal to webui_script()
         webui.run_done[run_id] = true;
     }
+    else if((unsigned char) packet[1] == WEBUI_HEADER_CALL_FUNC) {
+
+        // Function Call
+
+        // 0: [Signature]
+        // 1: [Type]
+        // 2: [Null]
+        // 3: [ID, Null, Data]
+
+        // Get html element id
+        char* element;
+        size_t element_len;
+        if(!_webui_get_data(packet, len, 3, &element_len, &element))
+            return;
+
+        // Get data
+        void* data;
+        size_t data_len;
+        if(!_webui_get_data(packet, len, (3 + element_len + 1), &data_len, (char **) &data))
+            return;
+
+        // Generate WebUI internal id
+        size_t element_id_len = 3 + 1 + element_len + 1; // [win num][/][name][null]
+        char* webui_internal_id = (char*) _webui_malloc(element_id_len);
+        sprintf(webui_internal_id, "%d/%s", win->core.window_number, element);
+
+        _webui_window_event(
+            win,                // Window
+            webui_internal_id,  // WebUI Internal ID
+            element,            // User HTML ID
+            data,               // User Custom Data
+            data_len            // User Data Len
+        );
+    }
+}
+
+const char* webui_as_string(webui_event_t* e) {
+
+    if(e->data != NULL && e->data_len > 0 && e->data_len <= WEBUI_MAX_BUF)
+        return (const char *) e->data;
+    return "";
+}
+
+int webui_as_int(webui_event_t* e) {
+
+    if(e->data != NULL && e->data_len > 0 && e->data_len <= WEBUI_MAX_BUF)
+        return atoi((const char *) e->data);
+    return 0;
+}
+
+bool webui_as_bool(webui_event_t* e) {
+
+    if(webui_as_int(e) > 0)
+        return true;
+    return false;
 }
 
 bool webui_open(webui_window_t* win, const char* url, unsigned int browser) {
@@ -3003,18 +3062,18 @@ void _webui_init() {
     webui.executable_path       = _webui_get_current_path();
 }
 
-unsigned int _webui_get_cb_index(char* element_id) {
+unsigned int _webui_get_cb_index(char* webui_internal_id) {
 
     #ifdef WEBUI_LOG
-        printf("[0] _webui_get_cb_index([%s])... \n", element_id);
+        printf("[0] _webui_get_cb_index([%s])... \n", webui_internal_id);
     #endif
 
-    if(element_id != NULL) {
+    if(webui_internal_id != NULL) {
 
         for(unsigned int i = 1; i < WEBUI_MAX_ARRAY; i++) {
 
             if(!_webui_is_empty(webui.html_elements[i])) 
-                if(strcmp(webui.html_elements[i], element_id) == 0)
+                if(strcmp(webui.html_elements[i], webui_internal_id) == 0)
                     return i;
         }
     }
@@ -3022,10 +3081,10 @@ unsigned int _webui_get_cb_index(char* element_id) {
     return 0;
 }
 
-unsigned int _webui_set_cb_index(char* element_id) {
+unsigned int _webui_set_cb_index(char* webui_internal_id) {
 
     #ifdef WEBUI_LOG
-        printf("[0] _webui_set_cb_index([%s])... \n", element_id);
+        printf("[0] _webui_set_cb_index([%s])... \n", webui_internal_id);
     #endif
 
     // Add
@@ -3033,7 +3092,7 @@ unsigned int _webui_set_cb_index(char* element_id) {
 
         if(_webui_is_empty(webui.html_elements[i])) {
 
-            webui.html_elements[i] = element_id;
+            webui.html_elements[i] = webui_internal_id;
 
             return i;
         }

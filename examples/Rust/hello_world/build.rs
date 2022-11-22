@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.4
+    WebUI Library 2.0.5
     
     http://webui.me
     https://github.com/alifcommunity/webui

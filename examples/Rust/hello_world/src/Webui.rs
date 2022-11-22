@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.0.4
+    WebUI Library 2.0.5
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -34,6 +34,8 @@ pub struct webui_event_t {
     pub element_id: ::std::os::raw::c_uint,
     pub element_name: *mut ::std::os::raw::c_char,
     pub window: *mut webui_window_t,
+    pub data: *mut ::std::os::raw::c_char,
+    pub data_len: ::std::os::raw::c_uint,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -85,8 +87,10 @@ pub struct webui_script_t {
 #[derive(Debug, Copy, Clone)]
 pub struct webui_cb_t {
     pub win: *mut webui_window_t,
-    pub element_id: *mut ::std::os::raw::c_char,
+    pub webui_internal_id: *mut ::std::os::raw::c_char,
     pub element_name: *mut ::std::os::raw::c_char,
+    pub data: *mut ::std::os::raw::c_char,
+    pub data_len: ::std::os::raw::c_uint,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -312,12 +316,12 @@ extern "C" {
 }
 extern "C" {
     pub fn _webui_get_cb_index(
-        element: *mut ::std::os::raw::c_char,
+        webui_internal_id: *mut ::std::os::raw::c_char,
     ) -> ::std::os::raw::c_uint;
 }
 extern "C" {
     pub fn _webui_set_cb_index(
-        element: *mut ::std::os::raw::c_char,
+        webui_internal_id: *mut ::std::os::raw::c_char,
     ) -> ::std::os::raw::c_uint;
 }
 extern "C" {
@@ -357,6 +361,8 @@ extern "C" {
         win: *mut webui_window_t,
         element_id: *mut ::std::os::raw::c_char,
         element: *mut ::std::os::raw::c_char,
+        data: *mut ::std::os::raw::c_char,
+        data_len: ::std::os::raw::c_uint,
     );
 }
 extern "C" {
