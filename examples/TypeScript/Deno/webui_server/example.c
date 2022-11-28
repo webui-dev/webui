@@ -13,7 +13,7 @@
 
 int main() {
 
-	// Crate new window
+	// Create a new window
 	webui_window_t* my_window;
 	my_window = webui_new_window();
 

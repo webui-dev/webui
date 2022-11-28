@@ -220,9 +220,12 @@ EXPORT void webui_bind_all(webui_window_t* win, void (*func)(webui_event_t* e));
 EXPORT bool webui_open(webui_window_t* win, const char* url, unsigned int browser);
 EXPORT void webui_script_cleanup(webui_script_t* script);
 EXPORT void webui_script_runtime(webui_window_t* win, unsigned int runtime);
-EXPORT int webui_as_int(webui_event_t* e);
-EXPORT const char* webui_as_string(webui_event_t* e);
-EXPORT bool webui_as_bool(webui_event_t* e);
+EXPORT int webui_get_int(webui_event_t* e);
+EXPORT const char* webui_get_string(webui_event_t* e);
+EXPORT bool webui_get_bool(webui_event_t* e);
+EXPORT void webui_return_int(webui_event_t* e, int n);
+EXPORT void webui_return_string(webui_event_t* e, char* s);
+EXPORT void webui_return_bool(webui_event_t* e, bool b);
 
 // -- Interface -----------------------
 // Used by other languages to create WebUI wrappers

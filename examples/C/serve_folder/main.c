@@ -11,15 +11,20 @@
     Copyright (C)2022 Hassan DRAGA <https://github.com/hassandraga>.
 */
 
+// Note:
+// To see the console logs (printf) you need to build in debug mode
+// example 'make debug', or 'nmake debug', or 'mingw32-make debug'
+
 #include "webui.h"
 
 void all_clicks(webui_event_t* e) {
+
     printf("You clicked on '%s' element.\n", e->element_name);
 }
 
 int main() {
 
-	// Crate new window
+	// Create a new window
 	webui_window_t* my_window;
 	my_window = webui_new_window();
 
