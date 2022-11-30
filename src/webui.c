@@ -145,30 +145,17 @@ static const char* webui_javascript_bridge =
 "} \n"
 " // -- APIs -------------------------- \n"
 "function webui_fn(fn, value) { \n"
+"    var data = ''; \n"
 "    if(_webui_ws_status && fn !== '') { \n"
-"        if(typeof value === 'string') { var value8 = new TextEncoder('utf-8').encode(value); } \n"
-"        else if(typeof value === 'number') { var value8 = new TextEncoder('utf-8').encode(value); } \n"
-"        else if(typeof value === 'boolean') { var v = 0; if(value) v = 1; var value8 = new TextEncoder('utf-8').encode(v); } \n"
-"        else { var value8 = new TextEncoder('utf-8').encode('undefined'); } \n"
-"        const fn8 = new TextEncoder('utf-8').encode(fn); \n"
-"        var packet = new Uint8Array(3 + fn8.length + 1 + value8.length + 1); \n"
-"        packet[0] = _WEBUI_SIGNATURE; \n"
-"        packet[1] = _WEBUI_FUNCTION; \n"
-"        packet[2] = 0; \n"
-"        var p = -1; \n"
-"        var i = 3; \n"
-"        for (; i < (3 + fn8.length); i++) \n"
-"            packet[i] = fn8[++p]; \n"
-"        packet[i] = 0; \n"
-"        i++; \n"
-"        p = -1; \n"
-"        for (; i < (3 + fn8.length + 1 + value8.length); i++) \n"
-"            packet[i] = value8[++p]; \n"
-"        packet[i] = 0; \n"
-"        _webui_ws.send(packet.buffer); \n"
 "        if(_webui_log) \n"
 "            console.log('WebUI -> Func [' + fn + ']'); \n"
+"        var xmlHttp = new XMLHttpRequest(); \n"
+"        xmlHttp.open('GET', ('http://localhost:' + _webui_port + '/WEBUI/FUNC/' + fn + '/' + value), false); \n"
+"        xmlHttp.send(null); \n"
+"        if(xmlHttp.status == 200) \n"
+"           data = String(xmlHttp.responseText); \n"
 "    } \n"
+"    return data; \n"
 "} \n"
 "function webui_log(status) { \n"
 "    if(status) { \n"
@@ -866,7 +853,7 @@ const char* _webui_generate_js_bridge(webui_window_t* win) {
             strcat(event_cb_js_array, "\",");
         }
     }
-    strcat(event_cb_js_array, "] \n");
+    strcat(event_cb_js_array, "]; \n");
 
     // Generate the full WebUI JS-Bridge
     size_t len = cb_mem_size + strlen(webui_javascript_bridge) + 1;
@@ -1093,6 +1080,85 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
                 }
             }
         }
+        else if(strncmp(hm->uri.ptr, "/WEBUI/FUNC/", 12) == 0 && hm->uri.len >= 15) {
+            
+            // Function Call (With response)
+
+            // [/WEBUI/FUNC/ELEMENT_ID/DATA]
+            // 0            12
+
+            #ifdef WEBUI_LOG
+                printf("[%d] _webui_server_event_handler()... CB start\n", win->core.window_number);
+            #endif
+
+            // Copy packet
+            size_t len = hm->uri.len;
+            char* packet = (char*) _webui_malloc(len + 1);
+            memcpy(packet, hm->uri.ptr, len);
+
+            // Get html element id
+            char* element = &packet[12];
+            size_t element_len = 0;
+            for (size_t i = 12; i < len; i++) {
+                if(packet[i] == '/') {
+                    packet[i] = '\0';
+                    break;
+                }
+                element_len++;
+            }
+
+            // [/WEBUI/FUNC/ELEMENT_ID DATA]
+            // 0            12
+
+            // Get data
+            void* data = &packet[11 + element_len + 2];
+            size_t data_len = strlen(data);
+
+            // Generate WebUI internal id
+            size_t internal_id_size = 3 + 1 + element_len + 1; // [win num][/][name][null]
+            char* webui_internal_id = (char*) _webui_malloc(internal_id_size);
+            sprintf(webui_internal_id, "%d/%s", win->core.window_number, element);
+
+            // Call user function
+            webui_event_t e;
+            e.window_id = win->core.window_number;
+            e.element_name = element;
+            e.window = win;
+            e.data = data;
+            e.data_len = data_len;
+
+            unsigned int cb_index = _webui_get_cb_index(webui_internal_id);
+
+            // Check for bind
+            if(cb_index > 0 && webui.cb[cb_index] != NULL) {
+
+                // Call user cb
+                e.element_id = cb_index;
+                webui.cb[cb_index](&e);
+            }
+            // Check for bind-all
+            else if(win->core.is_bind_all && win->core.cb_all[0] != NULL) {
+
+                // Call user cb
+                e.element_id = 0;
+                win->core.cb_all[0](&e);
+            }
+
+            #ifdef WEBUI_LOG
+                printf("[%d] _webui_server_event_handler()... CB end -> response [%.*s]\n", win->core.window_number, e.data_len, e.data);
+            #endif
+
+            // Send response
+            mg_http_reply(
+                c, 200,
+                "",
+                e.data
+            );
+
+            // Free
+            _webui_free_mem((void *) &webui_internal_id);
+            _webui_free_mem((void *) &e.data);
+        }
         else {
 
             // [/file]
@@ -1123,10 +1189,10 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
             }
             else {
 
-                // Resource Not Available
+                // Forbidden
 
                 #ifdef WEBUI_LOG
-                    printf("[%d] _webui_server_event_handler()... HTML 404\n", win->core.window_number);
+                    printf("[%d] _webui_server_event_handler()... HTML 403\n", win->core.window_number);
                 #endif
 
                 // Header
@@ -2653,8 +2719,8 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
             return;
 
         // Generate WebUI internal id
-        size_t element_id_len = 3 + 1 + element_len + 1; // [win num][/][name][null]
-        char* webui_internal_id = (char*) _webui_malloc(element_id_len);
+        size_t internal_id_size = 3 + 1 + element_len + 1; // [win num][/][name][null]
+        char* webui_internal_id = (char*) _webui_malloc(internal_id_size);
         sprintf(webui_internal_id, "%d/%s", win->core.window_number, element);
 
         _webui_window_event(
@@ -2716,7 +2782,7 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
     }
     else if((unsigned char) packet[1] == WEBUI_HEADER_CALL_FUNC) {
 
-        // Function Call
+        // Function Call (No response)
 
         // 0: [Signature]
         // 1: [Type]
@@ -2736,8 +2802,8 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
             return;
 
         // Generate WebUI internal id
-        size_t element_id_len = 3 + 1 + element_len + 1; // [win num][/][name][null]
-        char* webui_internal_id = (char*) _webui_malloc(element_id_len);
+        size_t internal_id_size = 3 + 1 + element_len + 1; // [win num][/][name][null]
+        char* webui_internal_id = (char*) _webui_malloc(internal_id_size);
         sprintf(webui_internal_id, "%d/%s", win->core.window_number, element);
 
         _webui_window_event(
@@ -2750,25 +2816,100 @@ void _webui_window_receive(webui_window_t* win, const char* packet, size_t len) 
     }
 }
 
-const char* webui_as_string(webui_event_t* e) {
+const char* webui_get_string(webui_event_t* e) {
+    
+    #ifdef WEBUI_LOG
+        printf("[0] webui_get_string()... \n");
+    #endif
 
-    if(e->data != NULL && e->data_len > 0 && e->data_len <= WEBUI_MAX_BUF)
-        return (const char *) e->data;
-    return "";
+    if(e->data != NULL && e->data_len > 0 && e->data_len <= WEBUI_MAX_BUF) {
+        size_t len = strlen(e->data);
+        if(len > 0 && len <= WEBUI_MAX_BUF)
+            return (const char *) e->data;
+    }
+    return webui_empty_string;
 }
 
-int webui_as_int(webui_event_t* e) {
+int webui_get_int(webui_event_t* e) {
+    
+    #ifdef WEBUI_LOG
+        printf("[0] webui_get_int()... \n");
+    #endif
 
     if(e->data != NULL && e->data_len > 0 && e->data_len <= WEBUI_MAX_BUF)
         return atoi((const char *) e->data);
     return 0;
 }
 
-bool webui_as_bool(webui_event_t* e) {
+bool webui_get_bool(webui_event_t* e) {
 
-    if(webui_as_int(e) > 0)
+    #ifdef WEBUI_LOG
+        printf("[0] webui_get_bool()... \n");
+    #endif
+
+    if(webui_get_int(e) > 0)
         return true;
     return false;
+}
+
+void webui_return_int(webui_event_t* e, int n) {
+
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_return_int([%d])... \n", e->window_id, n);
+    #endif
+
+    // Int to Str
+    int len = (int)((ceil(log10(n))) * sizeof(char));
+    char* buf = (char*) _webui_malloc(len + 1);
+    sprintf(buf, "%d", n);
+
+    // Free old data
+    _webui_free_mem((void *) &e->data);
+
+    // Update data
+    e->data = buf;
+    e->data_len = len;
+}
+
+void webui_return_string(webui_event_t* e, char* s) {
+
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_return_int([%d])... \n", e->window_id, n);
+    #endif
+
+    if(_webui_is_empty(s))
+        return;
+
+    // Copy Str
+    int len = strlen(s);
+    char* buf = (char*) _webui_malloc(len + 1);
+    memcpy(buf, s, len);
+
+    // Free old data
+    _webui_free_mem((void *) &e->data);
+
+    // Update data
+    e->data = buf;
+    e->data_len = len;
+}
+
+void webui_return_bool(webui_event_t* e, bool b) {
+
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_return_int([%d])... \n", e->window_id, n);
+    #endif
+
+    // Bool to Str
+    int len = sizeof(bool);
+    bool* buf = (bool*) _webui_malloc(len + 1);
+    sprintf(buf, "%d", b);
+
+    // Free old data
+    _webui_free_mem((void *) &e->data);
+
+    // Update data
+    e->data = buf;
+    e->data_len = len;
 }
 
 bool webui_open(webui_window_t* win, const char* url, unsigned int browser) {
@@ -3147,7 +3288,7 @@ void webui_script_interface(webui_window_t* win, const char* script, unsigned in
     };
 
     webui_script(win, &js);
-    
+
     data = (char*) js.result.data;
     *error = js.result.error;
     *length = js.result.length;
