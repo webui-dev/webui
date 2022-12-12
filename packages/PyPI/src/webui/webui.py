@@ -17,6 +17,8 @@ import shutil
 
 WebUI = None
 WebUI_Path = os.path.dirname(__file__)
+PTR_CHAR = ctypes.POINTER(ctypes.c_char)
+PTR_PTR_CHAR = ctypes.POINTER(PTR_CHAR)
 
 
 # Event
@@ -24,6 +26,7 @@ class event:
     element_id = 0
     window_id = 0
     element_name = ""
+    data = ""
     window = None
     c_window = None
 
@@ -92,7 +95,9 @@ class window:
                 ctypes.c_uint,
                 ctypes.c_uint,
                 ctypes.c_char_p,
-                ctypes.c_void_p)
+                ctypes.c_void_p,
+                ctypes.c_char_p,
+                PTR_PTR_CHAR)
             self.c_events = py_fun(self.events)
         except OSError as e:
             print(
@@ -107,17 +112,25 @@ class window:
 
 
     def events(self, element_id, window_id, 
-                element_name, window):
+                element_name, window, data, response):
         if self.cb_fun_list[int(element_id)] is None:
             print('WebUI Error: Callback is None.')
             return
+        # Create event
         e = event()
-        e.element_id = element_id
-        e.window_id = window_id
+        e.element_id = int(element_id)
+        e.window_id = int(window_id)
+        e.data = data.decode('utf-8')
         e.element_name = element_name.decode('utf-8')
         e.window = self
         e.c_window = window
-        self.cb_fun_list[element_id](e)
+        # User callback
+        cb_res = str(self.cb_fun_list[element_id](e))
+        cb_res_encode = cb_res.encode('utf-8')
+        # Allocate a new memory
+        buffer = ctypes.create_string_buffer(cb_res_encode)
+        # Set the response
+        response[0] = buffer
 
 
     def bind(self, element, func):

@@ -29,6 +29,7 @@
 #define WEBUI_MAX_PORT          (65500)     // Should be less than 65535
 #define WEBUI_MAX_BUF           (1024000)   // 1024 Kb max dynamic memory allocation
 #define WEBUI_DEFAULT_PATH      "."         // Default root path
+#define WEBUI_DEF_TIMEOUT       (8)         // Default startup timeout in seconds
 
 // -- C STD ---------------------------
 #include <stdbool.h>
@@ -42,6 +43,7 @@
 #include <stddef.h>
 #include <time.h>
 #include <errno.h>
+#include <math.h>
 #if defined(__GNUC__) || defined(__TINYC__)
     #include <dirent.h>
 #endif
@@ -124,7 +126,7 @@ typedef struct webui_event_t {
     char* element_name;
     webui_window_t* window;
     void* data;
-    unsigned int data_len;
+    void* response;
 } webui_event_t;
 typedef struct webui_javascript_result_t {
     bool error;
@@ -141,7 +143,6 @@ typedef struct webui_cb_t {
     char* webui_internal_id;
     char* element_name;
     void* data;
-    unsigned int data_len;
 } webui_cb_t;
 typedef struct webui_cmd_async_t {
     webui_window_t* win;
@@ -189,8 +190,8 @@ typedef struct webui_t {
     webui_runtime_t runtime;
     bool initialized;
     void (*cb[WEBUI_MAX_ARRAY])(webui_event_t* e);
-    void (*cb_int[WEBUI_MAX_ARRAY])(unsigned int, unsigned int, char*, webui_window_t*);
-    void (*cb_int_all[1])(unsigned int, unsigned int, char*, webui_window_t*);
+    void (*cb_interface[WEBUI_MAX_ARRAY])(unsigned int, unsigned int, char*, webui_window_t*, char*, char**);
+    void (*cb_interface_all[1])(unsigned int, unsigned int, char*, webui_window_t*, char*, char**);
     char* executable_path;
     void *ptr_list[WEBUI_MAX_ARRAY];
     unsigned int ptr_position;
@@ -236,7 +237,7 @@ typedef struct webui_script_interface_t {
     unsigned int length;
     const char* data;
 } webui_script_interface_t;
-EXPORT unsigned int webui_bind_interface(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*, webui_window_t*));
+EXPORT unsigned int webui_bind_interface(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*, webui_window_t*, char*, char**));
 EXPORT void webui_script_interface(webui_window_t* win, const char* script, unsigned int timeout, bool* error, unsigned int* length, char* data);
 EXPORT void webui_script_interface_struct(webui_window_t* win, webui_script_interface_t* js_int);
 
@@ -276,6 +277,8 @@ EXPORT bool _webui_set_root_folder(webui_window_t* win, const char* path);
 EXPORT void _webui_wait_process(webui_window_t* win, bool status);
 EXPORT const char* _webui_generate_js_bridge(webui_window_t* win);
 EXPORT void _webui_print_hex(const char* data, size_t len);
+EXPORT void _webui_free_mem(void **p);
+EXPORT void _webui_str_copy(char *destination, char *source);
 #ifdef _WIN32
     EXPORT DWORD WINAPI _webui_cb(LPVOID _arg);
     EXPORT DWORD WINAPI _webui_run_browser_task(LPVOID _arg);

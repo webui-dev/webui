@@ -230,17 +230,21 @@ bool _webui_ptr_exist(void *p) {
 void _webui_ptr_add(void *p, size_t size) {
     
     #ifdef WEBUI_LOG
-        // printf("[0] _webui_ptr_add()... \n");
+        // printf("[0] _webui_ptr_add(0x%p)... \n", p);
     #endif
 
     if(p == NULL)
         return;
-    
+
     if(!_webui_ptr_exist(p)) {
 
         for(unsigned int i = 0; i < webui.ptr_position; i++) {
 
             if(webui.ptr_list[i] == NULL) {
+
+                #ifdef WEBUI_LOG
+                    printf("[0] _webui_ptr_add(0x%p)... Allocate %d bytes\n", p, (int)size);
+                #endif
 
                 webui.ptr_list[i] = p;
                 webui.ptr_size[i] = size;
@@ -248,10 +252,14 @@ void _webui_ptr_add(void *p, size_t size) {
             }
         }
 
+        #ifdef WEBUI_LOG
+            printf("[0] _webui_ptr_add(0x%p)... Allocate %d bytes\n", p, (int)size);
+        #endif
+
         webui.ptr_list[webui.ptr_position] = p;
         webui.ptr_size[webui.ptr_position] = size;
         webui.ptr_position++;
-        if (webui.ptr_position >= WEBUI_MAX_ARRAY)
+        if(webui.ptr_position >= WEBUI_MAX_ARRAY)
             webui.ptr_position = (WEBUI_MAX_ARRAY - 1);
     }
 }
@@ -259,7 +267,7 @@ void _webui_ptr_add(void *p, size_t size) {
 void _webui_free_mem(void **p) {
     
     #ifdef WEBUI_LOG
-        // printf("[0] _webui_free_mem()... \n");
+        // printf("[0] _webui_free_mem(0x%p)... \n", *p);
     #endif
 
     if(p == NULL || *p == NULL)
@@ -268,6 +276,10 @@ void _webui_free_mem(void **p) {
     for(unsigned int i = 0; i < webui.ptr_position; i++) {
 
         if(webui.ptr_list[i] == *p) {
+
+            #ifdef WEBUI_LOG
+                printf("[0] _webui_free_mem(0x%p)... Free %d bytes\n", *p, (int)webui.ptr_size[i]);
+            #endif
 
             memset(*p, 0x00, webui.ptr_size[i]);
             free(*p);
@@ -287,6 +299,18 @@ void _webui_free_mem(void **p) {
     }
 
     *p = NULL;
+}
+
+void _webui_str_copy(char *destination, char *source) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_str_copy: source @ %p\n", source);
+        printf("[0] _webui_str_copy: source [%c]\n", source);
+        printf("[0] _webui_str_copy: destination @ %p\n", destination);
+    #endif
+    
+    //char** ptr = &p;
+    //_webui_free_mem((void *) &ptr);
 }
 
 void _webui_panic() {
@@ -395,7 +419,7 @@ bool _webui_timer_is_end(webui_timer_t* t, unsigned int ms) {
     _webui_timer_clock_gettime(&t->now);
 
     unsigned int def = (unsigned int) _webui_timer_diff(&t->start, &t->now);
-    if (def > ms)
+    if(def > ms)
         return true;
     return false;
 }
@@ -413,10 +437,6 @@ bool _webui_timer_is_end(webui_timer_t* t, unsigned int ms) {
 
 bool _webui_is_empty(const char* s) {
 
-    #ifdef WEBUI_LOG
-        // printf("[0] _webui_is_empty()... \n");
-    #endif
-    
     #ifdef WEBUI_LOG
         // printf("[0] _webui_is_empty()... \n");
     #endif
@@ -1125,7 +1145,7 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
             e.element_name = element;
             e.window = win;
             e.data = data;
-            e.data_len = data_len;
+            e.response = NULL;
 
             unsigned int cb_index = _webui_get_cb_index(webui_internal_id);
 
@@ -1144,20 +1164,40 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
                 win->core.cb_all[0](&e);
             }
 
+            if(_webui_is_empty(e.response))
+                e.response = (char*)webui_empty_string;
+
             #ifdef WEBUI_LOG
-                printf("[%d] _webui_server_event_handler()... CB end -> response [%.*s]\n", win->core.window_number, e.data_len, e.data);
+                printf("[%d] _webui_server_event_handler()... user-callback response [%s]\n", win->core.window_number, (const char*)e.response);
             #endif
 
             // Send response
             mg_http_reply(
                 c, 200,
                 "",
-                e.data
+                e.response
             );
 
             // Free
+            _webui_free_mem((void *) &packet);
             _webui_free_mem((void *) &webui_internal_id);
-            _webui_free_mem((void *) &e.data);
+
+            // Free data allocated by user callback
+            if(e.response != NULL) {
+                if(_webui_ptr_exist(e.response)) {
+                    // This block of memory is allocated by WebUI
+                    // for example the user callback used webui_return_int()
+                    // It's totally safe to free it right now
+                    _webui_free_mem((void *) &e.response);
+                }
+                else {
+                    // This block of memory is allocated by 
+                    // the user-callback in another language
+                    // for example Python, Rust, Golang...
+                    // We should not free it, it's unsafe.
+                    e.response = NULL;
+                }
+            }
         }
         else {
 
@@ -1937,7 +1977,7 @@ int _webui_run_browser(webui_window_t* win, char* cmd) {
 
         #ifdef _WIN32
             HANDLE user_fun_thread = CreateThread(NULL, 0, _webui_run_browser_detect_proc_task, (void *) arg, 0, NULL);
-            if (user_fun_thread != NULL)
+            if(user_fun_thread != NULL)
                 CloseHandle(user_fun_thread);
         #else
             pthread_t thread;
@@ -2447,7 +2487,7 @@ bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
         #ifdef _WIN32
             HANDLE thread = CreateThread(NULL, 0, webui_server_start, (void *) win, 0, NULL);
             win->core.server_thread = thread;
-            if (thread != NULL)
+            if(thread != NULL)
                 CloseHandle(thread);
         #elif __linux__
             pthread_t thread;
@@ -2563,7 +2603,7 @@ unsigned int webui_bind(webui_window_t* win, const char* element, void (*func)(w
     e.element_name = arg->element_name;
     e.window = arg->win;
     e.data = arg->data;
-    e.data_len = arg->data_len;
+    e.response = NULL;
 
     unsigned int cb_index = _webui_get_cb_index(arg->webui_internal_id);
 
@@ -2613,7 +2653,6 @@ void _webui_window_event(webui_window_t* win, char* webui_internal_id, char* ele
         arg->data = data;
     else
         arg->data = (void*) webui_empty_string;
-    arg->data_len = data_len;
 
     #ifdef _WIN32
         HANDLE user_fun_thread = CreateThread(NULL, 0, _webui_cb, (void *) arg, 0, NULL);
@@ -2822,11 +2861,12 @@ const char* webui_get_string(webui_event_t* e) {
         printf("[0] webui_get_string()... \n");
     #endif
 
-    if(e->data != NULL && e->data_len > 0 && e->data_len <= WEBUI_MAX_BUF) {
+    if(e->data != NULL) {
         size_t len = strlen(e->data);
         if(len > 0 && len <= WEBUI_MAX_BUF)
             return (const char *) e->data;
     }
+
     return webui_empty_string;
 }
 
@@ -2836,8 +2876,12 @@ int webui_get_int(webui_event_t* e) {
         printf("[0] webui_get_int()... \n");
     #endif
 
-    if(e->data != NULL && e->data_len > 0 && e->data_len <= WEBUI_MAX_BUF)
-        return atoi((const char *) e->data);
+    if(e->data != NULL) {
+        size_t len = strlen(e->data);
+        if(len > 0 && len <= 24) // long long has ~19 char len
+            return atoi((const char *) e->data);
+    }
+    
     return 0;
 }
 
@@ -2847,9 +2891,10 @@ bool webui_get_bool(webui_event_t* e) {
         printf("[0] webui_get_bool()... \n");
     #endif
 
-    if(webui_get_int(e) > 0)
-        return true;
-    return false;
+    if(webui_get_int(e) == 0)
+        return false;
+    
+    return true;
 }
 
 void webui_return_int(webui_event_t* e, int n) {
@@ -2863,18 +2908,14 @@ void webui_return_int(webui_event_t* e, int n) {
     char* buf = (char*) _webui_malloc(len + 1);
     sprintf(buf, "%d", n);
 
-    // Free old data
-    _webui_free_mem((void *) &e->data);
-
-    // Update data
-    e->data = buf;
-    e->data_len = len;
+    // Set response
+    e->response = buf;
 }
 
 void webui_return_string(webui_event_t* e, char* s) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_return_int([%d])... \n", e->window_id, n);
+        printf("[%d] webui_return_string([%s])... \n", e->window_id, s);
     #endif
 
     if(_webui_is_empty(s))
@@ -2885,31 +2926,23 @@ void webui_return_string(webui_event_t* e, char* s) {
     char* buf = (char*) _webui_malloc(len + 1);
     memcpy(buf, s, len);
 
-    // Free old data
-    _webui_free_mem((void *) &e->data);
-
-    // Update data
-    e->data = buf;
-    e->data_len = len;
+    // Set response
+    e->response = buf;
 }
 
 void webui_return_bool(webui_event_t* e, bool b) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_return_int([%d])... \n", e->window_id, n);
+        printf("[%d] webui_return_bool([%d])... \n", e->window_id, b);
     #endif
 
     // Bool to Str
-    int len = sizeof(bool);
-    bool* buf = (bool*) _webui_malloc(len + 1);
+    int len = 1;
+    char* buf = (char*) _webui_malloc(len + 1);
     sprintf(buf, "%d", b);
 
-    // Free old data
-    _webui_free_mem((void *) &e->data);
-
-    // Update data
-    e->data = buf;
-    e->data_len = len;
+    // Set response
+    e->response = buf;
 }
 
 bool webui_open(webui_window_t* win, const char* url, unsigned int browser) {
@@ -3190,7 +3223,7 @@ void _webui_init() {
     memset(&webui, 0x0, sizeof(webui_t));
     webui.initialized           = true;
     webui.use_timeout           = true;
-    webui.startup_timeout       = 5; // Seconds
+    webui.startup_timeout       = WEBUI_DEF_TIMEOUT;
     webui.timeout_extra         = true;
     webui.browser.chrome        = 1;
     webui.browser.firefox       = 2;
@@ -3244,34 +3277,54 @@ unsigned int _webui_set_cb_index(char* webui_internal_id) {
 
 // --[Interface]---------------
 
-void webui_bind_int_handler(webui_event_t* e) {
+void webui_bind_interface_handler(webui_event_t* e) {
+
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_bind_interface_handler()... \n", e->window_id);
+    #endif
 
     unsigned int cb_index = e->element_id;
 
-    if(cb_index > 0 && webui.cb_int[cb_index] != NULL)
-        webui.cb_int[cb_index](e->element_id, e->window_id, e->element_name, e->window);
+    if(cb_index > 0 && webui.cb_interface[cb_index] != NULL)
+        webui.cb_interface[cb_index](e->element_id, e->window_id, e->element_name, e->window, (char*)e->data, (char**)&e->response);
+    
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_bind_interface_handler()... user-callback response [%s]\n", e->window_id, (const char *)e->response);
+    #endif
 }
 
-void webui_bind_int_all_handler(webui_event_t* e) {
+void webui_bind_interface_all_handler(webui_event_t* e) {
 
-    if(webui.cb_int_all[0] != NULL)
-        webui.cb_int_all[0](e->element_id, e->window_id, e->element_name, e->window);
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_bind_interface_all_handler()... \n", e->window_id);
+    #endif
+
+    if(webui.cb_interface_all[0] != NULL)
+        webui.cb_interface_all[0](e->element_id, e->window_id, e->element_name, e->window, (char*)e->data, (char**)&e->response);
+
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_bind_interface_all_handler()... user-callback response [%s]\n", e->window_id, (const char *)e->response);
+    #endif
 }
 
-unsigned int webui_bind_interface(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*, webui_window_t*)) {
+unsigned int webui_bind_interface(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*, webui_window_t*, char*, char**)) {
+
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_bind_interface()... \n", win->core.window_number);
+    #endif
 
     if(_webui_is_empty(element)) {
 
         // Bind All
-        webui_bind_all(win, webui_bind_int_all_handler);
-        webui.cb_int_all[0] = func;
+        webui_bind_all(win, webui_bind_interface_all_handler);
+        webui.cb_interface_all[0] = func;
         return 0;
     }
     else {
 
         // Bind
-        unsigned int cb_index = webui_bind(win, element, webui_bind_int_handler);
-        webui.cb_int[cb_index] = func;
+        unsigned int cb_index = webui_bind(win, element, webui_bind_interface_handler);
+        webui.cb_interface[cb_index] = func;
         return cb_index;
     }
 }
