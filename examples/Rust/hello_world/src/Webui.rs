@@ -146,7 +146,7 @@ pub struct webui_t {
     pub initialized: bool,
     pub cb: [::std::option::Option<unsafe extern "C" fn(e: *mut webui_event_t)>;
         32usize],
-    pub cb_int: [::std::option::Option<
+    pub cb_interface: [::std::option::Option<
         unsafe extern "C" fn(
             element_id: ::std::os::raw::c_uint,
             window_id: ::std::os::raw::c_uint,

@@ -45,24 +45,30 @@ html = """
 	<body>
 		<h2>Python Debug & Development</h2>
 		<br>
-		<input type="password" id="MyInput" OnKeyUp="document.getElementById('err').innerHTML='&nbsp;';" autocomplete="off">
+		<input type="text" id="MyInput" OnKeyUp="document.getElementById('err').innerHTML='&nbsp;';" autocomplete="off" value=\"2\">
 		<br>
-	<h3 id="err" style="color: #dbdd52">&nbsp;</h3>
+		<h3 id="err" style="color: #dbdd52">&nbsp;</h3>
 		<br>
-	<button id="TestID">Test</button> - <button id="ExitID">Exit</button>
-	</body>
-</html>
+		<button id="TestID">Test Python-To-JS</button>
+		<button OnClick="MyJS();">Test JS-To-Python</button>
+		<button id="ExitID">Exit</button>
+		<script>
+			function MyJS() {
+				const number = document.getElementById('MyInput').value;
+				var result = webui_fn('Test2', number);
+				document.getElementById('MyInput').value = result;
+			}
+		</script>
+    </body></html>
 """
 
 def test(e : webui.event):
-
-	# Print some info (optional)
 	print('Element_id: ' + str(e.element_id))
 	print('Window_id: ' + str(e.window_id))
 	print('Element_name: ' + e.element_name)
 
 	# Run JavaScript to get the password
-	res = e.window.run_js("return document.getElementById(\"MyInput\").value;")
+	res = e.window.run_js("return document.getElementById('MyInput').value;")
 
 	# Check for any error
 	if res.error is True:
@@ -70,7 +76,19 @@ def test(e : webui.event):
 	else:
 		print("JavaScript OK -> Output: [" + res.data + "]")
 
+def test2(e : webui.event):
+	print('Element_id: ' + str(e.element_id))
+	print('Window_id: ' + str(e.window_id))
+	print('Element_name: ' + e.element_name)
+	print('Data: ' + e.data)
+	v = int(e.data)
+	v = v * 2
+	return v
+
 def close(e : webui.event):
+	print('Element_id: ' + str(e.element_id))
+	print('Window_id: ' + str(e.window_id))
+	print('Element_name: ' + e.element_name)
 	webui.exit()
 
 def main():
@@ -80,6 +98,7 @@ def main():
 
 	# Bind am HTML element ID with a python function
 	MyWindow.bind_all(test)
+	MyWindow.bind('Test2', test2)
 	MyWindow.bind('ExitID', close)
 
 	# Show the window
