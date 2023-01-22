@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Tic Tac Toe</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <section>
+        <h1 class="game--title">Tic Tac Toe WebUI</h1>
+        <div class="game--container">
+            <div data-cell-index="0" id="0" class="cell" OnClick="webui_fn('but',this.getAttribute('data-cell-index'));" ></div>
+            <div data-cell-index="1" id="1" class="cell"  ></div>
+            <div data-cell-index="2" id="2" class="cell"  ></div>
+            <div data-cell-index="3" id="3" class="cell"  ></div>
+            <div data-cell-index="4" id="4" class="cell"  ></div>
+            <div data-cell-index="5" id="5" class="cell"  ></div>
+            <div data-cell-index="6" id="6" class="cell"  ></div>
+            <div data-cell-index="7" id="7" class="cell"  ></div>
+            <div data-cell-index="8" id="8" class="cell"  ></div>
+        </div>
+        <h2 class="game--status">It's X 's turn</h2>
+        <button class="game--restart" id="clear">Restart Game</button>
+    </section>
+
+    <script src="/webui.js"></script>
+</body>
+</html>
