@@ -1,11 +1,11 @@
 /*
-    WebUI Library 2.0.5
+    WebUI Library 2.0.6
     
     http://webui.me
     https://github.com/alifcommunity/webui
 
     Licensed under GNU General Public License v3.0.
-    Copyright (C)2022 Hassan DRAGA <https://github.com/hassandraga>.
+    Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga>.
 */
 
 #ifndef _WEBUI_H
@@ -17,7 +17,7 @@
     #define EXPORT extern
 #endif
 
-#define WEBUI_VERSION           "2.0.5"     // Version
+#define WEBUI_VERSION           "2.0.6"     // Version
 #define WEBUI_HEADER_SIGNATURE  0xFF        // All packets should start with this 8bit
 #define WEBUI_HEADER_JS         0xFE        // Javascript result in frontend
 #define WEBUI_HEADER_CLICK      0xFD        // Click event
