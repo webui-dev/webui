@@ -1,10 +1,10 @@
-# WebUI Library 2.0.5
+# WebUI Library 2.0.6
 #
 # http://webui.me
 # https://github.com/alifcommunity/webui
 #
 # Licensed under GNU General Public License v3.0.
-# Copyright (C)2022 Hassan DRAGA <https://github.com/hassandraga>.
+# Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga>.
 
 
 import os
