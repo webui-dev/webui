@@ -20,11 +20,17 @@
 // -- Heap ----------------------------
 webui_t webui;
 
+#ifdef WEBUI_LOG
+    #define WEBUI_JS_LOG "true"
+#else
+    #define WEBUI_JS_LOG "false"
+#endif
+
 // -- WebUI JS-Bridge ---------
 // This is a uncompressed version to make the debugging
 // more easy in the browser using the builtin dev-tools
 static const char* webui_javascript_bridge = 
-"var _webui_log = false; \n"
+"var _webui_log = " WEBUI_JS_LOG "; \n"
 "var _webui_ws; \n"
 "var _webui_ws_status = false; \n"
 "var _webui_ws_status_once = false; \n"
@@ -189,13 +195,25 @@ static const char* webui_javascript_bridge =
 "    if(!_webui_ws_status_once) { \n"
 "        _webui_freeze_ui(); \n"
 "        alert('WebUI failed to connect to the background application. Please try again.'); \n"
-"        if(!_webui_log) \n"
-"            window.close(); \n"
+"        if(!_webui_log) window.close(); \n"
 "    } \n"
 "}, 1500); \n"
-"window.addEventListener('load', _webui_start()); \n"
-"function UnloadHandler(){window.removeEventListener('unload', UnloadHandler, false);} \n"
-"window.addEventListener('unload', UnloadHandler, false);";
+"window.addEventListener('unload', unload_handler, false); \n"
+"function unload_handler(){ \n"
+"    // Unload for 'back' & 'forward' navigation \n"
+"    window.removeEventListener('unload', unload_handler, false); \n"
+"} \n"
+"// Links \n"
+"document.addEventListener('click', e => { \n"
+"    const attribute = e.target.closest('a'); \n"
+"    if(attribute){ \n"
+"        const link = attribute.href; \n"
+"        e.preventDefault(); \n"
+"        _webui_close(_WEBUI_SWITCH, link); \n"
+"    } \n"
+"}); \n"
+"// Load \n"
+"window.addEventListener('load', _webui_start()); \n";
 
 // -- Heap ----------------------------
 static const char* webui_html_served = "<html><head><title>Access Denied</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Access Denied</h2><p>You can't access this content<br>because it's already processed.<br><br>The current security policy denies<br>multiple requests.</p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
@@ -847,7 +865,7 @@ const char* _webui_generate_js_bridge(webui_window_t* win) {
     #endif
 
     // Calculate the cb size
-    size_t cb_mem_size = 256; // To hold `const _webui_bind_list = ["elem1", "elem2",];`
+    size_t cb_mem_size = 256; // To hold 'const _webui_bind_list = ["elem1", "elem2",];'
     for(unsigned int i = 1; i < WEBUI_MAX_ARRAY; i++)
         if(!_webui_is_empty(webui.html_elements[i]))
             cb_mem_size += strlen(webui.html_elements[i]) + 3;
