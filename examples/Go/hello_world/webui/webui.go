@@ -12,8 +12,8 @@ package webui
 // [?] Change the library path as you need
 #cgo CFLAGS: -I ./ -I ../../../../include
 #cgo windows LDFLAGS: -L ./ -L ../../../../build/Windows/GCC/ -L ../../../../build/Windows/MSVC/ -lwebui-2-static-x64 -lws2_32
-#cgo darwin LDFLAGS: -L ./ -L ../../../../build/macOS/GCC/ -L ../../../../build/macOS/Clang/ -lwebui-2-static-x64 -lpthread
-#cgo linux LDFLAGS: -L ./ -L ../../../../build/Linux/GCC/ -L ../../../../build/Linux/Clang/ -lwebui-2-static-x64 -lpthread
+#cgo darwin LDFLAGS: -L ./ -L ../../../../build/macOS/GCC/ -L ../../../../build/macOS/Clang/ -lwebui-2-static-x64 -lpthread -lm
+#cgo linux LDFLAGS: -L ./ -L ../../../../build/Linux/GCC/ -L ../../../../build/Linux/Clang/ -lwebui-2-static-x64 -lpthread -lm
 #include <webui.h>
 extern void webui_go_handler(webui_window_t* _window, unsigned int _element_id, unsigned int _window_id, char* _element_name);
 static void webui_bind_go_handler(webui_event_t* e) {
