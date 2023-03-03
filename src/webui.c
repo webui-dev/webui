@@ -125,10 +125,8 @@ static const char* webui_javascript_bridge =
 "    } \n"
 "} \n"
 "function _webui_clicks_listener() { \n"
-"    var count = 0; \n"
 "    Object.keys(window).forEach(key=>{ \n"
 "        if(/^on(click)/.test(key)) { \n"
-"            count++; \n"
 "            window.addEventListener(key.slice(2),event=>{ \n"
 "                if(event.target.id !== '') { \n"
 "                    if(_webui_bind_all || _webui_bind_list.includes(_webui_win_num + '/' + event.target.id)) \n"
@@ -137,8 +135,6 @@ static const char* webui_javascript_bridge =
 "            }); \n"
 "        } \n"
 "    }); \n"
-"    if(_webui_log) \n"
-"        console.log('WebUI -> Click listening for ' + count + ' elements'); \n"
 "} \n"
 "function _webui_send_click(elem) { \n"
 "    if(_webui_ws_status && elem !== '') { \n"
@@ -224,7 +220,7 @@ static const char* webui_def_icon = "<?xml version=\"1.0\" ?><svg height=\"24\" 
 static const char* webui_def_icon_type = "image/svg+xml";
 static const char* webui_js_empty = "WEBUI_JS_EMPTY";
 static const char* webui_js_timeout = "WEBUI_JS_TIMEOUT";
-static const char* const webui_empty_string = ""; // In case the optimization is disabled
+static const char* const webui_empty_string = ""; // In case the compiler optimization is disabled
 
 #ifdef _WIN32
     static const char* webui_sep = "\\";
@@ -458,6 +454,35 @@ bool _webui_is_empty(const char* s) {
     if((s != NULL) && (s[0] != '\0'))
         return false;
     return true;
+}
+
+bool _webui_file_exist_mg(void *ev_data) {
+    
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_file_exist_mg()... \n");
+    #endif
+
+    char* file;
+    char* full_path;
+
+    struct mg_http_message *hm = (struct mg_http_message *) ev_data;
+
+    // Get file name
+    file = (char*) _webui_malloc(hm->uri.len + 1);
+    const char* p = hm->uri.ptr;
+    p++; // Skip "/"
+    sprintf(file, "%.*s", (int)(hm->uri.len - 1), p);
+
+    // Get full path
+    full_path = (char*) _webui_malloc(strlen(webui.executable_path) + 1 + strlen(file) + 1);
+    sprintf(full_path, "%s%s%s", webui.executable_path, webui_sep, file);
+
+    bool exist = _webui_file_exist(full_path);
+
+    _webui_free_mem((void *) &file);
+    _webui_free_mem((void *) &full_path);
+
+    return exist;
 }
 
 bool _webui_file_exist(char* file) {
@@ -1036,7 +1061,7 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
                 _webui_free_mem((void *) &index);
                 
                 // Index.html
-                // Serve as a normal text-based file
+                // Serve as a normal HTML text-based file
                 _webui_serve_file(win, c, ev_data);
             }
             else {
@@ -1046,16 +1071,17 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
                 if(!win->core.multi_access && win->core.server_handled) {
 
                     // Main HTML already handled.
+                    // Forbidden 403
 
                     #ifdef WEBUI_LOG
-                        printf("[%d] _webui_server_event_handler()... HTML Main Already Handled\n", win->core.window_number);
+                        printf("[%d] _webui_server_event_handler()... HTML Main Already Handled (403)\n", win->core.window_number);
                     #endif
 
                     // Header
                     // text/html; charset=utf-8
 
                     mg_http_reply(
-                        c, 200,
+                        c, 403,
                         "",
                         webui_html_served
                     );
@@ -1243,20 +1269,32 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
             }
             else {
 
-                // Forbidden
+                // This is a non-server-folder mode
+                // but the HTML body request a local file
+                // this request can be css, js, image, etc...
 
-                #ifdef WEBUI_LOG
-                    printf("[%d] _webui_server_event_handler()... HTML 403\n", win->core.window_number);
-                #endif
+                if(_webui_file_exist_mg(ev_data)) {
 
-                // Header
-                // text/html; charset=utf-8
+                    // Serve as a normal text-based file
+                    _webui_serve_file(win, c, ev_data);
+                }
+                else {
 
-                mg_http_reply(
-                    c, 200,
-                    "",
-                    webui_html_res_not_available
-                );
+                    // 404
+
+                    #ifdef WEBUI_LOG
+                        printf("[%d] _webui_server_event_handler()... HTML 404\n", win->core.window_number);
+                    #endif
+
+                    // Header
+                    // text/html; charset=utf-8
+
+                    mg_http_reply(
+                        c, 404,
+                        "",
+                        webui_html_res_not_available
+                    );
+                }
             }
         }
     }
@@ -1408,9 +1446,37 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
                     for(;;) {
 
                         // Wait forever for disconnection
+
                         mg_mgr_poll(&mgr, 1);
-                        if(!win->core.connected || webui.exit_now)
+
+                        // Exit signal
+                        if(webui.exit_now){
+                            stop = true;
                             break;
+                        }
+
+                        if(!win->core.connected){
+
+                            // The UI is just get disconnected
+                            // let's wait for re-connection...
+
+                            webui_timer_t timer;
+                            _webui_timer_start(&timer);
+                            for(;;) {
+
+                                // Stop if window is connected
+                                mg_mgr_poll(&mgr, 1);
+                                if(win->core.connected)
+                                    break;
+
+                                // Stop if timer is finished
+                                if(_webui_timer_is_end(&timer, 2500))
+                                    break;
+                            }
+
+                            if(!win->core.connected)
+                                break;
+                        }
                     }
 
                     if(win->core.server_handled)
@@ -2321,6 +2387,7 @@ webui_window_t* webui_new_window() {
     win->core.browser_path = (char*) _webui_malloc(1024);
     win->core.profile_path = (char*) _webui_malloc(1024);
     win->path = (char*) _webui_malloc(WEBUI_MAX_PATH);
+    sprintf(win->path, "%s", WEBUI_DEFAULT_PATH);
     
     #ifdef WEBUI_LOG
         printf("[0] webui_new_window() -> New window @ 0x%p\n", win);

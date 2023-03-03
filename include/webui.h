@@ -279,6 +279,8 @@ EXPORT const char* _webui_generate_js_bridge(webui_window_t* win);
 EXPORT void _webui_print_hex(const char* data, size_t len);
 EXPORT void _webui_free_mem(void **p);
 EXPORT void _webui_str_copy(char *destination, char *source);
+EXPORT bool _webui_file_exist_mg(void *ev_data);
+EXPORT bool _webui_file_exist(char* file);
 #ifdef _WIN32
     EXPORT DWORD WINAPI _webui_cb(LPVOID _arg);
     EXPORT DWORD WINAPI _webui_run_browser_task(LPVOID _arg);
