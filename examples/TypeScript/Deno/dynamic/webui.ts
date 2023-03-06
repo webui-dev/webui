@@ -7,6 +7,7 @@
 // Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga>.
 
 import { existsSync } from "https://deno.land/std/fs/mod.ts";
+//import { readCString } from "https://deno.land/std/c/strings/mod.ts";
 
 const version = '2.0.6';
 const encoder = new TextEncoder();
@@ -25,17 +26,18 @@ interface event {
     window_id: number;
     element_name_ptr: string;
     win: Deno.Pointer;
+    data: string;
 }
 
 // Determine the library name based
 // on the current OS
 var lib_name;
 if (Deno.build.os === 'windows')
-    lib_name = 'webui-2-x64x.dll';
-if (Deno.build.os === 'linux')
-    lib_name = 'webui-2-x64x.so';
+    lib_name = 'webui-2-x64.dll';
+else if (Deno.build.os === 'linux')
+    lib_name = 'webui-2-x64.so';
 else
-    lib_name = 'webui-2-x64x.dyn';
+    lib_name = 'webui-2-x64.dyn';
 
 // Full path to the library name
 var lib_path = './' + lib_name;
@@ -129,7 +131,7 @@ export function exit() {
 export async function wait() {
     load_lib();
     while(true) {
-        await sleep(100);
+        await sleep(250);
         if(!webui_lib.symbols.webui_is_app_running())
             break;
     }
@@ -139,25 +141,58 @@ export function bind(win, element, func) : number {
     load_lib();
     const callbackResource = new Deno.UnsafeCallback(
         {
-            parameters: ['u32', 'u32', 'pointer', 'pointer'],
+            parameters: ['u32', 'u32', 'pointer', 'pointer', 'pointer', 'pointer'],
             result: 'void',
         } as const,
         (
-            element_id: Deno.u32,
-            window_id: Deno.u32,
-            element_name_ptr: Deno.PointerValue,
-            win: Deno.Pointer,
+            param_element_id: Deno.u32,
+            param_window_id: Deno.u32,
+            param_element_name_ptr: Deno.Pointer,
+            param_win: Deno.Pointer,
+            param_data: Deno.Pointer,
+            param_response: Deno.Pointer,
         ) => {
-            const element_name = new Deno.UnsafePointerView(BigInt(element_name_ptr)).getCString();
+
+            // Create elements
+            const element_id = parseInt(param_element_id);
+            const window_id = parseInt(param_window_id);
+            const element_name = new Deno.UnsafePointerView(param_element_name_ptr).getCString();
+            const win = param_win;
+            const data = new Deno.UnsafePointerView(param_data).getCString();
+
+            // Create struct
             const e: event = {
                 element_id: element_id,
                 window_id: window_id,
                 element_name: element_name,
                 win: win,
+                data: data,
             };
-            func(e);
+
+            // Call callback
+            const result = String(func(e));
+
+            // TODO -----------------------------------------------------------------------
+            //
+            // `result`         : The callback result in string
+            // `param_response` : It's a non initialized (null) `char**`
+            //
+            // Now, we should create a non-garbage colleted buffer, fill it with `result`
+            // and set it to `param_response`.
+
+            // Create A Buffer
+            // This code is by ChatGPT (AI)
+            const encoder = new TextEncoder(); // Create a TextEncoder instance
+            const resultBytes = encoder.encode(result); // Convert the string to bytes
+            const buf = new Uint8Array(resultBytes.length + 1); // Allocate a buffer to hold the string
+            buf.set(resultBytes); // Copy the bytes of the string into the buffer
+            buf[resultBytes.length] = 0; // Set the null terminator
+
+            // Set our buffer `buf` to `char**`
+            param_response = buf;
         },
     );
+
 	webui_lib.symbols.webui_bind_interface(win, string_to_uint8array(element), callbackResource.pointer);
     return 0;
 }

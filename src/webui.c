@@ -3116,10 +3116,11 @@ void webui_exit() {
 bool webui_is_app_running() {
 
     #ifdef WEBUI_LOG
-        printf("[0] webui_is_app_running()... \n");
+        // printf("[0] webui_is_app_running()... \n");
     #endif
 
-    _webui_init();
+    if(!webui.initialized)
+        _webui_init();
     
     if(webui.use_timeout) {
         if(webui.wait_for_socket_window) {
@@ -3133,6 +3134,7 @@ bool webui_is_app_running() {
             return true;
         return false;
     }
+
     return false;
 }
 
@@ -3404,7 +3406,7 @@ void webui_bind_interface_handler(webui_event_t* e) {
 
     if(cb_index > 0 && webui.cb_interface[cb_index] != NULL)
         webui.cb_interface[cb_index](e->element_id, e->window_id, e->element_name, e->window, (char*)e->data, (char**)&e->response);
-    
+
     #ifdef WEBUI_LOG
         printf("[%d] webui_bind_interface_handler()... user-callback response [%s]\n", e->window_id, (const char *)e->response);
     #endif
