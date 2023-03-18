@@ -1,0 +1,10 @@
+.{
+    .name = "minimal",
+    .version = "0.0.1",
+    .dependencies = .{
+        .webui = .{
+            .url = "https://github.com/desttinghim/webui/archive/e8ce3b54f6975c71249c0cc5898ffe7273e81055.tar.gz",
+            .hash = "1220ed6841d9b2ffdd69a496dab958d71059b9d73aef655b9169b975760079582177",
+        },
+    },
+}
