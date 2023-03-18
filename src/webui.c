@@ -1786,30 +1786,49 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
         #endif
 
     }
-    else if(browser == webui.browser.chrome) {
+else if(browser == webui.browser.chrome) {
 
-        // Chrome
+    // Chrome
 
-        #ifdef _WIN32
+    #ifdef _WIN32
 
-            // Chrome on Windows
+        // Chrome on Windows
 
-            char fullpath32[1024];
-            char fullpath64[1024];
-            sprintf(fullpath32, "%s%sGoogle\\Chrome\\Application\\chrome.exe", programs_folder32, webui_sep);
-            sprintf(fullpath64, "%s%sGoogle\\Chrome\\Application\\chrome.exe", programs_folder64, webui_sep);
+        char fullpath32_chrome[1024];
+        char fullpath64_chrome[1024];
+        char fullpath32_chromium[1024];
+        char fullpath64_chromium[1024];
+        
+        // Chrome paths
+        sprintf(fullpath32_chrome, "%s%sGoogle\\Chrome\\Application\\chrome.exe", programs_folder32, webui_sep);
+        sprintf(fullpath64_chrome, "%s%sGoogle\\Chrome\\Application\\chrome.exe", programs_folder64, webui_sep);
 
-            if(_webui_file_exist(fullpath64)) {
+        // Chromium paths
+        sprintf(fullpath32_chromium, "%s%sChromium\\Application\\chrome.exe", programs_folder32, webui_sep);
+        sprintf(fullpath64_chromium, "%s%sChromium\\Application\\chrome.exe", programs_folder64, webui_sep);
 
-                sprintf(win->core.browser_path, "\"%s\"", fullpath64);
-                return true;
-            }
-            else if(_webui_file_exist(fullpath32)) {
+        if(_webui_file_exist(fullpath64_chrome)) {
 
-                sprintf(win->core.browser_path, "\"%s\"", fullpath32);
-                return true;
-            }
-            else return false;
+            sprintf(win->core.browser_path, "\"%s\"", fullpath64_chrome);
+            return true;
+        }
+        else if(_webui_file_exist(fullpath32_chrome)) {
+
+            sprintf(win->core.browser_path, "\"%s\"", fullpath32_chrome);
+            return true;
+        }
+        else if(_webui_file_exist(fullpath64_chromium)) {
+
+            sprintf(win->core.browser_path, "\"%s\"", fullpath64_chromium);
+            return true;
+        }
+        else if(_webui_file_exist(fullpath32_chromium)) {
+
+            sprintf(win->core.browser_path, "\"%s\"", fullpath32_chromium);
+            return true;
+        }
+        else return false;
+
 
         #elif __APPLE__
 
