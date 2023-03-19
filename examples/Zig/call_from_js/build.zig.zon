@@ -1,0 +1,10 @@
+.{
+    .name = "hello_world",
+    .version = "0.0.1",
+    .dependencies = .{
+        .webui = .{
+            .url = "https://github.com/desttinghim/webui/archive/c3a02919d3a1e39f68fff377c4e3ba05af84d414.tar.gz",
+            .hash = "122074780f39cdcf938114377b6a5fb249de5e4ae226614fb60a1331bbe173b3636b",
+        },
+    },
+}

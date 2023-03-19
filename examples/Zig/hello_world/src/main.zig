@@ -26,8 +26,6 @@ pub fn main() void {
         \\ </html>;
     ;
 
-    std.log.debug("Hello", .{});
-
     // Create a window
     var my_window: *c.webui_window_t = c.webui_new_window();
 
