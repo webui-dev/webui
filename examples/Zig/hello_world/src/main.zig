@@ -6,7 +6,7 @@ pub fn main() void {
         \\ <!DOCTYPE html>
         \\ <html>
         \\     <head>
-        \\         <title>WebUI 2 - C99 Example</title>
+        \\         <title>WebUI 2 - Zig Example</title>
         \\         <style>
         \\         body{
         \\             color: white; background: #0F2027;
@@ -54,7 +54,7 @@ export fn close_the_application(e: ?*c.webui_event_t) callconv(.C) void {
 // check the password function
 export fn check_the_password(e_opt: ?*c.webui_event_t) callconv(.C) void {
     const e = e_opt orelse {
-        std.log.err("Passed an empty event: {}", .{@src()});
+        std.log.err("check_the_pasword passed an empty event", .{});
         return;
     };
 
@@ -75,7 +75,7 @@ export fn check_the_password(e_opt: ?*c.webui_event_t) callconv(.C) void {
     }
 
     // Get the password
-    const password = js.result.data;
+    const password = std.mem.span(js.result.data);
     std.log.info("Password: {s}", .{password});
 
     // Check the password
