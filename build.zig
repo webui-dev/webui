@@ -20,6 +20,6 @@ pub fn build(b: *std.Build) void {
     lib.install();
 
     if (target.isWindows()) {
-        lib.linkSystemLibrary("Ws2_32");
+        lib.linkSystemLibrary("ws2_32");
     }
 }
