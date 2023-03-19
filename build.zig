@@ -18,4 +18,8 @@ pub fn build(b: *std.Build) void {
     lib.addIncludePath("include");
     lib.installHeadersDirectory("include", "");
     lib.install();
+
+    if (target.isWindows()) {
+        lib.linkSystemLibrary("Ws2_32");
+    }
 }
