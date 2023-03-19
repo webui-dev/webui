@@ -1,5 +1,5 @@
 .{
-    .name = "call_from_js",
+    .name = "serve_folder",
     .version = "0.0.1",
     .dependencies = .{
         .webui = .{
