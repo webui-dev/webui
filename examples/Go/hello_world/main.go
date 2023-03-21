@@ -112,5 +112,5 @@ func main() {
 	// Loop
 	webui.Wait()
 
-	fmt.Println("Bye.")
+	fmt.Println("Thank you.")
 }

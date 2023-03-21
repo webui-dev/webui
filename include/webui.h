@@ -1,11 +1,11 @@
 /*
-    WebUI Library 2.0.6
+    WebUI Library 2.0.7
     
     http://webui.me
     https://github.com/alifcommunity/webui
 
-    Licensed under GNU General Public License v3.0.
-    Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga>.
+    Licensed under GNU Lesser General Public License v2.1.
+    Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga> - Canada.
 */
 
 #ifndef _WEBUI_H
@@ -17,7 +17,7 @@
     #define EXPORT extern
 #endif
 
-#define WEBUI_VERSION           "2.0.6"     // Version
+#define WEBUI_VERSION           "2.0.7"     // Version
 #define WEBUI_HEADER_SIGNATURE  0xFF        // All packets should start with this 8bit
 #define WEBUI_HEADER_JS         0xFE        // Javascript result in frontend
 #define WEBUI_HEADER_CLICK      0xFD        // Click event
@@ -227,6 +227,7 @@ EXPORT bool webui_get_bool(webui_event_t* e);
 EXPORT void webui_return_int(webui_event_t* e, int n);
 EXPORT void webui_return_string(webui_event_t* e, char* s);
 EXPORT void webui_return_bool(webui_event_t* e, bool b);
+EXPORT void webui_clean_mem(void* p);
 
 // -- Interface -----------------------
 // Used by other languages to create WebUI wrappers
@@ -238,7 +239,7 @@ typedef struct webui_script_interface_t {
     const char* data;
 } webui_script_interface_t;
 EXPORT unsigned int webui_bind_interface(webui_window_t* win, const char* element, void (*func)(unsigned int, unsigned int, char*, webui_window_t*, char*, char**));
-EXPORT void webui_script_interface(webui_window_t* win, const char* script, unsigned int timeout, bool* error, unsigned int* length, char* data);
+EXPORT void webui_script_interface(webui_window_t* win, const char* script, unsigned int timeout, bool* error, unsigned int* length, char** data);
 EXPORT void webui_script_interface_struct(webui_window_t* win, webui_script_interface_t* js_int);
 
 // Core
@@ -278,9 +279,9 @@ EXPORT void _webui_wait_process(webui_window_t* win, bool status);
 EXPORT const char* _webui_generate_js_bridge(webui_window_t* win);
 EXPORT void _webui_print_hex(const char* data, size_t len);
 EXPORT void _webui_free_mem(void **p);
-EXPORT void _webui_str_copy(char *destination, char *source);
 EXPORT bool _webui_file_exist_mg(void *ev_data);
 EXPORT bool _webui_file_exist(char* file);
+EXPORT void _webui_free_all_mem();
 #ifdef _WIN32
     EXPORT DWORD WINAPI _webui_cb(LPVOID _arg);
     EXPORT DWORD WINAPI _webui_run_browser_task(LPVOID _arg);

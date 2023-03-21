@@ -24,6 +24,14 @@
 - Multi-platform & Multi-Browser
 - Using private profile for safety
 
+## CppCon 2019 Presentation
+
+[Borislav Stanimirov](https://ibob.bg/) discusses using HTML5 in the web browser as GUI at the [C++ conference 2019](https://cppcon.org/).
+
+<div align="center">
+  <a href="https://www.youtube.com/watch?v=bbbcZd4cuxg"><img src="https://img.youtube.com/vi/bbbcZd4cuxg/0.jpg" alt="Embrace Modern Technology: Using HTML 5 for GUI in C++ - Borislav Stanimirov - CppCon 2019"></a>
+</div>
+
 ## UI & The Web Technologies
 
 Web application UI design is not just about how a product looks but how it works. Using web technologies in your UI makes your product modern and professional, And a well-designed web application will help you make a solid first impression on potential customers. Great web application design also assists you in nurturing leads and increasing conversions. In addition, it makes navigating and using your web app easier for your users.
@@ -32,15 +40,19 @@ Web application UI design is not just about how a product looks but how it works
 
 Today's web browsers have everything a modern UI needs. Web browsers are very sophisticated and optimized. Therefore, using it as a GUI will be an excellent choice. While old legacy GUI lib is complex and outdated, a WebView-based app is still an option. However, a WebView needs a huge SDK to build and many dependencies to run, and it can only provide some features like a real web browser. That is why WebUI uses real web browsers to give you full features of comprehensive web technologies while keeping your software lightweight and portable.
 
-## Comparison
+## How does it work?
 
 ![ScreenShot](webui_diagram.png)
 
+Think of WebUI like a WebView controller, but instead of embedding the WebView controller in your program, which makes the final program big in size and non-portable as it needs the WebView runtimes. Instead, using WebUI, you use a tiny static/dynamic library to run any installed web browser and use it as GUI by communicating with it using a WebSocket, which makes your program small, fast, and portable. **All it needs is a web browser**.
+
+## Runtime Dependencies
+
 |  | WebView | Qt | WebUI |
 | ------ | ------ | ------ | ------ |
-| Dependencies on Windows | *Windows APIs, WebView2* | *QtCore, QtGui, QtWidgets* | *No need* |
-| Dependencies on Linux | *GTK3, WebKitGTK* | *QtCore, QtGui, QtWidgets* | *No need* |
-| Dependencies on macOS | *Cocoa, WebKit* | *QtCore, QtGui, QtWidgets* | *No need* |
+| Runtime Dependencies on Windows | *WebView2* | *QtCore, QtGui, QtWidgets* | *Any Web Browser* |
+| Runtime Dependencies on Linux | *GTK3, WebKitGTK* | *QtCore, QtGui, QtWidgets* | *Any Web Browser* |
+| Runtime Dependencies on macOS | *Cocoa, WebKit* | *QtCore, QtGui, QtWidgets* | *Any Web Browser* |
 
 ## Documentation
 
@@ -61,7 +73,8 @@ Today's web browsers have everything a modern UI needs. Web browsers are very so
  - [Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust/hello_world)
  - [V - malisipi/vwebui](https://github.com/malisipi/vwebui/tree/main/examples)
  - [Nim - neroist/webui](https://github.com/neroist/webui/tree/main/examples)
- 
+ - [Zig](https://github.com/alifcommunity/webui/tree/main/examples/Zig)
+
 ## Supported Browser
 
 | OS | Browser | Status |
@@ -88,6 +101,7 @@ Today's web browsers have everything a modern UI needs. Web browsers are very so
 | Rust | ✔️ | [examples/Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust) |
 | V | ✔️ | [malisipi/vwebui](https://github.com/malisipi/vwebui) |
 | Nim | ✔️ | [neroist/webui](https://github.com/neroist/webui) |
+| Zig | ✔️ | [examples/Zig](https://github.com/alifcommunity/webui/tree/main/examples/Zig) |
 
 ### License
 
