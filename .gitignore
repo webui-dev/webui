@@ -32,3 +32,9 @@ target/
 
 # Broken NTFS
 nul
+
+# Zig
+/zig-cache/
+/zig-out/
+/examples/Zig/*/zig-cache/
+/examples/Zig/*/zig-out/
