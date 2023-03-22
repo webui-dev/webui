@@ -1,12 +1,12 @@
 /*
-	WebUI Library 2.x
+	WebUI Library 2.0.7
 	C99 Visual Studio Example
 
 	http://webui.me
 	https://github.com/alifcommunity/webui
 
 	Licensed under GNU General Public License v3.0.
-	Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga>.
+	Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga> - Canada.
 */
 
 #include "webui.h"

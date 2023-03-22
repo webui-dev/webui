@@ -1,11 +1,11 @@
 /*
-    WebUI Library 2.0.6
+    WebUI Library 2.0.7
     
     http://webui.me
     https://github.com/alifcommunity/webui
 
     Licensed under GNU General Public License v3.0.
-    Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga>.
+    Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga> - Canada.
 */
 
 // Flags
@@ -287,6 +287,7 @@ extern "C" {
                 window_id: ::std::os::raw::c_uint,
                 element_name: *mut ::std::os::raw::c_char,
                 window: *mut webui_window_t,
+                // TODO: Add char*, char**
             ),
         >,
     ) -> ::std::os::raw::c_uint;
@@ -298,7 +299,7 @@ extern "C" {
         timeout: ::std::os::raw::c_uint,
         error: *mut bool,
         length: *mut ::std::os::raw::c_uint,
-        data: *mut ::std::os::raw::c_char,
+        data: *mut ::std::os::raw::c_char, // TODO: Change this from char* to char**
     );
 }
 extern "C" {

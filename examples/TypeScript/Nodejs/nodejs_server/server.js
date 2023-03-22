@@ -25,6 +25,6 @@ ls.on('error', (error) => {
     process.exit();
 });
 ls.on("close", code => {
-    console.log('Bye.');
+    console.log('Thank you.');
     process.exit();
 });
