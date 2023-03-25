@@ -2372,9 +2372,9 @@ bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int
             return _webui_browser_start_edge(win, address);
         else if(browser == webui.browser.custom)
             return _webui_browser_start_custom(win, address);
-				else if(browser == webui.browser.chromium)
-						return _webui_browser_start_chromium(win, address);
-				else
+        else if(browser == webui.browser.chromium)
+            return _webui_browser_start_chromium(win, address);
+        else
             return false;
     }
     else if(win->core.CurrentBrowser != 0) {
@@ -2388,9 +2388,9 @@ bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int
             return _webui_browser_start_edge(win, address);
         else if(win->core.CurrentBrowser == webui.browser.custom)
             return _webui_browser_start_custom(win, address);
-				else if(browser == webui.browser.chromium)
-						return _webui_browser_start_chromium(win, address);
-				else
+        else if(browser == webui.browser.chromium)
+            return _webui_browser_start_chromium(win, address);
+        else
             return false;
             //webui::exit();
     }
@@ -2404,27 +2404,27 @@ bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int
                 if(!_webui_browser_start_firefox(win, address))
                     if(!_webui_browser_start_edge(win, address))
                         if(!_webui_browser_start_custom(win, address))
-														if(!_webui_browser_start_chromium(win, address))
-															return false;
-															//webui::exit();
+                              if(!_webui_browser_start_chromium(win, address))
+                                    return false;
+                                    //webui::exit();
         #elif __APPLE__
             // macOS
             if(!_webui_browser_start_chrome(win, address))
                 if(!_webui_browser_start_firefox(win, address))
                     if(!_webui_browser_start_edge(win, address))
                         if(!_webui_browser_start_custom(win, address))
-														if(!_webui_browser_start_chromium(win, address))
-															return false;
-															//webui::exit();
+                              if(!_webui_browser_start_chromium(win, address))
+                                    return false;
+                                    //webui::exit();
         #else
             // Linux
             if(!_webui_browser_start_chrome(win, address))
                 if(!_webui_browser_start_firefox(win, address))
                     if(!_webui_browser_start_edge(win, address))
                         if(!_webui_browser_start_custom(win, address))
-														if(!_webui_browser_start_chromium(win, address))
-															return false;
-															//webui::exit();
+                              if(!_webui_browser_start_chromium(win, address))
+                                    return false;
+                                    //webui::exit();
         #endif
     }
 
