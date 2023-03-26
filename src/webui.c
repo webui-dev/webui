@@ -1897,8 +1897,8 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
 
 						char fullpath32[1024];
 						char fullpath64[1024];
-						sprintf(fullpath32, "%s%sChromium\\Application\\chrome.exe", programs_folder32, webui_sep);
-						sprintf(fullpath64, "%s%sChromium\\Application\\chrome.exe", programs_folder64, webui_sep);
+						sprintf(fullpath32, "%s\\..\\Local\\Chromium\\Application\\chrome.exe", getenv("APPDATA"));
+						sprintf(fullpath64, "%s\\..\\Local\\Chromium\\Application\\chrome.exe", getenv("LOCALAPPDATA"));
 
 						if (_webui_file_exist(fullpath64)) {
 
