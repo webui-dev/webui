@@ -17,6 +17,7 @@
 ## Features
 
 - Written in Pure C
+- Fully Independent (*No need for any third-party library*)
 - Lightweight (*~160 Kb using TCC*) & Small memory footprint
 - Fast WS binary communication (*App--WebUI--Browser*)
 - One header file
