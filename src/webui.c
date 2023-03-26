@@ -1897,8 +1897,8 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
 
 						char fullpath32[1024];
 						char fullpath64[1024];
-						sprintf(fullpath32, "%s%sChromium\\Application\\chrome.exe", programs_folder32, webui_sep);
-						sprintf(fullpath64, "%s%sChromium\\Application\\chrome.exe", programs_folder64, webui_sep);
+						sprintf(fullpath32, "%s\\..\\Local\\Chromium\\Application\\chrome.exe", getenv("APPDATA"));
+						sprintf(fullpath64, "%s\\..\\Local\\Chromium\\Application\\chrome.exe", getenv("LOCALAPPDATA"));
 
 						if (_webui_file_exist(fullpath64)) {
 
@@ -2370,10 +2370,10 @@ bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int
             return _webui_browser_start_firefox(win, address);
         else if(browser == webui.browser.edge)
             return _webui_browser_start_edge(win, address);
-        else if(browser == webui.browser.custom)
-            return _webui_browser_start_custom(win, address);
         else if(browser == webui.browser.chromium)
             return _webui_browser_start_chromium(win, address);
+        else if(browser == webui.browser.custom)
+            return _webui_browser_start_custom(win, address);
         else
             return false;
     }
@@ -2386,10 +2386,10 @@ bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int
             return _webui_browser_start_firefox(win, address);
         else if(win->core.CurrentBrowser == webui.browser.edge)
             return _webui_browser_start_edge(win, address);
-        else if(win->core.CurrentBrowser == webui.browser.custom)
-            return _webui_browser_start_custom(win, address);
         else if(browser == webui.browser.chromium)
             return _webui_browser_start_chromium(win, address);
+        else if(win->core.CurrentBrowser == webui.browser.custom)
+            return _webui_browser_start_custom(win, address);
         else
             return false;
             //webui::exit();
@@ -2403,8 +2403,8 @@ bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int
             if(!_webui_browser_start_chrome(win, address))
                 if(!_webui_browser_start_firefox(win, address))
                     if(!_webui_browser_start_edge(win, address))
-                        if(!_webui_browser_start_custom(win, address))
-                              if(!_webui_browser_start_chromium(win, address))
+                        if(!_webui_browser_start_chromium(win, address))
+                              if(!_webui_browser_start_custom(win, address))
                                     return false;
                                     //webui::exit();
         #elif __APPLE__
@@ -2412,8 +2412,8 @@ bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int
             if(!_webui_browser_start_chrome(win, address))
                 if(!_webui_browser_start_firefox(win, address))
                     if(!_webui_browser_start_edge(win, address))
-                        if(!_webui_browser_start_custom(win, address))
-                              if(!_webui_browser_start_chromium(win, address))
+                        if(!_webui_browser_start_chromium(win, address))
+                              if(!_webui_browser_start_custom(win, address))
                                     return false;
                                     //webui::exit();
         #else
@@ -2421,8 +2421,8 @@ bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int
             if(!_webui_browser_start_chrome(win, address))
                 if(!_webui_browser_start_firefox(win, address))
                     if(!_webui_browser_start_edge(win, address))
-                        if(!_webui_browser_start_custom(win, address))
-                              if(!_webui_browser_start_chromium(win, address))
+                        if(!_webui_browser_start_chromium(win, address))
+                              if(!_webui_browser_start_custom(win, address))
                                     return false;
                                     //webui::exit();
         #endif
