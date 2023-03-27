@@ -107,6 +107,13 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 > GNU General Public License v3.0
 
+### Contributions
+
+Contributions are welcome! Please follow the guidelines below:
+
+ - Please create PRs on the beta branches
+ - Make sure that PRs deal with one issue only
+
 ### Stargazers
 
 [![Stargazers repo roster for @alifcommunity/webui](https://reporoster.com/stars/alifcommunity/webui)](https://github.com/alifcommunity/webui/stargazers)
