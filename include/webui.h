@@ -82,6 +82,21 @@
     #define WEBUI_PCLOSE pclose
     #define WEBUI_MAX_PATH PATH_MAX
 #endif
+// -- Apple ---------------------------
+#ifdef __APPLE__
+    #include <pthread.h> // POSIX threading
+    #include <unistd.h>
+    #include <limits.h>
+    #include <dirent.h>
+    #include <sys/socket.h>
+    #include <fcntl.h>
+    #include <poll.h>
+    #define WEBUI_GET_CURRENT_DIR getcwd
+    #define WEBUI_FILE_EXIST access
+    #define WEBUI_POPEN popen
+    #define WEBUI_PCLOSE pclose
+    #define WEBUI_MAX_PATH PATH_MAX
+#endif
 
 // -- Structs -------------------------
 struct webui_event_t;
