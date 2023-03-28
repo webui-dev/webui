@@ -17,7 +17,7 @@ debug:
 	@echo "Build WebUI Library (Debug Dynamic)..."
 	@clang -g -fPIC -m64 -o mongoose.o -I "$(INCLUDE)" -c "$(SOURCE)/mongoose.c"
 	@clang -g -fPIC -m64 -o webui.o -I "$(INCLUDE)" -c "$(SOURCE)/webui.c"
-	@clang -g -shared -o webui-2-aarch64-apple-darwin.dylib webui.o mongoose.o
+	@clang -g -shared -o webui-2-x64.dyn webui.o mongoose.o
 #	Clean
 	@- rm -f *.o
 	@echo "Done."
@@ -33,7 +33,7 @@ release:
 	@echo "Build WebUI Library (Release Dynamic)..."
 	@clang -O3 -fPIC -m64 -o mongoose.o -I "$(INCLUDE)" -c "$(SOURCE)/mongoose.c"
 	@clang -O3 -fPIC -m64 -o webui.o -I "$(INCLUDE)" -c "$(SOURCE)/webui.c"
-	@clang -shared -o webui-2-aarch64-apple-darwin.dylib webui.o mongoose.o
+	@clang -shared -o webui-2-x64.dyn webui.o mongoose.o
 #	Clean
 	@- rm -f *.o
 	@echo "Done."
