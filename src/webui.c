@@ -1,11 +1,13 @@
 /*
-    WebUI Library 2.0.7
+    WebUI Library 2.1.0
     
     http://webui.me
     https://github.com/alifcommunity/webui
 
-    Licensed under GNU Lesser General Public License v2.1.
-    Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga> - Canada.
+    Copyright (c) 2020-2023 Hassan Draga.
+    Licensed under GNU General Public License v2.0.
+    All rights reserved.
+    Canada.
 */
 
 // -- Third-party ---------------------
@@ -1137,21 +1139,18 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
 
                     if(win->core.html != NULL) {
 
-                        if(strstr(win->core.html, "</html>") != NULL) {
+                        // Generate the full WebUI JS-Bridge
+                        const char* js = _webui_generate_js_bridge(win);
 
-                            // Generate the full WebUI JS-Bridge
-                            const char* js = _webui_generate_js_bridge(win);
+                        // Inject WebUI JS-Bridge into HTML
+                        size_t len = strlen(win->core.html) + strlen(js) + 128;
+                        html = (char*) _webui_malloc(len);
+                        sprintf(html, 
+                            "%s \n <script type = \"text/javascript\"> \n %s \n </script>",
+                            win->core.html, js
+                        );
 
-                            // Inject WebUI JS-Bridge into HTML
-                            size_t len = strlen(win->core.html) + strlen(js) + 512;
-                            html = (char*) _webui_malloc(len);
-                            sprintf(html, 
-                                "%s \n <script type = \"text/javascript\"> \n %s \n </script>",
-                                win->core.html, js
-                            );
-
-                            _webui_free_mem((void *) &js);
-                        }
+                        _webui_free_mem((void *) &js);
                     }
 
                     // // HTTP Header
@@ -1587,45 +1586,61 @@ bool _webui_browser_create_profile_folder(webui_window_t* win, unsigned int brow
         printf("[0] _webui_browser_create_profile_folder(%d)... \n", browser);
     #endif
     
+    // Custom Browser
     if(browser == webui.browser.custom) {
-
-        // Custom Browser
-
+        // Check the struct pointer
         if(webui.custom_browser == NULL)
             return false;
-
         return true;
     }
 
     const char* temp = _webui_browser_get_temp_path(browser);
 
-    // Chrome
-    // No need to create a folder
     if(browser == webui.browser.chrome) {
 
+        // Google Chrome
         sprintf(win->core.profile_path, "%s%s.WebUI%sWebUIChromeProfile", temp, webui_sep, webui_sep);
         return true;
     }
-    
-    // Chromium
-    // No need to create a folder
-    if(browser == webui.browser.chromium) {
+    else if(browser == webui.browser.edge) {
 
-        sprintf(win->core.profile_path, "%s%s.WebUI%sWebUIChromiumProfile", temp, webui_sep, webui_sep);
-        return true;
-    }
-		
-    // Edge
-    // No need to create a folder
-    if(browser == webui.browser.edge) {
-
+        // Edge
         sprintf(win->core.profile_path, "%s%s.WebUI%sWebUIEdgeProfile", temp, webui_sep, webui_sep);
         return true;
     }
+    else if(browser == webui.browser.epic) {
 
-    // Firefox
-    // We need to create a folder
-    if(browser == webui.browser.firefox) {
+        // Epic
+        sprintf(win->core.profile_path, "%s%s.WebUI%sWebUIEpicProfile", temp, webui_sep, webui_sep);
+        return true;
+    }
+    else if(browser == webui.browser.vivaldi) {
+
+        // Vivaldi
+        sprintf(win->core.profile_path, "%s%s.WebUI%sWebUIVivaldiProfile", temp, webui_sep, webui_sep);
+        return true;
+    }
+    else if(browser == webui.browser.brave) {
+
+        // Brave
+        sprintf(win->core.profile_path, "%s%s.WebUI%sWebUIBraveProfile", temp, webui_sep, webui_sep);
+        return true;
+    }
+    else if(browser == webui.browser.yandex) {
+
+        // Yandex
+        sprintf(win->core.profile_path, "%s%s.WebUI%sWebUIYandexProfile", temp, webui_sep, webui_sep);
+        return true;
+    }
+    else if(browser == webui.browser.chromium) {
+
+        // Chromium
+        sprintf(win->core.profile_path, "%s%s.WebUI%sWebUIChromiumProfile", temp, webui_sep, webui_sep);
+        return true;
+    }
+    else if(browser == webui.browser.firefox) {
+
+        // Firefox (We need to create a folder)
 
         char* profile_name = "WebUIFirefoxProfile";
 
@@ -1639,7 +1654,7 @@ bool _webui_browser_create_profile_folder(webui_window_t* win, unsigned int brow
             sprintf(buf, "%s -CreateProfile \"WebUI %s\"", win->core.browser_path, firefox_profile_path);
             _webui_cmd_sync(buf, false);
 
-            // Wait 10 seconds while slow PCs finish creating the folder...
+            // Creating the browser profile folders timeout...
             for(unsigned int n = 0; n <= (webui.startup_timeout * 4); n++) {
 
                 if(_webui_folder_exist(firefox_profile_path))
@@ -1751,68 +1766,389 @@ const char* _webui_browser_get_temp_path(unsigned int browser) {
     #endif
 }
 
+bool _webui_get_windows_reg_value(HKEY key, const char* reg, const char* value_name, char value[WEBUI_MAX_PATH]) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_get_windows_reg_value([%s])... \n", reg);
+    #endif
+
+    HKEY hKey;
+
+    if(RegOpenKeyEx(key, reg, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+
+        DWORD valueSize = WEBUI_MAX_PATH;
+        // If `value_name` is empty then
+        // will read the "(default)" reg-key
+        if(RegQueryValueEx(hKey, value_name, NULL, NULL, (LPBYTE)value, &valueSize) == ERROR_SUCCESS) {
+
+            RegCloseKey(hKey);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool _webui_is_google_chrome_folder(const char* folder) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_is_google_chrome_folder([%s])... \n", folder);
+    #endif
+
+    char browser_full_path[WEBUI_MAX_PATH];
+
+    // Make sure this folder is Google Chrome setup and not Chromium
+    // by checking if `master_preferences` file exist or `initial_preferences`
+    // Ref: https://support.google.com/chrome/a/answer/187948?hl=en
+
+    sprintf(browser_full_path, "%s\\master_preferences", folder);
+    if(!_webui_file_exist(browser_full_path)) {
+
+        sprintf(browser_full_path, "%s\\initial_preferences", folder);
+        if(!_webui_file_exist(browser_full_path))
+            return false; // This is Chromium or something else
+    }
+
+    // Make sure the browser executable file exist
+    sprintf(browser_full_path, "%s\\chrome.exe", folder);
+    if(!_webui_file_exist(browser_full_path))
+        return false;
+    
+    return true;
+}
+
 bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_browser_exist([%d])... \n", browser);
     #endif
 
-    // Check if a browser exist
+    // Check if a web browser is installed on this machine
 
+    // Custom Browser
     if(browser == webui.browser.custom) {
-
-        // Custom Browser
-
+        // Check the struct pointer
         if(webui.custom_browser == NULL)
             return false;
-
         return true;
     }
 
-    #ifdef _WIN32
-        // Resolve SystemDrive
-        #ifdef _MSC_VER
-            char* drive = NULL;
-            size_t sz = 0;
-            if(_dupenv_s(&drive, &sz, "SystemDrive") != 0 || drive == NULL)
+    if(browser == webui.browser.chrome) {
+
+        // Google Chrome
+
+        #ifdef _WIN32
+
+            // Google Chrome on Windows
+
+            char browser_folder[WEBUI_MAX_PATH];
+
+            // Search in `HKEY_LOCAL_MACHINE` (If Google Chrome installed for multi-user)
+            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", "Path", browser_folder)) {
+
+                // Make sure its Google Chrome and not Chromium
+                if(_webui_is_google_chrome_folder(browser_folder)) {
+
+                    // Google Chrome Found (multi-user)
+                    sprintf(win->core.browser_path, "\"%s\\chrome.exe\"", browser_folder);
+                    return true;
+                }
+            }            
+
+            // Search in `HKEY_CURRENT_USER` (If Google Chrome installed for one user)
+            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", "Path", browser_folder)) {
+
+                // Make sure its Google Chrome and not Chromium
+                if(_webui_is_google_chrome_folder(browser_folder)) {
+
+                    // Google Chrome Found (one user)
+                    sprintf(win->core.browser_path, "\"%s\\chrome.exe\"", browser_folder);
+                    return true;
+                }
+            }
+
+            return false;
+
+        #elif __APPLE__
+
+            // Google Chrome on macOS
+            if(_webui_cmd_sync("open -R -a \"Google Chrome\"", false) == 0) {
+
+                sprintf(win->core.browser_path, "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome");
+                return true;
+            }
+            else
                 return false;
         #else
-            char* drive = getenv("SystemDrive"); // _dupenv_s
-            if(drive == NULL)
+
+            // Google Chrome on Linux
+            if(_webui_cmd_sync("google-chrome --version", false) == 0) {
+
+                sprintf(win->core.browser_path, "google-chrome");
+                return true;
+            }
+            else
+                return false;
+
+        #endif
+    }
+    else if(browser == webui.browser.edge) {
+
+        // Edge
+
+        #ifdef _WIN32
+
+            // Edge on Windows
+
+            char browser_fullpath[WEBUI_MAX_PATH];
+
+            // Search in `HKEY_LOCAL_MACHINE` (If Edge installed for multi-user)
+            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe", "", browser_fullpath)) {
+
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Edge Found (multi-user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
+            }
+
+            // Search in `HKEY_CURRENT_USER` (If Edge installed for one user)
+            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe", "", browser_fullpath)) {
+
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Edge Found (one user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
+            }
+
+            return false;
+
+        #elif __APPLE__
+
+            // Edge on macOS
+            return false;
+
+        #else
+
+            // Edge on Linux
+            return false;
+
+        #endif
+    }
+    else if(browser == webui.browser.epic) {
+
+        // Epic Privacy Browser
+
+        #ifdef _WIN32
+
+            // Epic on Windows
+
+            char browser_fullpath[WEBUI_MAX_PATH];
+
+            // Search in `HKEY_CURRENT_USER` (If Epic installed for one user)
+            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\epic.exe", "", browser_fullpath)) {
+
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Epic Found (one user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
+            }
+
+            // Search in `HKEY_LOCAL_MACHINE` (If Epic installed for multi-user)
+            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\epic.exe", "", browser_fullpath)) {
+
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Epic Found (multi-user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
+            }
+
+            return false;
+
+        #elif __APPLE__
+
+            // Epic on macOS
+            if(_webui_cmd_sync("open -R -a \"Epic\"", false) == 0) {
+
+                sprintf(win->core.browser_path, "/Applications/Epic\\ Epic.app/Contents/MacOS/Epic\\ Epic");
+                return true;
+            }
+            else
+                return false;
+        #else
+
+            // Epic on Linux
+            if(_webui_cmd_sync("epic --version", false) == 0) {
+
+                sprintf(win->core.browser_path, "epic");
+                return true;
+            }
+            else
                 return false;
         #endif
-        char programs_folder32[1024];
-        char programs_folder64[1024];
-        sprintf(programs_folder32, "%s%sProgram Files (x86)", drive, webui_sep);
-        sprintf(programs_folder64, "%s%sProgram Files", drive, webui_sep);
-    #endif
+    }
+    else if(browser == webui.browser.vivaldi) {
 
-    if(browser == webui.browser.firefox) {
+        // Vivaldi Browser
+
+        #ifdef _WIN32
+
+            // Vivaldi on Windows
+
+            char browser_fullpath[WEBUI_MAX_PATH];
+
+            // Search in `HKEY_LOCAL_MACHINE` (If Vivaldi installed for multi-user)
+            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\vivaldi.exe", "", browser_fullpath)) {
+
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Vivaldi Found (multi-user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
+            }
+
+            // Search in `HKEY_CURRENT_USER` (If Vivaldi installed for one user)
+            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\vivaldi.exe", "", browser_fullpath)) {
+
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Vivaldi Found (one user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
+            }
+
+            return false;
+
+        #elif __APPLE__
+
+            // Vivaldi on macOS
+            if(_webui_cmd_sync("open -R -a \"Vivaldi\"", false) == 0) {
+
+                sprintf(win->core.browser_path, "/Applications/Vivaldi\\ Vivaldi.app/Contents/MacOS/Vivaldi\\ Vivaldi");
+                return true;
+            }
+            else
+                return false;
+        #else
+
+            // Vivaldi on Linux
+            if(_webui_cmd_sync("vivaldi --version", false) == 0) {
+
+                sprintf(win->core.browser_path, "vivaldi");
+                return true;
+            }
+            else
+                return false;
+        #endif
+    }
+    else if(browser == webui.browser.brave) {
+
+        // Brave Browser
+
+        #ifdef _WIN32
+
+            // Brave on Windows
+
+            char browser_fullpath[WEBUI_MAX_PATH];
+
+            // Search in `HKEY_LOCAL_MACHINE` (If Brave installed for multi-user)
+            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\brave.exe", "", browser_fullpath)) {
+
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Brave Found (multi-user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
+            }
+
+            // Search in `HKEY_CURRENT_USER` (If Brave installed for one user)
+            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\brave.exe", "", browser_fullpath)) {
+
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Brave Found (one user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
+            }
+
+            return false;
+
+        #elif __APPLE__
+
+            // Brave on macOS
+            if(_webui_cmd_sync("open -R -a \"Brave\"", false) == 0) {
+
+                sprintf(win->core.browser_path, "/Applications/Brave\\ Brave.app/Contents/MacOS/Brave\\ Brave");
+                return true;
+            }
+            else
+                return false;
+        #else
+
+            // Brave on Linux
+            if(_webui_cmd_sync("brave-browser --version", false) == 0) {
+
+                sprintf(win->core.browser_path, "brave-browser");
+                return true;
+            }
+            else
+                return false;
+        #endif
+    }
+    else if(browser == webui.browser.firefox) {
 
         // Firefox
         
         #ifdef _WIN32
         
-            // Firefox 32/64 on Windows
+            // Firefox on Windows
 
-            // TODO: Add support for C:\Program Files\Firefox Nightly\firefox.exe
-            char fullpath32[1024];
-            char fullpath64[1024];
-            sprintf(fullpath32, "%s%sMozilla Firefox\\firefox.exe", programs_folder32, webui_sep);
-            sprintf(fullpath64, "%s%sMozilla Firefox\\firefox.exe", programs_folder64, webui_sep);
+            char browser_fullpath[WEBUI_MAX_PATH];
 
-            if(_webui_file_exist(fullpath64)) {
-                
-                sprintf(win->core.browser_path, "\"%s\"", fullpath64);
-                return true;
+            // Search in `HKEY_LOCAL_MACHINE` (If Firefox installed for multi-user)
+            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\firefox.exe", "", browser_fullpath)) {
+
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Firefox Found (multi-user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
             }
-            else if(_webui_file_exist(fullpath32)) {
 
-                sprintf(win->core.browser_path, "\"%s\"", fullpath32);
-                return true;
+            // Search in `HKEY_CURRENT_USER` (If Firefox installed for one user)
+            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\firefox.exe", "", browser_fullpath)) {
+
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Firefox Found (one user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
             }
-            else
-                return false;
+
+            return false;
 
         #elif __APPLE__
             
@@ -1839,140 +2175,120 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
         #endif
 
     }
-    else if(browser == webui.browser.chrome) {
+    else if(browser == webui.browser.yandex) {
 
-        // Chrome
+        // Yandex Browser
 
         #ifdef _WIN32
 
-            // Chrome on Windows
+            // Yandex on Windows
 
-            char fullpath32[1024];
-            char fullpath64[1024];
-            sprintf(fullpath32, "%s%sGoogle\\Chrome\\Application\\chrome.exe", programs_folder32, webui_sep);
-            sprintf(fullpath64, "%s%sGoogle\\Chrome\\Application\\chrome.exe", programs_folder64, webui_sep);
+            char browser_fullpath[WEBUI_MAX_PATH];
 
-            if(_webui_file_exist(fullpath64)) {
+            // Search in `HKEY_CURRENT_USER` (If Yandex installed for one user)
+            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\browser.exe", "", browser_fullpath)) {
 
-                sprintf(win->core.browser_path, "\"%s\"", fullpath64);
-                return true;
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Yandex Found (one user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
             }
-            else if(_webui_file_exist(fullpath32)) {
 
-                sprintf(win->core.browser_path, "\"%s\"", fullpath32);
-                return true;
+            // Search in `HKEY_LOCAL_MACHINE` (If Yandex installed for multi-user)
+            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\browser.exe", "", browser_fullpath)) {
+
+                // Make sure the browser executable file exist
+                if(_webui_file_exist(browser_fullpath)) {
+
+                    // Yandex Found (multi-user)
+                    sprintf(win->core.browser_path, "\"%s\"", browser_fullpath);
+                    return true;
+                }
             }
-            else return false;
+
+            return false;
 
         #elif __APPLE__
 
-            // Chrome on macOS
-            if(_webui_cmd_sync("open -R -a \"Google Chrome\"", false) == 0) {
+            // Yandex on macOS
+            if(_webui_cmd_sync("open -R -a \"Yandex\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome");
+                sprintf(win->core.browser_path, "/Applications/Yandex\\ Yandex.app/Contents/MacOS/Yandex\\ Yandex");
                 return true;
             }
             else
                 return false;
         #else
 
-            // Chrome on Linux
-            if(_webui_cmd_sync("google-chrome --version", false) == 0) {
+            // Yandex on Linux
+            if(_webui_cmd_sync("yandex-browser --version", false) == 0) {
 
-                sprintf(win->core.browser_path, "google-chrome");
+                sprintf(win->core.browser_path, "yandex-browser");
                 return true;
             }
             else
                 return false;
-
         #endif
     }
-		else if (browser == webui.browser.chromium) {
+    else if(browser == webui.browser.chromium) {
 
-				// Chromium
-
-				#ifdef _WIN32
-
-						// Chromium on Windows
-
-						char fullpath32[1024];
-						char fullpath64[1024];
-						sprintf(fullpath32, "%s\\..\\Local\\Chromium\\Application\\chrome.exe", getenv("APPDATA"));
-						sprintf(fullpath64, "%s\\..\\Local\\Chromium\\Application\\chrome.exe", getenv("LOCALAPPDATA"));
-
-						if (_webui_file_exist(fullpath64)) {
-
-								sprintf(win->core.browser_path, "\"%s\"", fullpath64);
-								return true;
-						}
-						else if (_webui_file_exist(fullpath32)) {
-
-								sprintf(win->core.browser_path, "\"%s\"", fullpath32);
-								return true;
-						}
-						else return false;
-
-				#elif __APPLE__
-
-						// Chromium on macOS
-
-						if (_webui_cmd_sync("open -R -a \"Chromium\"", false) == 0) {
-
-								sprintf(win->core.browser_path, "/Applications/Chromium.app/Contents/MacOS/Chromium");
-								return true;
-						}
-						else
-								return false;
-
-				#else
-
-						// Chromium on Linux
-
-						if (_webui_cmd_sync("chromium-browser --version", false) == 0) {
-
-								sprintf(win->core.browser_path, "chromium-browser");
-								return true;
-						}
-						else
-								return false;
-
-				#endif
-		}
-    else if(browser == webui.browser.edge) {
-
-        // Edge
+        // The Chromium Projects
 
         #ifdef _WIN32
 
-            // Edge on Windows
+            // Chromium on Windows
 
-            char fullpath32[1024];
-            char fullpath64[1024];
-            sprintf(fullpath32, "%s%sMicrosoft\\Edge\\Application\\msedge.exe", programs_folder32, webui_sep);
-            sprintf(fullpath64, "%s%sMicrosoft\\Edge\\Application\\msedge.exe", programs_folder64, webui_sep);
+            char browser_folder[WEBUI_MAX_PATH];
 
-            if(_webui_file_exist(fullpath64)) {
+            // Search in `HKEY_CURRENT_USER` (If Chromium installed for one user)
+            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", "Path", browser_folder)) {
 
-                sprintf(win->core.browser_path, "\"%s\"", fullpath64);
-                return true;
+                // Make sure its Chromium and not Google Chrome
+                if(!_webui_is_google_chrome_folder(browser_folder)) {
+
+                    // Chromium Found (one user)
+                    sprintf(win->core.browser_path, "\"%s\\chrome.exe\"", browser_folder);
+                    return true;
+                }
             }
-            else if(_webui_file_exist(fullpath32)) {
 
-                sprintf(win->core.browser_path, "\"%s\"", fullpath32);
-                return true;
+            // Search in `HKEY_LOCAL_MACHINE` (If Chromium installed for multi-user)
+            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", "Path", browser_folder)) {
+
+                // Make sure its Chromium and not Google Chrome
+                if(!_webui_is_google_chrome_folder(browser_folder)) {
+
+                    // Chromium Found (multi-user)
+                    sprintf(win->core.browser_path, "\"%s\\chrome.exe\"", browser_folder);
+                    return true;
+                }
             }
-            else return false;
+
+            return false;
 
         #elif __APPLE__
 
-            // Edge on macOS
-            return false;
+            // Chromium on macOS
+            if(_webui_cmd_sync("open -R -a \"Chromium\"", false) == 0) {
 
+                sprintf(win->core.browser_path, "/Applications/Chromium\\ Chromium.app/Contents/MacOS/Chromium\\ Chromium");
+                return true;
+            }
+            else
+                return false;
         #else
 
-            // Edge on Linux
-            return false;
+            // Chromium on Linux
+            if(_webui_cmd_sync("chromium-browser --version", false) == 0) {
 
+                sprintf(win->core.browser_path, "chromium-browser");
+                return true;
+            }
+            else
+                return false;
         #endif
     }
 
@@ -2201,7 +2517,7 @@ bool _webui_browser_start_chrome(webui_window_t* win, const char* address) {
         printf("[0] _webui_browser_start_chrome([%s])... \n", address);
     #endif
     
-    // -- Chrome ----------------------
+    // -- Google Chrome ----------------------
 
     if(win->core.CurrentBrowser != 0 && win->core.CurrentBrowser != webui.browser.chrome)
         return false;
@@ -2213,7 +2529,7 @@ bool _webui_browser_start_chrome(webui_window_t* win, const char* address) {
         return false;
     
     char arg[1024];
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --app=", win->core.profile_path);
+    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --incognito --app=", win->core.profile_path);
 
     char full[1024];
     sprintf(full, "%s%s%s", win->core.browser_path, arg, address);
@@ -2221,6 +2537,205 @@ bool _webui_browser_start_chrome(webui_window_t* win, const char* address) {
     if(_webui_run_browser(win, full) == 0) {
 
         win->core.CurrentBrowser = webui.browser.chrome;
+        webui.browser.current = webui.browser.chrome;
+        return true;
+    }
+    else
+        return false;
+}
+
+bool _webui_browser_start_edge(webui_window_t* win, const char* address) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_browser_start_edge([%s])... \n", address);
+    #endif
+
+    // -- Microsoft Edge ----------------------
+
+    if(win->core.CurrentBrowser != 0 && win->core.CurrentBrowser != webui.browser.edge)
+        return false;
+
+    if(!_webui_browser_exist(win, webui.browser.edge))
+        return false;
+    
+    if(!_webui_browser_create_profile_folder(win, webui.browser.edge))
+        return false;
+
+    // TODO: We need to disable the Sync message in the first run,
+    // we fix it using `--inprivate`, but it add "" in the title bar.
+
+    char arg[1024];
+    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --inprivate --app=", win->core.profile_path);
+
+    char full[1024];
+    sprintf(full, "%s%s%s", win->core.browser_path, arg, address);
+
+    if(_webui_run_browser(win, full) == 0) {
+
+        win->core.CurrentBrowser = webui.browser.edge;
+        webui.browser.current = webui.browser.edge;
+        return true;
+    }
+    else
+        return false;
+}
+
+bool _webui_browser_start_epic(webui_window_t* win, const char* address) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_browser_start_epic([%s])... \n", address);
+    #endif
+
+    // -- Epic Privacy Browser ----------------------
+
+    if(win->core.CurrentBrowser != 0 && win->core.CurrentBrowser != webui.browser.epic)
+        return false;
+
+    if(!_webui_browser_exist(win, webui.browser.epic))
+        return false;
+    
+    if(!_webui_browser_create_profile_folder(win, webui.browser.epic))
+        return false;
+
+    char arg[1024];
+    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --incognito --app=", win->core.profile_path);
+
+    char full[1024];
+    sprintf(full, "%s%s%s", win->core.browser_path, arg, address);
+
+    if(_webui_run_browser(win, full) == 0) {
+
+        win->core.CurrentBrowser = webui.browser.epic;
+        webui.browser.current = webui.browser.epic;
+        return true;
+    }
+    else
+        return false;
+}
+
+bool _webui_browser_start_vivaldi(webui_window_t* win, const char* address) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_browser_start_vivaldi([%s])... \n", address);
+    #endif
+
+    // -- Vivaldi Browser ----------------------
+
+    if(win->core.CurrentBrowser != 0 && win->core.CurrentBrowser != webui.browser.vivaldi)
+        return false;
+
+    if(!_webui_browser_exist(win, webui.browser.vivaldi))
+        return false;
+    
+    if(!_webui_browser_create_profile_folder(win, webui.browser.vivaldi))
+        return false;
+
+    char arg[1024];
+    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --incognito --app=", win->core.profile_path);
+
+    char full[1024];
+    sprintf(full, "%s%s%s", win->core.browser_path, arg, address);
+
+    if(_webui_run_browser(win, full) == 0) {
+
+        win->core.CurrentBrowser = webui.browser.vivaldi;
+        webui.browser.current = webui.browser.vivaldi;
+        return true;
+    }
+    else
+        return false;
+}
+
+bool _webui_browser_start_brave(webui_window_t* win, const char* address) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_browser_start_brave([%s])... \n", address);
+    #endif
+
+    // -- Brave Browser ----------------------
+
+    if(win->core.CurrentBrowser != 0 && win->core.CurrentBrowser != webui.browser.brave)
+        return false;
+
+    if(!_webui_browser_exist(win, webui.browser.brave))
+        return false;
+    
+    if(!_webui_browser_create_profile_folder(win, webui.browser.brave))
+        return false;
+
+    char arg[1024];
+    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --incognito --app=", win->core.profile_path);
+
+    char full[1024];
+    sprintf(full, "%s%s%s", win->core.browser_path, arg, address);
+
+    if(_webui_run_browser(win, full) == 0) {
+
+        win->core.CurrentBrowser = webui.browser.brave;
+        webui.browser.current = webui.browser.brave;
+        return true;
+    }
+    else
+        return false;
+}
+
+bool _webui_browser_start_firefox(webui_window_t* win, const char* address) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_browser_start_firefox([%s])... \n", address);
+    #endif
+
+    // -- Mozilla Firefox ----------------------
+
+    if(win->core.CurrentBrowser != 0 && win->core.CurrentBrowser != webui.browser.firefox)
+        return false;
+
+    if(!_webui_browser_exist(win, webui.browser.firefox))
+        return false;
+
+    if(!_webui_browser_create_profile_folder(win, webui.browser.firefox))
+        return false;
+
+    char full[1024];
+    sprintf(full, "%s -P WebUI -purgecaches -new-window -private-window %s", win->core.browser_path, address);
+
+    if(_webui_run_browser(win, full) == 0) {
+
+        win->core.CurrentBrowser = webui.browser.firefox;
+        webui.browser.current = webui.browser.firefox;
+        return true;
+    }
+    else
+        return false;
+}
+
+bool _webui_browser_start_yandex(webui_window_t* win, const char* address) {
+
+    #ifdef WEBUI_LOG
+        printf("[0] _webui_browser_start_yandex([%s])... \n", address);
+    #endif
+
+    // -- Yandex Browser ----------------------
+
+    if(win->core.CurrentBrowser != 0 && win->core.CurrentBrowser != webui.browser.yandex)
+        return false;
+
+    if(!_webui_browser_exist(win, webui.browser.yandex))
+        return false;
+    
+    if(!_webui_browser_create_profile_folder(win, webui.browser.yandex))
+        return false;
+
+    char arg[1024];
+    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --incognito --app=", win->core.profile_path);
+
+    char full[1024];
+    sprintf(full, "%s%s%s", win->core.browser_path, arg, address);
+
+    if(_webui_run_browser(win, full) == 0) {
+
+        win->core.CurrentBrowser = webui.browser.yandex;
+        webui.browser.current = webui.browser.yandex;
         return true;
     }
     else
@@ -2233,7 +2748,7 @@ bool _webui_browser_start_chromium(webui_window_t* win, const char* address) {
         printf("[0] _webui_browser_start_chromium([%s])... \n", address);
     #endif
     
-    // -- Chromium -------------------
+    // -- The Chromium Projects -------------------
 
     if (win->core.CurrentBrowser != 0 && win->core.CurrentBrowser != webui.browser.chromium)
         return false;
@@ -2245,7 +2760,7 @@ bool _webui_browser_start_chromium(webui_window_t* win, const char* address) {
         return false;
     
     char arg[1024];
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --app=", win->core.profile_path);
+    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --incognito --app=", win->core.profile_path);
 
     char full[1024];
     sprintf(full, "%s%s%s", win->core.browser_path, arg, address);
@@ -2253,6 +2768,7 @@ bool _webui_browser_start_chromium(webui_window_t* win, const char* address) {
     if (_webui_run_browser(win, full) == 0) {
 
         win->core.CurrentBrowser = webui.browser.chromium;
+        webui.browser.current = webui.browser.chromium;
         return true;
     }
     else
@@ -2285,64 +2801,7 @@ bool _webui_browser_start_custom(webui_window_t* win, const char* address) {
     if(_webui_run_browser(win, full) == 0) {
 
         win->core.CurrentBrowser = webui.browser.custom;
-        return true;
-    }
-    else
-        return false;
-}
-
-bool _webui_browser_start_firefox(webui_window_t* win, const char* address) {
-
-    #ifdef WEBUI_LOG
-        printf("[0] _webui_browser_start_firefox([%s])... \n", address);
-    #endif
-
-    // -- Firefox ----------------------
-
-    if(win->core.CurrentBrowser != 0 && win->core.CurrentBrowser != webui.browser.firefox)
-        return false;
-
-    if(!_webui_browser_exist(win, webui.browser.firefox))
-        return false;
-
-    if(!_webui_browser_create_profile_folder(win, webui.browser.firefox))
-        return false;
-
-    char full[1024];
-    sprintf(full, "%s -P WebUI -purgecaches -new-window -private-window %s", win->core.browser_path, address);
-
-    if(_webui_run_browser(win, full) == 0) {
-
-        win->core.CurrentBrowser = webui.browser.firefox;
-        return true;
-    }
-    else
-        return false;
-}
-
-bool _webui_browser_start_edge(webui_window_t* win, const char* address) {
-
-    #ifdef WEBUI_LOG
-        printf("[0] _webui_browser_start_edge([%s])... \n", address);
-    #endif
-
-    // -- Edge ----------------------
-
-    if(win->core.CurrentBrowser != 0 && win->core.CurrentBrowser != webui.browser.edge)
-        return false;
-
-    if(!_webui_browser_exist(win, webui.browser.edge))
-        return false;
-    
-    if(!_webui_browser_create_profile_folder(win, webui.browser.edge))
-        return false;
-
-    char full[1024];
-    sprintf(full, "%s --user-data-dir=\"%s\" --no-proxy-server --app=%s", win->core.browser_path, win->core.profile_path, address);
-
-    if(_webui_run_browser(win, full) == 0) {
-
-        win->core.CurrentBrowser = webui.browser.edge;
+        webui.browser.current = webui.browser.custom;
         return true;
     }
     else
@@ -2359,17 +2818,30 @@ bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int
     if(browser > 10)
         return false;
     
+    // Current browser
+    if(browser == webui.browser.any && webui.browser.current != 0)
+        browser = webui.browser.current;
+
     // TODO: Convert address from [/...] to [file://...]
 
     if(browser != 0) {
 
-        // Specified browser
+        // User specified browser
+
         if(browser == webui.browser.chrome)
             return _webui_browser_start_chrome(win, address);
-        else if(browser == webui.browser.firefox)
-            return _webui_browser_start_firefox(win, address);
         else if(browser == webui.browser.edge)
             return _webui_browser_start_edge(win, address);
+        else if(browser == webui.browser.epic)
+            return _webui_browser_start_epic(win, address);
+        else if(browser == webui.browser.vivaldi)
+            return _webui_browser_start_vivaldi(win, address);
+        else if(browser == webui.browser.brave)
+            return _webui_browser_start_brave(win, address);
+        else if(browser == webui.browser.firefox)
+            return _webui_browser_start_firefox(win, address);
+        else if(browser == webui.browser.yandex)
+            return _webui_browser_start_yandex(win, address);
         else if(browser == webui.browser.chromium)
             return _webui_browser_start_chromium(win, address);
         else if(browser == webui.browser.custom)
@@ -2379,20 +2851,28 @@ bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int
     }
     else if(win->core.CurrentBrowser != 0) {
 
-        // Already set browser
+        // Already used browser
+
         if(win->core.CurrentBrowser == webui.browser.chrome)
             return _webui_browser_start_chrome(win, address);
-        else if(win->core.CurrentBrowser == webui.browser.firefox)
-            return _webui_browser_start_firefox(win, address);
         else if(win->core.CurrentBrowser == webui.browser.edge)
             return _webui_browser_start_edge(win, address);
+        else if(win->core.CurrentBrowser == webui.browser.epic)
+            return _webui_browser_start_epic(win, address);
+        else if(win->core.CurrentBrowser == webui.browser.vivaldi)
+            return _webui_browser_start_vivaldi(win, address);
+        else if(win->core.CurrentBrowser == webui.browser.brave)
+            return _webui_browser_start_brave(win, address);
+        else if(win->core.CurrentBrowser == webui.browser.firefox)
+            return _webui_browser_start_firefox(win, address);
+        else if(win->core.CurrentBrowser == webui.browser.yandex)
+            return _webui_browser_start_yandex(win, address);
         else if(browser == webui.browser.chromium)
             return _webui_browser_start_chromium(win, address);
         else if(win->core.CurrentBrowser == webui.browser.custom)
             return _webui_browser_start_custom(win, address);
         else
             return false;
-            //webui::exit();
     }
     else {
 
@@ -2401,30 +2881,39 @@ bool _webui_browser_start(webui_window_t* win, const char* address, unsigned int
         #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
             // Windows
             if(!_webui_browser_start_chrome(win, address))
-                if(!_webui_browser_start_firefox(win, address))
-                    if(!_webui_browser_start_edge(win, address))
-                        if(!_webui_browser_start_chromium(win, address))
-                              if(!_webui_browser_start_custom(win, address))
-                                    return false;
-                                    //webui::exit();
+                if(!_webui_browser_start_edge(win, address))
+                    if(!_webui_browser_start_epic(win, address))
+                        if(!_webui_browser_start_vivaldi(win, address))
+                            if(!_webui_browser_start_brave(win, address))
+                                if(!_webui_browser_start_firefox(win, address))
+                                    if(!_webui_browser_start_yandex(win, address))
+                                        if(!_webui_browser_start_chromium(win, address))
+                                            if(!_webui_browser_start_custom(win, address))
+                                                return false;
         #elif __APPLE__
             // macOS
             if(!_webui_browser_start_chrome(win, address))
-                if(!_webui_browser_start_firefox(win, address))
-                    if(!_webui_browser_start_edge(win, address))
-                        if(!_webui_browser_start_chromium(win, address))
-                              if(!_webui_browser_start_custom(win, address))
-                                    return false;
-                                    //webui::exit();
+                if(!_webui_browser_start_edge(win, address))
+                    if(!_webui_browser_start_epic(win, address))
+                        if(!_webui_browser_start_vivaldi(win, address))
+                            if(!_webui_browser_start_brave(win, address))
+                                if(!_webui_browser_start_firefox(win, address))
+                                    if(!_webui_browser_start_yandex(win, address))
+                                        if(!_webui_browser_start_chromium(win, address))
+                                            if(!_webui_browser_start_custom(win, address))
+                                                return false;
         #else
             // Linux
             if(!_webui_browser_start_chrome(win, address))
-                if(!_webui_browser_start_firefox(win, address))
-                    if(!_webui_browser_start_edge(win, address))
-                        if(!_webui_browser_start_chromium(win, address))
-                              if(!_webui_browser_start_custom(win, address))
-                                    return false;
-                                    //webui::exit();
+                if(!_webui_browser_start_edge(win, address))
+                    if(!_webui_browser_start_epic(win, address))
+                        if(!_webui_browser_start_vivaldi(win, address))
+                            if(!_webui_browser_start_brave(win, address))
+                                if(!_webui_browser_start_firefox(win, address))
+                                    if(!_webui_browser_start_yandex(win, address))
+                                        if(!_webui_browser_start_chromium(win, address))
+                                            if(!_webui_browser_start_custom(win, address))
+                                                return false;
         #endif
     }
 
@@ -2445,7 +2934,6 @@ void webui_script_cleanup(webui_script_t* script) {
 
     _webui_free_mem((void *) &script->result.data);
     _webui_free_mem((void *) &script->script);
-    memset(script, 0x00, sizeof(webui_script_t));
 }
 
 void webui_script(webui_window_t* win, webui_script_t* script) {
@@ -2534,8 +3022,8 @@ webui_window_t* webui_new_window() {
 
     // Initialisation
     win->core.window_number = _webui_get_new_window_number();
-    win->core.browser_path = (char*) _webui_malloc(1024);
-    win->core.profile_path = (char*) _webui_malloc(1024);
+    win->core.browser_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
+    win->core.profile_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     win->path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     sprintf(win->path, "%s", WEBUI_DEFAULT_PATH);
     
@@ -2620,7 +3108,7 @@ const char* webui_new_server(webui_window_t* win, const char* path) {
     // WEBUI_NON_EXIST_BROWSER is to prevent
     // any browser from running. Because we want 
     // to only to run a web-server this time.
-    webui_show(win, NULL, WEBUI_NON_EXIST_BROWSER);
+    _webui_show_window(win, NULL, WEBUI_NON_EXIST_BROWSER);
 
     // Wait for server to start
     for(unsigned int n = 0; n < 500; n++) {
@@ -2674,16 +3162,6 @@ void webui_set_icon(webui_window_t* win, const char* icon_s, const char* type_s)
     win->core.icon_type = type_s;
 }
 
-bool webui_refresh(webui_window_t* win, const char* html) {
-
-    return webui_show(win, html, 0);
-}
-
-bool webui_refresh_cpy(webui_window_t* win, const char* html) {
-
-    return webui_show_cpy(win, html, 0);
-}
-
 bool webui_open(webui_window_t* win, const char* url, unsigned int browser) {
 
     #ifdef WEBUI_LOG
@@ -2722,17 +3200,58 @@ bool webui_open(webui_window_t* win, const char* url, unsigned int browser) {
     return _webui_browser_start(win, url, browser);
 }
 
-bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
+bool webui_show(webui_window_t* win, const char* content) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_show(html, [%d])... \n", win->core.window_number, browser);
-        printf("- - -[HTML]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", html);
+        printf("[%d] webui_show()... \n", win->core.window_number);
+    #endif
+
+    size_t content_len = strlen(content);
+
+    // Some wrappers does not guarantee `content` to
+    // stay valid, so, let's make a copy right now.
+    char* content_cpy = (char*) webui_empty_string;
+    if(content_len > 1) {
+        content_cpy = _webui_malloc(content_len + 1);
+        memcpy(content_cpy, content, content_len);
+    }
+
+    // Check if this is an HTML script or a file name
+    if(strstr(content_cpy, "<html")) {
+
+        // Handel the static HTML script
+        #ifdef WEBUI_LOG
+            printf("[%d] webui_show()... -> Static HTML Script:\n", win->core.window_number);
+            printf("- - -[HTML]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", content_cpy);
+        #endif
+        win->core.server_root = false;
+        return _webui_show_window(win, content_cpy, webui.browser.any);
+    }
+    
+    // Handel the file
+    #ifdef WEBUI_LOG
+        printf("[%d] webui_show()... -> File: [%s]\n", win->core.window_number, content_cpy);
+    #endif
+    if(content_len > WEBUI_MAX_PATH || strstr(content_cpy, "<"))
+        return false;
+    if(win->core.url == NULL)
+        webui_new_server(win, "");
+    // URL: [localhost:port][/][filename]
+    char* url = (char*) _webui_malloc(strlen(win->core.url) + 1 + content_len);
+    sprintf(url, "%s/%s", win->core.url, content_cpy);
+    return webui_open(win, url, win->core.CurrentBrowser);
+}
+
+bool _webui_show_window(webui_window_t* win, const char* html, unsigned int browser) {
+
+    #ifdef WEBUI_LOG
+        printf("[%d] _webui_show_window(html, [%d])... \n", win->core.window_number, browser);
     #endif
 
     _webui_init();
 
     // Initializing
-    win->core.html = html == NULL ? webui_empty_string : html;
+    win->core.html = (html == NULL ? webui_empty_string : html);
     win->core.server_handled = false;
     webui.wait_for_socket_window = true;
 
@@ -2792,31 +3311,6 @@ bool webui_show(webui_window_t* win, const char* html, unsigned int browser) {
     }
 
     return true;
-}
-
-bool webui_show_cpy(webui_window_t* win, const char* html, unsigned int browser) {
-
-    #ifdef WEBUI_LOG
-        printf("[%d] webui_show_cpy(html, [%d])... \n", win->core.window_number, browser);
-    #endif
-
-    // Copy HTML, And show the window
-
-    // Free
-    if(win->core.html_cpy != NULL)
-        _webui_free_mem((void *) &win->core.html_cpy);
-    
-    // Allocate
-    char* cpy = (char*) webui_empty_string;
-    size_t len = strlen(html);
-    if(len > 1) {
-
-        cpy = _webui_malloc(len + 1);
-        memcpy(cpy, html, len);
-    }
-    
-    // Show window
-    return webui_show(win, cpy, browser);
 }
 
 void webui_bind_all(webui_window_t* win, void (*func)(webui_event_t* e)) {
@@ -3147,16 +3641,18 @@ const char* webui_get_string(webui_event_t* e) {
     return webui_empty_string;
 }
 
-int webui_get_int(webui_event_t* e) {
+long long int webui_get_int(webui_event_t* e) {
     
     #ifdef WEBUI_LOG
         printf("[0] webui_get_int()... \n");
     #endif
 
+    char *endptr;
+
     if(e->data != NULL) {
         size_t len = strlen(e->data);
-        if(len > 0 && len <= 24) // long long has ~19 char len
-            return atoi((const char *) e->data);
+        if(len > 0 && len <= 20) // 64-bit max is -9,223,372,036,854,775,808 (20 character)
+            return strtoll((const char *) e->data, &endptr, 10);
     }
     
     return 0;
@@ -3168,22 +3664,23 @@ bool webui_get_bool(webui_event_t* e) {
         printf("[0] webui_get_bool()... \n");
     #endif
 
-    if(webui_get_int(e) == 0)
-        return false;
+    const char* str = webui_get_string(e);
+    if(str[0] == 't' || str[0] == 'T') // true || True
+        return true;
     
-    return true;
+        return false;
 }
 
-void webui_return_int(webui_event_t* e, int n) {
+void webui_return_int(webui_event_t* e, long long int n) {
 
     #ifdef WEBUI_LOG
-        printf("[%d] webui_return_int([%d])... \n", e->window_id, n);
+        printf("[%d] webui_return_int([%lld])... \n", e->window_id, n);
     #endif
 
     // Int to Str
-    int len = (int)((ceil(log10(n))) * sizeof(char));
-    char* buf = (char*) _webui_malloc(len + 1);
-    sprintf(buf, "%d", n);
+    // 64-bit max is -9,223,372,036,854,775,808 (20 character)
+    char* buf = (char*) _webui_malloc(32);
+    sprintf(buf, "%lld", n);
 
     // Set response
     e->response = buf;
@@ -3516,6 +4013,11 @@ void _webui_init() {
     webui.browser.edge          = 3;
     webui.browser.safari        = 4;
     webui.browser.chromium      = 5;
+    webui.browser.opera         = 6;
+    webui.browser.brave         = 7;
+    webui.browser.vivaldi       = 8;
+    webui.browser.epic          = 9;
+    webui.browser.yandex        = 10;
     webui.browser.custom        = 99;
     webui.runtime.deno          = 1;
     webui.runtime.nodejs        = 2;

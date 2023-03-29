@@ -1,13 +1,3 @@
-
-# WebUI Library 2.0.7
-# Python Example
-#
-# http://webui.me
-# https://github.com/alifcommunity/webui
-#
-# Licensed under GNU General Public License v3.0.
-# Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga> - Canada.
-
 # This script is for debugging & development of the WebUI Python wrapper
 # The source code is located at 'webui/packages/PyPI/src/webui/webui.py'
 
@@ -102,7 +92,7 @@ def main():
 	MyWindow.bind('ExitID', close)
 
 	# Show the window
-	MyWindow.show(html, webui.browser.any)
+	MyWindow.show(html)
 
 	# Wait until all windows are closed
 	webui.wait()

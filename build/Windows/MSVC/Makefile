@@ -13,7 +13,7 @@ debug:
 	@echo Build WebUI Library (Debug Dynamic)...
 	@cl /Zi /Fomongoose.obj /c /EHsc "../../../src/mongoose.c" /I "../../../include" >nul 2>&1
 	@cl /Zi /Fowebui.obj /c /EHsc /DWEBUI_LOG "../../../src/webui.c" /I "../../../include" >nul 2>&1
-	@link /DLL /OUT:webui-2-x64.dll webui.obj mongoose.obj user32.lib >nul 2>&1
+	@link /DLL /OUT:webui-2-x64.dll webui.obj mongoose.obj user32.lib Advapi32.lib >nul 2>&1
 #	Clean
 	@- del *.obj >nul 2>&1
 	@echo Done.
@@ -28,7 +28,7 @@ release:
 	@echo Build WebUI Library (Release Dynamic)...
 	@cl /Fomongoose.obj /c /EHsc "../../../src/mongoose.c" /I "../../../include" >nul 2>&1
 	@cl /Fowebui.obj /c /EHsc "../../../src/webui.c" /I "../../../include" >nul 2>&1
-	@link /DLL /OUT:webui-2-x64.dll webui.obj mongoose.obj user32.lib >nul 2>&1
+	@link /DLL /OUT:webui-2-x64.dll webui.obj mongoose.obj user32.lib Advapi32.lib >nul 2>&1
 #	Clean
 	@- del *.obj >nul 2>&1
 	@- del *.ilk >nul 2>&1

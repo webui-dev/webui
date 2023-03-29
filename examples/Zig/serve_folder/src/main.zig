@@ -1,4 +1,4 @@
-// WebUI Library 2.0.7
+// WebUI Library 2.1.0
 // Serve a Folder Example
 
 pub fn main() void {

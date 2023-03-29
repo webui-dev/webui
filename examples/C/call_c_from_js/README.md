@@ -1,7 +1,7 @@
 
-# WebUI Examples - C
+# WebUI C - Call C from JavaScript Example
 
-To build the C example you will need one of those C compilers, no dependencies is needed.
+Example of how to call C from JavaScript. To build this example, you will need one of those C compilers (*no dependencies are required*).
 
 ### Windows
 

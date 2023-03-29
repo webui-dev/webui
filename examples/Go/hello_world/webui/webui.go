@@ -1,12 +1,6 @@
 package webui
 
-// WebUI Library 2.0.7
-//
-// http://webui.me
-// https://github.com/alifcommunity/webui
-//
-// Licensed under GNU General Public License v3.0.
-// Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga> - Canada.
+
 
 /*
 // [?] Change the library path as you need

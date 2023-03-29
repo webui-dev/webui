@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "webui2"
-version = "2.0.7"
+version = "2.1.0"
 authors = [
   { name="Hassan Draga" },
 ]

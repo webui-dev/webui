@@ -1,4 +1,4 @@
-# WebUI Library 2.0.7
+# WebUI Library 2.1.0
 # C++ Example
 # Windows - GCC
 

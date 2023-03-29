@@ -1,15 +1,9 @@
-// WebUI Library 2.0.7
-//
-// http://webui.me
-// https://github.com/alifcommunity/webui
-//
-// Licensed under GNU General Public License v3.0.
-// Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga> - Canada.
+
 
 import { existsSync } from "https://deno.land/std/fs/mod.ts";
 // import { readCString } from "https://deno.land/std/c/strings/mod.ts";
 
-const version = '2.0.7';
+const version = '2.1.0';
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 let lib_loaded = false;

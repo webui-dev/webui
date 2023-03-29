@@ -17,7 +17,7 @@ debug:
 	@echo Build WebUI Library (Debug Dynamic)...
 	@tcc -g -fPIC -m64 -o mongoose.o -I "$(INCLUDE)" -c "$(SOURCE)/mongoose.c"
 	@tcc -g -fPIC -m64 -o webui.o -I "$(INCLUDE)" -c "$(SOURCE)/webui.c" -DWEBUI_LOG
-	@tcc -g -shared -o webui-2-x64.dll webui.o mongoose.o -lws2_32
+	@tcc -g -shared -o webui-2-x64.dll webui.o mongoose.o -lws2_32 -lAdvapi32
 #	Clean
 	@- del *.o >nul 2>&1
 	@echo Done.
@@ -32,7 +32,7 @@ release:
 	@echo Build WebUI Library (Release Dynamic)...
 	@tcc -fPIC -m64 -o mongoose.o -I "$(INCLUDE)" -c "$(SOURCE)/mongoose.c"
 	@tcc -fPIC -m64 -o webui.o -I "$(INCLUDE)" -c "$(SOURCE)/webui.c"
-	@tcc -shared -o webui-2-x64.dll webui.o mongoose.o -lws2_32
+	@tcc -shared -o webui-2-x64.dll webui.o mongoose.o -lws2_32 -lAdvapi32
 #	Clean
 	@- del *.o >nul 2>&1
 	@echo Done.

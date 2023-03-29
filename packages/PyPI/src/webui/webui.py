@@ -1,10 +1,13 @@
-# WebUI Library 2.0.7
+
+# WebUI Library 2.1.0
 #
 # http://webui.me
 # https://github.com/alifcommunity/webui
 #
-# Licensed under GNU General Public License v3.0.
-# Copyright (C)2023 Hassan DRAGA <https://github.com/hassandraga> - Canada.
+# Copyright (c) 2020-2023 Hassan Draga.
+# Licensed under GNU General Public License v2.0.
+# All rights reserved.
+# Canada.
 
 
 import os
@@ -49,14 +52,6 @@ class javascript:
     error = False
     length = 0
     data = ""
-
-
-# Browser
-class browser:
-    any = 0
-    chrome = 1
-    firefox = 2
-    edge = 3
 
 
 # Scripts Runtime
@@ -165,7 +160,7 @@ class window:
         self.cb_fun_list.insert(cb_index, func)
 
 
-    def show(self, html="<html></html>", browser=0):
+    def show(self, html="<html></html>"):
         global WebUI
         if self.window is None:
             err_window_is_none('show')
@@ -173,20 +168,7 @@ class window:
         if WebUI is None:
             err_library_not_found('show')
             return
-        WebUI.webui_show_cpy(self.window, 
-                            html.encode('utf-8'), ctypes.c_uint(browser))
-
-
-    def refresh(self, html="<html></html>"):
-        global WebUI
-        if self.window is None:
-            err_window_is_none('show')
-            return
-        if WebUI is None:
-            err_library_not_found('show')
-            return
-        WebUI.webui_refresh_cpy(self.window, 
-                            html.encode('utf-8'))
+        WebUI.webui_show(self.window, html.encode('utf-8'))
 
 
     def open(self, url, browser=0):
