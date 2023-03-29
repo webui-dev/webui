@@ -67,7 +67,7 @@ fn main() {
     Webui::Bind(my_window, "MyButton2", close_the_application);
 
     // Show the window
-    Webui::Show(my_window, my_html, Webui::Chrome);
+    Webui::Show(my_window, my_html);
 
     // Wait until all windows get closed
     Webui::Wait();        

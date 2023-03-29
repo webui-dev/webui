@@ -1,4 +1,14 @@
+/*
+    WebUI Library 2.1.0
+    
+    http://webui.me
+    https://github.com/alifcommunity/webui
 
+    Copyright (c) 2020-2023 Hassan Draga.
+    Licensed under GNU General Public License v2.0.
+    All rights reserved.
+    Canada.
+*/
 
 // Flags
 #![allow(non_camel_case_types)]
@@ -106,6 +116,12 @@ pub struct webui_browser_t {
     pub edge: ::std::os::raw::c_uint,
     pub safari: ::std::os::raw::c_uint,
     pub chromium: ::std::os::raw::c_uint,
+    pub opera: ::std::os::raw::c_uint,
+    pub brave: ::std::os::raw::c_uint,
+    pub vivaldi: ::std::os::raw::c_uint,
+    pub epic: ::std::os::raw::c_uint,
+    pub yandex: ::std::os::raw::c_uint,
+    pub current: ::std::os::raw::c_uint,
     pub custom: ::std::os::raw::c_uint,
 }
 #[repr(C)]
@@ -172,8 +188,7 @@ extern "C" {
 extern "C" {
     pub fn webui_show(
         win: *mut webui_window_t,
-        html: *const ::std::os::raw::c_char,
-        browser: ::std::os::raw::c_uint,
+        html: *const ::std::os::raw::c_char
     ) -> bool;
 }
 extern "C" {
@@ -293,9 +308,6 @@ extern "C" {
         //js_int: *mut webui_script_interface_t,
         js_int: &webui_script_interface_t,
     );
-}
-extern "C" {
-    pub fn webui_TEST(win: *mut webui_window_t);
 }
 extern "C" {
     pub fn _webui_init();
@@ -471,6 +483,12 @@ pub const Firefox: u32 = 2;
 pub const Edge: u32 = 3;
 pub const Safari: u32 = 4;
 pub const Chromium: u32 = 5;
+pub const opera: u32 = 6;
+pub const brave: u32 = 7;
+pub const vivaldi: u32 = 8;
+pub const epic: u32 = 9;
+pub const yandex: u32 = 10;
+pub const current: u32 = 0;
 pub const Custom: u32 = 99;
 
 pub struct JavaScript {
@@ -538,7 +556,7 @@ pub fn Exit() {
     }
 }
 
-pub fn Show(win: *mut webui_window_t, html: &str, b: u32) -> bool {
+pub fn Show(win: *mut webui_window_t, html: &str) -> bool {
 
     unsafe {
 
