@@ -1766,28 +1766,30 @@ const char* _webui_browser_get_temp_path(unsigned int browser) {
     #endif
 }
 
-bool _webui_get_windows_reg_value(HKEY key, const char* reg, const char* value_name, char value[WEBUI_MAX_PATH]) {
+#ifdef _WIN32
+    bool _webui_get_windows_reg_value(HKEY key, const char* reg, const char* value_name, char value[WEBUI_MAX_PATH]) {
 
-    #ifdef WEBUI_LOG
-        printf("[0] _webui_get_windows_reg_value([%s])... \n", reg);
-    #endif
+        #ifdef WEBUI_LOG
+            printf("[0] _webui_get_windows_reg_value([%s])... \n", reg);
+        #endif
 
-    HKEY hKey;
+        HKEY hKey;
 
-    if(RegOpenKeyEx(key, reg, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        if(RegOpenKeyEx(key, reg, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
 
-        DWORD valueSize = WEBUI_MAX_PATH;
-        // If `value_name` is empty then
-        // will read the "(default)" reg-key
-        if(RegQueryValueEx(hKey, value_name, NULL, NULL, (LPBYTE)value, &valueSize) == ERROR_SUCCESS) {
+            DWORD valueSize = WEBUI_MAX_PATH;
+            // If `value_name` is empty then
+            // will read the "(default)" reg-key
+            if(RegQueryValueEx(hKey, value_name, NULL, NULL, (LPBYTE)value, &valueSize) == ERROR_SUCCESS) {
 
-            RegCloseKey(hKey);
-            return true;
+                RegCloseKey(hKey);
+                return true;
+            }
         }
-    }
 
-    return false;
-}
+        return false;
+    }
+#endif
 
 bool _webui_is_google_chrome_folder(const char* folder) {
 
