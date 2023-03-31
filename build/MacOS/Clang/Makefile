@@ -1,5 +1,5 @@
 # WebUI Library
-# MacOS - Clang
+# macOS - Clang
 
 SOURCE=../../../src
 INCLUDE=../../../include
@@ -11,8 +11,8 @@ debug:
 	@echo "Build WebUI Library (Debug Static)..."
 	@clang -g -m64 -o mongoose.o -I "$(INCLUDE)" -c "$(SOURCE)/mongoose.c"
 	@clang -g -m64 -o webui.o -I "$(INCLUDE)" -c "$(SOURCE)/webui.c"
-	@ar rc libwebui-2-aarch64-apple-darwin.a webui.o mongoose.o
-	@ranlib libwebui-2-aarch64-apple-darwin.a
+	@ar rc libwebui-2-static-x64.a webui.o mongoose.o
+	@ranlib libwebui-2-static-x64.a
 #	Dynamic with Debug info
 	@echo "Build WebUI Library (Debug Dynamic)..."
 	@clang -g -fPIC -m64 -o mongoose.o -I "$(INCLUDE)" -c "$(SOURCE)/mongoose.c"
@@ -27,8 +27,8 @@ release:
 	@echo "Build WebUI Library (Release Static)..."
 	@clang -Os -m64 -o mongoose.o -I "$(INCLUDE)" -c "$(SOURCE)/mongoose.c"
 	@clang -Os -m64 -o webui.o -I "$(INCLUDE)" -c "$(SOURCE)/webui.c"
-	@ar rc libwebui-2-aarch64-apple-darwin.a webui.o mongoose.o
-	@ranlib libwebui-2-aarch64-apple-darwin.a
+	@ar rc libwebui-2-static-x64.a webui.o mongoose.o
+	@ranlib libwebui-2-static-x64.a
 #	Dynamic Release
 	@echo "Build WebUI Library (Release Dynamic)..."
 	@clang -O3 -fPIC -m64 -o mongoose.o -I "$(INCLUDE)" -c "$(SOURCE)/mongoose.c"
