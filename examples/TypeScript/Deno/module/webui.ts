@@ -3,7 +3,7 @@
 import { existsSync } from "https://deno.land/std/fs/mod.ts";
 // import { readCString } from "https://deno.land/std/c/strings/mod.ts";
 
-const version = '2.1.0';
+const version = '2.1.1';
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 let lib_loaded = false;

@@ -1,5 +1,5 @@
 
-# WebUI Library 2.1.0
+# WebUI Library 2.1.1
 #
 # http://webui.me
 # https://github.com/alifcommunity/webui
@@ -140,22 +140,6 @@ class window:
             WebUI.webui_bind_interface(
                 self.window,
                 element.encode('utf-8'),
-                self.c_events))
-        self.cb_fun_list.insert(cb_index, func)
-
-
-    def bind_all(self, func):
-        global WebUI
-        if self.window is None:
-            err_window_is_none('bind')
-            return
-        if WebUI is None:
-            err_library_not_found('bind')
-            return
-        cb_index = int(
-            WebUI.webui_bind_interface(
-                self.window,
-                "".encode('utf-8'),
                 self.c_events))
         self.cb_fun_list.insert(cb_index, func)
 

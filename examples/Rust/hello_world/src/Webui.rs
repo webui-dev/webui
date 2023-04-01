@@ -1,5 +1,5 @@
 /*
-    WebUI Library 2.1.0
+    WebUI Library 2.1.1
     
     http://webui.me
     https://github.com/alifcommunity/webui
@@ -49,11 +49,7 @@ pub struct webui_window_core_t {
     pub multi_access: bool,
     pub server_root: bool,
     pub server_port: ::std::os::raw::c_uint,
-    pub is_bind_all: bool,
     pub url: *mut ::std::os::raw::c_char,
-    pub cb_all: [::std::option::Option<
-        unsafe extern "C" fn(e: *mut webui_event_t),
-    >; 1usize],
     pub html: *const ::std::os::raw::c_char,
     pub html_cpy: *const ::std::os::raw::c_char,
     pub icon: *const ::std::os::raw::c_char,
@@ -234,14 +230,6 @@ extern "C" {
             unsafe fn(e: *mut webui_event_t),
         >,
     ) -> ::std::os::raw::c_uint;
-}
-extern "C" {
-    pub fn webui_bind_all(
-        win: *mut webui_window_t,
-        func: ::std::option::Option<
-            unsafe extern "C" fn(e: *mut webui_event_t),
-        >,
-    );
 }
 extern "C" {
     pub fn webui_open(

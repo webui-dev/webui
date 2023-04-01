@@ -11,6 +11,21 @@ void exit_app(webui_event_t* e) {
     webui_exit();
 }
 
+void events(webui_event_t* e) {
+
+    // This function gets called every time
+    // there is an event
+
+    if(e->type == WEBUI_EVENT_CONNECTED)
+        printf("Connected. \n");
+    else if(e->type == WEBUI_EVENT_DISCONNECTED)
+        printf("Disconnected. \n");
+    else if(e->type == WEBUI_EVENT_MOUSE_CLICK)
+        printf("Click. \n");
+    else if(e->type == WEBUI_EVENT_NAVIGATION)
+        printf("Starting navigation to: %s \n", (char *)e->data);
+}
+
 void switch_to_second_page(webui_event_t* e) {
 
     // This function gets called every
@@ -41,6 +56,9 @@ int main() {
     webui_bind(my_window, "OpenNewWindow", show_second_window);
     webui_bind(my_window, "Exit", exit_app);
     webui_bind(my_second_window, "Exit", exit_app);
+
+    // Bind events
+    webui_bind(my_window, "", events);
 
     // Show a new window
     webui_show(my_window, "index.html");

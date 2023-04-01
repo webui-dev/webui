@@ -87,7 +87,7 @@ def main():
 	MyWindow = webui.window()
 
 	# Bind am HTML element ID with a python function
-	MyWindow.bind_all(test)
+	MyWindow.bind('', test)
 	MyWindow.bind('Test2', test2)
 	MyWindow.bind('ExitID', close)
 
