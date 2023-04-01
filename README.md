@@ -65,7 +65,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
  - Online Documentation - Go (*Not Complete*)
  - Online Documentation - Rust (*Not Complete*)
  - Online Documentation - V (*Not Complete*)
- - Online Documentation - Nim (*Not Complete*)
+ - [Online Documentation - Nim (*Not Complete*)](https://neroist.github.io/webui-docs/)
  - Online Documentation - Zig (*Not Complete*)
 
 ## Build
