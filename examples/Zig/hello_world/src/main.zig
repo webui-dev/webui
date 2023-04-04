@@ -34,9 +34,7 @@ pub fn main() void {
     _ = c.webui_bind(my_window, "MyButton2", close_the_application);
 
     // Show the window
-    if (!c.webui_show(my_window, my_html, c.webui.browser.chrome)) {
-        _ = c.webui_show(my_window, my_html, c.webui.browser.any);
-    }
+    c.webui_show(my_window, my_html);
 
     // Wait until all windows get closed
     c.webui_wait();

@@ -16,9 +16,7 @@ pub fn main() void {
     const url = c.webui_new_server(my_window, root_path);
 
     // Show the window using the generated url
-    if (!c.webui_show(my_window, url, c.webui.browser.chrome)) {
-        _ = c.webui_show(my_window, url, c.webui.browser.any);
-    }
+    c.webui_show(my_window, url);
 
     // Wait until all windows get closed
     c.webui_wait();
