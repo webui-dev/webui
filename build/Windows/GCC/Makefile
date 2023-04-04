@@ -35,6 +35,7 @@ release:
 	@gcc -O3 -fPIC -m64 -o mongoose.o -I "$(INCLUDE)" -c "$(SOURCE)/mongoose.c" -Wno-stringop-overread
 	@gcc -O3 -fPIC -m64 -o webui.o -I "$(INCLUDE)" -c "$(SOURCE)/webui.c"
 	@gcc -shared -o webui-2-x64.dll webui.o mongoose.o -lws2_32
+	@strip --strip-unneeded webui-2-x64.dll
 #	Clean
 	@- del *.o >nul 2>&1
 	@echo Done.
