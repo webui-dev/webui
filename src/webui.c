@@ -52,15 +52,15 @@ static const char* webui_javascript_bridge =
 "    _webui_close_value = value; \n"
 "    _webui_ws.close(); \n"
 "} \n"
-"function _webui_freeze_ui() { \n"
+"function _webui_freeze_ui(void) { \n"
 "    document.body.style.filter = 'contrast(1%)'; \n"
 "} \n"
-"function _webui_start() { \n"
+"function _webui_start(void) { \n"
 "    if('WebSocket' in window) { \n"
 "        if(_webui_bind_list.includes(_webui_win_num + '/')) _webui_has_events = true; \n"
 "        _webui_ws = new WebSocket('ws://localhost:' + _webui_port + '/_ws'); \n"
 "        _webui_ws.binaryType = 'arraybuffer'; \n"
-"        _webui_ws.onopen = function () { \n"
+"        _webui_ws.onopen = function (void) { \n"
 "            _webui_ws.binaryType = 'arraybuffer'; \n"
 "            _webui_ws_status = true; \n"
 "            _webui_ws_status_once = true; \n"
@@ -68,7 +68,7 @@ static const char* webui_javascript_bridge =
 "                console.log('WebUI -> Connected'); \n"
 "            _webui_clicks_listener(); \n"
 "        }; \n"
-"        _webui_ws.onerror = function () { \n"
+"        _webui_ws.onerror = function (void) { \n"
 "            if(_webui_log) \n"
 "                console.log('WebUI -> Connection Failed'); \n"
 "            _webui_freeze_ui(); \n"
@@ -129,7 +129,7 @@ static const char* webui_javascript_bridge =
 "        if(!_webui_log) window.close(); \n"
 "    } \n"
 "} \n"
-"function _webui_clicks_listener() { \n"
+"function _webui_clicks_listener(void) { \n"
 "    Object.keys(window).forEach(key=>{ \n"
 "        if(/^on(click)/.test(key)) { \n"
 "            window.addEventListener(key.slice(2),event=>{ \n"
@@ -206,10 +206,10 @@ static const char* webui_javascript_bridge =
 "        return false; \n"
 "    } \n"
 "}); \n"
-"window.onbeforeunload = function () { \n"
+"window.onbeforeunload = function (void) { \n"
 "   //_webui_ws.close(); \n"
 "}; \n"
-"setTimeout(function () { \n"
+"setTimeout(function (void) { \n"
 "    if(!_webui_ws_status_once) { \n"
 "        _webui_freeze_ui(); \n"
 "        alert('WebUI failed to connect to the background application. Please try again.'); \n"
@@ -217,14 +217,14 @@ static const char* webui_javascript_bridge =
 "    } \n"
 "}, 1500); \n"
 "window.addEventListener('unload', unload_handler, false); \n"
-"function unload_handler(){ \n"
+"function unload_handler(void) { \n"
 "    // Unload for 'back' & 'forward' navigation \n"
 "    window.removeEventListener('unload', unload_handler, false); \n"
 "} \n"
 "// Links \n"
 "document.addEventListener('click', e => { \n"
 "    const attribute = e.target.closest('a'); \n"
-"    if(attribute){ \n"
+"    if(attribute) { \n"
 "        const link = attribute.href; \n"
 "        e.preventDefault(); \n"
 "        _webui_close(_WEBUI_SWITCH, link); \n"
@@ -358,7 +358,7 @@ void _webui_free_mem(void **p) {
     *p = NULL;
 }
 
-void _webui_free_all_mem() {
+void _webui_free_all_mem(void) {
     
     #ifdef WEBUI_LOG
         printf("[0] _webui_free_all_mem()... \n");
@@ -386,7 +386,7 @@ void _webui_free_all_mem() {
     }
 }
 
-void _webui_panic() {
+void _webui_panic(void) {
     
     #ifdef WEBUI_LOG
         printf("[0] _webui_panic()... \n");
@@ -601,7 +601,7 @@ const char* _webui_get_extension(const char*f) {
     return ext + 1;
 }
 
-unsigned int _webui_get_run_id() {
+unsigned int _webui_get_run_id(void) {
     
     #ifdef WEBUI_LOG
         printf("[0] _webui_get_run_id()... \n");
@@ -735,7 +735,7 @@ void _webui_serve_file(webui_window_t* win, struct mg_connection *c, void *ev_da
     mg_http_serve_dir(c, ev_data, &opts);
 }
 
-bool _webui_deno_exist() {
+bool _webui_deno_exist(void) {
     
     #ifdef WEBUI_LOG
         printf("[0] _webui_deno_exist()... \n");
@@ -755,7 +755,7 @@ bool _webui_deno_exist() {
         return false;
 }
 
-bool _webui_nodejs_exist() {
+bool _webui_nodejs_exist(void) {
     
     #ifdef WEBUI_LOG
         printf("[0] _webui_nodejs_exist()... \n");
@@ -1549,12 +1549,12 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
                         mg_mgr_poll(&mgr, 1);
 
                         // Exit signal
-                        if(webui.exit_now){
+                        if(webui.exit_now) {
                             stop = true;
                             break;
                         }
 
-                        if(!win->core.connected){
+                        if(!win->core.connected) {
 
                             // The UI is just get disconnected
                             // let's wait for re-connection...
@@ -1953,7 +1953,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Google Chrome on macOS
             if(_webui_cmd_sync("open -R -a \"Google Chrome\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome");
+                sprintf(win->core.browser_path, "/Applications/Google\\ Chrome.app/Contents/macOS/Google\\ Chrome");
                 return true;
             }
             else
@@ -2060,7 +2060,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Epic on macOS
             if(_webui_cmd_sync("open -R -a \"Epic\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Epic\\ Epic.app/Contents/MacOS/Epic\\ Epic");
+                sprintf(win->core.browser_path, "/Applications/Epic\\ Epic.app/Contents/macOS/Epic\\ Epic");
                 return true;
             }
             else
@@ -2118,7 +2118,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Vivaldi on macOS
             if(_webui_cmd_sync("open -R -a \"Vivaldi\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Vivaldi\\ Vivaldi.app/Contents/MacOS/Vivaldi\\ Vivaldi");
+                sprintf(win->core.browser_path, "/Applications/Vivaldi\\ Vivaldi.app/Contents/macOS/Vivaldi\\ Vivaldi");
                 return true;
             }
             else
@@ -2176,7 +2176,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Brave on macOS
             if(_webui_cmd_sync("open -R -a \"Brave\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Brave\\ Brave.app/Contents/MacOS/Brave\\ Brave");
+                sprintf(win->core.browser_path, "/Applications/Brave\\ Brave.app/Contents/macOS/Brave\\ Brave");
                 return true;
             }
             else
@@ -2234,7 +2234,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Firefox on macOS
             if(_webui_cmd_sync("open -R -a \"firefox\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Firefox.app/Contents/MacOS/firefox");
+                sprintf(win->core.browser_path, "/Applications/Firefox.app/Contents/macOS/firefox");
                 return true;
             }
             else
@@ -2295,7 +2295,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Yandex on macOS
             if(_webui_cmd_sync("open -R -a \"Yandex\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Yandex\\ Yandex.app/Contents/MacOS/Yandex\\ Yandex");
+                sprintf(win->core.browser_path, "/Applications/Yandex\\ Yandex.app/Contents/macOS/Yandex\\ Yandex");
                 return true;
             }
             else
@@ -2353,7 +2353,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Chromium on macOS
             if(_webui_cmd_sync("open -R -a \"Chromium\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Chromium\\ Chromium.app/Contents/MacOS/Chromium\\ Chromium");
+                sprintf(win->core.browser_path, "/Applications/Chromium\\ Chromium.app/Contents/macOS/Chromium\\ Chromium");
                 return true;
             }
             else
@@ -2374,7 +2374,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
     return false;
 }
 
-void _webui_clean() {
+void _webui_clean(void) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_clean()... \n");
@@ -3089,7 +3089,7 @@ void webui_script(webui_window_t* win, webui_script_t* script) {
     }
 }
 
-webui_window_t* webui_new_window() {
+webui_window_t* webui_new_window(void) {
 
     #ifdef WEBUI_LOG
         printf("[0] webui_new_window()... \n");
@@ -3145,7 +3145,7 @@ bool webui_is_shown(webui_window_t* win) {
     return win->core.connected;
 }
 
-bool webui_is_any_window_running() {
+bool webui_is_any_window_running(void) {
 
     #ifdef WEBUI_LOG
         printf("[0] webui_is_any_window_running()... \n");
@@ -3845,7 +3845,7 @@ void _webui_wait_process(webui_window_t* win, bool status) {
     win->core.detect_process_close = status;
 }
 
-char* _webui_get_current_path() {
+char* _webui_get_current_path(void) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_get_current_path()... \n");
@@ -3867,7 +3867,7 @@ void _webui_set_custom_browser(webui_custom_browser_t* p) {
     webui.custom_browser = p;
 }
 
-void webui_exit() {
+void webui_exit(void) {
 
     #ifdef WEBUI_LOG
         printf("[0] webui_exit()... \n");
@@ -3881,10 +3881,10 @@ void webui_exit() {
     _webui_sleep(100);
 }
 
-bool webui_is_app_running() {
+bool webui_is_app_running(void) {
 
     #ifdef WEBUI_LOG
-        // printf("[0] webui_is_app_running()... \n");
+        printf("[0] webui_is_app_running()... \n");
     #endif
 
     static bool app_is_running = true;
@@ -3919,7 +3919,7 @@ bool webui_is_app_running() {
     return app_is_running;
 }
 
-void webui_wait() {
+void webui_wait(void) {
 
     #ifdef WEBUI_LOG
         printf("[L] webui_wait()... \n");
@@ -3993,7 +3993,7 @@ void _webui_free_port(unsigned int port) {
     }
 }
 
-void _webui_wait_for_startup() {
+void _webui_wait_for_startup(void) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_wait_for_startup()... \n");
@@ -4038,7 +4038,7 @@ void webui_set_timeout(unsigned int second) {
     }
 }
 
-unsigned int _webui_get_new_window_number() {
+unsigned int _webui_get_new_window_number(void) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_get_new_window_number()... \n");
@@ -4047,7 +4047,7 @@ unsigned int _webui_get_new_window_number() {
     return ++webui.last_window;
 }
 
-unsigned int _webui_get_free_port() {
+unsigned int _webui_get_free_port(void) {
 
     #ifdef WEBUI_LOG
         printf("[0] _webui_get_free_port()... \n");
@@ -4110,7 +4110,7 @@ void webui_script_runtime(webui_window_t* win, unsigned int runtime) {
         win->core.runtime = runtime;
 }
 
-void _webui_init() {
+void _webui_init(void) {
 
     if(webui.initialized)
         return;    
