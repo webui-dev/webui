@@ -11,7 +11,7 @@ import { serve } from "https://deno.land/std@0.158.0/http/server.ts";
 
 // Optional - Set a custom library path:
 //  const lib_full_path = '../../../../build/Windows/MSVC/webui-2-x64.dll';
-//  console.log("Optional: Looking for the WebUI dynamic library at: " + lib_full_path);
+//  console.log("Looking for the WebUI dynamic library at: " + lib_full_path);
 //  webui.set_lib_path(lib_full_path);
 
 // Deno Server Listener

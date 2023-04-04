@@ -7,7 +7,7 @@ import * as webui from "../module/webui.ts";
 
 // Optional - Set a custom library path:
 //  const lib_full_path = '../../../../build/Windows/MSVC/webui-2-x64.dll';
-//  console.log("Optional: Looking for the WebUI dynamic library at: " + lib_full_path);
+//  console.log("Looking for the WebUI dynamic library at: " + lib_full_path);
 //  webui.set_lib_path(lib_full_path);
 
 const my_html = `
@@ -90,10 +90,10 @@ webui.bind(my_window, "Exit", function(e : webui.event) {
 });
 
 // Show the window
-if(!webui.show(my_window, my_html, webui.browser.chrome))
-	webui.show(my_window, my_html, webui.browser.any);
+webui.show(my_window, my_html);
 
 // Wait until all windows get closed
 await webui.wait();
 
 console.log("Thank you.");
+Deno.exit(0);

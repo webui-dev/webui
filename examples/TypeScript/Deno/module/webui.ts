@@ -1,14 +1,23 @@
+/*
+  WebUI Library 2.1.1
+  
+  http://webui.me
+  https://github.com/alifcommunity/webui
 
+  Copyright (c) 2020-2023 Hassan Draga.
+  Licensed under GNU General Public License v2.0.
+  All rights reserved.
+  Canada.
+*/
 
 import { existsSync } from "https://deno.land/std/fs/mod.ts";
 // import { readCString } from "https://deno.land/std/c/strings/mod.ts";
 
-const version = '2.1.1';
+export const version = '2.1.1';
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 let lib_loaded = false;
 let webui_lib;
-let fun_list:number[][];
 
 export const browser = {};
 browser.any = 0;
@@ -17,8 +26,6 @@ browser.firefox = 2;
 browser.edge = 3;
 browser.safari = 4;
 browser.chromium = 5;
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export interface event {
   element_id: number;
@@ -30,10 +37,10 @@ export interface event {
 
 export interface js {
   Timeout: number;
-	Script:  string;
-	Error:   boolean;
-	Length:  number;
-	Data:  string;
+	Script: string;
+	Error: boolean;
+	Length: number;
+	Data: string;
 }
 
 // Determine the library name based
@@ -102,8 +109,6 @@ function load_lib() {
     lib_path = lib_path_cwd;
   }
 
-  console.log('Load the library = [' + lib_path + ']');
-
   // Load the library
   // FFI
   webui_lib = Deno.dlopen(
@@ -112,7 +117,7 @@ function load_lib() {
       webui_wait: {
         parameters: [],
         result: 'void',
-        nonblocking: false,
+        nonblocking: true,
       },
       webui_new_window: {
         parameters: [],
@@ -120,7 +125,7 @@ function load_lib() {
         nonblocking: false,
       },
       webui_show: {
-        parameters: ['pointer', 'buffer', 'u32'],
+        parameters: ['pointer', 'buffer'],
         result: 'i32',
         nonblocking: false,
       },
@@ -161,21 +166,21 @@ function load_lib() {
   lib_loaded = true;
 }
 
-export function set_lib_path(path) {
+export function set_lib_path(path : string) {
 	lib_path = path;
 }
 
-export function new_window() : number {
+export function new_window() : Deno.Pointer {
   load_lib();
 	return webui_lib.symbols.webui_new_window();
 }
 
-export function show(win, html, browser) : number {
+export function show(win : Deno.Pointer, content : string) : number {
   load_lib();
-  return webui_lib.symbols.webui_show(win, string_to_uint8array(html), browser);
+  return webui_lib.symbols.webui_show(win, string_to_uint8array(content));
 }
 
-export function open(win, url, browser) : number {
+export function open(win, url : string, browser : number) : number {
   load_lib();
   return webui_lib.symbols.webui_open(win, string_to_uint8array(url), browser);
 }
@@ -183,17 +188,22 @@ export function open(win, url, browser) : number {
 export function exit() {
   load_lib();
   webui_lib.symbols.webui_exit();
-  Deno.exit(0);
 }
 
-export async function wait() {
-  load_lib();
-  while(true) {
-    await sleep(250);
-    if(!webui_lib.symbols.webui_is_app_running())
-      break;
+// - - - - - - - - - - - - - - - -
+// TODO: We should use the Non-blocking FFI to call 
+// `webui_lib.symbols.webui_wait()`. but it breaks
+// the main thread. Lets do it in another way for now.
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  export async function wait() {
+    load_lib();
+    while(true) {
+      await sleep(50);
+      if(!webui_lib.symbols.webui_is_app_running())
+        break;
+    }
   }
-}
+// - - - - - - - - - - - - - - - -
 
 export function run(win : number, javascript : js) {
   load_lib();
@@ -224,9 +234,9 @@ export function run(win : number, javascript : js) {
   data = String(Deno.UnsafePointerView.getCString(charPointer, 0));
 
   // Update
-  javascript.Error = error;
-  javascript.Length = length;
-  javascript.Data = data;
+  javascript.Error = Boolean(error);
+  javascript.Length = Number(length);
+  javascript.Data = String(data);
 
   // Clean memory
   webui_lib.symbols.webui_clean_mem(charPointer);

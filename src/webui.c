@@ -52,15 +52,15 @@ static const char* webui_javascript_bridge =
 "    _webui_close_value = value; \n"
 "    _webui_ws.close(); \n"
 "} \n"
-"function _webui_freeze_ui(void) { \n"
+"function _webui_freeze_ui() { \n"
 "    document.body.style.filter = 'contrast(1%)'; \n"
 "} \n"
-"function _webui_start(void) { \n"
+"function _webui_start() { \n"
 "    if('WebSocket' in window) { \n"
 "        if(_webui_bind_list.includes(_webui_win_num + '/')) _webui_has_events = true; \n"
 "        _webui_ws = new WebSocket('ws://localhost:' + _webui_port + '/_ws'); \n"
 "        _webui_ws.binaryType = 'arraybuffer'; \n"
-"        _webui_ws.onopen = function (void) { \n"
+"        _webui_ws.onopen = function () { \n"
 "            _webui_ws.binaryType = 'arraybuffer'; \n"
 "            _webui_ws_status = true; \n"
 "            _webui_ws_status_once = true; \n"
@@ -68,7 +68,7 @@ static const char* webui_javascript_bridge =
 "                console.log('WebUI -> Connected'); \n"
 "            _webui_clicks_listener(); \n"
 "        }; \n"
-"        _webui_ws.onerror = function (void) { \n"
+"        _webui_ws.onerror = function () { \n"
 "            if(_webui_log) \n"
 "                console.log('WebUI -> Connection Failed'); \n"
 "            _webui_freeze_ui(); \n"
@@ -129,7 +129,7 @@ static const char* webui_javascript_bridge =
 "        if(!_webui_log) window.close(); \n"
 "    } \n"
 "} \n"
-"function _webui_clicks_listener(void) { \n"
+"function _webui_clicks_listener() { \n"
 "    Object.keys(window).forEach(key=>{ \n"
 "        if(/^on(click)/.test(key)) { \n"
 "            window.addEventListener(key.slice(2),event=>{ \n"
@@ -206,10 +206,10 @@ static const char* webui_javascript_bridge =
 "        return false; \n"
 "    } \n"
 "}); \n"
-"window.onbeforeunload = function (void) { \n"
+"window.onbeforeunload = function () { \n"
 "   //_webui_ws.close(); \n"
 "}; \n"
-"setTimeout(function (void) { \n"
+"setTimeout(function () { \n"
 "    if(!_webui_ws_status_once) { \n"
 "        _webui_freeze_ui(); \n"
 "        alert('WebUI failed to connect to the background application. Please try again.'); \n"
@@ -217,7 +217,7 @@ static const char* webui_javascript_bridge =
 "    } \n"
 "}, 1500); \n"
 "window.addEventListener('unload', unload_handler, false); \n"
-"function unload_handler(void) { \n"
+"function unload_handler() { \n"
 "    // Unload for 'back' & 'forward' navigation \n"
 "    window.removeEventListener('unload', unload_handler, false); \n"
 "} \n"
@@ -3884,7 +3884,7 @@ void webui_exit(void) {
 bool webui_is_app_running(void) {
 
     #ifdef WEBUI_LOG
-        printf("[0] webui_is_app_running()... \n");
+        // printf("[0] webui_is_app_running()... \n");
     #endif
 
     static bool app_is_running = true;
