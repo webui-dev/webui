@@ -100,10 +100,10 @@ class window:
             sys.exit(1)
 
 
-    def __del__(self):
-        global WebUI
-        if self.window is not None and WebUI is not None:
-            WebUI.webui_close(self.window)
+    # def __del__(self):
+    #     global WebUI
+    #     if self.window is not None and WebUI is not None:
+    #         WebUI.webui_close(self.window)
 
 
     def events(self, element_id, window_id, 

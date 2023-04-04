@@ -12,7 +12,7 @@ import webui
 # Use the local WebUI Dynamic lib
 # For instructions on compiling it please visit:
 # https://github.com/alifcommunity/webui/tree/main/build
-webui.set_library_path('../../../build/Windows/MSVC')
+webui.set_library_path('../../../build/Windows/GCC')
 
 # HTML
 html = """
