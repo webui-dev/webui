@@ -184,7 +184,7 @@ extern "C" {
 extern "C" {
     pub fn webui_show(
         win: *mut webui_window_t,
-        html: *const ::std::os::raw::c_char
+        content: *const ::std::os::raw::c_char
     ) -> bool;
 }
 extern "C" {
@@ -544,15 +544,15 @@ pub fn Exit() {
     }
 }
 
-pub fn Show(win: *mut webui_window_t, html: &str) -> bool {
+pub fn Show(win: *mut webui_window_t, content: &str) -> bool {
 
     unsafe {
 
-        // HTML String to i8/u8
-        let html_c_str = CString::new(html).unwrap();
-        let html_c_char: *const c_char = html_c_str.as_ptr() as *const c_char;
+        // Content String to i8/u8
+        let content_c_str = CString::new(content).unwrap();
+        let content_c_char: *const c_char = content_c_str.as_ptr() as *const c_char;
 
-        return webui_show(win, html_c_char);
+        return webui_show(win, content_c_char);
     }
 }
 
