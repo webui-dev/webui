@@ -1,6 +1,3 @@
-// WebUI Go Hello World Example
-// https://github.com/alifcommunity/webui
-
 package main
 
 import (
@@ -84,7 +81,7 @@ func Check(e webui.Event) {
 		// Check the password
 		if MyScript.Data == "123456" {
 
-			webui.Show(e.Window, dashboard_html, webui.AnyBrowser)
+			webui.Show(e.Window, dashboard_html)
 		} else {
 
 			MyScript.Script = " document.getElementById('err').innerHTML = 'Sorry. Wrong password'; "
@@ -107,7 +104,7 @@ func main() {
 	webui.Bind(my_window, "Exit", Exit)
 
 	// Show window
-	webui.Show(my_window, login_html, webui.AnyBrowser)
+	webui.Show(my_window, login_html)
 
 	// Loop
 	webui.Wait()

@@ -1,6 +1,16 @@
+/*
+   WebUI Library 2.1.1
+
+   http://webui.me
+   https://github.com/alifcommunity/webui
+
+   Copyright (c) 2020-2023 Hassan Draga.
+   Licensed under GNU General Public License v2.0.
+   All rights reserved.
+   Canada.
+*/
+
 package webui
-
-
 
 /*
 // [?] Change the library path as you need
@@ -94,10 +104,16 @@ func Exit() {
 	C.webui_exit()
 }
 
-func Show(window *C.webui_window_t, html string, browser uint) {
+func Show(window *C.webui_window_t, content string) {
 
-	c_html := C.CString(html)
-	C.webui_show(window, c_html, C.uint(browser))
+	c_content := C.CString(content)
+	C.webui_show(window, c_content)
+}
+
+func Open(window *C.webui_window_t, url string, browser uint) {
+
+	c_url := C.CString(url)
+	C.webui_open(window, c_url, C.uint(browser))
 }
 
 func Wait() {
