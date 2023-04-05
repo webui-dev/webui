@@ -18,3 +18,5 @@ DEL /Q /F /S "*.ilk" >nul 2>&1
 DEL /Q /F /S "*.obj" >nul 2>&1
 DEL /Q /F /S "*.res" >nul 2>&1
 DEL /Q /F /S "*.bak" >nul 2>&1
+
+DEL /Q /F /S "*.DS_Store" >nul 2>&1

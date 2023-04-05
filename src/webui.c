@@ -1932,7 +1932,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
                     sprintf(win->core.browser_path, "\"%s\\chrome.exe\"", browser_folder);
                     return true;
                 }
-            }            
+            }
 
             // Search in `HKEY_CURRENT_USER` (If Google Chrome installed for one user)
             if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", "Path", browser_folder)) {
@@ -1953,7 +1953,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Google Chrome on macOS
             if(_webui_cmd_sync("open -R -a \"Google Chrome\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Google\\ Chrome.app/Contents/macOS/Google\\ Chrome");
+                sprintf(win->core.browser_path, "open -W \"/Applications/Google Chrome.app\" --args");
                 return true;
             }
             else
@@ -2060,7 +2060,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Epic on macOS
             if(_webui_cmd_sync("open -R -a \"Epic\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Epic\\ Epic.app/Contents/macOS/Epic\\ Epic");
+                sprintf(win->core.browser_path, "open -W \"/Applications/Epic.app\" --args");
                 return true;
             }
             else
@@ -2118,7 +2118,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Vivaldi on macOS
             if(_webui_cmd_sync("open -R -a \"Vivaldi\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Vivaldi\\ Vivaldi.app/Contents/macOS/Vivaldi\\ Vivaldi");
+                sprintf(win->core.browser_path, "open -W \"/Applications/Vivaldi.app\" --args");
                 return true;
             }
             else
@@ -2176,7 +2176,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Brave on macOS
             if(_webui_cmd_sync("open -R -a \"Brave\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Brave\\ Brave.app/Contents/macOS/Brave\\ Brave");
+                sprintf(win->core.browser_path, "open -W \"/Applications/Brave.app\" --args");
                 return true;
             }
             else
@@ -2234,7 +2234,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Firefox on macOS
             if(_webui_cmd_sync("open -R -a \"firefox\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Firefox.app/Contents/macOS/firefox");
+                sprintf(win->core.browser_path, "open -W \"/Applications/Firefox.app\" --args");
                 return true;
             }
             else
@@ -2295,7 +2295,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Yandex on macOS
             if(_webui_cmd_sync("open -R -a \"Yandex\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Yandex\\ Yandex.app/Contents/macOS/Yandex\\ Yandex");
+                sprintf(win->core.browser_path, "open -W \"/Applications/Yandex.app\" --args");
                 return true;
             }
             else
@@ -2353,7 +2353,7 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
             // Chromium on macOS
             if(_webui_cmd_sync("open -R -a \"Chromium\"", false) == 0) {
 
-                sprintf(win->core.browser_path, "/Applications/Chromium\\ Chromium.app/Contents/macOS/Chromium\\ Chromium");
+                sprintf(win->core.browser_path, "open -W \"/Applications/Chromium.app\" --args");
                 return true;
             }
             else

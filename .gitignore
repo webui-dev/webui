@@ -13,6 +13,7 @@
 *.o
 *.def
 *.obj
+*.dyn
 
 # IDE
 .idea/
@@ -38,3 +39,13 @@ nul
 /zig-out/
 /examples/Zig/*/zig-cache/
 /examples/Zig/*/zig-out/
+
+# macOS
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
