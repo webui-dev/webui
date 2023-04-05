@@ -396,7 +396,7 @@ void _webui_panic(void) {
     exit(EXIT_FAILURE);
 }
 
-size_t round_to_memory_block(int size) {
+size_t _webui_round_to_memory_block(int size) {
 
     // If size is negative
     if(size < 4)
@@ -423,7 +423,7 @@ void* _webui_malloc(int size) {
     // terminator if it's a string
     size++;
 
-    size = round_to_memory_block(size);
+    size = _webui_round_to_memory_block(size);
 
     void* block = NULL;
     for(unsigned int i = 0; i < 8; i++) {
@@ -3894,7 +3894,7 @@ bool webui_is_app_running(void) {
 
     // Initialization
     if(!webui.initialized)
-    _webui_init();
+        _webui_init();
     
     // Get app status
     if(webui.exit_now) {
@@ -3906,15 +3906,14 @@ bool webui_is_app_running(void) {
                 app_is_running = false;
         }
     }
-    else {
-
-        // Unknown status!
-        app_is_running = false;
-    }
 
     // Final cleaning
-    if(!app_is_running)
+    if(!app_is_running) {
+        #ifdef WEBUI_LOG
+            printf("[0] webui_is_app_running()... -> App Stopped.\n");
+        #endif
         _webui_clean();
+    }
 
     return app_is_running;
 }
@@ -4116,6 +4115,7 @@ void _webui_init(void) {
         return;    
 
     #ifdef WEBUI_LOG
+        printf("[0] WebUI v%s \n", WEBUI_VERSION);
         printf("[0] _webui_init()... \n");
     #endif
 

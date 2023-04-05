@@ -124,6 +124,11 @@ function load_lib() {
         result: 'pointer',
         nonblocking: false,
       },
+      webui_new_server: {
+        parameters: ['pointer', 'buffer'],
+        result: 'pointer',
+        nonblocking: false,
+      },
       webui_show: {
         parameters: ['pointer', 'buffer'],
         result: 'i32',
@@ -173,6 +178,13 @@ export function set_lib_path(path : string) {
 export function new_window() : Deno.Pointer {
   load_lib();
 	return webui_lib.symbols.webui_new_window();
+}
+
+export function new_server(win : Deno.Pointer = null, path : string) : string {
+  load_lib();
+  const ptr = webui_lib.symbols.webui_new_server(win, string_to_uint8array(path));
+  const dataView = new Deno.UnsafePointerView(ptr);
+  return String(dataView.getCString());
 }
 
 export function show(win : Deno.Pointer, content : string) : number {
