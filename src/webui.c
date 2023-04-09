@@ -1966,6 +1966,11 @@ bool _webui_browser_exist(webui_window_t* win, unsigned int browser) {
                 sprintf(win->core.browser_path, "google-chrome");
                 return true;
             }
+            else if(_webui_cmd_sync("google-chrome-stable --version", false) == 0) {
+
+                sprintf(win->core.browser_path, "google-chrome-stable");
+                return true;
+            }
             else
                 return false;
 
