@@ -4,7 +4,7 @@
 This is an example of how to use the WebUI dynamic library in Deno to create an HTML5 based user interface.
 
 
-Tested using Deno v1.32.3 (v8 11.2.214.9, typescript 5.0.3).
+Tested using Deno v1.32.4.
 
 ### Deno Hello World
 

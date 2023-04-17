@@ -3,10 +3,10 @@
 // deno run --allow-all --unstable hello_world.ts
 
 // Import WebUI module (Local file)
-import * as webui from "../module/webui.ts";
+import * as webui from "./webui.ts";
 
 // Optional - Set a custom library path:
-//  const lib_full_path = '../../../../build/Windows/MSVC/webui-2-x64.dll';
+//  const lib_full_path = 'webui-2-x64.dll';
 //  console.log("Looking for the WebUI dynamic library at: " + lib_full_path);
 //  webui.set_lib_path(lib_full_path);
 

@@ -782,9 +782,6 @@ void webui_interface_set_response(char* ptr, const char* response) {
         printf("[User] webui_interface_set_response() -> Response [%s] \n", response);
     #endif
 
-    printf("[User] webui_interface_set_response() -> ptr 1 0x%p \n", ptr);
-    printf("[User] webui_interface_set_response() -> ptr 2 0x%p \n", *((char**)ptr));
-
     size_t len = strlen(response);
 
     if(len < 1)
@@ -799,9 +796,6 @@ void webui_interface_set_response(char* ptr, const char* response) {
         printf("[User] webui_interface_set_response() -> Internal buffer @ 0x%p \n", (*_ptr));
         printf("[User] webui_interface_set_response() -> Internal buffer [%s] \n", (*_ptr));
     #endif
-
-    printf("[User] webui_interface_set_response() -> ptr 1 0x%p \n", ptr);
-    printf("[User] webui_interface_set_response() -> ptr 2 0x%p \n", *((char**)ptr));
 }
 
 bool webui_interface_is_app_running(void) {
