@@ -17,7 +17,7 @@ This example shows how to use the WebUI Dynamic Library in Deno.
 Folder structure example:
 
     [My Folder]
-	    * deno
-	    * hello_world.ts
-		* webui.ts
-		* webui-2-x64 dynamic library
+        * deno
+        * hello_world.ts
+        * webui.ts
+        * webui-2-x64 dynamic library
