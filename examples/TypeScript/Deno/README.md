@@ -14,11 +14,10 @@ This example shows how to use the WebUI Dynamic Library in Deno.
  2. Download WebUI pre-built Library (*[webui.me](https://webui.me/)*)
  3. Run `deno run --allow-all --unstable hello_world.ts`
 
-Folder structure example (*Windows*)
+Folder structure example:
 
     [My Folder]
 	    * deno
 	    * hello_world.ts
-		* module/webui.ts
-		* module/`webui-2-x64` library
-
+		* webui.ts
+		* webui-2-x64 dynamic library
