@@ -117,6 +117,7 @@ int mg_base64_decode(const char *src, int n, char *dst) {
 
 
 
+
 struct dns_data {
   struct dns_data *next;
   struct mg_connection *c;
@@ -411,9 +412,7 @@ void mg_error(struct mg_connection *c, const char *fmt, ...) {
 
 
 
-static bool is_digit(int c) {
-  return c >= '0' && c <= '9';
-}
+static bool is_digit(int c) { return c >= '0' && c <= '9'; }
 
 static int addexp(char *buf, int e, int sign) {
   int n = 0;
@@ -446,7 +445,7 @@ static int xisnan(double x) {
          0x7ff00000;
 }
 
-static size_t mg_dtoa(char *dst, size_t dstlen, double d, int width) {
+static size_t mg_dtoa(char *dst, size_t dstlen, double d, int width, bool tz) {
   char buf[40];
   int i, s = 0, n = 0, e = 0;
   double t, mul, saved;
@@ -468,13 +467,13 @@ static size_t mg_dtoa(char *dst, size_t dstlen, double d, int width) {
   while (d < 1.0 && d / mul < 1.0) mul /= 10.0, e--;
   // printf(" --> %g %d %g %g\n", saved, e, t, mul);
 
-  if (e >= width) {
-    n = (int) mg_dtoa(buf, sizeof(buf), saved / mul, width);
+  if (e >= width && width > 1) {
+    n = (int) mg_dtoa(buf, sizeof(buf), saved / mul, width, tz);
     // printf(" --> %.*g %d [%.*s]\n", 10, d / t, e, n, buf);
     n += addexp(buf + s + n, e, '+');
     return mg_snprintf(dst, dstlen, "%.*s", n, buf);
-  } else if (e <= -width) {
-    n = (int) mg_dtoa(buf, sizeof(buf), saved / mul, width);
+  } else if (e <= -width && width > 1) {
+    n = (int) mg_dtoa(buf, sizeof(buf), saved / mul, width, tz);
     // printf(" --> %.*g %d [%.*s]\n", 10, d / mul, e, n, buf);
     n += addexp(buf + s + n, -e, '-');
     return mg_snprintf(dst, dstlen, "%.*s", n, buf);
@@ -497,8 +496,8 @@ static size_t mg_dtoa(char *dst, size_t dstlen, double d, int width) {
       t /= 10.0;
     }
   }
-  while (n > 0 && buf[s + n - 1] == '0') n--;  // Trim trailing zeros
-  if (n > 0 && buf[s + n - 1] == '.') n--;     // Trim trailing dot
+  while (tz && n > 0 && buf[s + n - 1] == '0') n--;  // Trim trailing zeroes
+  if (n > 0 && buf[s + n - 1] == '.') n--;           // Trim trailing dot
   n += s;
   if (n >= (int) sizeof(buf)) n = (int) sizeof(buf) - 1;
   buf[n] = '\0';
@@ -542,9 +541,7 @@ static char mg_esc(int c, bool esc) {
   return 0;
 }
 
-static char mg_escape(int c) {
-  return mg_esc(c, true);
-}
+static char mg_escape(int c) { return mg_esc(c, true); }
 
 static size_t qcpy(void (*out)(char, void *), void *ptr, char *buf,
                    size_t len) {
@@ -631,7 +628,7 @@ size_t mg_vxprintf(void (*out)(char, void *), void *param, const char *fmt,
         if (c == 'g' || c == 'f') {
           double v = va_arg(*ap, double);
           if (pr == ~0U) pr = 6;
-          k = mg_dtoa(tmp, sizeof(tmp), v, (int) pr);
+          k = mg_dtoa(tmp, sizeof(tmp), v, (int) pr, c == 'g');
         } else if (is_long == 2) {
           int64_t v = va_arg(*ap, int64_t);
           k = mg_lld(tmp, v, s, h);
@@ -1297,6 +1294,7 @@ struct mg_fs mg_fs_posix = {p_stat,  p_list, p_open,   p_close,  p_read,
 #ifdef MG_ENABLE_LINES
 #line 1 "src/http.c"
 #endif
+
 
 
 
@@ -3247,6 +3245,7 @@ struct mg_connection *mg_mqtt_listen(struct mg_mgr *mgr, const char *url,
 
 
 
+
 size_t mg_vprintf(struct mg_connection *c, const char *fmt, va_list *ap) {
   size_t old = c->send.len;
   mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, ap);
@@ -3491,7 +3490,6 @@ void mg_mgr_init(struct mg_mgr *mgr) {
 #ifdef MG_ENABLE_LINES
 #line 1 "src/printf.c"
 #endif
-
 
 
 
@@ -4107,6 +4105,7 @@ struct mg_connection *mg_sntp_connect(struct mg_mgr *mgr, const char *url,
 
 
 
+
 #if MG_ENABLE_SOCKET
 
 #ifndef closesocket
@@ -4669,7 +4668,7 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
     }
   }
 #else
-  struct timeval tv = {ms / 1000, (ms % 1000) * 1000}, tv_zero = {0, 0};
+  struct timeval tv = {ms / 1000, (ms % 1000) * 1000}, tv_zero = {0, 0}, *tvp;
   struct mg_connection *c;
   fd_set rset, wset, eset;
   MG_SOCKET_TYPE maxfd = 0;
@@ -4678,17 +4677,18 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
   FD_ZERO(&rset);
   FD_ZERO(&wset);
   FD_ZERO(&eset);
+  tvp = ms < 0 ? NULL : &tv;
   for (c = mgr->conns; c != NULL; c = c->next) {
     c->is_readable = c->is_writable = 0;
     if (skip_iotest(c)) continue;
     FD_SET(FD(c), &eset);
     if (can_read(c)) FD_SET(FD(c), &rset);
     if (can_write(c)) FD_SET(FD(c), &wset);
-    if (mg_tls_pending(c) > 0) tv = tv_zero;
+    if (mg_tls_pending(c) > 0) tvp = &tv_zero;
     if (FD(c) > maxfd) maxfd = FD(c);
   }
 
-  if ((rc = select((int) maxfd + 1, &rset, &wset, &eset, &tv)) < 0) {
+  if ((rc = select((int) maxfd + 1, &rset, &wset, &eset, tvp)) < 0) {
 #if MG_ARCH == MG_ARCH_WIN32
     if (maxfd == 0) Sleep(ms);  // On Windows, select fails if no sockets
 #else
@@ -5769,6 +5769,7 @@ uint64_t mg_millis(void) {
 #ifdef MG_ENABLE_LINES
 #line 1 "src/ws.c"
 #endif
+
 
 
 

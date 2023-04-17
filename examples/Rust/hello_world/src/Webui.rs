@@ -1,13 +1,11 @@
 /*
-    WebUI Library 2.1.1
-    
-    http://webui.me
-    https://github.com/alifcommunity/webui
-
-    Copyright (c) 2020-2023 Hassan Draga.
-    Licensed under GNU General Public License v2.0.
-    All rights reserved.
-    Canada.
+  WebUI Library 2.2.0
+  http://_webui_core.me
+  https://github.com/alifcommunity/webui
+  Copyright (c) 2020-2023 Hassan Draga.
+  Licensed under GNU General Public License v2.0.
+  All rights reserved.
+  Canada.
 */
 
 // Flags
@@ -22,484 +20,238 @@
 use std::os::raw::c_char;
 use std::ffi::CString;
 use std::ffi::CStr;
+use std::collections::HashMap;
+use lazy_static::lazy_static;
+use std::sync::Mutex;
 
-// --[WebUI Library References]--------
-pub type size_t = ::std::os::raw::c_ulonglong;
-pub const WEBUI_MAX_ARRAY: u32 = 32;
-pub const __bool_true_false_are_defined: u32 = 1;
+// Consts
 pub const true_: u32 = 1;
 pub const false_: u32 = 0;
+pub const __bool_true_false_are_defined: u32 = 1;
+pub type size_t = ::std::os::raw::c_ulong;
+pub type wchar_t = ::std::os::raw::c_int;
+
+// Event struct
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct webui_event_t {
-    pub window_id: ::std::os::raw::c_uint,
-    pub element_id: ::std::os::raw::c_uint,
-    pub element_name: *mut ::std::os::raw::c_char,
-    pub window: *mut webui_window_t,
+    pub window: *mut ::std::os::raw::c_void,
+    pub type_: ::std::os::raw::c_uint,
+    pub element: *mut ::std::os::raw::c_char,
     pub data: *mut ::std::os::raw::c_char,
-    pub data_len: ::std::os::raw::c_uint,
+    pub response: *mut ::std::os::raw::c_char,
 }
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct webui_window_core_t {
-    pub window_number: ::std::os::raw::c_uint,
-    pub server_running: bool,
-    pub connected: bool,
-    pub server_handled: bool,
-    pub multi_access: bool,
-    pub server_root: bool,
-    pub server_port: ::std::os::raw::c_uint,
-    pub url: *mut ::std::os::raw::c_char,
-    pub html: *const ::std::os::raw::c_char,
-    pub html_cpy: *const ::std::os::raw::c_char,
-    pub icon: *const ::std::os::raw::c_char,
-    pub icon_type: *const ::std::os::raw::c_char,
-    pub CurrentBrowser: ::std::os::raw::c_uint,
-    pub browser_path: *mut ::std::os::raw::c_char,
-    pub profile_path: *mut ::std::os::raw::c_char,
-    pub connections: ::std::os::raw::c_uint,
-    pub runtime: ::std::os::raw::c_uint,
-    pub detect_process_close: bool,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct webui_window_t {
-    pub core: webui_window_core_t,
-    pub path: *mut ::std::os::raw::c_char,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct webui_javascript_result_t {
-    pub error: bool,
-    pub length: ::std::os::raw::c_uint,
-    pub data: *const ::std::os::raw::c_char,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct webui_script_t {
-    pub script: *const ::std::os::raw::c_char,
-    pub timeout: ::std::os::raw::c_uint,
-    pub result: webui_javascript_result_t,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct webui_cb_t {
-    pub win: *mut webui_window_t,
-    pub webui_internal_id: *mut ::std::os::raw::c_char,
-    pub element_name: *mut ::std::os::raw::c_char,
-    pub data: *mut ::std::os::raw::c_char,
-    pub data_len: ::std::os::raw::c_uint,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct webui_cmd_async_t {
-    pub win: *mut webui_window_t,
-    pub cmd: *mut ::std::os::raw::c_char,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct webui_custom_browser_t {
-    pub app: *mut ::std::os::raw::c_char,
-    pub arg: *mut ::std::os::raw::c_char,
-    pub auto_link: bool,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct webui_browser_t {
-    pub any: ::std::os::raw::c_uint,
-    pub chrome: ::std::os::raw::c_uint,
-    pub firefox: ::std::os::raw::c_uint,
-    pub edge: ::std::os::raw::c_uint,
-    pub safari: ::std::os::raw::c_uint,
-    pub chromium: ::std::os::raw::c_uint,
-    pub opera: ::std::os::raw::c_uint,
-    pub brave: ::std::os::raw::c_uint,
-    pub vivaldi: ::std::os::raw::c_uint,
-    pub epic: ::std::os::raw::c_uint,
-    pub yandex: ::std::os::raw::c_uint,
-    pub current: ::std::os::raw::c_uint,
-    pub custom: ::std::os::raw::c_uint,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct webui_runtime_t {
-    pub none: ::std::os::raw::c_uint,
-    pub deno: ::std::os::raw::c_uint,
-    pub nodejs: ::std::os::raw::c_uint,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct webui_t {
-    pub servers: ::std::os::raw::c_uint,
-    pub connections: ::std::os::raw::c_uint,
-    pub custom_browser: *mut webui_custom_browser_t,
-    pub wait_for_socket_window: bool,
-    pub html_elements: [*mut ::std::os::raw::c_char; 32usize],
-    pub used_ports: [::std::os::raw::c_uint; 32usize],
-    pub last_window: ::std::os::raw::c_uint,
-    pub startup_timeout: ::std::os::raw::c_uint,
-    pub use_timeout: bool,
-    pub timeout_extra: bool,
-    pub exit_now: bool,
-    pub run_responses: [*const ::std::os::raw::c_char; 32usize],
-    pub run_done: [bool; 32usize],
-    pub run_error: [bool; 32usize],
-    pub run_last_id: ::std::os::raw::c_uint,
-    pub browser: webui_browser_t,
-    pub runtime: webui_runtime_t,
-    pub initialized: bool,
-    pub cb: [::std::option::Option<unsafe extern "C" fn(e: *mut webui_event_t)>;
-        32usize],
-    pub cb_interface: [::std::option::Option<
-        unsafe extern "C" fn(
-            element_id: ::std::os::raw::c_uint,
-            window_id: ::std::os::raw::c_uint,
-            element_name: *mut ::std::os::raw::c_char,
-            window: *mut webui_window_t,
-        ),
-    >; 32usize],
-    pub executable_path: *mut ::std::os::raw::c_char,
-    pub ptr_list: [*mut ::std::os::raw::c_void; 32usize],
-    pub ptr_position: ::std::os::raw::c_uint,
-    pub ptr_size: [usize; 32usize],
+
+// References
+
+extern "C" {
+    pub fn webui_new_window() -> *mut ::std::os::raw::c_void;
 }
 extern "C" {
-    pub static mut webui: webui_t;
+    pub fn webui_bind(
+        window: *mut ::std::os::raw::c_void,
+        element: *const ::std::os::raw::c_char,
+        func: ::std::option::Option<unsafe extern "C" fn(e: *mut webui_event_t)>
+    ) -> ::std::os::raw::c_uint;
+}
+extern "C" {
+    pub fn webui_show(
+        window: *mut ::std::os::raw::c_void,
+        content: *const ::std::os::raw::c_char
+    ) -> bool;
+}
+extern "C" {
+    pub fn webui_show_browser(
+        window: *mut ::std::os::raw::c_void,
+        content: *const ::std::os::raw::c_char,
+        browser: ::std::os::raw::c_uint
+    ) -> bool;
 }
 extern "C" {
     pub fn webui_wait();
 }
 extern "C" {
+    pub fn webui_close(window: *mut ::std::os::raw::c_void);
+}
+extern "C" {
     pub fn webui_exit();
 }
 extern "C" {
-    pub fn webui_is_any_window_running() -> bool;
+    pub fn webui_is_shown(window: *mut ::std::os::raw::c_void) -> bool;
 }
 extern "C" {
     pub fn webui_set_timeout(second: ::std::os::raw::c_uint);
 }
 extern "C" {
-    pub fn webui_new_window() -> *mut webui_window_t;
-}
-extern "C" {
-    pub fn webui_show(
-        win: *mut webui_window_t,
-        content: *const ::std::os::raw::c_char
-    ) -> bool;
-}
-extern "C" {
     pub fn webui_set_icon(
-        win: *mut webui_window_t,
-        icon_s: *const ::std::os::raw::c_char,
-        type_s: *const ::std::os::raw::c_char,
+        window: *mut ::std::os::raw::c_void,
+        icon: *const ::std::os::raw::c_char,
+        type_: *const ::std::os::raw::c_char
     );
 }
 extern "C" {
-    pub fn webui_multi_access(win: *mut webui_window_t, status: bool);
+    pub fn webui_set_multi_access(window: *mut ::std::os::raw::c_void, status: bool);
 }
 extern "C" {
-    pub fn _webui_set_root_folder(
-        win: *mut webui_window_t,
-        path: *const ::std::os::raw::c_char,
+    pub fn webui_run(
+        window: *mut ::std::os::raw::c_void,
+        script: *const ::std::os::raw::c_char
     ) -> bool;
-}
-extern "C" {
-    pub fn webui_new_server(
-        win: *mut webui_window_t,
-        path: *const ::std::os::raw::c_char,
-    ) -> *const ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn webui_close(win: *mut webui_window_t);
-}
-extern "C" {
-    pub fn webui_is_shown(win: *mut webui_window_t) -> bool;
 }
 extern "C" {
     pub fn webui_script(
-        win: *mut webui_window_t,
-        script: *mut webui_script_t,
-    );
-}
-extern "C" {
-    pub fn webui_bind(
-        win: *mut webui_window_t,
-        element: *const ::std::os::raw::c_char,
-        func: ::std::option::Option<
-            // unsafe extern "C" fn(e: *mut webui_event_t),
-            unsafe fn(e: *mut webui_event_t),
-        >,
-    ) -> ::std::os::raw::c_uint;
-}
-extern "C" {
-    pub fn webui_open(
-        win: *mut webui_window_t,
-        url: *const ::std::os::raw::c_char,
-        browser: ::std::os::raw::c_uint,
-    ) -> bool;
-}
-extern "C" {
-    pub fn webui_script_cleanup(script: *mut webui_script_t);
-}
-extern "C" {
-    pub fn webui_script_runtime(
-        win: *mut webui_window_t,
-        runtime: ::std::os::raw::c_uint,
-    );
-}
-extern "C" {
-    pub fn _webui_wait_process(win: *mut webui_window_t, status: bool);
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct webui_script_interface_t {
-    pub script: *mut ::std::os::raw::c_char,
-    pub timeout: ::std::os::raw::c_uint,
-    pub error: bool,
-    pub length: ::std::os::raw::c_uint,
-    pub data: *const ::std::os::raw::c_char,
-}
-extern "C" {
-    pub fn webui_bind_interface(
-        win: *mut webui_window_t,
-        element: *const ::std::os::raw::c_char,
-        func: ::std::option::Option<
-            // unsafe extern "C" fn(
-            //     element_id: ::std::os::raw::c_uint,
-            //     window_id: ::std::os::raw::c_uint,
-            //     element_name: *mut ::std::os::raw::c_char,
-            //     window: *mut webui_window_t,
-            // ),
-            unsafe fn(
-                element_id: ::std::os::raw::c_uint,
-                window_id: ::std::os::raw::c_uint,
-                element_name: *mut ::std::os::raw::c_char,
-                window: *mut webui_window_t,
-                // TODO: Add char*, char**
-            ),
-        >,
-    ) -> ::std::os::raw::c_uint;
-}
-extern "C" {
-    pub fn webui_script_interface(
-        win: *mut webui_window_t,
+        window: *mut ::std::os::raw::c_void,
         script: *const ::std::os::raw::c_char,
         timeout: ::std::os::raw::c_uint,
-        error: *mut bool,
-        length: *mut ::std::os::raw::c_uint,
-        data: *mut ::std::os::raw::c_char, // TODO: Change this from char* to char**
-    );
+        buffer: *mut ::std::os::raw::c_char,
+        buffer_length: size_t
+    ) -> bool;
 }
 extern "C" {
-    pub fn webui_script_interface_struct(
-        win: *mut webui_window_t,
-        //js_int: *mut webui_script_interface_t,
-        js_int: &webui_script_interface_t,
-    );
+    pub fn webui_set_runtime(window: *mut ::std::os::raw::c_void, runtime: ::std::os::raw::c_uint);
 }
 extern "C" {
-    pub fn _webui_init();
+    pub fn webui_get_int(e: *mut webui_event_t) -> ::std::os::raw::c_longlong;
 }
 extern "C" {
-    pub fn _webui_get_cb_index(
-        webui_internal_id: *mut ::std::os::raw::c_char,
+    pub fn webui_get_string(e: *mut webui_event_t) -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    pub fn webui_get_bool(e: *mut webui_event_t) -> bool;
+}
+extern "C" {
+    pub fn webui_return_int(e: *mut webui_event_t, n: ::std::os::raw::c_longlong);
+}
+extern "C" {
+    pub fn webui_return_string(e: *mut webui_event_t, s: *mut ::std::os::raw::c_char);
+}
+extern "C" {
+    pub fn webui_return_bool(e: *mut webui_event_t, b: bool);
+}
+extern "C" {
+    pub fn webui_interface_bind(
+        window: *mut ::std::os::raw::c_void,
+        element: *const ::std::os::raw::c_char,
+        func: ::std::option::Option<
+            unsafe fn(
+                arg1: *mut ::std::os::raw::c_void,
+                arg2: ::std::os::raw::c_uint,
+                arg3: *mut ::std::os::raw::c_char,
+                arg4: *mut ::std::os::raw::c_char,
+                arg5: *mut ::std::os::raw::c_char
+            )
+        >
     ) -> ::std::os::raw::c_uint;
 }
 extern "C" {
-    pub fn _webui_set_cb_index(
-        webui_internal_id: *mut ::std::os::raw::c_char,
+    pub fn webui_interface_set_response(
+        ptr: *mut ::std::os::raw::c_char,
+        response: *const ::std::os::raw::c_char
+    );
+}
+extern "C" {
+    pub fn webui_interface_is_app_running() -> bool;
+}
+extern "C" {
+    pub fn webui_interface_get_window_id(
+        window: *mut ::std::os::raw::c_void
     ) -> ::std::os::raw::c_uint;
-}
-extern "C" {
-    pub fn _webui_get_free_port() -> ::std::os::raw::c_uint;
-}
-extern "C" {
-    pub fn _webui_get_new_window_number() -> ::std::os::raw::c_uint;
-}
-extern "C" {
-    pub fn _webui_wait_for_startup();
-}
-extern "C" {
-    pub fn _webui_free_port(port: ::std::os::raw::c_uint);
-}
-extern "C" {
-    pub fn _webui_set_custom_browser(p: *mut webui_custom_browser_t);
-}
-extern "C" {
-    pub fn _webui_get_current_path() -> *mut ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn _webui_window_receive(
-        win: *mut webui_window_t,
-        packet: *const ::std::os::raw::c_char,
-        len: usize,
-    );
-}
-extern "C" {
-    pub fn _webui_window_send(
-        win: *mut webui_window_t,
-        packet: *mut ::std::os::raw::c_char,
-        packets_size: usize,
-    );
-}
-extern "C" {
-    pub fn _webui_window_event(
-        win: *mut webui_window_t,
-        element_id: *mut ::std::os::raw::c_char,
-        element: *mut ::std::os::raw::c_char,
-        data: *mut ::std::os::raw::c_char,
-        data_len: ::std::os::raw::c_uint,
-    );
-}
-extern "C" {
-    pub fn _webui_window_get_number(
-        win: *mut webui_window_t,
-    ) -> ::std::os::raw::c_uint;
-}
-extern "C" {
-    pub fn _webui_window_open(
-        win: *mut webui_window_t,
-        link: *mut ::std::os::raw::c_char,
-        browser: ::std::os::raw::c_uint,
-    );
-}
-extern "C" {
-    pub fn _webui_cmd_sync(
-        cmd: *mut ::std::os::raw::c_char,
-        show: bool,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn _webui_cmd_async(
-        cmd: *mut ::std::os::raw::c_char,
-        show: bool,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn _webui_run_browser(
-        win: *mut webui_window_t,
-        cmd: *mut ::std::os::raw::c_char,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn _webui_clean();
-}
-extern "C" {
-    pub fn _webui_browser_exist(
-        win: *mut webui_window_t,
-        browser: ::std::os::raw::c_uint,
-    ) -> bool;
-}
-extern "C" {
-    pub fn _webui_browser_get_temp_path(
-        browser: ::std::os::raw::c_uint,
-    ) -> *const ::std::os::raw::c_char;
-}
-extern "C" {
-    pub fn _webui_folder_exist(folder: *mut ::std::os::raw::c_char) -> bool;
-}
-extern "C" {
-    pub fn _webui_browser_create_profile_folder(
-        win: *mut webui_window_t,
-        browser: ::std::os::raw::c_uint,
-    ) -> bool;
-}
-extern "C" {
-    pub fn _webui_browser_start_edge(
-        win: *mut webui_window_t,
-        address: *const ::std::os::raw::c_char,
-    ) -> bool;
-}
-extern "C" {
-    pub fn _webui_browser_start_firefox(
-        win: *mut webui_window_t,
-        address: *const ::std::os::raw::c_char,
-    ) -> bool;
-}
-extern "C" {
-    pub fn _webui_browser_start_custom(
-        win: *mut webui_window_t,
-        address: *const ::std::os::raw::c_char,
-    ) -> bool;
-}
-extern "C" {
-    pub fn _webui_browser_start_chrome(
-        win: *mut webui_window_t,
-        address: *const ::std::os::raw::c_char,
-    ) -> bool;
-}
-extern "C" {
-    pub fn _webui_browser_start(
-        win: *mut webui_window_t,
-        address: *const ::std::os::raw::c_char,
-        browser: ::std::os::raw::c_uint,
-    ) -> bool;
-}
-extern "C" {
-    pub fn _webui_system_win32(
-        cmd: *mut ::std::os::raw::c_char,
-        show: bool,
-    ) -> ::std::os::raw::c_int;
-}
-
-// --[Tools]---------------------------
-
-// fn char_to_string(c : *mut ::std::os::raw::c_char) -> String {
-//     let cstr = unsafe {CStr::from_ptr(c)};
-//     let s : String = String::from_utf8_lossy(cstr.to_bytes()).to_string();
-//     return s;
-// }
-
-fn char_to_string(c : *const i8) -> String {
-
-    let cstr = unsafe {CStr::from_ptr(c)};
-    let s : String = String::from_utf8_lossy(cstr.to_bytes()).to_string();
-    return s;
-}
-
-fn cstr_to_string(c : CString) -> String {
-
-    let s : String = String::from_utf8_lossy(c.to_bytes()).to_string();
-    return s;
 }
 
 // --[Wrapper]-------------------------
 
+// Browsers
 pub const AnyBrowser: u32 = 0;
 pub const Chrome: u32 = 1;
 pub const Firefox: u32 = 2;
 pub const Edge: u32 = 3;
 pub const Safari: u32 = 4;
 pub const Chromium: u32 = 5;
-pub const opera: u32 = 6;
-pub const brave: u32 = 7;
-pub const vivaldi: u32 = 8;
-pub const epic: u32 = 9;
-pub const yandex: u32 = 10;
-pub const current: u32 = 0;
-pub const Custom: u32 = 99;
+pub const Opera: u32 = 6;
+pub const Brave: u32 = 7;
+pub const Vivaldi: u32 = 8;
+pub const Epic: u32 = 9;
+pub const Yandex: u32 = 10;
+
+// Runtimes
+pub const None: u32 = 0;
+pub const Deno: u32 = 1;
+pub const NodeJS: u32 = 2;
+
+// Events
+pub const WEBUI_EVENT_DISCONNECTED: u32 = 0;
+pub const WEBUI_EVENT_CONNECTED: u32 = 1;
+pub const WEBUI_EVENT_MULTI_CONNECTION: u32 = 2;
+pub const WEBUI_EVENT_UNWANTED_CONNECTION: u32 = 3;
+pub const WEBUI_EVENT_MOUSE_CLICK: u32 = 4;
+pub const WEBUI_EVENT_NAVIGATION: u32 = 5;
+pub const WEBUI_EVENT_CALLBACK: u32 = 6;
 
 pub struct JavaScript {
     pub timeout: u32,
-	pub script:  String,
-	pub error:   bool,
-	pub data:    String,
+    pub script: String,
+    pub error: bool,
+    pub data: String,
 }
 
 pub struct Event {
-    pub ElementId:     u32,
-	pub WindowId:      u32,
-	pub ElementName:   String,
-	pub Window:         *mut webui_window_t,
+    pub Window: *mut ::std::os::raw::c_void,
+    pub EventType: u32,
+    pub Element: String,
+    pub Data: String,
 }
 
 // List of Rust user functions (2-dimensional array)
-static mut func_list: [[Option::<fn(e: Event) -> ()>; 64]; 64] = [[None; 64]; 64];
+// static mut func_list: [[Option::<fn(e: Event) -> ()>; 64]; 64] = [[64; 64]; 64];
+// static mut func_array: Vec<Vec<fn(Event)>> = vec![vec![]; 1024];
+// static mut elements_map = HashMap::<String, usize>::new();
+// static mut elements_map: HashMap::new();
 
-pub fn RunJavaScript(win: *mut webui_window_t, js: &mut JavaScript) {
+type FunctionType = fn(Event);
+const ROWS: usize = 64;
+const COLS: usize = 64;
+static mut GLOBAL_ARRAY: Option<[[Option<FunctionType>; COLS]; ROWS]> = None;
 
+lazy_static! {
+    static ref elements_map: HashMap<String, usize> = HashMap::new();
+    // static mut func_array: Vec<Vec<fn(Event)>> = vec![vec![]; 1024];
+}
+
+// Save a string in the map and return its index
+fn save_string(map: &mut HashMap<String, usize>, s: &str) -> usize {
+    // Check if the string already exists in the map
+    if let Some(&index) = map.get(s) {
+        return index;
+    }
+
+    // If the string does not exist, add it to the map and return the new index
+    let index = map.len();
+    map.insert(s.to_owned(), index);
+    index
+}
+
+// Search for a string in the map and return its index if found, or -1 if not found
+fn find_string(map: &HashMap<String, usize>, s: &str) -> isize {
+    if let Some(&index) = map.get(s) {
+        index as isize
+    } else {
+        -1
+    }
+}
+
+fn char_to_string(c: *const i8) -> String {
+    let cstr = unsafe { CStr::from_ptr(c) };
+    let s: String = String::from_utf8_lossy(cstr.to_bytes()).to_string();
+    return s;
+}
+
+fn cstr_to_string(c: CString) -> String {
+    let s: String = String::from_utf8_lossy(c.to_bytes()).to_string();
+    return s;
+}
+
+pub fn RunJavaScript(win: *mut ::std::os::raw::c_void, js: &mut JavaScript) {
     unsafe {
-
         // Script String to i8/u8
         let script_cpy = String::from(js.script.clone());
         let script_c_str = CString::new(script_cpy).unwrap();
@@ -508,46 +260,41 @@ pub fn RunJavaScript(win: *mut webui_window_t, js: &mut JavaScript) {
         let script: webui_script_interface_t = webui_script_interface_t {
             timeout: js.timeout,
             script: script_c_char as *mut i8,
-            data: script_c_char, // 'data' TODO: Should be null
+            data: script_c_char,
             error: false,
             length: 0,
         };
 
+        // deprecated
         webui_script_interface_struct(win, &script);
+        // TODO: `webui_script_interface_struct` is deprecated. use `webui_script` instead.
 
         js.error = script.error;
         js.data = char_to_string(script.data);
     }
 }
 
-pub fn NewWindow() -> *mut webui_window_t {
-
+pub fn NewWindow() -> *mut ::std::os::raw::c_void {
     unsafe {
-
+        GLOBAL_ARRAY = Some([[None; COLS]; ROWS]);
         return webui_new_window();
     }
 }
 
 pub fn Wait() {
-
     unsafe {
-
         webui_wait();
     }
 }
 
 pub fn Exit() {
-
     unsafe {
-
         webui_exit();
     }
 }
 
-pub fn Show(win: *mut webui_window_t, content: &str) -> bool {
-
+pub fn Show(win: *mut ::std::os::raw::c_void, content: &str) -> bool {
     unsafe {
-
         // Content String to i8/u8
         let content_c_str = CString::new(content).unwrap();
         let content_c_char: *const c_char = content_c_str.as_ptr() as *const c_char;
@@ -556,47 +303,75 @@ pub fn Show(win: *mut webui_window_t, content: &str) -> bool {
     }
 }
 
-fn events_handler (element_id: ::std::os::raw::c_uint, window_id: ::std::os::raw::c_uint, element_name: *mut ::std::os::raw::c_char, window: *mut webui_window_t) {
+fn events_handler(
+    _window: *mut ::std::os::raw::c_void,
+    _event_type: ::std::os::raw::c_uint,
+    _element: *mut ::std::os::raw::c_char,
+    _data: *mut ::std::os::raw::c_char,
+    _response: *mut ::std::os::raw::c_char
+) {
+    let Window: *mut ::std::os::raw::c_void = _window;
+    let EventType: u32 = _event_type;
+    let Element: String = char_to_string(_element);
+    let Data: String = char_to_string(_data);
 
-    let ElementId: u32 = element_id;
-    let WindowId: u32 = window_id;
-    let ElementName: String = char_to_string(element_name);
-    let Window: *mut webui_window_t = window;
+    let element_index = find_string(&elements_map, &Element);
+    if element_index < 0 {
+        return;
+    }
 
     let E = Event {
-        ElementId: ElementId,
-        WindowId: WindowId,
-        ElementName: ElementName,
         Window: Window,
+        EventType: EventType,
+        Element: Element,
+        Data: Data,
     };
 
     // Call the Rust user function
-    let WindowId_64 = WindowId as usize;
-    let ElementId_64 = ElementId as usize;
+    let window_id = webui_interface_get_window_id(_window);
+    let window_id_64 = window_id as usize;
+    let element_index_64 = element_index as usize;
     unsafe {
-        (func_list[WindowId_64][ElementId_64]).expect("non-null function pointer")(E);
+        // func_list[window_id_64][element_index_64].expect("non-null function pointer")(E);
+        // func_array[window_id_64][element_index_64](E);
+        // if let Some(func) = GLOBAL_ARRAY[window_id_64][element_index_64] {
+        //     func(E.clone());
+        // }
+        if let Some(func) = GLOBAL_ARRAY.as_ref().unwrap()[window_id_64][element_index_64] {
+            func(E);
+        }
     }
 }
 
-pub fn Bind(win: *mut webui_window_t, element: &str, func: fn(e: Event)) {
-
+pub fn Bind(win: *mut ::std::os::raw::c_void, element: &str, func: fn(Event)) {
     // Element String to i8/u8
     let element_c_str = CString::new(element).unwrap();
     let element_c_char: *const c_char = element_c_str.as_ptr() as *const c_char;
 
     // Bind
     unsafe {
-        
-        let f: Option<unsafe fn(element_id: ::std::os::raw::c_uint, window_id: ::std::os::raw::c_uint, element_name: *mut ::std::os::raw::c_char, window: *mut webui_window_t)> = Some(events_handler);
+        let f: Option<
+            unsafe fn(
+                _window: *mut ::std::os::raw::c_void,
+                _event_type: ::std::os::raw::c_uint,
+                _element: *mut ::std::os::raw::c_char,
+                _data: *mut ::std::os::raw::c_char,
+                _response: *mut ::std::os::raw::c_char
+            )
+        > = Some(events_handler);
 
-        let window_id: ::std::os::raw::c_uint = _webui_window_get_number(win);
-	    let cb_index: ::std::os::raw::c_uint = webui_bind_interface(win, element_c_char, f);
-
+        let element_index = save_string(&mut elements_map, element);
+        let window_id = webui_interface_get_window_id(win);
         let window_id_64 = window_id as usize;
-        let cb_index_64 = cb_index as usize;
+        let element_index_64 = element_index as usize;
+
+        webui_interface_bind(win, element_c_char, f);
 
         // Add the Rust user function to the list
-        let user_cb: Option<fn(e: Event)> = Some(func);
-        func_list[window_id_64][cb_index_64] = user_cb;
+        // let user_cb: Option<fn(e: Event)> = Some(func);
+        // func_list[window_id_64][element_index_64] = user_cb;
+        // func_array[window_id_64][element_index_64] = func;
+        // GLOBAL_ARRAY[window_id_64][element_index_64] = Some(func as FunctionType);
+        GLOBAL_ARRAY.as_mut().unwrap()[window_id_64][element_index_64] = Some(func as FunctionType);
     }
 }

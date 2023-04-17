@@ -12,38 +12,28 @@ void my_function_count(webui_event_t* e) {
 
     // This function gets called every time the user clicks on "MyButton1"
 
-    // Create a WebUI JavaScript struct
-    webui_script_t MyJavaScript = {
-        .script = "return GetCount();",
-        .timeout = 3
-    };
+    // Create a buffer to hold the response
+    char response[64];
 
     // Run JavaScript
-    webui_script(e->window, &MyJavaScript);
+    if(!webui_script(e->window, "return GetCount();", 0, response, 64)) {
 
-    // Check if there is any JavaScript error
-    if(MyJavaScript.result.error) {
-
-        printf("JavaScript Error: %s\n", MyJavaScript.result.data);
+        printf("JavaScript Error: %s\n", response);
         return;
     }
 
     // Get the count
-    int count = atoi(MyJavaScript.result.data);
+    int count = atoi(response);
 
     // Increment
     count++;
 
     // Generate a JavaScript
-    char buf[64];
-    sprintf(buf, "SetCount(%d);", count);
+    char js[64];
+    sprintf(js, "SetCount(%d);", count);
 
-    // Run JavaScript
-    MyJavaScript.script = buf;
-    webui_script(e->window, &MyJavaScript);
-
-    // Free data resources
-    webui_script_cleanup(&MyJavaScript);
+    // Run JavaScript (Quick Way)
+    webui_run(e->window, js);
 }
 
 int main() {
@@ -88,7 +78,7 @@ int main() {
     "</html>";
 
     // Create a window
-    webui_window_t* my_window = webui_new_window();
+    void* my_window = webui_new_window();
 
     // Bind HTML elements with C functions
     webui_bind(my_window, "MyButton1", my_function_count);

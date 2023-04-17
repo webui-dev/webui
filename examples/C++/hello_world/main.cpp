@@ -9,7 +9,7 @@ extern "C"{
 
 int main() {
 
-	std::cout << "The C++ wrapper is coming soon. Please see the C example for now.";
+	std::cout << "The C++ wrapper is coming soon. Please see the C examples for now.";
     return 0;
 }
 

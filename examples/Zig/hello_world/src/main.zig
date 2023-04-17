@@ -65,13 +65,13 @@ export fn check_the_password(e_opt: ?*c.webui_event_t) callconv(.C) void {
     c.webui_script(e.window, &js);
 
     // Check if there is a JavaScript error
-    if (js.result.@"error") {
-        std.log.err("JavaScript Error: {s}\n", .{js.result.data});
+    if (js.@"error") {
+        std.log.err("JavaScript Error: {s}\n", .{js.data});
         return;
     }
 
     // Get the password
-    const password = std.mem.span(js.result.data);
+    const password = std.mem.span(js.data);
     std.log.info("Password: {s}", .{password});
 
     // Check the password

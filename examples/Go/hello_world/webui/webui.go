@@ -1,131 +1,200 @@
 /*
-   WebUI Library 2.1.1
-
-   http://webui.me
-   https://github.com/alifcommunity/webui
-
-   Copyright (c) 2020-2023 Hassan Draga.
-   Licensed under GNU General Public License v2.0.
-   All rights reserved.
-   Canada.
+  WebUI Library 2.2.0
+  http://_webui_core.me
+  https://github.com/alifcommunity/webui
+  Copyright (c) 2020-2023 Hassan Draga.
+  Licensed under GNU General Public License v2.0.
+  All rights reserved.
+  Canada.
 */
 
 package webui
 
 /*
-// [?] Change the library path as you need
-#cgo CFLAGS: -I ./ -I ../../../../include
-#cgo windows LDFLAGS: -L ./ -L ../../../../build/Windows/GCC/ -L ../../../../build/Windows/MSVC/ -lwebui-2-static-x64 -lws2_32
-#cgo darwin LDFLAGS: -L ./ -L ../../../../build/macOS/GCC/ -L ../../../../build/macOS/Clang/ -lwebui-2-static-x64 -lpthread -lm
-#cgo linux LDFLAGS: -L ./ -L ../../../../build/Linux/GCC/ -L ../../../../build/Linux/Clang/ -lwebui-2-static-x64 -lpthread -lm
+#cgo CFLAGS: -I ./
+#cgo windows LDFLAGS: -L ./ -lwebui-2-static-x64 -lws2_32
+#cgo darwin LDFLAGS: -L ./ -lwebui-2-static-x64 -lpthread -lm
+#cgo linux LDFLAGS: -L ./ -lwebui-2-static-x64 -lpthread -lm
 #include <webui.h>
-extern void webui_go_handler(webui_window_t* _window, unsigned int _element_id, unsigned int _window_id, char* _element_name);
-static void webui_bind_go_handler(webui_event_t* e) {
-    webui_go_handler(e->window, e->element_id, e->window_id, e->element_name);
+extern void go_webui_event(void* _window, unsigned int _event_type, char* _element, char* _data, char* _response);
+static void go_webui_events_handler(webui_event_t* e) {
+    go_webui_event(e->window, e->type, e->element, e->data, (char*)&e->response);
 }
-static unsigned int webui_bind_go(webui_window_t* win, const char* element) {
-    return webui_bind(win, element, webui_bind_go_handler);
+static void go_webui_bind(void* win, const char* element) {
+    webui_bind(win, element, go_webui_events_handler);
 }
 */
+import "C"
+
 import (
-	"C"
+	"bytes"
+	"strconv"
+	"unsafe"
 )
 
-const AnyBrowser uint = 0
-const Chrome uint = 1
-const Firefox uint = 2
-const Edge uint = 3
-const Safari uint = 4
-const Chromium uint = 5
-const Custom uint = 99
-
-// Event Struct
-type Event struct {
-	Window      *C.webui_window_t
-	ElementID   uint
-	WindowID    uint
-	ElementName string
-}
-
-// JavaScript Struct
-type JavaScript struct {
-	Timeout uint
-	Script  string
-	Error   bool
-	Length  uint
-	Data    string
-}
+// Heap
+var isIni bool = false
 
 // User Go Callback Functions list
-var fun_list [64][256]func(Event)
+var fun_list map[string]func(Event) string
 
-//export webui_go_handler
-func webui_go_handler(_window *C.webui_window_t, _element_id C.uint, _window_id C.uint, _element_name *C.char) {
+// Web browsers enum
+const AnyBrowser uint = 0 // 0. Default recommended web browser
+const Chrome uint = 1     // 1. Google Chrome
+const Firefox uint = 2    // 2. Mozilla Firefox
+const Edge uint = 3       // 3. Microsoft Edge
+const Safari uint = 4     // 4. Apple Safari
+const Chromium uint = 5   // 5. The Chromium Project
+const Opera uint = 6      // 6. Opera Browser
+const Brave uint = 7      // 7. The Brave Browser
+const Vivaldi uint = 8    // 8. The Vivaldi Browser
+const Epic uint = 9       // 9. The Epic Browser
+const Yandex uint = 10    // 10. The Yandex Browser
 
-	var window *C.webui_window_t = (*C.webui_window_t)(_window)
-	var element_id uint = uint(_element_id)
-	var window_id uint = uint(_window_id)
-	var element_name string = C.GoString(_element_name)
+// Events enum
+const WEBUI_EVENT_DISCONNECTED uint = 0        // 0. Window disconnection event
+const WEBUI_EVENT_CONNECTED uint = 1           // 1. Window connection event
+const WEBUI_EVENT_MULTI_CONNECTION uint = 2    // 2. New window connection event
+const WEBUI_EVENT_UNWANTED_CONNECTION uint = 3 // 3. New unwanted window connection event
+const WEBUI_EVENT_MOUSE_CLICK uint = 4         // 4. Mouse click event
+const WEBUI_EVENT_NAVIGATION uint = 5          // 5. Window navigation event
+const WEBUI_EVENT_CALLBACK uint = 6            // 6. Function call event
 
+// Events struct
+type Event struct {
+	Window    unsafe.Pointer
+	EventType uint
+	Element   string
+	Data      string
+}
+
+// JavaScript struct
+type JavaScript struct {
+	Timeout    uint
+	BufferSize uint
+	Response   string
+}
+
+// Initilializing
+func Ini() {
+	if isIni {
+		return
+	}
+	isIni = true
+	fun_list = make(map[string]func(Event) string)
+}
+
+// JavaScript object constructor
+func NewJavaScript() JavaScript {
+	Ini()
+	js := JavaScript{
+		Timeout:    0,
+		BufferSize: (1024 * 8),
+		Response:   "",
+	}
+	return js
+}
+
+// This function receives all events
+//
+//export go_webui_event
+func go_webui_event(window unsafe.Pointer, _event_type C.uint, _element *C.char, _data *C.char, _response *C.char) {
+
+	Ini()
+
+	// Create a new event struct
+	var event_type uint = uint(_event_type)
+	var element string = C.GoString(_element)
+	var data string = C.GoString(_data)
 	e := Event{
-		Window:      window,
-		ElementID:   element_id,
-		WindowID:    window_id,
-		ElementName: element_name,
+		Window:    window,
+		EventType: event_type,
+		Element:   element,
+		Data:      data,
 	}
 
-	fun_list[window_id][element_id](e)
-}
+	// Call user callback function
+	var window_id uint = uint(C.webui_interface_get_window_id(unsafe.Pointer(window)))
+	var func_id string = strconv.Itoa(int(window_id)) + element
+	response := string(fun_list[func_id](e))
 
-func RunJavaScript(window *C.webui_window_t, js *JavaScript) {
-
-	// Interface
-	c_js := C.webui_script_interface_t{
-		script:  C.CString(js.Script),
-		timeout: 30, // uint(js.Timeout),
-		error:   C.bool(false),
-		// length:  uint(0),
-		// data:    C.CString(nil),
+	// Set the response back
+	if len(response) > 0 {
+		c_response := C.CString(response)
+		C.webui_interface_set_response(_response, c_response)
 	}
-
-	C.webui_script_interface_struct(window, &c_js)
-
-	js.Error = bool(c_js.error)
-	js.Data = C.GoString(c_js.data)
 }
 
-func NewWindow() *C.webui_window_t {
+// Run a JavaScript, and get the response back (Make sure your local buffer can hold the response).
+func Script(window unsafe.Pointer, js *JavaScript, script string) bool {
 
-	return C.webui_new_window()
+	Ini()
+
+	// Convert the JavaScript from Go-String to C-String
+	c_script := C.CString(script)
+
+	// Create a local buffer to hold the response
+	ResponseBuffer := make([]byte, uint64(js.BufferSize))
+
+	// Create a pointer to the local buffer
+	ptr := (*C.char)(unsafe.Pointer(&ResponseBuffer[0]))
+
+	// Run the JavaScript and wait for response
+	status := C.webui_script(window, c_script, C.uint(js.Timeout), ptr, C.size_t(uint64(js.BufferSize)))
+
+	// Copy the response to the users struct
+	ResponseLen := bytes.IndexByte(ResponseBuffer[:], 0)
+	js.Response = string(ResponseBuffer[:ResponseLen])
+
+	// return the status of the JavaScript execution
+	// True: No JavaScript error.
+	// False: JavaScript error.
+	return bool(status)
 }
 
+// Create a new window object
+func NewWindow() unsafe.Pointer {
+	Ini()
+	// Create a new window object
+	// this return a (void pointer) and we should
+	// never change it. It's only managed by WebUI
+	return unsafe.Pointer(C.webui_new_window())
+}
+
+// Close all opened windows
 func Exit() {
-
+	Ini()
 	C.webui_exit()
 }
 
-func Show(window *C.webui_window_t, content string) {
-
+// Show a window using a embedded HTML, or a file. If the window is already opened then it will be refreshed.
+func Show(window unsafe.Pointer, content string) {
+	Ini()
 	c_content := C.CString(content)
 	C.webui_show(window, c_content)
 }
 
-func Open(window *C.webui_window_t, url string, browser uint) {
-
-	c_url := C.CString(url)
-	C.webui_open(window, c_url, C.uint(browser))
-}
-
+// Wait until all opened windows get closed.
 func Wait() {
-
+	Ini()
 	C.webui_wait()
 }
 
-func Bind(window *C.webui_window_t, element string, callback func(Event)) {
+// Bind a specific html element click event with a function. Empty element means all events.
+func Bind(window unsafe.Pointer, element string, callback func(Event) string) {
 
+	Ini()
+
+	// Convert element from Go-String to C-String
 	c_element := C.CString(element)
-	var window_id uint = uint(C._webui_window_get_number(window))
-	var cb_index uint = uint(C.webui_bind_go(window, c_element))
+	C.go_webui_bind(window, c_element)
 
-	fun_list[window_id][cb_index] = callback
+	// Get the window ID
+	var window_id uint = uint(C.webui_interface_get_window_id(window))
+
+	// Generate a unique ID for this element
+	var func_id string = strconv.Itoa(int(window_id)) + element
+
+	// Add the user callback function to the list
+	fun_list[func_id] = callback
 }

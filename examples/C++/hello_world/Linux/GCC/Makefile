@@ -1,4 +1,4 @@
-# WebUI Library 2.1.1
+# WebUI Library 2.2.0
 # C++ Example
 # Linux - GCC
 

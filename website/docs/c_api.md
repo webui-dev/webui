@@ -87,7 +87,7 @@ Please visit [C Examples](https://github.com/alifcommunity/webui/tree/main/examp
 To create a new window object, you can use `webui_new_window()`, which returns a pointer to a struct `webui_window_t`. This pointer does *NOT* need to be freed.
 
 ```c
-webui_window_t* my_window = webui_new_window();
+void* my_window = webui_new_window();
 ```
 
 ---
@@ -328,10 +328,10 @@ void my_function(webui_event_t* e){
     webui_script(e->window, &js);
 
 	// Check if there is any JavaScript error
-	if(js.result.error)
-		printf("Error: %s\n", js.result.data);
+	if(js.error)
+		printf("Error: %s\n", js.data);
     else
-        printf("Output: %s\n", js.result.data);
+        printf("Output: %s\n", js.data);
     
     // Free resources
 	webui_script_cleanup(&js);

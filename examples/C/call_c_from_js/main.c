@@ -103,7 +103,7 @@ int main() {
     "</html>";
 
     // Create a window
-    webui_window_t* my_window = webui_new_window();
+    void* my_window = webui_new_window();
 
     // Bind HTML elements with C functions
     webui_bind(my_window, "MyID_One", my_function_string);

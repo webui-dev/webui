@@ -1,5 +1,5 @@
 
-# WebUI Library 2.1.1
+# WebUI Library 2.2.0
 #
 # http://webui.me
 # https://github.com/alifcommunity/webui
@@ -26,7 +26,6 @@ PTR_PTR_CHAR = ctypes.POINTER(PTR_CHAR)
 
 # Event
 class event:
-    element_id = 0
     window_id = 0
     element_name = ""
     data = ""
@@ -137,7 +136,7 @@ class window:
             err_library_not_found('bind')
             return
         cb_index = int(
-            WebUI.webui_bind_interface(
+            WebUI.webui_interface_bind(
                 self.window,
                 element.encode('utf-8'),
                 self.c_events))

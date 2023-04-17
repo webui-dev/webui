@@ -1,9 +1,5 @@
 # Build
 *.exe
-*.dll
-*.so
-*.dylib
-*.a
 *.ilk
 *.pdb
 *.lib
@@ -13,7 +9,6 @@
 *.o
 *.def
 *.obj
-*.dyn
 
 # IDE
 .idea/
