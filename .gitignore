@@ -2,13 +2,12 @@
 *.exe
 *.ilk
 *.pdb
-*.lib
 *.exp
 *.res
 *.out
-*.o
 *.def
 *.obj
+*.o
 
 # IDE
 .idea/

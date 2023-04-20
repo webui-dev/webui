@@ -26,46 +26,32 @@ PTR_PTR_CHAR = ctypes.POINTER(PTR_CHAR)
 
 # Event
 class event:
-    window_id = 0
-    element_name = ""
-    data = ""
-    window = None
-    c_window = None
-
-
-# WebUI C-Struct
-class webui_script_interface_t(ctypes.Structure):
-    _fields_ = [
-        ("script", c_char_p),
-        ("timeout", c_uint),
-        ("error", c_bool),
-        ("length", c_uint),
-        ("data", c_char_p)
-    ]
+    Window = None
+    EventType = 0
+    Element = ""
+    Data = ""
 
 
 # JavaScript
 class javascript:
-    script = ""
-    timeout = 10
-    error = False
-    length = 0
-    data = ""
+    Error = False
+    Response = ""
 
 
 # Scripts Runtime
 class runtime:
     none = 0
-    deno = 1
-    nodejs = 2
+    Deno = 1
+    Nodejs = 2
 
 
 # The window class
 class window:
 
     window = None
+    window_id = None
     c_events = None
-    cb_fun_list = [64]
+    cb_fun_list = {}
 
     def __init__(self):
         global WebUI
@@ -82,16 +68,18 @@ class window:
             webui_wrapper = WebUI.webui_new_window
             webui_wrapper.restype = c_void_p
             self.window = c_void_p(webui_wrapper())
+            # Get the window unique ID
+            self.window_id = int(
+                WebUI.webui_interface_get_window_id(
+                self.window))
             # Initializing events() to be used by
             # WebUI library as a callback
             py_fun = ctypes.CFUNCTYPE(
-                ctypes.c_void_p,
-                ctypes.c_uint,
-                ctypes.c_uint,
-                ctypes.c_char_p,
-                ctypes.c_void_p,
-                ctypes.c_char_p,
-                PTR_PTR_CHAR)
+                ctypes.c_void_p, # Window
+                ctypes.c_uint, # EventType
+                ctypes.c_char_p, # Element
+                ctypes.c_char_p, # Data
+                ctypes.c_char_p) # Response
             self.c_events = py_fun(self.events)
         except OSError as e:
             print(
@@ -105,26 +93,22 @@ class window:
     #         WebUI.webui_close(self.window)
 
 
-    def events(self, element_id, window_id, 
-                element_name, window, data, response):
-        if self.cb_fun_list[int(element_id)] is None:
+    def events(self, window, event_type, 
+                element, data, response):
+        if self.cb_fun_list[self.window_id][element] is None:
             print('WebUI Error: Callback is None.')
             return
         # Create event
         e = event()
-        e.element_id = int(element_id)
-        e.window_id = int(window_id)
-        e.data = data.decode('utf-8')
-        e.element_name = element_name.decode('utf-8')
-        e.window = self
-        e.c_window = window
+        e.Window = self
+        e.EventType = int(event_type)
+        e.Element = element.decode('utf-8')
+        e.Data = data.decode('utf-8')
         # User callback
-        cb_res = str(self.cb_fun_list[element_id](e))
+        cb_res = str(self.cb_fun_list[self.window_id][element](e))
         cb_res_encode = cb_res.encode('utf-8')
-        # Allocate a new memory
-        buffer = ctypes.create_string_buffer(cb_res_encode)
         # Set the response
-        response[0] = buffer
+        WebUI.webui_interface_bind(response, cb_res_encode)
 
 
     def bind(self, element, func):
@@ -135,15 +119,16 @@ class window:
         if WebUI is None:
             err_library_not_found('bind')
             return
-        cb_index = int(
-            WebUI.webui_interface_bind(
-                self.window,
-                element.encode('utf-8'),
-                self.c_events))
-        self.cb_fun_list.insert(cb_index, func)
+        # Bind
+        WebUI.webui_interface_bind(
+            self.window,
+            element.encode('utf-8'),
+            self.c_events)
+        # Add CB to the list
+        self.cb_fun_list[self.window_id] = {element: func}
 
 
-    def show(self, html="<html></html>"):
+    def show(self, content="<html></html>"):
         global WebUI
         if self.window is None:
             err_window_is_none('show')
@@ -151,59 +136,31 @@ class window:
         if WebUI is None:
             err_library_not_found('show')
             return
-        WebUI.webui_show(self.window, html.encode('utf-8'))
+        # Show the window
+        WebUI.webui_show(self.window, content.encode('utf-8'))
 
 
-    def open(self, url, browser=0):
+    def set_runtime(self, rt=runtime.deno):
         global WebUI
         if self.window is None:
-            err_window_is_none('open')
+            err_window_is_none('set_runtime')
             return
         if WebUI is None:
-            err_library_not_found('open')
+            err_library_not_found('set_runtime')
             return
-        WebUI.webui_open(self.window, 
-                        url.encode('utf-8'), ctypes.c_uint(browser))
-
-
-    def script_runtime(self, rt=runtime.deno):
-        global WebUI
-        if self.window is None:
-            err_window_is_none('script_runtime')
-            return
-        if WebUI is None:
-            err_library_not_found('script_runtime')
-            return
-        WebUI.webui_script_runtime(self.window, 
+        WebUI.webui_set_runtime(self.window, 
                         ctypes.c_uint(rt))
 
 
-    def new_server(self, path=""):
+    def set_multi_access(self, status=False):
         global WebUI
         if self.window is None:
-            err_window_is_none('new_server')
+            err_window_is_none('set_multi_access')
             return
         if WebUI is None:
-            err_library_not_found('new_server')
+            err_library_not_found('set_multi_access')
             return
-        webui_wrapper = None
-        webui_wrapper = WebUI.webui_new_server
-        webui_wrapper.argtypes = [c_void_p, c_void_p]
-        webui_wrapper.restype = c_char_p
-        url = c_char_p(webui_wrapper(self.window,
-            path.encode('utf-8'))).value.decode('utf-8')
-        return url
-
-
-    def multi_access(self, status=False):
-        global WebUI
-        if self.window is None:
-            err_window_is_none('multi_access')
-            return
-        if WebUI is None:
-            err_library_not_found('multi_access')
-            return
-        WebUI.webui_multi_access(self.window, 
+        WebUI.webui_set_multi_access(self.window, 
                         ctypes.c_bool(status))
 
 
@@ -215,23 +172,15 @@ class window:
         WebUI.webui_close(self.window)
 
 
-    def is_any_window_running(self):
-        global WebUI
-        if WebUI is None:
-            err_library_not_found('close')
-            return
-        r = bool(WebUI.webui_is_any_window_running())
-        return r
-
     def is_shown(self):
         global WebUI
         if WebUI is None:
-            err_library_not_found('close')
+            err_library_not_found('is_shown')
             return
         r = bool(WebUI.webui_is_shown(self.window))
         return r
 
-    def run_js(self, script, timeout=0) -> javascript:
+    def script(self, script, timeout=0, response_size=(1024 * 8)) -> javascript:
         global WebUI
         if self.window is None:
             err_window_is_none('show')
@@ -239,27 +188,20 @@ class window:
         if WebUI is None:
             err_library_not_found('show')
             return
-        # Create Struct
-        js = webui_script_interface_t()
-        # Initializing
-        js.script = ctypes.c_char_p(script.encode('utf-8'))
-        js.timeout = ctypes.c_uint(timeout)
-        js.error = ctypes.c_bool(False)
-        js.length = ctypes.c_uint(0)
-        js.data = ctypes.c_char_p("".encode('utf-8'))
+        # Create Buffer
+        buffer = ctypes.create_string_buffer(response_size)
+        buffer.value = b""
+        # Create a pointer to the buffer
+        buffer_ptr = ctypes.pointer(buffer)
+        # Run JavaScript
+        status = bool(WebUI.webui_script(self.window, 
+            ctypes.c_char_p(script.encode('utf-8')), 
+            ctypes.c_uint(timeout), buffer_ptr,
+            ctypes.c_uint(response_size)))
         # Initializing Result
         res = javascript()
-        res.script = script
-        res.timeout = timeout
-        res.error = True
-        res.length = 7
-        res.data = "UNKNOWN"
-        # Run JavaScript
-        WebUI.webui_script_interface_struct(self.window, 
-                                            ctypes.byref(js))
-        res.length = int(js.length)
-        res.data = js.data.decode('utf-8')
-        res.error = js.error
+        res.data = buffer.value.decode('utf-8')
+        res.error = status
         return res
 
 
@@ -355,7 +297,7 @@ def is_app_running():
         if WebUI is None:
             err_library_not_found('is_app_running')
             return
-    r = bool(WebUI.webui_is_app_running())
+    r = bool(WebUI.webui_interface_is_app_running())
     return r
 
 
