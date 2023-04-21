@@ -13,8 +13,6 @@
 .idea/
 .vscode/
 .vs/
-Debug/
-Release/
 
 # Python
 __pycache__/

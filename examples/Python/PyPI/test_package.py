@@ -10,7 +10,7 @@ sys.path.append('Package/src/webui')
 import webui
 
 # Use the local WebUI Dynamic lib
-webui.set_library_path('../../../build/Windows/MSVC')
+# webui.set_library_path('../../../build/Windows/MSVC')
 
 # HTML
 html = """
@@ -39,7 +39,7 @@ html = """
 		<br>
 		<button id="P2JS">Test Python-To-JS</button>
 		<button OnClick="MyJS();">Test JS-To-Python</button>
-		<button id="ExitID">Exit</button>
+		<button id="Exit">Exit</button>
 		<script>
 			function MyJS() {
 				const number = document.getElementById('MyInput').value;
@@ -52,37 +52,39 @@ html = """
 
 def all_events(e : webui.event):
 	print('Function: all_events()')
-	print('Element: ' + e.Element)
-	print('EventType: ' + e.EventType)
-	print('Data: ' + e.Data)
+	print('Element: ' + e.element)
+	print('Type: ' + str(e.type))
+	print('Data: ' + e.data)
 
 def python_to_js(e : webui.event):
 	print('Function: python_to_js()')
-	print('Element: ' + e.Element)
-	print('EventType: ' + e.EventType)
-	print('Data: ' + e.Data)
+	print('Element: ' + e.element)
+	print('Type: ' + str(e.type))
+	print('Data: ' + e.data)
 	# Run JavaScript to get the password
 	res = e.window.script("return document.getElementById('MyInput').value;")
 	# Check for any error
 	if res.error is True:
-		print("JavaScript Error -> Output: [" + res.data + "]")
+		print("JavaScript Error: [" + res.data + "]")
 	else:
-		print("JavaScript OK -> Output: [" + res.data + "]")
+		print("JavaScript OK: [" + res.data + "]")
+	# Quick JavaScript (no response waiting)
+	
 
 def js_to_python(e : webui.event):
 	print('Function: js_to_python()')
-	print('Element: ' + e.Element)
-	print('EventType: ' + e.EventType)
-	print('Data: ' + e.Data)
+	print('Element: ' + e.element)
+	print('Type: ' + str(e.type))
+	print('Data: ' + e.data)
 	v = int(e.data)
 	v = v * 2
 	return v
 
 def exit(e : webui.event):
 	print('Function: exit()')
-	print('Element: ' + e.Element)
-	print('EventType: ' + e.EventType)
-	print('Data: ' + e.Data)
+	print('element: ' + e.element)
+	print('type: ' + str(e.type))
+	print('data: ' + e.data)
 	webui.exit()
 
 def main():
@@ -102,7 +104,7 @@ def main():
 	# Wait until all windows are closed
 	webui.wait()
 
-	print('Done.')
+	print('Test Done.')
 
 if __name__ == "__main__":
 	main()

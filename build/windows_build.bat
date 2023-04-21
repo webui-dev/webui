@@ -90,7 +90,7 @@ IF "%ARG1%"=="" (
 
     set TAR_OUT=webui-windows-x64-v%WEBUI_VERSION%.zip
     cd "Release"
-    tar.exe -c -f %TAR_OUT% Windows
+    tar.exe -c -f %TAR_OUT% Windows\*
     cd "%RootPath%"
 
     echo.
