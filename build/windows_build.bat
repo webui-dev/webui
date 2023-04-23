@@ -61,6 +61,14 @@ copy /Y "build\Windows\MSVC\webui-2-x64.dll" "examples\TypeScript\Deno\webui-2-x
 REM Python
 copy /Y "build\Windows\MSVC\webui-2-x64.dll" "examples\Python\PyPI\Package\src\webui\webui-2-x64.dll"
 
+REM C++ (Visual Studio 2022)
+copy /Y "include\webui.h" "examples\C++\VS2022\serve_a_folder\my_webui_app\webui.h"
+copy /Y "build\Windows\MSVC\webui-2-static-x64.lib" "examples\C++\VS2022\serve_a_folder\my_webui_app\webui-2-static-x64.lib"
+
+REM C++ (Visual Studio 2019)
+copy /Y "include\webui.h" "examples\C++\VS2019\serve_a_folder\my_webui_app\webui.h"
+copy /Y "build\Windows\MSVC\webui-2-static-x64.lib" "examples\C++\VS2019\serve_a_folder\my_webui_app\webui-2-static-x64.lib"
+
 echo.
 IF "%ARG1%"=="" (
 
@@ -90,6 +98,7 @@ IF "%ARG1%"=="" (
 
     set TAR_OUT=webui-windows-x64-v%WEBUI_VERSION%.zip
     cd "Release"
+    timeout 2 > NUL
     tar.exe -c -f %TAR_OUT% Windows\*
     cd "%RootPath%"
 
@@ -102,6 +111,7 @@ IF "%ARG1%"=="" (
     DEL /Q /F /S "*.pdb" >nul 2>&1
     DEL /Q /F /S "*.ilk" >nul 2>&1
     DEL /Q /F /S "*.obj" >nul 2>&1
+    DEL /Q /F /S "*.iobj" >nul 2>&1
     DEL /Q /F /S "*.res" >nul 2>&1
     DEL /Q /F /S "*.bak" >nul 2>&1
     DEL /Q /F /S "*.DS_Store" >nul 2>&1

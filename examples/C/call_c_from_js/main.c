@@ -112,7 +112,7 @@ int main() {
     webui_bind(my_window, "MyID_Four", my_function_with_response);
 
     // Show the window
-    webui_show(my_window, my_html);
+    webui_show(my_window, my_html); // webui_show_browser(my_window, my_html, Chrome);
 
     // Wait until all windows get closed
     webui_wait();

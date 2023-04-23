@@ -85,7 +85,7 @@ int main() {
     webui_bind(my_window, "MyButton2", my_function_exit);
 
     // Show the window
-    webui_show(my_window, my_html);
+    webui_show(my_window, my_html); // webui_show_browser(my_window, my_html, Chrome);
 
     // Wait until all windows get closed
     webui_wait();

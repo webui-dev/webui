@@ -20,7 +20,7 @@
 #define WEBUI_HEADER_SWITCH     0xFB        // Frontend refresh
 #define WEBUI_HEADER_CLOSE      0xFA        // Close window
 #define WEBUI_HEADER_CALL_FUNC  0xF9        // Call a backend function
-#define WEBUI_MAX_ARRAY         (128)       // Max threads, servers, windows, pointers..
+#define WEBUI_MAX_ARRAY         (512)       // Max threads, servers, windows, pointers..
 #define WEBUI_MIN_PORT          (10000)     // Minimum socket port
 #define WEBUI_MAX_PORT          (65500)     // Should be less than 65535
 #define WEBUI_MAX_BUF           (1024000)   // 1024 Kb max dynamic memory allocation

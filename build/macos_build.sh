@@ -63,6 +63,7 @@ if [ "$ARG1" = "" ]; then
 
     TAR_OUT="webui-macos-x64-v$WEBUI_VERSION.zip"
     cd "Release"
+    sleep 2
     tar -c -f $TAR_OUT macOS/*
     cd "$RootPath"
 
