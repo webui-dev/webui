@@ -372,7 +372,7 @@ bool webui_script(void* window, const char* script, unsigned int timeout_second,
             // Copy response to the user's response buffer
             size_t response_len = strlen(_webui_core.run_responses[run_id]);
             size_t bytes_to_cpy = (response_len <= buffer_length ? response_len : buffer_length);
-            snprintf(buffer, bytes_to_cpy, "%s", _webui_core.run_responses[run_id]);
+            snprintf(buffer, bytes_to_cpy+1, "%s", _webui_core.run_responses[run_id]);
         }
 
         _webui_free_mem((void *)_webui_core.run_responses[run_id]);
