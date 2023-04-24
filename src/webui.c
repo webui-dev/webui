@@ -491,7 +491,11 @@ bool webui_show(void* window, const char* content) {
         printf("[User] webui_show()... \n");
     #endif
 
-    return _webui_show(win, content, AnyBrowser);
+    // Find the best web browser to use
+    unsigned int browser = _webui_find_the_best_browser(win);
+
+    // Show the window
+    return _webui_show(win, content, browser);
 }
 
 bool webui_show_browser(void* window, const char* content, unsigned int browser) {
@@ -2214,6 +2218,9 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
         // Google Chrome
 
+        static bool ChromeExist = false;
+        if(ChromeExist) return true;
+
         #ifdef _WIN32
 
             // Google Chrome on Windows
@@ -2228,6 +2235,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Google Chrome Found (multi-user)
                     sprintf(win->browser_path, "\"%s\\chrome.exe\"", browser_folder);
+                    ChromeExist = true;
                     return true;
                 }
             }
@@ -2240,6 +2248,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Google Chrome Found (one user)
                     sprintf(win->browser_path, "\"%s\\chrome.exe\"", browser_folder);
+                    ChromeExist = true;
                     return true;
                 }
             }
@@ -2252,6 +2261,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("open -R -a \"Google Chrome\"", false) == 0) {
 
                 sprintf(win->browser_path, "open -W \"/Applications/Google Chrome.app\" --args");
+                ChromeExist = true;
                 return true;
             }
             else
@@ -2262,11 +2272,13 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("google-chrome --version", false) == 0) {
 
                 sprintf(win->browser_path, "google-chrome");
+                ChromeExist = true;
                 return true;
             }
             else if(_webui_cmd_sync("google-chrome-stable --version", false) == 0) {
 
                 sprintf(win->browser_path, "google-chrome-stable");
+                ChromeExist = true;
                 return true;
             }
             else
@@ -2277,6 +2289,9 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
     else if(browser == Edge) {
 
         // Edge
+
+        static bool EdgeExist = false;
+        if(EdgeExist) return true;
 
         #ifdef _WIN32
 
@@ -2292,6 +2307,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Edge Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    EdgeExist = true;
                     return true;
                 }
             }
@@ -2304,6 +2320,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Edge Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    EdgeExist = true;
                     return true;
                 }
             }
@@ -2318,13 +2335,29 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         #else
 
             // Edge on Linux
-            return false;
+            if(_webui_cmd_sync("microsoft-edge-stable --version", false) == 0) {
+
+                sprintf(win->browser_path, "microsoft-edge-stable");
+                EdgeExist = true;
+                return true;
+            }
+            else if(_webui_cmd_sync("microsoft-edge-dev --version", false) == 0) {
+
+                sprintf(win->browser_path, "microsoft-edge-dev");
+                EdgeExist = true;
+                return true;
+            }
+            else
+                return false;
 
         #endif
     }
     else if(browser == Epic) {
 
         // Epic Privacy Browser
+
+        static bool EpicExist = false;
+        if(EpicExist) return true;
 
         #ifdef _WIN32
 
@@ -2340,6 +2373,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Epic Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    EpicExist = true;
                     return true;
                 }
             }
@@ -2352,6 +2386,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Epic Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    EpicExist = true;
                     return true;
                 }
             }
@@ -2364,6 +2399,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("open -R -a \"Epic\"", false) == 0) {
 
                 sprintf(win->browser_path, "open -W \"/Applications/Epic.app\" --args");
+                EpicExist = true;
                 return true;
             }
             else
@@ -2374,6 +2410,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("epic --version", false) == 0) {
 
                 sprintf(win->browser_path, "epic");
+                EpicExist = true;
                 return true;
             }
             else
@@ -2383,6 +2420,9 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
     else if(browser == Vivaldi) {
 
         // Vivaldi Browser
+
+        static bool VivaldiExist = false;
+        if(VivaldiExist) return true;
 
         #ifdef _WIN32
 
@@ -2398,6 +2438,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Vivaldi Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    VivaldiExist = true;
                     return true;
                 }
             }
@@ -2410,6 +2451,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Vivaldi Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    VivaldiExist = true;
                     return true;
                 }
             }
@@ -2422,6 +2464,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("open -R -a \"Vivaldi\"", false) == 0) {
 
                 sprintf(win->browser_path, "open -W \"/Applications/Vivaldi.app\" --args");
+                VivaldiExist = true;
                 return true;
             }
             else
@@ -2432,6 +2475,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("vivaldi --version", false) == 0) {
 
                 sprintf(win->browser_path, "vivaldi");
+                VivaldiExist = true;
                 return true;
             }
             else
@@ -2441,6 +2485,9 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
     else if(browser == Brave) {
 
         // Brave Browser
+
+        static bool BraveExist = false;
+        if(BraveExist) return true;
 
         #ifdef _WIN32
 
@@ -2456,6 +2503,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Brave Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    BraveExist = true;
                     return true;
                 }
             }
@@ -2468,6 +2516,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Brave Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    BraveExist = true;
                     return true;
                 }
             }
@@ -2480,6 +2529,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("open -R -a \"Brave\"", false) == 0) {
 
                 sprintf(win->browser_path, "open -W \"/Applications/Brave.app\" --args");
+                BraveExist = true;
                 return true;
             }
             else
@@ -2490,6 +2540,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("brave-browser --version", false) == 0) {
 
                 sprintf(win->browser_path, "brave-browser");
+                BraveExist = true;
                 return true;
             }
             else
@@ -2499,6 +2550,9 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
     else if(browser == Firefox) {
 
         // Firefox
+
+        static bool FirefoxExist = false;
+        if(FirefoxExist) return true;
         
         #ifdef _WIN32
         
@@ -2514,6 +2568,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Firefox Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    FirefoxExist = true;
                     return true;
                 }
             }
@@ -2526,6 +2581,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Firefox Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    FirefoxExist = true;
                     return true;
                 }
             }
@@ -2538,6 +2594,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("open -R -a \"firefox\"", false) == 0) {
 
                 sprintf(win->browser_path, "open -W \"/Applications/Firefox.app\" --args");
+                FirefoxExist = true;
                 return true;
             }
             else
@@ -2549,6 +2606,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("firefox -v", false) == 0) {
 
                 sprintf(win->browser_path, "firefox");
+                FirefoxExist = true;
                 return true;
             }
             else
@@ -2560,6 +2618,9 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
     else if(browser == Yandex) {
 
         // Yandex Browser
+
+        static bool YandexExist = false;
+        if(YandexExist) return true;
 
         #ifdef _WIN32
 
@@ -2575,6 +2636,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Yandex Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    YandexExist = true;
                     return true;
                 }
             }
@@ -2587,6 +2649,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Yandex Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
+                    YandexExist = true;
                     return true;
                 }
             }
@@ -2599,6 +2662,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("open -R -a \"Yandex\"", false) == 0) {
 
                 sprintf(win->browser_path, "open -W \"/Applications/Yandex.app\" --args");
+                YandexExist = true;
                 return true;
             }
             else
@@ -2609,6 +2673,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("yandex-browser --version", false) == 0) {
 
                 sprintf(win->browser_path, "yandex-browser");
+                YandexExist = true;
                 return true;
             }
             else
@@ -2618,6 +2683,9 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
     else if(browser == Chromium) {
 
         // The Chromium Projects
+
+        static bool ChromiumExist = false;
+        if(ChromiumExist) return true;
 
         #ifdef _WIN32
 
@@ -2633,6 +2701,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Chromium Found (one user)
                     sprintf(win->browser_path, "\"%s\\chrome.exe\"", browser_folder);
+                    ChromiumExist = true;
                     return true;
                 }
             }
@@ -2645,6 +2714,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
 
                     // Chromium Found (multi-user)
                     sprintf(win->browser_path, "\"%s\\chrome.exe\"", browser_folder);
+                    ChromiumExist = true;
                     return true;
                 }
             }
@@ -2657,6 +2727,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("open -R -a \"Chromium\"", false) == 0) {
 
                 sprintf(win->browser_path, "open -W \"/Applications/Chromium.app\" --args");
+                ChromiumExist = true;
                 return true;
             }
             else
@@ -2667,6 +2738,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             if(_webui_cmd_sync("chromium-browser --version", false) == 0) {
 
                 sprintf(win->browser_path, "chromium-browser");
+                ChromiumExist = true;
                 return true;
             }
             else
@@ -3032,7 +3104,7 @@ bool _webui_browser_start(_webui_window_t* win, const char* address, unsigned in
     if(browser > 10)
         return false;
     
-    // Current browser
+    // Current browser used in the last opened window
     if(browser == AnyBrowser && _webui_core.current_browser != 0)
         browser = _webui_core.current_browser;
 
@@ -3040,7 +3112,7 @@ bool _webui_browser_start(_webui_window_t* win, const char* address, unsigned in
 
     if(browser != 0) {
 
-        // User specified browser
+        // Open the window using the user specified browser
 
         if(browser == Chrome)
             return _webui_browser_start_chrome(win, address);
@@ -3063,7 +3135,7 @@ bool _webui_browser_start(_webui_window_t* win, const char* address, unsigned in
     }
     else if(win->current_browser != 0) {
 
-        // Already used browser
+        // Open the window using the same web browser used for this current window
 
         if(win->current_browser == Chrome)
             return _webui_browser_start_chrome(win, address);
@@ -3086,7 +3158,16 @@ bool _webui_browser_start(_webui_window_t* win, const char* address, unsigned in
     }
     else {
 
-        // Default OS browser
+        // Open the window using the default OS browser
+
+        // #1 - Chrome - Works perfectly
+        // #2 - Edge - Works perfectly like Chrome
+        // #3 - Epic - Works perfectly like Chrome
+        // #4 - Vivaldi - Works perfectly like Chrome
+        // #5 - Brave - Shows a policy notification in the first run
+        // #6 - Firefox - Does not support App-Mode like Chrome (Looks not great)
+        // #7 - Yandex - Shows a big welcome window in the first run
+        // #8 - Chromium - Some Anti-Malware shows a false alert when using ungoogled-chromium-binaries
 
         #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
             // Windows
@@ -3146,6 +3227,142 @@ bool _webui_set_root_folder(_webui_window_t* win, const char* path) {
     webui_set_multi_access(win, true);
 
     return true;
+}
+
+bool _webui_is_process_running(const char* process_name) {
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_is_process_running([%s])... \n", process_name);
+    #endif
+
+    bool isRunning = false;
+
+    #ifdef _WIN32
+        // Microsoft Windows
+        HANDLE hSnapshot;
+        PROCESSENTRY32 pe32;
+        hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if(hSnapshot == INVALID_HANDLE_VALUE)
+            return false;
+        pe32.dwSize = sizeof(PROCESSENTRY32);
+        if(!Process32First(hSnapshot, &pe32)) {
+            CloseHandle(hSnapshot);
+            return false;
+        }
+        do {
+            if (strcmp(pe32.szExeFile, process_name) == 0) {
+                isRunning = true;
+                break;
+            }
+        }
+        while (Process32Next(hSnapshot, &pe32));
+        CloseHandle(hSnapshot);
+    #elif __linux__
+        // Linux
+        DIR *dir;
+        struct dirent *entry;
+        char cmdline_path[WEBUI_MAX_PATH];
+        char cmdline_contents[WEBUI_MAX_PATH];
+        dir = opendir("/proc");
+        if (!dir)
+            return false; // Unable to open /proc
+        while ((entry = readdir(dir))) {
+            if (entry->d_type == DT_DIR && atoi(entry->d_name) > 0) {
+                snprintf(cmdline_path, sizeof(cmdline_path), "/proc/%s/cmdline", entry->d_name);
+                FILE *cmdline_file = fopen(cmdline_path, "r");
+                if (cmdline_file) {
+                    char* gets = fgets(cmdline_contents, sizeof(cmdline_contents), cmdline_file);
+                    fclose(cmdline_file);
+                    if(gets != NULL) {
+                        if(strstr(cmdline_contents, process_name)) {
+                            isRunning = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        closedir(dir);
+    #else
+        // macOS
+        int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
+        struct kinfo_proc *procs = NULL;
+        size_t size;
+        if (sysctl(mib, 4, NULL, &size, NULL, 0) < 0)
+            return false; // Failed to get process list size
+        procs = (struct kinfo_proc *)malloc(size);
+        if (!procs)
+            return false; // Failed to allocate memory for process list
+        if (sysctl(mib, 4, procs, &size, NULL, 0) < 0) {
+            free(procs);
+            return false; // Failed to get process list
+        }
+        size_t count = size / sizeof(struct kinfo_proc);
+        for (size_t i = 0; i < count; i++) {
+            if (strstr(procs[i].kp_proc.p_comm, process_name)) {
+                isRunning = true;
+                break;
+            }
+        }
+        free(procs);
+    #endif
+
+    return isRunning;    
+}
+
+unsigned int _webui_find_the_best_browser(_webui_window_t* win) {
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_find_the_best_browser()... \n");
+    #endif
+
+    // #1 - Chrome - Works perfectly
+    // #2 - Edge - Works perfectly like Chrome
+    // #3 - Epic - Works perfectly like Chrome
+    // #4 - Vivaldi - Works perfectly like Chrome
+    // #5 - Brave - Shows a policy notification in the first run
+    // #6 - Firefox - Does not support App-Mode like Chrome (Looks not great)
+    // #7 - Yandex - Shows a big welcome window in the first run
+    // #8 - Chromium - Some Anti-Malware shows a false alert when using ungoogled-chromium-binaries
+
+    // To save memory, let's search if a web browser is already running
+
+    #ifdef _WIN32
+        // Microsoft Windows
+        if(_webui_is_process_running("chrome.exe") && _webui_browser_exist(win, Chrome)) return Chrome;
+        else if(_webui_is_process_running("msedge.exe") && _webui_browser_exist(win, Edge)) return Edge;
+        else if(_webui_is_process_running("epic.exe") && _webui_browser_exist(win, Epic)) return Epic;
+        else if(_webui_is_process_running("vivaldi.exe") && _webui_browser_exist(win, Vivaldi)) return Vivaldi;
+        else if(_webui_is_process_running("brave.exe") && _webui_browser_exist(win, Brave)) return Brave;
+        else if(_webui_is_process_running("firefox.exe") && _webui_browser_exist(win, Firefox)) return Firefox;
+        else if(_webui_is_process_running("browser.exe") && _webui_browser_exist(win, Yandex)) return Yandex;
+        // Chromium check is never reached if Google Chrome is installed due to duplicate process name `chrome.exe`
+        else if(_webui_is_process_running("chrome.exe") && _webui_browser_exist(win, Chromium)) return Chromium;
+    #elif __linux__
+        // Linux
+        if(_webui_is_process_running("chrome") && _webui_browser_exist(win, Chrome)) return Chrome;
+        else if(_webui_is_process_running("google-chrome") && _webui_browser_exist(win, Chrome)) return Chrome;
+        else if(_webui_is_process_running("google-chrome-stable") && _webui_browser_exist(win, Chrome)) return Chrome;
+        else if(_webui_is_process_running("microsoft-edge-stable") && _webui_browser_exist(win, Edge)) return Edge;
+        else if(_webui_is_process_running("microsoft-edge-dev") && _webui_browser_exist(win, Edge)) return Edge;
+        else if(_webui_is_process_running("epic") && _webui_browser_exist(win, Epic)) return Epic;
+        else if(_webui_is_process_running("vivaldi") && _webui_browser_exist(win, Vivaldi)) return Vivaldi;
+        else if(_webui_is_process_running("brave-browser") && _webui_browser_exist(win, Brave)) return Brave;
+        else if(_webui_is_process_running("firefox") && _webui_browser_exist(win, Firefox)) return Firefox;
+        else if(_webui_is_process_running("yandex-browser") && _webui_browser_exist(win, Yandex)) return Yandex;
+        else if(_webui_is_process_running("chromium-browser") && _webui_browser_exist(win, Chromium)) return Chromium;
+    #else
+        // macOS
+        if(_webui_is_process_running("Google Chrome") && _webui_browser_exist(win, Chrome)) return Chrome;
+        else if(_webui_is_process_running("Epic") && _webui_browser_exist(win, Epic)) return Epic;
+        else if(_webui_is_process_running("Vivaldi") && _webui_browser_exist(win, Vivaldi)) return Vivaldi;
+        else if(_webui_is_process_running("Brave") && _webui_browser_exist(win, Brave)) return Brave;
+        else if(_webui_is_process_running("Firefox") && _webui_browser_exist(win, Firefox)) return Firefox;
+        else if(_webui_is_process_running("Yandex") && _webui_browser_exist(win, Yandex)) return Yandex;
+        else if(_webui_is_process_running("Chromium") && _webui_browser_exist(win, Chromium)) return Chromium;
+    #endif
+
+    return AnyBrowser;
 }
 
 bool _webui_show(_webui_window_t* win, const char* content, unsigned int browser) {

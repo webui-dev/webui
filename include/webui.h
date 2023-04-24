@@ -52,6 +52,7 @@
     #include <direct.h>
     #include <io.h>
     #include <tchar.h>
+    #include <tlhelp32.h>
     #define WEBUI_GET_CURRENT_DIR _getcwd
     #define WEBUI_FILE_EXIST _access
     #define WEBUI_POPEN _popen
@@ -61,6 +62,7 @@
 
 // -- Linux ---------------------------
 #ifdef __linux__
+    #include <unistd.h>
     #include <pthread.h>
     #include <unistd.h>
     #include <limits.h>
@@ -87,6 +89,7 @@
     #include <poll.h>
     #include <sys/syslimits.h> // PATH_MAX
     #include <sys/time.h>
+    #include <sys/sysctl.h>
     #define WEBUI_GET_CURRENT_DIR getcwd
     #define WEBUI_FILE_EXIST access
     #define WEBUI_POPEN popen
