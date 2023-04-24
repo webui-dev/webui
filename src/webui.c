@@ -72,7 +72,7 @@ static const char* webui_javascript_bridge =
 "            _webui_ws_status = false; \n"
 "            if(_webui_close_reason === _WEBUI_SWITCH) { \n"
 "                if(_webui_log) \n"
-"                    console.log('WebUI -> Refresh UI'); \n"
+"                    console.log('WebUI -> Connection lost -> Navigation to [' + _webui_close_value + ']'); \n"
 "                window.location.replace(_webui_close_value); \n"
 "            } else { \n"
 "                if(_webui_log) \n"
@@ -167,6 +167,16 @@ static const char* webui_javascript_bridge =
 "            console.log('WebUI -> Navigation [' + url + ']'); \n"
 "    } \n"
 "} \n"
+"function webui_is_external_link(url) { \n"
+"    const currentUrl = new URL(window.location.href); \n"
+"    const targetUrl = new URL(url, window.location.href); \n"
+"    currentUrl.hash = ''; \n"
+"    targetUrl.hash = ''; \n"
+"    if (url.startsWith('#') || url === currentUrl.href + '#' || currentUrl.href === targetUrl.href) { \n"
+"        return false; \n"
+"    } \n"
+"        return true; \n"
+"} \n"
 " // -- APIs -------------------------- \n"
 "function webui_fn(fn, value) { \n"
 "    if(!_webui_has_events && !_webui_bind_list.includes(_webui_win_num + '/' + fn)) \n"
@@ -224,8 +234,10 @@ static const char* webui_javascript_bridge =
 "    const attribute = e.target.closest('a'); \n"
 "    if(attribute) { \n"
 "        const link = attribute.href; \n"
-"        e.preventDefault(); \n"
-"        _webui_close(_WEBUI_SWITCH, link); \n"
+"        if(webui_is_external_link(link)) { \n"
+"            e.preventDefault(); \n"
+"            _webui_close(_WEBUI_SWITCH, link); \n"
+"        } \n"
 "    } \n"
 "}); \n"
 "if(typeof navigation !== 'undefined') { \n"
@@ -295,10 +307,10 @@ bool webui_script(void* window, const char* script, unsigned int timeout_second,
     _webui_window_t* win = (_webui_window_t*)window;
 
     #ifdef WEBUI_LOG
-        printf("[User] webui_script()... \n", script);
+        printf("[User] webui_script()... \n");
         printf("[User] webui_script() -> Script [%s] \n", script);
         printf("[User] webui_script() -> Response Buffer @ 0x%p \n", buffer);
-        printf("[User] webui_script() -> Response Buffer Size %lld bytes \n", buffer_length);
+        printf("[User] webui_script() -> Response Buffer Size %zu bytes \n", buffer_length);
     #endif
 
     _webui_init();
@@ -370,9 +382,9 @@ bool webui_script(void* window, const char* script, unsigned int timeout_second,
         if(buffer != NULL && buffer_length > 1) {
 
             // Copy response to the user's response buffer
-            size_t response_len = strlen(_webui_core.run_responses[run_id])+1;
+            size_t response_len = strlen(_webui_core.run_responses[run_id]) + 1;
             size_t bytes_to_cpy = (response_len <= buffer_length ? response_len : buffer_length);
-            snprintf(buffer, bytes_to_cpy, "%s", _webui_core.run_responses[run_id]);
+            memcpy(buffer, _webui_core.run_responses[run_id], bytes_to_cpy);
         }
 
         _webui_free_mem((void *)_webui_core.run_responses[run_id]);
@@ -579,8 +591,8 @@ bool webui_get_bool(webui_event_t* e) {
     const char* str = webui_get_string(e);
     if(str[0] == 't' || str[0] == 'T') // true || True
         return true;
-    
-        return false;
+
+    return false;
 }
 
 void webui_return_int(webui_event_t* e, long long int n) {
@@ -3396,6 +3408,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             return;
         
         #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_CLICK \n");
             printf("[Core]\t\t_webui_window_receive() -> %d bytes \n", (int)element_len);
             printf("[Core]\t\t_webui_window_receive() -> [%s] \n", element);
         #endif
@@ -3443,6 +3456,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             error = false;
 
         #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_JS \n");
             printf("[Core]\t\t_webui_window_receive() -> run_id = 0x%02x \n", run_id);
             printf("[Core]\t\t_webui_window_receive() -> error = 0x%02x \n", error);
             printf("[Core]\t\t_webui_window_receive() -> %d bytes of data\n", (int)data_len);
@@ -3491,6 +3505,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             return;
         
         #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_CALL_FUNC \n");
             printf("[Core]\t\t_webui_window_receive() -> %d bytes \n", (int)element_len);
             printf("[Core]\t\t_webui_window_receive() -> [%s] \n", element);
         #endif
@@ -3526,6 +3541,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
                 return;
             
             #ifdef WEBUI_LOG
+                printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_SWITCH \n");
                 printf("[Core]\t\t_webui_window_receive() -> %d bytes \n", (int)url_len);
                 printf("[Core]\t\t_webui_window_receive() -> [%s] \n", url);
             #endif

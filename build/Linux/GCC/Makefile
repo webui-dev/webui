@@ -10,13 +10,13 @@ debug:
 #	Static with Debug info
 	@echo "Build WebUI Library (GCC Debug Static)..."
 	@gcc -g -m64 -o mongoose.o -I "$(INCLUDE)" -c "$(SOURCE)/mongoose.c" -Wno-stringop-overread
-	@gcc -g -m64 -o webui.o -I "$(INCLUDE)" -c "$(SOURCE)/webui.c"
+	@gcc -g -m64 -o webui.o -I "$(INCLUDE)" -c "$(SOURCE)/webui.c" -DWEBUI_LOG
 	@ar rc libwebui-2-static-x64.a webui.o mongoose.o
 	@ranlib libwebui-2-static-x64.a
 #	Dynamic with Debug info
 	@echo "Build WebUI Library (GCC Debug Dynamic)..."
 	@gcc -g -fPIC -m64 -o mongoose.o -I "$(INCLUDE)" -c "$(SOURCE)/mongoose.c" -Wno-stringop-overread
-	@gcc -g -fPIC -m64 -o webui.o -I "$(INCLUDE)" -c "$(SOURCE)/webui.c"
+	@gcc -g -fPIC -m64 -o webui.o -I "$(INCLUDE)" -c "$(SOURCE)/webui.c" -DWEBUI_LOG
 	@gcc -g -shared -o webui-2-x64.so webui.o mongoose.o
 #	Clean
 	@- rm -f *.o

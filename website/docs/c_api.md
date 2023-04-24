@@ -1,35 +1,43 @@
-# WebUI C APIs
+# WebUI v2.2.0 C APIs
 
-- [Get Started](/c_api?id=get-started)
-- [Example](/c_api?id=example)
+This document includes all WebUI C APIs.
+
+- [Download](/c_api?id=download)
+- [Build From Source](/c_api?id=build-from-source)
+- [Examples](/c_api?id=examples)
 - Window
     - [New Window](/c_api?id=new-window)
     - [Show Window](/c_api?id=show-window)
     - [Window status](/c_api?id=window-status)
-- Binding
+- Binding & Events
     - [Bind](/c_api?id=Bind)
-    - [Bind All](/c_api?id=bind-all)
+    - [Events](/c_api?id=events)
 - Application
     - [Wait](/c_api?id=wait)
     - [Exit](/c_api?id=exit)
     - [Close](/c_api?id=close)
-    - [App status](/c_api?id=app-status)
     - [Startup Timeout](/c_api?id=startup-timeout)
     - [Multi Access](/c_api?id=multi-access)
-- [Event](/c_api?id=event)
-- [Run JavaScript](/c_api?id=script)
-- [Server](/c_api?id=server)
+- JavaScript
+    - [Run JavaScript](/c_api?id=run-javascript)
+    - [TypeScript Runtimes](/c_api?id=typescript-runtimes)
 
 ---
-### Get Started
+### Download
 
-This document includes all WebUI APIs available for the C/C++ application. To begin, you need to clone the WebUI repo and build it from the source using any C compiler, No need for any external dependencies.
+Download WebUI v2.2.0 prebuilt binaries here: https://webui.me/#download
 
-Windows MSVC
+---
+### Build from Source
+
+You can build WebUI from source by cloning the WebUI repo and compile it using any C compiler, No need for any external dependencies.
+
+Windows MSVC (_Using x64 Native Tools Command Prompt for VS 20xx_)
 ```console
 git clone https://github.com/alifcommunity/webui.git
 cd webui\build\Windows\MSVC
 nmake
+nmake debug
 ```
 
 Windows MinGW
@@ -37,6 +45,7 @@ Windows MinGW
 git clone https://github.com/alifcommunity/webui.git
 cd webui\build\Windows\GCC
 mingw32-make
+mingw32-make debug
 ```
 
 Windows TCC
@@ -44,26 +53,64 @@ Windows TCC
 git clone https://github.com/alifcommunity/webui.git
 cd webui\build\Windows\TCC
 mingw32-make
+mingw32-make debug
 ```
 
 Linux GCC
 ```console
 git clone https://github.com/alifcommunity/webui.git
-cd webui\build\Linux\GCC
+cd webui/build/Linux/GCC
 make
+make debug
 ```
 
 Linux Clang
 ```console
 git clone https://github.com/alifcommunity/webui.git
-cd webui\build\Linux\Clang
+cd webui/build/Linux/Clang
 make
+make debug
+```
+
+macOS Clang
+```console
+git clone https://github.com/alifcommunity/webui.git
+cd webui/build/macOS/Clang
+make
+make debug
+```
+
+---
+You can also use the build script to automatically build WebUI and copy binaries into all examples folder.
+
+Windows
+```console
+git clone https://github.com/alifcommunity/webui.git
+cd webui\build\
+windows_build
+windows_build debug
+```
+
+Linux
+```console
+git clone https://github.com/alifcommunity/webui.git
+cd webui/build
+sh linux_build.sh
+sh linux_build.sh debug
+```
+
+macOS
+```console
+git clone https://github.com/alifcommunity/webui.git
+cd webui/build
+sh macos_build.sh
+sh macos_build.sh debug
 ```
 
 For more instructions, please visit [Build WebUI](https://github.com/alifcommunity/webui/tree/main/build) in our GitHub repository.
 
 ---
-### Example
+### Examples
 
 A minimal C example
 
@@ -72,8 +119,37 @@ A minimal C example
 
 int main() {
 
-    webui_window_t* win = webui_new_window();
-    webui_show(win, "<html>Hello!</html>", webui.browser.any);
+    void* win = webui_new_window();
+    webui_show(win, "<html>Hello!</html>");
+	webui_wait();
+    return 0;
+}
+```
+
+Using a local HTML file. Please not that you need to add `<script src="/webui.js"></script>` to all your HTML files
+
+```c
+#include "webui.h"
+
+int main() {
+
+    void* win = webui_new_window();
+    // Please add <script src="/webui.js"></script> to your HTML files
+    webui_show(win, "my_file.html");
+	webui_wait();
+    return 0;
+}
+```
+
+Using a specific web browser
+
+```c
+#include "webui.h"
+
+int main() {
+
+    void* win = webui_new_window();
+    webui_show_browser(win, "<html>Hello!</html>", Chrome);
 	webui_wait();
     return 0;
 }
@@ -84,7 +160,7 @@ Please visit [C Examples](https://github.com/alifcommunity/webui/tree/main/examp
 ---
 ### New Window
 
-To create a new window object, you can use `webui_new_window()`, which returns a pointer to a struct `webui_window_t`. This pointer does *NOT* need to be freed.
+To create a new window object, you can use `webui_new_window()`, which returns a void pointer. Please note that this pointer does *NOT* need to be freed.
 
 ```c
 void* my_window = webui_new_window();
@@ -96,65 +172,74 @@ void* my_window = webui_new_window();
 To show a window, you can use `webui_show()`. If the window is already shown, the UI will get refreshed in the same window.
 
 ```c
+// Show a window using the embedded HTML
 const char* my_html = "<html>Hello!</html>";
+webui_show(my_window, my_html);
 
-// Any available web browser
-webui_show(my_window, my_html, webui.browser.any);
+// Show a window using an .html local file
+// Please add <script src="/webui.js"></script> to your HTML files
+webui_show(my_window, "my_file.html");
 ```
 
-Show a window in a specific web browser
+Show a window using a specific web browser
 
 ```c
 const char* my_html = "<html>Hello!</html>";
 
-// Chrome
-webui_show(my_window, my_html, webui.browser.chrome);
+// Google Chrome
+webui_show_browser(my_window, my_html, Chrome);
 
-// Firefox
-webui_show(my_window, my_html, webui.browser.firefox);
+// Mozilla Firefox
+webui_show_browser(my_window, my_html, Firefox);
 
 // Microsoft Edge
-webui_show(my_window, my_html, webui.browser.edge);
+webui_show_browser(my_window, my_html, Edge);
+
+// Microsoft Apple Safari (Not Ready)
+webui_show_browser(my_window, my_html, Safari);
+
+// The Chromium Project
+webui_show_browser(my_window, my_html, Chromium);
+
+// Microsoft Opera Browser (Not Ready)
+webui_show_browser(my_window, my_html, Opera);
+
+// The Brave Browser
+webui_show_browser(my_window, my_html, Brave);
+
+// The Vivaldi Browser
+webui_show_browser(my_window, my_html, Vivaldi);
+
+// The Epic Browser
+webui_show_browser(my_window, my_html, Epic);
+
+// The Yandex Browser
+webui_show_browser(my_window, my_html, Yandex);
+
+// Default recommended web browser
+webui_show_browser(my_window, my_html, AnyBrowser);
+// Or simly
+webui_show(my_window, my_html);
+
 ```
 
-If you need to update the whole UI content, you can use `webui_refresh()`, which allows you to refresh the window UI with any new HTML content.
+If you need to update the whole UI content, you can also use the same function `webui_show()`, which allows you to refresh the window UI with any new HTML content.
 
 ```c
 const char* html = "<html>Hello</html>";
 const char* new_html = "<html>New World!</html>";
 
-// Open a window in Chrome
-webui_show(my_window, html, webui.browser.chrome);
+// Open a window
+webui_show(my_window, html);
 
 // Later...
 
 // Refresh the same window with the new content
-webui_refresh(my_window, new_html);
-```
-
-In some exceptional cases, like in the WebUI Rust wrapper, you need that the WebUI keep a copy of the HTML content instead of keeping the pointer to the original source, this will come in handy when your HTML pointer is not guaranteed to stay alive. in this case, please use `webui_show_cpy()`.
-
-```c
-char* ptr_html;
-// malloc()...
-
-// Open a window in Chrome & keep a valid copy of the HTML content
-webui_show_cpy(my_window, html, webui.browser.chrome);
-
-// You can now safely free ptr_html
+webui_show(my_window, new_html);
 ```
 
 ---
 ### Window Status
-
-In some exceptional cases, you want to know if any opened window exists, for that, please use `webui_is_any_window_running()`, which returns *True* or *False*.
-
-```c
-if(webui_is_any_window_running())
-    printf("Some windows still running");
-else
-    printf("All windows are closed.");
-```
 
 To know if a specific window is running, you can use `webui_is_shown()`.
 
@@ -172,29 +257,52 @@ Use `webui_bind()` to receive click events when the user clicks on any HTML elem
 
 ```c
 void my_function(webui_event_t* e) {
-    ...
+    // <button id="MyID">Hello</button> get clicked !
 }
 
 webui_bind(my_window, "MyID", my_function);
 ```
 
----
 ### Events
 
-You can listen for events by biding an empty ID.
+The *e* corresponds to the word _Event_. `e` is a struct that has those elements:
 
 ```c
-void events(webui_event_t* e) {
-    ...
+void* window; // Pointer to the window object.
+unsigned int type; // Event type (WEBUI_EVENT_MOUSE_CLICK, WEBUI_EVENT_NAVIGATION...)
+char* element; // HTML element ID
+char* data; // The data coming from JavaScript if any
+char* response; // No need to be used, its internally used by webui_return_xxx()
+```
+
+```c
+void my_function(webui_event_t* e){
+
+    printf("Hi!, You clicked on %s element\n", e.element);
+
+    if(e->type == WEBUI_EVENT_CONNECTED)
+        printf("Connected. \n");
+    else if(e->type == WEBUI_EVENT_DISCONNECTED)
+        printf("Disconnected. \n");
+    else if(e->type == WEBUI_EVENT_MOUSE_CLICK)
+        printf("Click. \n");
+    else if(e->type == WEBUI_EVENT_NAVIGATION)
+        printf("Starting navigation to: %s \n", (char *)e->data);    
+
+    // Send back a response to JavaScript
+    webui_return_int(e, 123); // As integer
+    webui_return_bool(e, true); // As boolean
+    webui_return_string(e, "My Response"); // As string
 }
 
-webui_bind(my_window, "", events);
+// Empty ID means all events on all elements
+webui_bind(my_window, "", my_function);
 ```
 
 ---
 ### Wait
 
-It is essential to call `webui_wait()` at the end of your main function, after you create/shows all your windows. This will make your application run until the user closes all visible windows or when calling *[webui_exit](/c_api?id=exit)*.
+It is essential to call `webui_wait()` at the end of your main function, after you create/shows all your windows. This will make your application run until the user closes all visible windows or when calling *[webui_exit()](/c_api?id=exit)*.
 
 ```c
 int main() {
@@ -230,21 +338,9 @@ webui_close(my_window);
 ```
 
 ---
-### App Status
-
-In some exceptional cases, like in the WebUI-TypeScript wrapper, you want to know if the whole application still running or not, for that, please use `webui_is_app_running()`, which returns *True* or *False*.
-
-```c
-if(webui_is_app_running())
-    printf("The application is still running");
-else
-    printf("The application is closed.");
-```
-
----
 ### Startup Timeout
 
-WebUI waits a couple of seconds to let the web browser start and connect, you can control this behavior by using `webui_set_timeout()`.
+WebUI waits a couple of seconds (_Default is 10 seconds_) to let the web browser start and connect. You can control this behaviour by using `webui_set_timeout()`.
 
 ```c
 // Wait 10 seconds for the web browser to start
@@ -254,6 +350,7 @@ webui_set_timeout(10);
 // not start yet, webui_wait() will return
 webui_wait();
 ```
+
 ```c
 // Wait forever.
 webui_set_timeout(0);
@@ -267,114 +364,54 @@ webui_wait();
 
 ![webui_access_denied](data/webui_access_denied.png)
 
-After the window is loaded, for safety, the used URL is not valid anymore, if someone else tries to access the URL WebUI will show an error. To allow multi-user access to the same URL, you can use `webui_multi_access()`.
+After the window is loaded, the URL is not valid anymore for safety. WebUI will show an error if someone else tries to access the URL. To allow multi-user access to the same URL, you can use `webui_multi_access()`.
 
 ```c
 webui_multi_access(my_window, true);
 ```
 
 ---
-### Event
+### Run JavaScript
 
-When you use *[webui_bind](/c_api?id=bind)*, your application will receive an event every time the user clicks on the specified HTML element. The event comes with the `element_name`, which is The HTML ID of the clicked element, for example, `MyButton`, `MyInput`.., The event also comes with the WebUI unique element ID & the unique window ID. Those two IDs are not generally needed, except if you write a wrapper for WebUI in a language other than C.
-
-```c
-void my_function(webui_event_t* e){
-
-	printf("Hi!, You clicked on %s element\n", e.element_name);
-}
-```
-
-The *e* corresponds to Event, and it has those elements:
-
-```c
-unsigned int window_id;     // WebUI unique window ID
-unsigned int element_id;    // WebUI unique element ID
-char* element_name;         // The HTML ID of the clicked element
-webui_window_t* window;     // Pointer to the current window
-```
-
----
-### Script
-
-You can run JavaScript on any window to read values, update the view, or anything else. In addition, you can check if the script execution errors, as well as receive data.
+You can run JavaScript on any window to read values, update the view, or anything else. In addition, you can check if the script execution has errors, as well as receive data.
 
 ```c
 void my_function(webui_event_t* e){
 
-	webui_script_t js = {
-		.script = "alert('Hello');",    // JavaScript
-		.timeout = 10                   // Max time to wait in seconds
-	};
+	// Create a buffer to hold the response
+    char response[64];
 
-    // Execute
-    webui_script(e->window, &js);
+    // Run JavaScript
+    if(!webui_script(
+        e->window, // Window
+        "return 2*2;", // JavaScript to be executed
+        0, // Maximum waiting time in second
+        response, // Local buffer to hold the JavaScript response
+        64) // Size of the local buffer
+    ) {
+        printf("JavaScript Error: %s\n", response);
+        return;
+    }
 
-    // Free resources
-	webui_script_cleanup(&js);
-}
-```
+    // Print the result
+    printf("JavaScript Response: %s\n", response); // 4
 
-An example of how to run a JavaScript and get back the output as `char*` datatype, and check for errors, if any.
-
-```c
-void my_function(webui_event_t* e){
-
-	webui_script_t js = {
-		.script = "var foo = 2; var bar = 5; return foo * bar;"
-	};
-
-    // Execute
-    webui_script(e->window, &js);
-
-	// Check if there is any JavaScript error
-	if(js.error)
-		printf("Error: %s\n", js.data);
-    else
-        printf("Output: %s\n", js.data);
-    
-    // Free resources
-	webui_script_cleanup(&js);
+    // Run JavaScript quickly with no waiting for the response
+    webui_run(e->window, "alert('Fast!');");
 }
 ```
 
 ---
-### Server
+### TypeScript Runtimes
 
-You can use WebUI to serve a folder, which makes WebUI act like a web server. To do that, please use `webui_new_server()`, which returns the complete URL of the server.
-
-```c
-// Serve a folder
-const char* url = webui_new_server(my_window, "/path/to/folder");
-```
+You may want to interpret JavaScript & TypeScript files and show the output in the UI. You can use `webui_set_runtime()` and choose between `Deno` or `Nodejs` as your runtimes.
 
 ```c
-// Automatically select the current path
-const char* url = webui_new_server(my_window, "");
-```
-
-When you serve a folder, you probably want to run JavaScript & TypeScript files and show the output in the UI. To do that, you can use `webui_script_runtime`, which makes WebUI act like Nodejs.
-
-```c
-// Chose your preferable runtime for .js & .ts files
-// Deno: webui.runtime.deno
-// Node.js: webui.runtime.nodejs
-
 // Deno
-webui_script_runtime(my_window, webui.runtime.deno);
+webui_set_runtime(my_window, Deno);
+webui_show(win, "my_file.ts");
 
 // Nodejs
-webui_script_runtime(my_window, webui.runtime.nodejs);
-```
-
-If you already have a URL, you can use WebUI to open a window using this URL. For that, please use `webui_open()`.
-
-```c
-webui_open(my_window, my_url, webui.browser.chrome);
-```
-
-In addition, it can make WebUI track clicks and send you events by embedding the WebUI JavaScript bridge file `webui.js`. Of course, this will work only if the server is WebUI.
-
-```html
-<script src="/webui.js"></script>
+webui_set_runtime(my_window, Nodejs);
+webui_show(win, "my_file.js");
 ```

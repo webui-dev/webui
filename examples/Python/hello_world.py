@@ -63,7 +63,7 @@ dashboard_html = """
 def check_the_password(e : webui.event):
 
 	# Run JavaScript to get the password
-	res = e.window.run_js("return document.getElementById(\"MyInput\").value;")
+	res = e.window.script("return document.getElementById(\"MyInput\").value;")
 
 	# Check for any error
 	if res.error is True:
@@ -76,7 +76,7 @@ def check_the_password(e : webui.event):
 		e.window.show(dashboard_html)
 	else:
 		print("Wrong password: " + res.data)
-		e.window.run_js(" document.getElementById('err').innerHTML = 'Sorry. Wrong password'; ")
+		e.window.script(" document.getElementById('err').innerHTML = 'Sorry. Wrong password'; ")
 
 def close_the_application(e : webui.event):
 	webui.exit()

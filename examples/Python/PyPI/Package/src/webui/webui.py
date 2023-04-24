@@ -23,6 +23,19 @@ webui_path = os.path.dirname(__file__)
 PTR_CHAR = ctypes.POINTER(ctypes.c_char)
 PTR_PTR_CHAR = ctypes.POINTER(PTR_CHAR)
 
+# Scripts Runtime
+class browser:
+    any:int = 0 # Default recommended web browser
+    chrome:int = 1 # Google Chrome
+    firefox:int = 2 # Mozilla Firefox
+    edge:int = 3 # Microsoft Edge
+    safari:int = 4 # Apple Safari
+    chromium:int = 5 # The Chromium Project
+    opera:int = 6 # Opera Browser
+    brave:int = 7 # The Brave Browser
+    vivaldi:int = 8 # The Vivaldi Browser
+    epic:int = 9 # The Epic Browser
+    yandex:int = 10 # The Yandex Browser
 
 # event
 class event:
@@ -119,6 +132,7 @@ class window:
             # Set the response
             webui_lib.webui_interface_set_response(response_ptr, cb_result_encode)
 
+
     # Bind a specific html element click event with a function. Empty element means all events.
     def bind(self, element, func):
         global webui_lib
@@ -137,8 +151,9 @@ class window:
         func_id = self.window_id + element
         self.cb_fun_list[func_id] = func
 
+
     # Show a window using a embedded HTML, or a file. If the window is already opened then it will be refreshed.
-    def show(self, content="<html></html>"):
+    def show(self, content="<html></html>", browser:int=0):
         global webui_lib
         if self.window is None:
             _err_window_is_none('show')
@@ -147,7 +162,8 @@ class window:
             _err_library_not_found('show')
             return
         # Show the window
-        webui_lib.webui_show(self.window, content.encode('utf-8'))
+        webui_lib.webui_show_browser(self.window, content.encode('utf-8'), ctypes.c_uint(browser))
+
 
     # Chose between Deno and Nodejs runtime for .js and .ts files.
     def set_runtime(self, rt=runtime.deno):
@@ -172,6 +188,7 @@ class window:
             return
         webui_lib.webui_set_multi_access(self.window, 
                         ctypes.c_bool(status))
+
 
     # Close the window.
     def close(self):
