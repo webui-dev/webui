@@ -492,7 +492,7 @@ bool webui_show(void* window, const char* content) {
     #endif
 
     // Find the best web browser to use
-    unsigned int browser = _webui_find_the_best_browser(win);
+    unsigned int browser = _webui_core.current_browser != 0 ? _webui_core.current_browser : _webui_find_the_best_browser(win);
 
     // Show the window
     return _webui_show(win, content, browser);
@@ -2219,7 +2219,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         // Google Chrome
 
         static bool ChromeExist = false;
-        if(ChromeExist) return true;
+        if(ChromeExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -2291,7 +2291,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         // Edge
 
         static bool EdgeExist = false;
-        if(EdgeExist) return true;
+        if(EdgeExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -2357,7 +2357,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         // Epic Privacy Browser
 
         static bool EpicExist = false;
-        if(EpicExist) return true;
+        if(EpicExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -2422,7 +2422,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         // Vivaldi Browser
 
         static bool VivaldiExist = false;
-        if(VivaldiExist) return true;
+        if(VivaldiExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -2487,7 +2487,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         // Brave Browser
 
         static bool BraveExist = false;
-        if(BraveExist) return true;
+        if(BraveExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -2537,9 +2537,9 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         #else
 
             // Brave on Linux
-            if(_webui_cmd_sync("brave-browser --version", false) == 0) {
+            if(_webui_cmd_sync("brave --version", false) == 0) {
 
-                sprintf(win->browser_path, "brave-browser");
+                sprintf(win->browser_path, "brave");
                 BraveExist = true;
                 return true;
             }
@@ -2552,7 +2552,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         // Firefox
 
         static bool FirefoxExist = false;
-        if(FirefoxExist) return true;
+        if(FirefoxExist && !_webui_is_empty(win->browser_path)) return true;
         
         #ifdef _WIN32
         
@@ -2620,7 +2620,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         // Yandex Browser
 
         static bool YandexExist = false;
-        if(YandexExist) return true;
+        if(YandexExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -2685,7 +2685,7 @@ bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         // The Chromium Projects
 
         static bool ChromiumExist = false;
-        if(ChromiumExist) return true;
+        if(ChromiumExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -3261,28 +3261,34 @@ bool _webui_is_process_running(const char* process_name) {
         // Linux
         DIR *dir;
         struct dirent *entry;
-        char cmdline_path[WEBUI_MAX_PATH];
-        char cmdline_contents[WEBUI_MAX_PATH];
+        char status_path[WEBUI_MAX_PATH];
+        char line[WEBUI_MAX_PATH];
         dir = opendir("/proc");
         if (!dir)
             return false; // Unable to open /proc
         while ((entry = readdir(dir))) {
             if (entry->d_type == DT_DIR && atoi(entry->d_name) > 0) {
-                snprintf(cmdline_path, sizeof(cmdline_path), "/proc/%s/cmdline", entry->d_name);
-                FILE *cmdline_file = fopen(cmdline_path, "r");
-                if (cmdline_file) {
-                    char* gets = fgets(cmdline_contents, sizeof(cmdline_contents), cmdline_file);
-                    fclose(cmdline_file);
-                    if(gets != NULL) {
-                        if(strstr(cmdline_contents, process_name)) {
-                            isRunning = true;
+                snprintf(status_path, sizeof(status_path), "/proc/%s/status", entry->d_name);
+                FILE *status_file = fopen(status_path, "r");
+                if (status_file) {
+                    while (fgets(line, sizeof(line), status_file)) {
+                        if (strncmp(line, "Name:", 5) == 0) {
+                            char proc_name[WEBUI_MAX_PATH];
+                            sscanf(line, "Name: %s", proc_name);
+                            if (strcmp(proc_name, process_name) == 0) {
+                                isRunning = true;
+                                fclose(status_file);
+                                goto _close_dir;
+                            }
                             break;
                         }
                     }
+                    fclose(status_file);
                 }
             }
         }
-        closedir(dir);
+        _close_dir:
+            closedir(dir);
     #else
         // macOS
         int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
@@ -3299,7 +3305,7 @@ bool _webui_is_process_running(const char* process_name) {
         }
         size_t count = size / sizeof(struct kinfo_proc);
         for (size_t i = 0; i < count; i++) {
-            if (strstr(procs[i].kp_proc.p_comm, process_name)) {
+            if (strcmp(procs[i].kp_proc.p_comm, process_name) == 0) {
                 isRunning = true;
                 break;
             }
@@ -3336,21 +3342,21 @@ unsigned int _webui_find_the_best_browser(_webui_window_t* win) {
         else if(_webui_is_process_running("brave.exe") && _webui_browser_exist(win, Brave)) return Brave;
         else if(_webui_is_process_running("firefox.exe") && _webui_browser_exist(win, Firefox)) return Firefox;
         else if(_webui_is_process_running("browser.exe") && _webui_browser_exist(win, Yandex)) return Yandex;
-        // Chromium check is never reached if Google Chrome is installed due to duplicate process name `chrome.exe`
+        // Chromium check is never reached if Google Chrome is installed
+        // due to duplicate process name `chrome.exe`
         else if(_webui_is_process_running("chrome.exe") && _webui_browser_exist(win, Chromium)) return Chromium;
     #elif __linux__
         // Linux
         if(_webui_is_process_running("chrome") && _webui_browser_exist(win, Chrome)) return Chrome;
-        else if(_webui_is_process_running("google-chrome") && _webui_browser_exist(win, Chrome)) return Chrome;
-        else if(_webui_is_process_running("google-chrome-stable") && _webui_browser_exist(win, Chrome)) return Chrome;
-        else if(_webui_is_process_running("microsoft-edge-stable") && _webui_browser_exist(win, Edge)) return Edge;
-        else if(_webui_is_process_running("microsoft-edge-dev") && _webui_browser_exist(win, Edge)) return Edge;
-        else if(_webui_is_process_running("epic") && _webui_browser_exist(win, Epic)) return Epic;
-        else if(_webui_is_process_running("vivaldi") && _webui_browser_exist(win, Vivaldi)) return Vivaldi;
-        else if(_webui_is_process_running("brave-browser") && _webui_browser_exist(win, Brave)) return Brave;
+        else if(_webui_is_process_running("msedge") && _webui_browser_exist(win, Edge)) return Edge;
+        // Epic...
+        else if(_webui_is_process_running("vivaldi-bin") && _webui_browser_exist(win, Vivaldi)) return Vivaldi;
+        else if(_webui_is_process_running("brave") && _webui_browser_exist(win, Brave)) return Brave;
         else if(_webui_is_process_running("firefox") && _webui_browser_exist(win, Firefox)) return Firefox;
-        else if(_webui_is_process_running("yandex-browser") && _webui_browser_exist(win, Yandex)) return Yandex;
-        else if(_webui_is_process_running("chromium-browser") && _webui_browser_exist(win, Chromium)) return Chromium;
+        else if(_webui_is_process_running("yandex_browser") && _webui_browser_exist(win, Yandex)) return Yandex;
+        // Chromium check is never reached if Google Chrome is installed
+        // due to duplicate process name `chrome`
+        else if(_webui_is_process_running("chrome") && _webui_browser_exist(win, Chromium)) return Chromium;
     #else
         // macOS
         if(_webui_is_process_running("Google Chrome") && _webui_browser_exist(win, Chrome)) return Chrome;
