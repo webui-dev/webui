@@ -1,4 +1,4 @@
-# WebUI
+# WebUI v2.2.0
 
 [![Website](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://github.com/alifcommunity/webui) [![Website](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://github.com/alifcommunity/webui/issues) [![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
 
@@ -11,8 +11,7 @@
 > * WebUI it's not a web-server solution or a framework, but it's an lightweight portable lib to use any installed web browser as a user interface.
 > 
 > * We are currently writing documentation.
-> 
-> * WebUI is not ready yet for production release.
+
 
 ## Features
 
@@ -58,9 +57,9 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ## Documentation
 
- - [Online Documentation - C](https://webui.me/docs/) (*Not Complete*)
+ - [Online Documentation - C](https://webui.me/docs/#/c_api)
  - Online Documentation - C++ (*Not Complete*)
- - [Online Documentation - Python](https://webui.me/docs/) (*Not Complete*)
+ - [Online Documentation - Python](https://webui.me/docs/#/python_api)
  - Online Documentation - TypeScript / JavaScript (*Not Complete*)
  - Online Documentation - Go (*Not Complete*)
  - Online Documentation - Rust (*Not Complete*)
@@ -77,14 +76,14 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 ## Examples
 
  - [C](https://github.com/alifcommunity/webui/tree/main/examples/C)
- - [C++](https://github.com/alifcommunity/webui/tree/main/examples/C++) (*Not Complete*)
- - [Python](https://github.com/alifcommunity/webui/tree/main/examples/Python) (*Not Complete*)
- - [TypeScript / JavaScript](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript) (*Not Complete*)
- - [Go](https://github.com/alifcommunity/webui/tree/main/examples/Go/hello_world) (*Not Complete*)
+ - [C++](https://github.com/alifcommunity/webui/tree/main/examples/C++)
+ - [Python](https://github.com/alifcommunity/webui/tree/main/examples/Python)
+ - [TypeScript / JavaScript](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript)
+ - [Go](https://github.com/alifcommunity/webui/tree/main/examples/Go/hello_world)
  - [Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust/hello_world) (*Not Complete*)
  - [V - malisipi/vwebui](https://github.com/malisipi/vwebui/tree/main/examples) (*Not Complete*)
  - [Nim - neroist/webui](https://github.com/neroist/webui/tree/main/examples) (*Not Complete*)
- - [Zig](https://github.com/alifcommunity/webui/tree/main/examples/Zig) (*Not Complete*)
+ - [Zig - desttinghim/webui](https://github.com/desttinghim/webui/tree/main/examples) (*Not Complete*)
 
 ## Supported Web Browsers
 
@@ -102,12 +101,12 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | - | - | - |
 | Linux | Mozilla Firefox | ✔️ |
 | Linux | Google Chrome | ✔️ |
-| Linux | Microsoft Edge | *coming soon* |
+| Linux | Microsoft Edge | ✔️ |
 | Linux | Chromium | ✔️ |
-| Linux | Yandex | *coming soon* |
-| Linux | Brave | *coming soon* |
-| Linux | Vivaldi | *coming soon* |
-| Linux | Epic | *coming soon* |
+| Linux | Yandex | ✔️ |
+| Linux | Brave | ✔️ |
+| Linux | Vivaldi | ✔️ |
+| Linux | Epic | *Does Not Exist* |
 | Linux | Opera | *coming soon* |
 | - | - | - |
 | macOS | Mozilla Firefox | *coming soon* |
@@ -126,15 +125,15 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | Language | Status | Link |
 | ------ | ------ | ------ |
 | C | ✔️ | [examples/C](https://github.com/alifcommunity/webui/tree/main/examples/C) |
-| C++ |  *Not Complete* | [examples/C++](https://github.com/alifcommunity/webui/tree/main/examples/C%2B%2B) |
-| Python | *Not Complete* | [examples/Python](https://github.com/alifcommunity/webui/tree/main/examples/Python) |
-| JavaScript | *Not Complete* | [examples/TypeScript/Nodejs](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Nodejs) |
-| TypeScript | *Not Complete* | [examples/TypeScript/Deno](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Deno) |
-| Go | *Not Complete* | [examples/Go](https://github.com/alifcommunity/webui/tree/main/examples/Go) |
+| C++ |  ✔️ | [examples/C++](https://github.com/alifcommunity/webui/tree/main/examples/C%2B%2B) |
+| Python | ✔️ | [examples/Python](https://github.com/alifcommunity/webui/tree/main/examples/Python) |
+| JavaScript | ✔️ | [examples/TypeScript/Nodejs](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Nodejs) |
+| TypeScript | ✔️ | [examples/TypeScript/Deno](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Deno) |
+| Go | ✔️ | [examples/Go](https://github.com/alifcommunity/webui/tree/main/examples/Go) |
 | Rust | *Not Complete* | [examples/Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust) |
 | V | *Not Complete* | [malisipi/vwebui](https://github.com/malisipi/vwebui) |
 | Nim | *Not Complete* | [neroist/webui](https://github.com/neroist/webui) |
-| Zig | *Not Complete* | [examples/Zig](https://github.com/alifcommunity/webui/tree/main/examples/Zig) |
+| Zig | *Not Complete* | [desttinghim/webui](https://github.com/desttinghim/webui) |
 
 ### License
 
