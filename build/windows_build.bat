@@ -20,7 +20,7 @@ Set RootPath=%CD%\..\
 cd "%RootPath%"
 
 echo.
-echo - - [Build MSVC] - - - - - - - - - - - - - -
+echo Building WebUI using MSVC...
 
 REM Build WebUI Library using MSVC
 cd "%RootPath%"
@@ -28,7 +28,7 @@ cd "build\Windows\MSVC"
 %MSVC_CMD%
 
 echo.
-echo - - [Build GCC] - - - - - - - - - - - - - -
+echo Building WebUI using GCC...
 echo.
 
 REM Build WebUI Library using GCC
@@ -37,7 +37,8 @@ cd "build\Windows\GCC"
 %GCC_CMD%
 
 echo.
-echo - - [Build TCC] - - - - - - - - - - - - - -
+echo Building WebUI using TCC...
+echo WARNING: To compile WebUI using TCC, you may need to copy (tlhelp32.h) from MinGW to your TCC setup folder.
 echo.
 
 REM Build WebUI Library using TCC
@@ -46,7 +47,7 @@ cd "build\Windows\TCC"
 %GCC_CMD%
 
 echo.
-echo - - [Copy Libs] - - - - - - - - - - - - - -
+echo Copying WebUI libs to the examples folder...
 echo.
 
 cd "%RootPath%"
@@ -72,7 +73,7 @@ copy /Y "build\Windows\MSVC\webui-2-static-x64.lib" "examples\C++\VS2019\serve_a
 echo.
 IF "%ARG1%"=="" (
 
-    echo - - [Copy Release Libs] - - - - - - - - - -
+    echo Copying WebUI libs to the release folder...
     echo.
 
     REM Release Windows Include
@@ -93,8 +94,7 @@ IF "%ARG1%"=="" (
     copy /Y "build\Windows\TCC\webui-2-x64.def" "Release\Windows\TCC\webui-2-x64.def"
 
     echo.
-    echo - - [Compress Release Folder] - - - - - - - -
-    echo.
+    echo Compressing the release folder...
 
     set TAR_OUT=webui-windows-x64-v%WEBUI_VERSION%.zip
     cd "Release"
@@ -103,7 +103,7 @@ IF "%ARG1%"=="" (
     cd "%RootPath%"
 
     echo.
-    echo - - [Clean] - - - - - - - - - - - - - - - - -
+    echo Cleaning...
 
     DEL /Q /F /S "*.exe" >nul 2>&1
     DEL /Q /F /S "*.o" >nul 2>&1

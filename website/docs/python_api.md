@@ -1,9 +1,6 @@
 # WebUI v2.2.0 Python APIs
 
-This document includes all WebUI Python APIs.
-
 - [Download And Install](/python_api?id=download-and-install)
-- [Build From Source](/python_api?id=build-from-source)
 - [Examples](/python_api?id=examples)
 - Window
     - [New Window](/python_api?id=new-window)
@@ -25,9 +22,9 @@ This document includes all WebUI Python APIs.
 ---
 ### Download And Install
 
-To install the WebUI package from PyPI (*~360 Kb*).
+Install the WebUI package from PyPI (*~360 Kb*).
 
-```console
+```sh
 pip install webui2
 ```
 
@@ -62,6 +59,7 @@ Using a specific web browser
 from webui import webui
 
 MyWindow = webui.window()
+# Please add <script src="/webui.js"></script> to your HTML files
 MyWindow.show('my_file.html', webui.browser.chrome)
 webui.wait()
 ```
@@ -71,7 +69,7 @@ Please visit [Python Examples](https://github.com/alifcommunity/webui/tree/main/
 ---
 ### New Window
 
-To create a new window object, you can use `webui.window()`, which returns a `window` object.
+To create a new window object, you can use `webui.window()`, which returns a `window` class object.
 
 ```python
 MyWindow = webui.window()
@@ -129,7 +127,8 @@ MyWindow.show(my_html, webui.browser.yandex)
 
 # Default recommended web browser
 MyWindow.show(my_html, webui.browser.any)
-# Or simly
+
+# Or simply
 MyWindow.show(my_html)
 ```
 
@@ -168,7 +167,7 @@ Use `bind()` to receive click events when the user clicks on any HTML element wi
 
 ```python
 def my_function(e : webui.event)
-	# <button id="MyID">Hello</button> get clicked !
+	# <button id="MyID">Hello</button> gets clicked!
 
 MyWindow.bind("MyID", my_function)
 ```
@@ -183,13 +182,13 @@ def events(e : webui.event)
 MyWindow.bind("", events)
 ```
 
-The *e* corresponds to the word _Event_. `e` is a struct that has those elements:
+The *e* corresponds to the word _Event_. `e` is a struct that has these elements:
 
 ```python
-window; # Pointer to the window object.
-type; # Event type (EVENT_MOUSE_CLICK, EVENT_NAVIGATION...)
-element; # HTML element ID
-data; # The data coming from JavaScript if any
+window; # The window object.
+type; # Integer: Event type (EVENT_MOUSE_CLICK, EVENT_NAVIGATION...).
+element; # String: HTML element ID.
+data; # String: The data are coming from JavaScript, if any.
 ```
 
 ---
@@ -228,14 +227,14 @@ MyWindow.close()
 ---
 ### Startup Timeout
 
-WebUI waits a couple of seconds (_Default is 10 seconds_) to let the web browser start and connect. You can control this behaviour by using `set_timeout()`.
+WebUI waits a couple of seconds (_Default is 30 seconds_) to let the web browser start and connect. You can control this behavior by using `set_timeout()`.
 
 ```python
-# Wait 10 seconds for the web browser to start
+# Wait 10 seconds for the browser to start
 webui.set_timeout(10)
 
-# After 10 seconds, if the web browser did
-# not start yet, wait() will return
+# Now, After 10 seconds, if the browser did
+# not get started, wait() will break
 webui.wait()
 ```
 
@@ -250,12 +249,12 @@ webui.wait()
 ---
 ### Multi Access
 
-![access_denied](data/access_denied.png)
+![access_denied](data/webui_access_denied.png)
 
-After the window is loaded, the URL is not valid anymore for safety. WebUI will show an error if someone else tries to access the URL. To allow multi-user access to the same URL, you can use `multi_access()`.
+After the window is loaded, the URL is not valid anymore for safety. WebUI will show an error if someone else tries to access the URL. To allow multi-user access to the same URL, you can use `set_multi_access()`.
 
 ```python
-MyWindow.multi_access(True)
+MyWindow.set_multi_access(True)
 ```
 
 ---
@@ -269,11 +268,11 @@ res = e.window.script("return 2*2;")
 
 # Check for any error
 if res.error is True:
-	print("JavaScript Error: [" + res.data + "]")
+	print("JavaScript Error: " + res.data)
 else:
-	print("JavaScript OK: [" + res.data + "]") # 4
+	print("JavaScript Response: " + res.data) # 4
 
-# Quick JavaScript (no response waiting)
+# Run JavaScript quickly with no waiting for the response
 e.window.run("alert('Fast!')")
 ```
 
@@ -285,9 +284,9 @@ You may want to interpret JavaScript & TypeScript files and show the output in t
 ```python
 # Deno
 MyWindow.set_runtime(webui.runtime.deno)
-MyWindow.show(win, "my_file.ts")
+MyWindow.show("my_file.ts")
 
 # Nodejs
 MyWindow.set_runtime(webui.runtime.nodejs)
-MyWindow.show(win, "my_file.js")
+MyWindow.show("my_file.js")
 ```

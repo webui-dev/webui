@@ -1,7 +1,5 @@
 # WebUI v2.2.0 C APIs
 
-This document includes all WebUI C APIs.
-
 - [Download](/c_api?id=download)
 - [Build From Source](/c_api?id=build-from-source)
 - [Examples](/c_api?id=examples)
@@ -33,7 +31,7 @@ Download WebUI v2.2.0 prebuilt binaries here: https://webui.me/#download
 You can build WebUI from source by cloning the WebUI repo and compile it using any C compiler, No need for any external dependencies.
 
 Windows MSVC (_Using x64 Native Tools Command Prompt for VS 20xx_)
-```console
+```sh
 git clone https://github.com/alifcommunity/webui.git
 cd webui\build\Windows\MSVC
 nmake
@@ -41,7 +39,7 @@ nmake debug
 ```
 
 Windows MinGW
-```console
+```sh
 git clone https://github.com/alifcommunity/webui.git
 cd webui\build\Windows\GCC
 mingw32-make
@@ -49,7 +47,7 @@ mingw32-make debug
 ```
 
 Windows TCC
-```console
+```sh
 git clone https://github.com/alifcommunity/webui.git
 cd webui\build\Windows\TCC
 mingw32-make
@@ -57,7 +55,7 @@ mingw32-make debug
 ```
 
 Linux GCC
-```console
+```sh
 git clone https://github.com/alifcommunity/webui.git
 cd webui/build/Linux/GCC
 make
@@ -65,7 +63,7 @@ make debug
 ```
 
 Linux Clang
-```console
+```sh
 git clone https://github.com/alifcommunity/webui.git
 cd webui/build/Linux/Clang
 make
@@ -73,7 +71,7 @@ make debug
 ```
 
 macOS Clang
-```console
+```sh
 git clone https://github.com/alifcommunity/webui.git
 cd webui/build/macOS/Clang
 make
@@ -84,7 +82,7 @@ make debug
 You can also use the build script to automatically build WebUI and copy binaries into all examples folder.
 
 Windows
-```console
+```sh
 git clone https://github.com/alifcommunity/webui.git
 cd webui\build\
 windows_build
@@ -92,7 +90,7 @@ windows_build debug
 ```
 
 Linux
-```console
+```sh
 git clone https://github.com/alifcommunity/webui.git
 cd webui/build
 sh linux_build.sh
@@ -100,7 +98,7 @@ sh linux_build.sh debug
 ```
 
 macOS
-```console
+```sh
 git clone https://github.com/alifcommunity/webui.git
 cd webui/build
 sh macos_build.sh
@@ -218,9 +216,9 @@ webui_show_browser(my_window, my_html, Yandex);
 
 // Default recommended web browser
 webui_show_browser(my_window, my_html, AnyBrowser);
-// Or simly
-webui_show(my_window, my_html);
 
+// Or simply
+webui_show(my_window, my_html);
 ```
 
 If you need to update the whole UI content, you can also use the same function `webui_show()`, which allows you to refresh the window UI with any new HTML content.
@@ -257,7 +255,7 @@ Use `webui_bind()` to receive click events when the user clicks on any HTML elem
 
 ```c
 void my_function(webui_event_t* e) {
-    // <button id="MyID">Hello</button> get clicked !
+    // <button id="MyID">Hello</button> gets clicked!
 }
 
 webui_bind(my_window, "MyID", my_function);
@@ -265,14 +263,14 @@ webui_bind(my_window, "MyID", my_function);
 
 ### Events
 
-The *e* corresponds to the word _Event_. `e` is a struct that has those elements:
+The *e* corresponds to the word _Event_. `e` is a struct that has these elements:
 
 ```c
-void* window; // Pointer to the window object.
-unsigned int type; // Event type (WEBUI_EVENT_MOUSE_CLICK, WEBUI_EVENT_NAVIGATION...)
-char* element; // HTML element ID
-char* data; // The data coming from JavaScript if any
-char* response; // No need to be used, its internally used by webui_return_xxx()
+void* window; // Pointer to the window struct.
+unsigned int type; // Event type (WEBUI_EVENT_MOUSE_CLICK, WEBUI_EVENT_NAVIGATION...).
+char* element; // HTML element ID.
+char* data; // The data are coming from JavaScript, if any.
+char* response; // Internally used by webui_return_xxx().
 ```
 
 ```c
@@ -340,14 +338,14 @@ webui_close(my_window);
 ---
 ### Startup Timeout
 
-WebUI waits a couple of seconds (_Default is 10 seconds_) to let the web browser start and connect. You can control this behaviour by using `webui_set_timeout()`.
+WebUI waits a couple of seconds (_Default is 30 seconds_) to let the web browser start and connect. You can control this behavior by using `webui_set_timeout()`.
 
 ```c
-// Wait 10 seconds for the web browser to start
+// Wait 10 seconds for the browser to start
 webui_set_timeout(10);
 
-// After 10 seconds, if the web browser did
-// not start yet, webui_wait() will return
+// Now, After 10 seconds, if the browser did
+// not get started, wait() will break
 webui_wait();
 ```
 
@@ -364,10 +362,10 @@ webui_wait();
 
 ![webui_access_denied](data/webui_access_denied.png)
 
-After the window is loaded, the URL is not valid anymore for safety. WebUI will show an error if someone else tries to access the URL. To allow multi-user access to the same URL, you can use `webui_multi_access()`.
+After the window is loaded, the URL is not valid anymore for safety. WebUI will show an error if someone else tries to access the URL. To allow multi-user access to the same URL, you can use `webui_set_multi_access()`.
 
 ```c
-webui_multi_access(my_window, true);
+webui_set_multi_access(my_window, true);
 ```
 
 ---
@@ -409,9 +407,9 @@ You may want to interpret JavaScript & TypeScript files and show the output in t
 ```c
 // Deno
 webui_set_runtime(my_window, Deno);
-webui_show(win, "my_file.ts");
+webui_show(my_window, "my_file.ts");
 
 // Nodejs
 webui_set_runtime(my_window, Nodejs);
-webui_show(win, "my_file.js");
+webui_show(my_window, "my_file.js");
 ```

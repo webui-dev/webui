@@ -20,7 +20,7 @@ RootPath="$PWD/../"
 cd "$RootPath"
 
 echo "";
-echo "- - [Build Clang] - - - - - - - - - - - - -";
+echo "Building WebUI using Clang...";
 echo "";
 
 # Build WebUI Library using Clang
@@ -29,7 +29,7 @@ cd "build/macOS/Clang"
 $CLANG_CMD
 
 echo "";
-echo "- - [Copy Libs] - - - - - - - - - - - - - -"
+echo "Copying WebUI libs to the examples folder..."
 echo "";
 
 cd "$RootPath"
@@ -47,7 +47,7 @@ cp -f "build/macOS/Clang/webui-2-x64.dyn" "examples/Python/PyPI/Package/src/webu
 echo "";
 if [ "$ARG1" = "" ]; then
 
-    echo "- - [Copy Release Libs] - - - - - - - - - -"
+    echo "Copying WebUI libs to the release folder..."
     echo "";
 
     # Release macOS Include
@@ -58,7 +58,7 @@ if [ "$ARG1" = "" ]; then
     cp -f "build/macOS/Clang/libwebui-2-static-x64.a" "Release/macOS/Clang/libwebui-2-static-x64.a"
 
     echo "";
-    echo "- - [Compress Release Folder] - - - - - - -"
+    echo "Compressing the release folder..."
     echo "";
 
     TAR_OUT="webui-macos-x64-v$WEBUI_VERSION.zip"
@@ -68,7 +68,7 @@ if [ "$ARG1" = "" ]; then
     cd "$RootPath"
 
     echo "";
-    echo "- - [Clean] - - - - - - - - - - - - - - - -"
+    echo "Cleaning..."
     echo "";
 
     find ./ -type f -name "*.o" -exec rm -f {} \;

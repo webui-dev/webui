@@ -16,12 +16,12 @@ package webui
 #cgo darwin LDFLAGS: -L ./ -lwebui-2-static-x64 -lpthread -lm
 #cgo linux LDFLAGS: -L ./ -lwebui-2-static-x64 -lpthread -lm
 #include <webui.h>
-extern void go_webui_event(void* _window, unsigned int _event_type, char* _element, char* _data, char* _response);
-static void go_webui_events_handler(webui_event_t* e) {
-    go_webui_event(e->window, e->type, e->element, e->data, (char*)&e->response);
+extern void GoWebuiEvent(void* _window, unsigned int _event_type, char* _element, char* _data, char* _response);
+static void GoWebuiEvents_handler(webui_event_t* e) {
+    GoWebuiEvent(e->window, e->type, e->element, e->data, (char*)&e->response);
 }
 static void go_webui_bind(void* win, const char* element) {
-    webui_bind(win, element, go_webui_events_handler);
+    webui_bind(win, element, GoWebuiEvents_handler);
 }
 */
 import "C"
@@ -50,6 +50,11 @@ const Brave uint = 7      // 7. The Brave Browser
 const Vivaldi uint = 8    // 8. The Vivaldi Browser
 const Epic uint = 9       // 9. The Epic Browser
 const Yandex uint = 10    // 10. The Yandex Browser
+
+// Runtimes enum
+const None uint = 0
+const Deno uint = 1
+const Nodejs uint = 2
 
 // Events enum
 const WEBUI_EVENT_DISCONNECTED uint = 0        // 0. Window disconnection event
@@ -84,22 +89,10 @@ func Ini() {
 	fun_list = make(map[string]func(Event) string)
 }
 
-// JavaScript object constructor
-func NewJavaScript() JavaScript {
-	Ini()
-	js := JavaScript{
-		Timeout:    0,
-		BufferSize: (1024 * 8),
-		Response:   "",
-	}
-	return js
-}
-
 // This function receives all events
 //
-//export go_webui_event
-func go_webui_event(window unsafe.Pointer, _event_type C.uint, _element *C.char, _data *C.char, _response *C.char) {
-
+//export GoWebuiEvent
+func GoWebuiEvent(window unsafe.Pointer, _event_type C.uint, _element *C.char, _data *C.char, _response *C.char) {
 	Ini()
 
 	// Create a new event struct
@@ -125,9 +118,22 @@ func go_webui_event(window unsafe.Pointer, _event_type C.uint, _element *C.char,
 	}
 }
 
+// -- Public APIs --
+
+// JavaScript object constructor
+func NewJavaScript() JavaScript {
+	Ini()
+
+	js := JavaScript{
+		Timeout:    0,
+		BufferSize: (1024 * 8),
+		Response:   "",
+	}
+	return js
+}
+
 // Run a JavaScript, and get the response back (Make sure your local buffer can hold the response).
 func Script(window unsafe.Pointer, js *JavaScript, script string) bool {
-
 	Ini()
 
 	// Convert the JavaScript from Go-String to C-String
@@ -152,37 +158,95 @@ func Script(window unsafe.Pointer, js *JavaScript, script string) bool {
 	return bool(status)
 }
 
+// Run JavaScript quickly with no waiting for the response.
+func Run(window unsafe.Pointer, script string) {
+	Ini()
+
+	// Convert the JavaScript from Go-String to C-String
+	c_script := C.CString(script)
+
+	// Run the JavaScript
+	C.webui_run(window, c_script)
+}
+
+// Chose between Deno and Nodejs runtime for .js and .ts files.
+func SetRuntime(window unsafe.Pointer, runtime uint) {
+	Ini()
+
+	C.webui_set_runtime(window, C.uint(runtime))
+}
+
 // Create a new window object
 func NewWindow() unsafe.Pointer {
 	Ini()
+
 	// Create a new window object
 	// this return a (void pointer) and we should
 	// never change it. It's only managed by WebUI
 	return unsafe.Pointer(C.webui_new_window())
 }
 
+// Check a specific window if it's still running
+func IsShown(window unsafe.Pointer) bool {
+	Ini()
+
+	status := C.webui_is_shown(window)
+	return bool(status)
+}
+
+// Close a specific window.
+func Close(window unsafe.Pointer) {
+	Ini()
+
+	C.webui_close(window)
+}
+
+// Set the maximum time in seconds to wait for browser to start
+func SetTimeout(seconds uint) {
+	Ini()
+
+	C.webui_set_timeout(C.uint(seconds))
+}
+
+// Allow the window URL to be re-used in normal web browsers
+func SetMultiAccess(window unsafe.Pointer, access bool) {
+	Ini()
+
+	C.webui_set_multi_access(window, C._Bool(access))
+}
+
 // Close all opened windows
 func Exit() {
 	Ini()
+
 	C.webui_exit()
 }
 
 // Show a window using a embedded HTML, or a file. If the window is already opened then it will be refreshed.
 func Show(window unsafe.Pointer, content string) {
 	Ini()
+
 	c_content := C.CString(content)
 	C.webui_show(window, c_content)
+}
+
+// Same as Show(). But with a specific web browser.
+func ShowBrowser(window unsafe.Pointer, content string, browser uint) {
+	Ini()
+
+	c_content := C.CString(content)
+	C.webui_show_browser(window, c_content, C.uint(browser))
 }
 
 // Wait until all opened windows get closed.
 func Wait() {
 	Ini()
+
 	C.webui_wait()
 }
 
 // Bind a specific html element click event with a function. Empty element means all events.
 func Bind(window unsafe.Pointer, element string, callback func(Event) string) {
-
 	Ini()
 
 	// Convert element from Go-String to C-String
