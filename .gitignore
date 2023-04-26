@@ -1,26 +1,66 @@
 # Build
 *.exe
-*.dll
-*.so
-*.dylib
-*.a
 *.ilk
 *.pdb
-*.lib
 *.exp
 *.res
 *.out
-*.o
 *.def
 *.obj
-*.dyn
+*.iobj
+*.o
+
+# Logs
+*.log
+*.logs
+*.tlog
 
 # IDE
-.idea/
 .vscode/
 .vs/
-Debug/
-Release/
+
+# Visual Studio
+.idea/
+*.recipe
+
+# Visual Studio for Mac
+.idea/
+
+# Visual Studio cache files
+ipch/
+*.dbmdl
+*.dbproj.schemaview
+
+# Others
+.builds
+*~*
+*.cache
+*.swp
+*.bak
+*.tmp
+*.swp
+*.userosscache
+*.err
+*.vspscc
+*.vssscc
+*.pidb
+*.svclog
+*.scc
+
+# NuGet
+packages/
+!packages/repositories.config
+*.nupkg
+
+# Microsoft Azure Build Output
+csx/
+*.build.csdef
+
+# User-specific files
+*.suo
+*.user
+*.userprefs
+*.sln.docstates
 
 # Python
 __pycache__/
@@ -35,13 +75,10 @@ target/
 nul
 
 # Zig
-/zig-cache/
-/zig-out/
-/examples/Zig/*/zig-cache/
-/examples/Zig/*/zig-out/
+zig-cache/
+zig-out/
 
 # macOS
-
 .DS_Store
 .DS_Store?
 ._*
@@ -49,3 +86,6 @@ nul
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# User-specific private settings
+*.DotSettings.user

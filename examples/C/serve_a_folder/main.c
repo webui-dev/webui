@@ -2,8 +2,8 @@
 
 #include "webui.h"
 
-webui_window_t* my_window;
-webui_window_t* my_second_window;
+void* my_window;
+void* my_second_window;
 
 void exit_app(webui_event_t* e) {
 
@@ -61,7 +61,7 @@ int main() {
     webui_bind(my_window, "", events);
 
     // Show a new window
-    webui_show(my_window, "index.html");
+    webui_show(my_window, "index.html"); // webui_show_browser(my_window, "index.html", Chrome);
 
     // Wait until all windows get closed
     webui_wait();

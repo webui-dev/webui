@@ -1,5 +1,3 @@
-
-
 mod Webui;
 
 fn close_the_application (_e: Webui::Event) {
