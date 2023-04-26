@@ -12,7 +12,6 @@
 > 
 > * We are currently writing documentation.
 
-
 ## Features
 
 - Written in Pure C
@@ -58,10 +57,10 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 ## Documentation
 
  - [Online Documentation - C](https://webui.me/docs/#/c_api)
- - Online Documentation - C++ (*Not Complete*)
+ - [Online Documentation - C++](https://webui.me/docs/#/cpp_api)
  - [Online Documentation - Python](https://webui.me/docs/#/python_api)
  - Online Documentation - TypeScript / JavaScript (*Not Complete*)
- - Online Documentation - Go (*Not Complete*)
+ - [Online Documentation - Go](https://webui.me/docs/#/golang_api)
  - Online Documentation - Rust (*Not Complete*)
  - Online Documentation - V (*Not Complete*)
  - [Online Documentation - Nim](https://neroist.github.io/webui-docs/) (*Not Complete*)

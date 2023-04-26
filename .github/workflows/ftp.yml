@@ -1,7 +1,7 @@
 name: WebUI-FTP
 on:
   push:
-    branches: [ WebUI_v2.2.0 ]
+    branches: [ main ]
 jobs:
   build:
     runs-on: ubuntu-latest
