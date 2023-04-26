@@ -9,6 +9,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: WebUI-FTP
         uses: airvzxf/ftp-deployment-action@latest
+        run: echo "set ssl:verify-certificate no" >> ~/.lftp/rc
         with:
           server: ${{ secrets.WEBUI_FTP_SERVER }}
           user: ${{ secrets.WEBUI_FTP_USERNAME }}
@@ -17,3 +18,4 @@ jobs:
           remote_dir: "/home/webui.me/public_html"
           delete: "true"
           ftp_ssl_allow: "true"
+          max_retries: "3"
