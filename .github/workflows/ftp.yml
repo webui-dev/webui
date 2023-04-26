@@ -14,7 +14,7 @@ jobs:
           user: ${{ secrets.WEBUI_FTP_USERNAME }}
           password: ${{ secrets.WEBUI_FTP_PASSWORD }}
           local_dir: "./website"
-          remote_dir: "/home/webui.me/public_html"
+          remote_dir: "./public_html"
           delete: "true"
           ftp_ssl_allow: "false"
           max_retries: "3"
