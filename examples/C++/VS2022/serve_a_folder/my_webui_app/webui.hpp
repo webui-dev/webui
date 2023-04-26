@@ -1,4 +1,3 @@
-#pragma once
 /*
   WebUI Library 2.2.0
   http://webui.me
@@ -9,12 +8,13 @@
   Canada.
 */
 
-// This is a C++ wrapper for WebUI.
+#ifndef _WEBUI_HPP
+#define _WEBUI_HPP
 
 // C++ STD
 #include <string>
 
-// Include the original WebUI header (C99)
+// WebUI C Header
 extern "C" {
 	#include "webui.h"
 }
@@ -57,18 +57,22 @@ namespace webui {
 	}
 
 	// -- Other ---------------------------
+	// Check a specific window if it's still running
 	bool is_shown(void* window) {
 		return webui_is_shown(window);
 	}
 
+	// Set the maximum time in seconds to wait for browser to start
 	void set_timeout(unsigned int second) {
 		webui_set_timeout(second);
 	}
 
+	// Set the default embedded HTML favicon
 	void set_icon(void* window, std::string icon, std::string type) {
 		webui_set_icon(window, icon.c_str(), type.c_str());
 	}
 
+	// Allow the window URL to be re-used in normal web browsers
 	void set_multi_access(void* window, bool status) {
 		webui_set_multi_access(window, status);
 	}
@@ -140,3 +144,5 @@ namespace webui {
 		return webui_interface_get_window_id(window);
 	}
 }
+
+#endif /* _WEBUI_HPP */

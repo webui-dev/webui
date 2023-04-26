@@ -53,6 +53,9 @@ cp -f "build/Linux/GCC/webui-2-x64.so" "examples/TypeScript/Deno/webui-2-x64.so"
 # Python
 cp -f "build/Linux/GCC/webui-2-x64.so" "examples/Python/PyPI/Package/src/webui/webui-2-x64.so"
 
+# C++ (Minimal)
+cp -f "include/webui.hpp" "examples/C++/minimal/webui.hpp"
+
 echo "";
 if [ "$ARG1" = "" ]; then
 
@@ -60,7 +63,8 @@ if [ "$ARG1" = "" ]; then
     echo "";
 
     # Release Linux Include
-    cp -f "include/webui.h" "Release/Linux/include/webui.h"    
+    cp -f "include/webui.h" "Release/Linux/include/webui.h"
+    cp -f "include/webui.hpp" "Release/Linux/include/webui.hpp"
 
     # Release Linux GCC
     cp -f "build/Linux/GCC/webui-2-x64.so" "Release/Linux/GCC/webui-2-x64.so"
