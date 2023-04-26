@@ -1,12 +1,22 @@
 # WebUI
 
-Use any web browser as GUI, with your preferred language in the backend, and HTML/JS/TS/CSS in the frontend.
+Use any web browser as GUI, with Python in the backend and HTML5 in the frontend, all in a lightweight portable lib.
+
+* [Online Documentation](https://webui.me/docs/#/python_api)
+
+```sh
+pip install webui2
+```
 
 ```python
 from webui import webui
+
+def my_function(e : webui.event)
+    print("Hi!, You clicked on " + e.element + " element")
+
 MyWindow = webui.window()
-MyWindow.bind('MyID', my_function)
-MyWindow.show("MyHTML")
+MyWindow.bind("MyID", my_function)
+MyWindow.show("<html>Hello World</html>")
 webui.wait()
 ```
 

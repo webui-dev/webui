@@ -49,6 +49,7 @@ Using a local HTML file. Please not that you need to add `<script src="/webui.js
 from webui import webui
 
 MyWindow = webui.window()
+# Please add <script src="/webui.js"></script> to your HTML files
 MyWindow.show('my_file.html')
 webui.wait()
 ```
@@ -59,8 +60,7 @@ Using a specific web browser
 from webui import webui
 
 MyWindow = webui.window()
-# Please add <script src="/webui.js"></script> to your HTML files
-MyWindow.show('my_file.html', webui.browser.chrome)
+MyWindow.show('<html>Hello World</html>', webui.browser.chrome)
 webui.wait()
 ```
 
@@ -82,9 +82,10 @@ To show a window, you can use `show()`. If the window is already shown, the UI w
 
 ```python
 # Show a window using the embedded HTML
-my_html = "<html>Hello!</html>"
-MyWindow.show(my_html)
+MyWindow.show("<html>Hello!</html>")
+```
 
+```python
 # Show a window using an .html local file
 # Please add <script src="/webui.js"></script> to your HTML files
 MyWindow.show("my_file.html")

@@ -22,6 +22,7 @@
 # Visual Studio
 .idea/
 *.recipe
+*.idb
 
 # Visual Studio for Mac
 .idea/

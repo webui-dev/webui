@@ -105,9 +105,10 @@ To show a window, you can use `show()`. If the window is already shown, the UI w
 
 ```go
 // Show a window using the embedded HTML
-const my_html string = "<html>Hello!</html>"
-webui.Show(my_window, my_html)
+webui.Show(my_window, "<html>Hello!</html>")
+```
 
+```go
 // Show a window using an .html local file
 // Please add <script src="/webui.js"></script> to your HTML files
 webui.Show(my_window, "my_file.html")
