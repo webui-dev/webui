@@ -32,6 +32,7 @@ jobs:
           cd ../../..
           cd build/Linux/Clang
           sudo ln -s llvm-ar-13 /usr/bin/llvm-ar
+          sudo ln -s llvm-ranlib-13 /usr/bin/llvm-ranlib
           make
 
   macOS-WebUI:
