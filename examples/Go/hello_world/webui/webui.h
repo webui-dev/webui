@@ -154,13 +154,17 @@ WEBUI_EXPORT void webui_close(void* window);
 WEBUI_EXPORT void webui_exit(void);
 
 // -- Other ---------------------------
+// Check a specific window if it's still running
 WEBUI_EXPORT bool webui_is_shown(void* window);
+// Set the maximum time in seconds to wait for browser to start
 WEBUI_EXPORT void webui_set_timeout(unsigned int second);
+// Set the default embedded HTML favicon
 WEBUI_EXPORT void webui_set_icon(void* window, const char* icon, const char* type);
+// Allow the window URL to be re-used in normal web browsers
 WEBUI_EXPORT void webui_set_multi_access(void* window, bool status);
 
 // -- JavaScript ----------------------
-// Quickly run a JavaScript (no response waiting).
+// Run JavaScript quickly with no waiting for the response.
 WEBUI_EXPORT bool webui_run(void* window, const char* script);
 // Run a JavaScript, and get the response back (Make sure your local buffer can hold the response).
 WEBUI_EXPORT bool webui_script(void* window, const char* script, unsigned int timeout, char* buffer, size_t buffer_length);

@@ -14,7 +14,7 @@ IF "%ARG1%"=="debug" (
 echo.
 echo WebUI v%WEBUI_VERSION% Build Script
 echo Platform: Microsoft Windows x64
-echo Compiler: MSVC and GCC
+echo Compiler: MSVC, GCC and TCC
 
 Set RootPath=%CD%\..\
 cd "%RootPath%"
