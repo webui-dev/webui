@@ -52,7 +52,9 @@
     #include <direct.h>
     #include <io.h>
     #include <tchar.h>
-    #include <tlhelp32.h>
+    #ifndef WEBUI_NO_TLHELPER32
+        #include <tlhelp32.h>
+    #endif
     #define WEBUI_GET_CURRENT_DIR _getcwd
     #define WEBUI_FILE_EXIST _access
     #define WEBUI_POPEN _popen

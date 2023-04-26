@@ -38,7 +38,7 @@ cd "build\Windows\GCC"
 
 echo.
 echo Building WebUI using TCC...
-echo WARNING: To compile WebUI using TCC, you may need to copy (tlhelp32.h) from MinGW to your TCC setup folder.
+echo WARNING: Auto-running browser detection is disabled in this TCC build due to the unavailability of `tlhelp32.h` header.
 echo.
 
 REM Build WebUI Library using TCC

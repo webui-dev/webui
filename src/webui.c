@@ -3239,24 +3239,26 @@ bool _webui_is_process_running(const char* process_name) {
 
     #ifdef _WIN32
         // Microsoft Windows
-        HANDLE hSnapshot;
-        PROCESSENTRY32 pe32;
-        hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-        if(hSnapshot == INVALID_HANDLE_VALUE)
-            return false;
-        pe32.dwSize = sizeof(PROCESSENTRY32);
-        if(!Process32First(hSnapshot, &pe32)) {
-            CloseHandle(hSnapshot);
-            return false;
-        }
-        do {
-            if (strcmp(pe32.szExeFile, process_name) == 0) {
-                isRunning = true;
-                break;
+        #ifndef WEBUI_NO_TLHELPER32
+            HANDLE hSnapshot;
+            PROCESSENTRY32 pe32;
+            hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+            if(hSnapshot == INVALID_HANDLE_VALUE)
+                return false;
+            pe32.dwSize = sizeof(PROCESSENTRY32);
+            if(!Process32First(hSnapshot, &pe32)) {
+                CloseHandle(hSnapshot);
+                return false;
             }
-        }
-        while (Process32Next(hSnapshot, &pe32));
-        CloseHandle(hSnapshot);
+            do {
+                if (strcmp(pe32.szExeFile, process_name) == 0) {
+                    isRunning = true;
+                    break;
+                }
+            }
+            while (Process32Next(hSnapshot, &pe32));
+            CloseHandle(hSnapshot);
+        #endif
     #elif __linux__
         // Linux
         DIR *dir;
