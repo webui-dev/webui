@@ -262,6 +262,25 @@ void my_function(webui_event_t* e) {
 webui::bind(my_window, "MyID", my_function);
 ```
 
+Using `webui::bind()` to call a class member method
+
+```cpp
+class MyClass {
+    public: void my_function(webui_event_t* e) {
+        // <button id="MyID">Hello</button> gets clicked!
+    }
+};
+
+// Wrapper:
+// Because WebUI is written in C, so it can not
+// access `MyClass` directly. That's why we should
+// create a simple C++ wrapper.
+MyClass obj;
+void my_function_wrapper(webui_event_t* e) { obj.my_function(e); }
+
+webui::bind(my_window, "MyID", my_function_wrapper);
+```
+
 ### Events
 
 The *e* corresponds to the word _Event_. `e` is a struct that has these elements:

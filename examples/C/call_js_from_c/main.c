@@ -64,7 +64,7 @@ int main() {
     "    <br>"
     "    <button id=\"MyButton2\">Exit</button>"
     "    <script>"
-    "      var count = 1;"
+    "      var count = 0;"
     "      function GetCount() {"
     "        return count;"
     "      }"

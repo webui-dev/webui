@@ -8,14 +8,14 @@ Example of how to create the minimal WebUI application in C++. To build this exa
 - **Build Tools for Microsoft Visual Studio**
 ```sh
 git clone https://github.com/alifcommunity/webui.git
-cd webui\examples\C++\minimal\Windows\MSVC
+cd webui\examples\C++\serve_a_folder\Windows\MSVC
 nmake
 ```
 
 - **MinGW**
 ```sh
 git clone https://github.com/alifcommunity/webui.git
-cd webui\examples\C++\minimal\Windows\GCC
+cd webui\examples\C++\serve_a_folder\Windows\GCC
 mingw32-make
 ```
 
@@ -24,14 +24,14 @@ mingw32-make
 - **GCC**
 ```sh
 git clone https://github.com/alifcommunity/webui.git
-cd webui/examples/C++/minimal/Linux/GCC
+cd webui/examples/C++/serve_a_folder/Linux/GCC
 make
 ```
 
 - **Clang**
 ```sh
 git clone https://github.com/alifcommunity/webui.git
-cd webui/examples/C++/minimal/Linux/Clang
+cd webui/examples/C++/serve_a_folder/Linux/Clang
 make
 ```
 
@@ -40,6 +40,6 @@ make
 - **Clang**
 ```sh
 git clone https://github.com/alifcommunity/webui.git
-cd webui/examples/C++/minimal/macOS/Clang
+cd webui/examples/C++/serve_a_folder/macOS/Clang
 make
 ```
