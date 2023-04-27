@@ -111,7 +111,7 @@ typedef struct _webui_cmd_async_t {
     DWORD WINAPI _webui_run_browser_task(LPVOID _arg);
     int _webui_system_win32(char* cmd, bool show);
     bool _webui_socket_test_listen_win32(unsigned int port_num);
-    bool _webui_get_windows_reg_value(HKEY key, const char* reg, const char* value_name, char value[WEBUI_MAX_PATH]);
+    bool _webui_get_windows_reg_value(HKEY key, LPCWSTR reg, LPCWSTR value_name, char value[WEBUI_MAX_PATH]);
 
     #define WEBUI_CB DWORD WINAPI _webui_cb(LPVOID _arg)
     #define WEBUI_SERVER_START DWORD WINAPI _webui_server_start(LPVOID arg)

@@ -71,6 +71,6 @@ int main() {
 
 #if defined(_MSC_VER)
     int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow) {
-        main();
+        return main();
     }
 #endif
