@@ -60,6 +60,9 @@ int main() {
     // Bind events
     webui_bind(my_window, "", events);
 
+    // Make Deno as the `.ts` and `.js` interpreter
+    webui_set_runtime(my_window, Deno);
+
     // Show a new window
     webui_show(my_window, "index.html"); // webui_show_browser(my_window, "index.html", Chrome);
 

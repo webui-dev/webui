@@ -25,6 +25,13 @@
             Or click on the button to switch to the second page programmatically.
         </p>
         <br>
+        Click on [deno_test.ts] to interpret the TypeScript file (If deno is installed)
+        <br>
+        By a simple HTTP request "deno_test.ts?foo=60&bar=40"
+        <br>
+        <br>
+        <button OnClick="call_deno_file();">deno_test.ts</button>
+        <br>
         <h4><a href="second.html">Second Page As A Simple Link</a></h4>
         <br>
         <button id="SwitchToSecondPage">Switch to The Second Page Programmatically</button>
@@ -35,5 +42,19 @@
 
     <!-- Connect this window to the background app -->
     <script src="/webui.js"></script>
-    
+
+    <script>
+        function call_deno_file() {
+            // Because `main.c` set Deno as the `.ts` and `.js` interpreter
+            // then a simple HTTP request to `/deno_test.ts` will be parsed
+            // of course Deno should be installed.
+
+            // Simple HTTP Request
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open("GET", "deno_test.ts?foo=60&bar=40", false);
+            xmlHttp.send(null);
+            alert(xmlHttp.responseText);
+        }
+    </script>
+
 </html>

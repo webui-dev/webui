@@ -24,6 +24,7 @@
 #define WEBUI_MIN_PORT          (10000)     // Minimum socket port
 #define WEBUI_MAX_PORT          (65500)     // Should be less than 65535
 #define WEBUI_MAX_BUF           (1024000)   // 1024 Kb max dynamic memory allocation
+#define WEBUI_CMD_STDOUT_BUF    (10240)     // Command STDOUT output buffer size
 #define WEBUI_DEFAULT_PATH      "."         // Default root path
 #define WEBUI_DEF_TIMEOUT       (30)        // Default startup timeout in seconds
 #define WEBUI_MAX_TIMEOUT       (60)        // Maximum startup timeout in seconds the user can set
@@ -110,6 +111,7 @@ typedef struct _webui_cmd_async_t {
     DWORD WINAPI _webui_cb(LPVOID _arg);
     DWORD WINAPI _webui_run_browser_task(LPVOID _arg);
     int _webui_system_win32(char* cmd, bool show);
+    int _webui_system_win32_out(const char *cmd, char **output, bool show);
     bool _webui_socket_test_listen_win32(unsigned int port_num);
     bool _webui_get_windows_reg_value(HKEY key, LPCWSTR reg, LPCWSTR value_name, char value[WEBUI_MAX_PATH]);
 
