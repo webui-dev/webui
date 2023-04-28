@@ -80,7 +80,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
  - [TypeScript / JavaScript](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript)
  - [Go](https://github.com/alifcommunity/webui/tree/main/examples/Go/hello_world)
  - [Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust/hello_world) (*Not Complete*)
- - [V - malisipi/vwebui](https://github.com/malisipi/vwebui/tree/main/examples) (*Not Complete*)
+ - [V - malisipi/vwebui](https://github.com/malisipi/vwebui/tree/main/examples)
  - [Nim - neroist/webui](https://github.com/neroist/webui/tree/main/examples) (*Not Complete*)
  - [Zig - desttinghim/webui](https://github.com/desttinghim/webui/tree/main/examples) (*Not Complete*)
 
@@ -130,7 +130,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | TypeScript | ✔️ | [examples/TypeScript/Deno](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Deno) |
 | Go | ✔️ | [examples/Go](https://github.com/alifcommunity/webui/tree/main/examples/Go) |
 | Rust | *Not Complete* | [examples/Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust) |
-| V | *Not Complete* | [malisipi/vwebui](https://github.com/malisipi/vwebui) |
+| V | ✔️ | [malisipi/vwebui](https://github.com/malisipi/vwebui) |
 | Nim | *Not Complete* | [neroist/webui](https://github.com/neroist/webui) |
 | Zig | *Not Complete* | [desttinghim/webui](https://github.com/desttinghim/webui) |
 
