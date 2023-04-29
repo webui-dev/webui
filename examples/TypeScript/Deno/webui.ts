@@ -35,7 +35,7 @@ export const browser = {
 
 export interface event {
   win: Deno.Pointer,
-  type: number,
+  event_type: number,
   element: string,
   data: string,
 }
@@ -148,7 +148,7 @@ function load_lib() {
         nonblocking: false,
       },
       webui_interface_bind: {
-        // unsigned int webui_interface_bind(void* window, const char* element, void (*func)(void*, int, char*, char*, char*))
+        // unsigned int webui_interface_bind(void* window, const char* element, void (*func)(void*, unsigned int, char*, char*, unsigned int))
         parameters: ['pointer', 'buffer', 'function'],
         result: 'u32',
         nonblocking: false,
@@ -237,27 +237,29 @@ export function bind(win: Deno.Pointer, element: string, func: Function) {
   load_lib();
   const callbackResource = new Deno.UnsafeCallback(
     {
-      parameters: ['pointer', 'u32', 'pointer', 'pointer', 'pointer'],
+      // unsigned int webui_interface_bind(..., void (*func)(void*, unsigned int, char*, char*, unsigned int))
+      parameters: ['pointer', 'u32', 'pointer', 'pointer', 'u32'],
       result: 'void',
     } as const,
     (
       param_window: Deno.Pointer,
-      param_type: Deno.u32,
+      param_event_type: Deno.u32,
       param_element: Deno.Pointer,
       param_data: Deno.Pointer,
-      param_response: Deno.Pointer
+      param_event_number: Deno.u32
     ) => {
 
       // Create elements
       const win = param_window;
-      const type = parseInt(param_type);
-      const element = new Deno.UnsafePointerView(param_element).getCString();
-      const data = new Deno.UnsafePointerView(param_data).getCString();
+      const event_type = parseInt(param_event_type);
+      const element = (param_element != null ? (new Deno.UnsafePointerView(param_element).getCString()) : "");
+      const data = (param_data != null ? (new Deno.UnsafePointerView(param_data).getCString()) : "");
+      const event_number = parseInt(param_event_number);
 
       // Create struct
       const e: event = {
         win: win,
-        type: type,
+        event_type: event_type,
         element: element,
         data: data,
       };
@@ -266,7 +268,7 @@ export function bind(win: Deno.Pointer, element: string, func: Function) {
       const result = String(func(e));
 
       // Send back the response
-      webui_lib.symbols.webui_interface_set_response(param_response, string_to_uint8array(result));
+      webui_lib.symbols.webui_interface_set_response(win, event_number, string_to_uint8array(result));
     },
   );
 

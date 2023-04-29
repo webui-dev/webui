@@ -287,7 +287,7 @@ The *e* corresponds to the word _Event_. `e` is a struct that has these elements
 
 ```cpp
 void* window; // Pointer to the window struct.
-unsigned int type; // Event type (WEBUI_EVENT_MOUSE_CLICK, WEBUI_EVENT_NAVIGATION...).
+unsigned int event_type; // Event type (WEBUI_EVENT_MOUSE_CLICK, WEBUI_EVENT_NAVIGATION...).
 char* element; // HTML element ID.
 char* data; // The data are coming from JavaScript, if any.
 char* response; // Internally used by webui::return_xxx().
@@ -298,13 +298,13 @@ void my_function(webui_event_t* e){
 
     std::cout << "Hi!, You clicked on " << e.element << std::endl;
 
-    if (e->type == WEBUI_EVENT_CONNECTED)
+    if (e->event_type == WEBUI_EVENT_CONNECTED)
         std::cout << "Connected." << std::endl;
-    else if (e->type == WEBUI_EVENT_DISCONNECTED)
+    else if (e->event_type == WEBUI_EVENT_DISCONNECTED)
         std::cout << "Disconnected." << std::endl;
-    else if (e->type == WEBUI_EVENT_MOUSE_CLICK)
+    else if (e->event_type == WEBUI_EVENT_MOUSE_CLICK)
         std::cout << "Click." << std::endl;
-    else if (e->type == WEBUI_EVENT_NAVIGATION)
+    else if (e->event_type == WEBUI_EVENT_NAVIGATION)
         std::cout << "Starting navigation to: " << e->data << std::endl;
 
     // Send back a response to JavaScript

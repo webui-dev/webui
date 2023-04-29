@@ -68,8 +68,8 @@ namespace webui {
 	}
 
 	// Set the default embedded HTML favicon
-	void set_icon(void* window, std::string icon, std::string type) {
-		webui_set_icon(window, icon.c_str(), type.c_str());
+	void set_icon(void* window, std::string icon, std::string icon_type) {
+		webui_set_icon(window, icon.c_str(), icon_type.c_str());
 	}
 
 	// Allow the window URL to be re-used in normal web browsers
@@ -125,13 +125,13 @@ namespace webui {
 
 	// -- Interface -----------------------
 	// Bind a specific html element click event with a function. Empty element means all events. This replace bind(). The func is (Window, EventType, Element, Data, Response)
-	unsigned int interface_bind(void* window, std::string element, void (*func)(void*, unsigned int, char*, char*, char*)) {
+	unsigned int interface_bind(void* window, std::string element, void (*func)(void*, unsigned int, char*, char*, unsigned int)) {
 		return webui_interface_bind(window, element.c_str(), func);
 	}
 
 	// When using `interface_bind()` you need this function to easily set your callback response.
-	void interface_set_response(std::string ptr, std::string response) {
-		webui_interface_set_response(&ptr[0], response.c_str());
+	void interface_set_response(void *window, webui_event_t* e, std::string response) {
+		webui_interface_set_response(window, e->event_number, response.c_str());
 	}
 
 	// Check if the app still running or not. This replace wait().

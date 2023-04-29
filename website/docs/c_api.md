@@ -267,7 +267,7 @@ The *e* corresponds to the word _Event_. `e` is a struct that has these elements
 
 ```c
 void* window; // Pointer to the window struct.
-unsigned int type; // Event type (WEBUI_EVENT_MOUSE_CLICK, WEBUI_EVENT_NAVIGATION...).
+unsigned int event_type; // Event type (WEBUI_EVENT_MOUSE_CLICK, WEBUI_EVENT_NAVIGATION...).
 char* element; // HTML element ID.
 char* data; // The data are coming from JavaScript, if any.
 char* response; // Internally used by webui_return_xxx().
@@ -278,13 +278,13 @@ void my_function(webui_event_t* e){
 
     printf("Hi!, You clicked on %s element\n", e.element);
 
-    if(e->type == WEBUI_EVENT_CONNECTED)
+    if(e->event_type == WEBUI_EVENT_CONNECTED)
         printf("Connected. \n");
-    else if(e->type == WEBUI_EVENT_DISCONNECTED)
+    else if(e->event_type == WEBUI_EVENT_DISCONNECTED)
         printf("Disconnected. \n");
-    else if(e->type == WEBUI_EVENT_MOUSE_CLICK)
+    else if(e->event_type == WEBUI_EVENT_MOUSE_CLICK)
         printf("Click. \n");
-    else if(e->type == WEBUI_EVENT_NAVIGATION)
+    else if(e->event_type == WEBUI_EVENT_NAVIGATION)
         printf("Starting navigation to: %s \n", (char *)e->data);    
 
     // Send back a response to JavaScript

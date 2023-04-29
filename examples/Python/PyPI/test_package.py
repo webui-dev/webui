@@ -53,13 +53,13 @@ html = """
 def all_events(e : webui.event):
 	print('Function: all_events()')
 	print('Element: ' + e.element)
-	print('Type: ' + str(e.type))
+	print('Type: ' + str(e.event_type))
 	print('Data: ' + e.data)
 
 def python_to_js(e : webui.event):
 	print('Function: python_to_js()')
 	print('Element: ' + e.element)
-	print('Type: ' + str(e.type))
+	print('Type: ' + str(e.event_type))
 	print('Data: ' + e.data)
 	# Run JavaScript to get the password
 	res = e.window.script("return document.getElementById('MyInput').value;")
@@ -74,7 +74,7 @@ def python_to_js(e : webui.event):
 def js_to_python(e : webui.event):
 	print('Function: js_to_python()')
 	print('Element: ' + e.element)
-	print('Type: ' + str(e.type))
+	print('Type: ' + str(e.event_type))
 	print('Data: ' + e.data)
 	v = int(e.data)
 	v = v * 2
@@ -82,9 +82,9 @@ def js_to_python(e : webui.event):
 
 def exit(e : webui.event):
 	print('Function: exit()')
-	print('element: ' + e.element)
-	print('type: ' + str(e.type))
-	print('data: ' + e.data)
+	print('Element: ' + e.element)
+	print('Type: ' + str(e.event_type))
+	print('Data: ' + e.data)
 	webui.exit()
 
 def main():

@@ -1,6 +1,3 @@
-
-
-
 # Install WebUI
 # pip install --upgrade webui2
 

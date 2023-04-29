@@ -33,13 +33,13 @@ class MyClass {
     // it's get bind with an empty HTML ID.
     void events(webui_event_t* e) {
 
-        if (e->type == WEBUI_EVENT_CONNECTED)
+        if (e->event_type == WEBUI_EVENT_CONNECTED)
             std::cout << "Window Connected." << std::endl;
-        else if (e->type == WEBUI_EVENT_DISCONNECTED)
+        else if (e->event_type == WEBUI_EVENT_DISCONNECTED)
             std::cout << "Window Disconnected." << std::endl;
-        else if (e->type == WEBUI_EVENT_MOUSE_CLICK)
+        else if (e->event_type == WEBUI_EVENT_MOUSE_CLICK)
             std::cout << "Click on element: " << e->element << std::endl;
-        else if (e->type == WEBUI_EVENT_NAVIGATION)
+        else if (e->event_type == WEBUI_EVENT_NAVIGATION)
             std::cout << "Starting navigation to: " << e->data << std::endl;
     }
 

@@ -187,7 +187,7 @@ The *e* corresponds to the word _Event_. `e` is a struct that has these elements
 
 ```python
 window; # The window object.
-type; # Integer: Event type (EVENT_MOUSE_CLICK, EVENT_NAVIGATION...).
+event_type; # Integer: Event type (EVENT_MOUSE_CLICK, EVENT_NAVIGATION...).
 element; # String: HTML element ID.
 data; # String: The data are coming from JavaScript, if any.
 ```

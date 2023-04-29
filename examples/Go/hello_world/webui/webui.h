@@ -133,10 +133,10 @@ enum webui_events {
 // -- Structs -------------------------
 typedef struct webui_event_t {
     void* window; // Pointer to the window object
-    unsigned int type; // Event type
-    char* element; // HTML element ID    
+    unsigned int event_type; // Event type
+    char* element; // HTML element ID
     char* data; // JavaScript data
-    char* response; // Callback response
+    unsigned int event_number; // Internal WebUI
 } webui_event_t;
 
 // -- Definitions ---------------------
@@ -161,7 +161,7 @@ WEBUI_EXPORT bool webui_is_shown(void* window);
 // Set the maximum time in seconds to wait for browser to start
 WEBUI_EXPORT void webui_set_timeout(unsigned int second);
 // Set the default embedded HTML favicon
-WEBUI_EXPORT void webui_set_icon(void* window, const char* icon, const char* type);
+WEBUI_EXPORT void webui_set_icon(void* window, const char* icon, const char* icon_type);
 // Allow the window URL to be re-used in normal web browsers
 WEBUI_EXPORT void webui_set_multi_access(void* window, bool status);
 
@@ -186,10 +186,10 @@ WEBUI_EXPORT void webui_return_string(webui_event_t* e, char* s);
 WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
 
 // -- Interface -----------------------
-// Bind a specific html element click event with a function. Empty element means all events. This replace webui_bind(). The func is (Window, EventType, Element, Data, Response)
-WEBUI_EXPORT unsigned int webui_interface_bind(void* window, const char* element, void (*func)(void*, unsigned int, char*, char*, char*));
-// When using `webui_interface_bind()` you need this function to easily set your callback response.
-WEBUI_EXPORT void webui_interface_set_response(char* ptr, const char* response);
+// Bind a specific html element click event with a function. Empty element means all events. This replace webui_bind(). The func is (Window, EventType, Element, Data, EventNumber)
+WEBUI_EXPORT unsigned int webui_interface_bind(void* window, const char* element, void (*func)(void*, unsigned int, char*, char*, unsigned int));
+// When using `webui_interface_bind()` you may need this function to easily set your callback response.
+WEBUI_EXPORT void webui_interface_set_response(void* window, unsigned int event_number, const char* response);
 // Check if the app still running or not. This replace webui_wait().
 WEBUI_EXPORT bool webui_interface_is_app_running(void);
 // Get window unique ID

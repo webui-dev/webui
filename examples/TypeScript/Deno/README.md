@@ -4,7 +4,7 @@
 This is an example of how to use the WebUI dynamic library in Deno to create an HTML5 based user interface.
 
 
-Tested using Deno v1.32.4.
+Tested using Deno v1.33.1.
 
 ### Deno Hello World
 
@@ -20,4 +20,4 @@ Folder structure example:
         * deno
         * hello_world.ts
         * webui.ts
-        * webui-2-x64 dynamic library
+        * webui-2-x64 (Dynamic library)

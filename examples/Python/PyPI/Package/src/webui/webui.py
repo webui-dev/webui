@@ -40,7 +40,7 @@ class browser:
 # event
 class event:
     window = None
-    type = 0
+    event_type = 0
     element = ""
     data = ""
 
@@ -91,10 +91,10 @@ class window:
             py_fun = ctypes.CFUNCTYPE(
                 ctypes.c_void_p, # RESERVED
                 ctypes.c_void_p, # window
-                ctypes.c_uint, # type
+                ctypes.c_uint, # event type
                 ctypes.c_char_p, # element
                 ctypes.c_char_p, # data
-                PTR_CHAR) # response
+                ctypes.c_uint) # event number
             self.c_events = py_fun(self._events)
         except OSError as e:
             print(
@@ -112,7 +112,7 @@ class window:
                event_type: ctypes.c_uint,
                _element: ctypes.c_char_p,
                data: ctypes.c_char_p,
-               response_ptr: PTR_CHAR):
+               event_number: ctypes.c_uint):
         element = _element.decode('utf-8')
         func_id = self.window_id + element
         if self.cb_fun_list[func_id] is None:
@@ -121,16 +121,19 @@ class window:
         # Create event
         e = event()
         e.window = self
-        e.type = int(event_type)
+        e.event_type = int(event_type)
         e.element = element
-        e.data = data.decode('utf-8')
+        if data is not None:
+            e.data = data.decode('utf-8')
+        else:
+            e.data = ''
         # User callback
         cb_result = self.cb_fun_list[func_id](e)
         if cb_result is not None:
             cb_result_str = str(cb_result)
             cb_result_encode = cb_result_str.encode('utf-8')
             # Set the response
-            webui_lib.webui_interface_set_response(response_ptr, cb_result_encode)
+            webui_lib.webui_interface_set_response(self.window, event_number, cb_result_encode)
 
 
     # Bind a specific html element click event with a function. Empty element means all events.

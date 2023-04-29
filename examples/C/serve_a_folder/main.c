@@ -16,13 +16,13 @@ void events(webui_event_t* e) {
     // This function gets called every time
     // there is an event
 
-    if(e->type == WEBUI_EVENT_CONNECTED)
+    if(e->event_type == WEBUI_EVENT_CONNECTED)
         printf("Connected. \n");
-    else if(e->type == WEBUI_EVENT_DISCONNECTED)
+    else if(e->event_type == WEBUI_EVENT_DISCONNECTED)
         printf("Disconnected. \n");
-    else if(e->type == WEBUI_EVENT_MOUSE_CLICK)
+    else if(e->event_type == WEBUI_EVENT_MOUSE_CLICK)
         printf("Click. \n");
-    else if(e->type == WEBUI_EVENT_NAVIGATION)
+    else if(e->event_type == WEBUI_EVENT_NAVIGATION)
         printf("Starting navigation to: %s \n", (char *)e->data);
 }
 

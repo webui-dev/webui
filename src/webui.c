@@ -39,7 +39,6 @@ static const char* webui_javascript_bridge =
 "const _WEBUI_CLICK = 252; \n"
 "const _WEBUI_SWITCH = 251; \n"
 "const _WEBUI_CLOSE = 250; \n"
-"const _WEBUI_FUNCTION = 249; \n"
 "function _webui_close(reason = 0, value = 0) { \n"
 "    _webui_send_event_navigation(value); \n"
 "    _webui_ws_status = false; \n"
@@ -469,17 +468,17 @@ void webui_set_multi_access(void* window, bool status) {
     win->multi_access = status;
 }
 
-void webui_set_icon(void* window, const char* icon, const char* type) {
+void webui_set_icon(void* window, const char* icon, const char* icon_type) {
 
     // Dereference
     _webui_window_t* win = (_webui_window_t*)window;
 
     #ifdef WEBUI_LOG
-        printf("[User] webui_set_icon([%s], [%s])... \n", icon, type);
+        printf("[User] webui_set_icon([%s], [%s])... \n", icon, icon_type);
     #endif
 
     win->icon = icon;
-    win->icon_type = type;
+    win->icon_type = icon_type;
 }
 
 bool webui_show(void* window, const char* content) {
@@ -605,9 +604,17 @@ void webui_return_int(webui_event_t* e, long long int n) {
         printf("[User] webui_return_int([%lld])... \n", n);
     #endif
 
+    // Dereference
+    _webui_window_t* win = (_webui_window_t*)e->window;
+
+    // Get buffer
+    if(win->event_core[e->event_number] == NULL)
+        return;
+    char** response = &win->event_core[e->event_number]->response;
+
     // Free
-    if(e->response != NULL)
-        _webui_free_mem(e->response);
+    if(*response != NULL)
+        _webui_free_mem((void*)*response);
 
     // Int to Str
     // 64-bit max is -9,223,372,036,854,775,808 (20 character)
@@ -615,7 +622,7 @@ void webui_return_int(webui_event_t* e, long long int n) {
     sprintf(buf, "%lld", n);
 
     // Set response
-    e->response = buf;
+    *response = buf;
 }
 
 void webui_return_string(webui_event_t* e, char* s) {
@@ -626,10 +633,18 @@ void webui_return_string(webui_event_t* e, char* s) {
 
     if(_webui_is_empty(s))
         return;
+
+    // Dereference
+    _webui_window_t* win = (_webui_window_t*)e->window;
+
+    // Get buffer
+    if(win->event_core[e->event_number] == NULL)
+        return;
+    char** response = &win->event_core[e->event_number]->response;
     
     // Free
-    if(e->response != NULL)
-        _webui_free_mem(e->response);
+    if(*response != NULL)
+        _webui_free_mem((void*)*response);
 
     // Copy Str
     int len = strlen(s);
@@ -637,7 +652,7 @@ void webui_return_string(webui_event_t* e, char* s) {
     memcpy(buf, s, len);
 
     // Set response
-    e->response = buf;
+    *response = buf;
 }
 
 void webui_return_bool(webui_event_t* e, bool b) {
@@ -646,9 +661,17 @@ void webui_return_bool(webui_event_t* e, bool b) {
         printf("[User] webui_return_bool([%d])... \n", b);
     #endif
 
+    // Dereference
+    _webui_window_t* win = (_webui_window_t*)e->window;
+
+    // Get buffer
+    if(win->event_core[e->event_number] == NULL)
+        return;
+    char** response = &win->event_core[e->event_number]->response;
+
     // Free
-    if(e->response != NULL)
-        _webui_free_mem(e->response);
+    if(*response != NULL)
+        _webui_free_mem((void*)*response);
 
     // Bool to Str
     int len = 1;
@@ -656,7 +679,7 @@ void webui_return_bool(webui_event_t* e, bool b) {
     sprintf(buf, "%d", b);
 
     // Set response
-    e->response = buf;
+    *response = buf;
 }
 
 void webui_exit(void) {
@@ -762,30 +785,40 @@ void _webui_interface_bind_handler(webui_event_t* e) {
     char* webui_internal_id = _webui_generate_internal_id(e->window, e->element);
     unsigned int cb_index = _webui_get_cb_index(webui_internal_id);
 
+    // void* window; // Pointer to the window object
+    // unsigned int event_type; // Event type
+    // char* element; // HTML element ID
+    // char* data; // JavaScript data
+    // unsigned int event_number; // Internal WebUI
+
     if(cb_index > 0 && _webui_core.cb_interface[cb_index] != NULL) {
 
         #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_interface_bind_handler() -> User callback @ 0x%p\n", _webui_core.cb_interface[cb_index]);
-            printf("[Core]\t\t_webui_interface_bind_handler() -> Response set @ 0x%p\n", (char*)&e->response);
-            printf("[Core]\t\t_webui_interface_bind_handler() -> type [%u]\n", e->type);
-            printf("[Core]\t\t_webui_interface_bind_handler() -> data [%s]\n", e->data);
-            printf("[Core]\t\t_webui_interface_bind_handler() -> element [%s]\n", e->element);
+            printf("[Core]\t\t_webui_interface_bind_handler() -> e->event_type [%u]\n", e->event_type);
+            printf("[Core]\t\t_webui_interface_bind_handler() -> e->element [%s]\n", e->element);
+            printf("[Core]\t\t_webui_interface_bind_handler() -> e->data [%s]\n", e->data);
+            printf("[Core]\t\t_webui_interface_bind_handler() -> e->event_number %d\n", e->event_number);
         #endif
-        _webui_core.cb_interface[cb_index](e->window, e->type, e->element, e->data, (char*)&e->response);
+
+        // Call cb
+        _webui_core.cb_interface[cb_index](e->window, e->event_type, e->element, e->data, e->event_number);
     }
-    
-    if(_webui_is_empty((const char *)e->response))
-        e->response = (char*)webui_empty_string;
-    
+
     // Free
     _webui_free_mem((void*)webui_internal_id);
 
     #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_interface_bind_handler() -> user-callback response [%s] @ 0x%p\n", (const char *)e->response, e->response);
+        // Print cb response
+        char* response = NULL;
+        _webui_window_t* win = (_webui_window_t*)e->window;
+        if(win->event_core[e->event_number] != NULL)
+            response = *(&win->event_core[e->event_number]->response);
+        printf("[Core]\t\t_webui_interface_bind_handler() -> user-callback response [%s]\n", response);
     #endif
 }
 
-unsigned int webui_interface_bind(void* window, const char* element, void (*func)(void*, unsigned int, char*, char*, char*)) {
+unsigned int webui_interface_bind(void* window, const char* element, void (*func)(void*, unsigned int, char*, char*, unsigned int)) {
 
     // Dereference
     _webui_window_t* win = (_webui_window_t*)window;
@@ -800,28 +833,32 @@ unsigned int webui_interface_bind(void* window, const char* element, void (*func
     return cb_index;
 }
 
-void webui_interface_set_response(char* ptr, const char* response) {
+void webui_interface_set_response(void* window, unsigned int event_number, const char* response) {
 
     #ifdef WEBUI_LOG
         printf("[User] webui_interface_set_response()... \n");
-        printf("[User] webui_interface_set_response() -> Pointer @ 0x%p \n", ptr);
+        printf("[User] webui_interface_set_response() -> event_number %d \n", event_number);
         printf("[User] webui_interface_set_response() -> Response [%s] \n", response);
     #endif
 
-    size_t len = strlen(response);
+    // Dereference
+    _webui_window_t* win = (_webui_window_t*)window;
 
-    if(len < 1)
-        return;
+    // Get internal response buffer
+    if(win->event_core[event_number] != NULL) {
 
-    char* buf = (char*) _webui_malloc(len);
-    char** _ptr = (char**)ptr;
-    *_ptr = buf;
-    strcpy(*_ptr, response);
+        char** buffer = NULL;
+        buffer = &win->event_core[event_number]->response;
 
-    #ifdef WEBUI_LOG
-        printf("[User] webui_interface_set_response() -> Internal buffer @ 0x%p \n", (*_ptr));
-        printf("[User] webui_interface_set_response() -> Internal buffer [%s] \n", (*_ptr));
-    #endif
+        // Set the response
+        size_t len = strlen(response);
+        *buffer = (char*) _webui_malloc(len);
+        strcpy(*buffer, response);
+
+        #ifdef WEBUI_LOG
+            printf("[User] webui_interface_set_response() -> Internal buffer [%s] \n", *buffer);
+        #endif
+    }
 }
 
 bool webui_interface_is_app_running(void) {
@@ -1054,6 +1091,22 @@ void* _webui_malloc(int size) {
     _webui_ptr_add((void*) block, size);
 
     return block;
+}
+
+unsigned int _webui_get_free_event_core_pos(_webui_window_t* win) {
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_get_free_event_core_pos()... \n");
+    #endif
+
+    for(unsigned int i = 1; i < WEBUI_MAX_ARRAY; i++) {
+        if(win->event_core[i] == NULL)
+            return i;
+    }
+
+    // Fatal. No free pos found
+    // let's use the first pos
+    return 0;
 }
 
 static void _webui_sleep(long unsigned int ms) {
@@ -1419,9 +1472,9 @@ static void _webui_interpret_file(_webui_window_t* win, struct mg_connection *c,
                 // [disable coloring][file]
                 char* cmd = (char*) _webui_malloc(64 + strlen(full_path));
                 #ifdef _WIN32
-                    sprintf(cmd, "Set NO_COLOR=1 & Set DENO_NO_UPDATE_CHECK=1 & deno run --allow-all --unstable \"%s\" \"%s\"", full_path, query);
+                    sprintf(cmd, "Set NO_COLOR=1 & Set DENO_NO_UPDATE_CHECK=1 & deno run --quiet --allow-all --unstable \"%s\" \"%s\"", full_path, query);
                 #else
-                    sprintf(cmd, "NO_COLOR=1 & DENO_NO_UPDATE_CHECK=1 & deno run --allow-all --unstable \"%s\" \"%s\"", full_path, query);
+                    sprintf(cmd, "NO_COLOR=1; DENO_NO_UPDATE_CHECK=1; deno run --quiet --allow-all --unstable \"%s\" \"%s\"", full_path, query);
                 #endif
 
                 // Run command
@@ -1636,41 +1689,48 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
             // Generate WebUI internal id
             char* webui_internal_id = _webui_generate_internal_id(win, element);
 
-            // Call user function
+            // Create new event core to hold the response
+            webui_event_core_t* event_core = (webui_event_core_t*) _webui_malloc(sizeof(webui_event_core_t));
+            unsigned int event_core_pos = _webui_get_free_event_core_pos(win);
+            win->event_core[event_core_pos] = event_core;
+            char** response = &win->event_core[event_core_pos]->response;
+
+            // Create new event
             webui_event_t e;
-            e.element = element;
             e.window = win;
+            e.event_type = WEBUI_EVENT_CALLBACK;
+            e.element = element;
             e.data = data;
-            e.response = NULL;
-            e.type = WEBUI_EVENT_CALLBACK;
+            e.event_number = event_core_pos;
 
+            // Call user function
             unsigned int cb_index = _webui_get_cb_index(webui_internal_id);
-
-            // Check for bind
             if(cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
 
                 // Call user cb
                 _webui_core.cb[cb_index](&e);
             }
 
-            if(_webui_is_empty(e.response))
-                e.response = (char*)webui_empty_string;
+            // Check the response
+            if(_webui_is_empty(*response))
+                *response = (char*)webui_empty_string;
 
             #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_server_event_handler()... user-callback response [%s]\n", (const char*)e.response);
+                printf("[Core]\t\t_webui_server_event_handler()... user-callback response [%s]\n", *response);
             #endif
 
             // Send response
             mg_http_reply(
                 c, 200,
                 "",
-                e.response
+                *response
             );
 
             // Free
             _webui_free_mem((void*)packet);
             _webui_free_mem((void*)webui_internal_id);
-            _webui_free_mem((void*)e.response);
+            _webui_free_mem((void*)*response);
+            _webui_free_mem((void*)event_core);
         }
         else if(mg_http_match_uri(hm, "/")) {
 
@@ -1903,19 +1963,19 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
             }
         }
 
-        // Events
+        // New Event
         if(win->has_events) {
 
             // Generate WebUI internal id
             char* webui_internal_id = _webui_generate_internal_id(win, "");
 
             _webui_window_event(
-                win,                // Window
-                webui_internal_id,  // WebUI Internal ID
-                "",                 // User HTML ID
-                NULL,               // User Custom Data
-                0,                  // User Data Len
-                event_type          // Type of this event
+                win,                // Event -> Window
+                event_type,         // Event -> Type of this event
+                "",                 // Event -> HTML Element
+                NULL,               // Event -> User Custom Data
+                0,                  // Event -> Event Number
+                webui_internal_id   // Extras -> WebUI Internal ID
             );
         }
     }
@@ -1949,12 +2009,12 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
             char* webui_internal_id = _webui_generate_internal_id(win, "");
 
             _webui_window_event(
-                win,                        // Window
-                webui_internal_id,          // WebUI Internal ID
-                "",                         // User HTML ID
-                NULL,                       // User Custom Data
-                0,                          // User Data Len
-                WEBUI_EVENT_DISCONNECTED    // Type of this event
+                win,                        // Event -> Window
+                WEBUI_EVENT_DISCONNECTED,   // Event -> Type of this event
+                "",                         // Event -> HTML Element
+                NULL,                       // Event -> User Custom Data
+                0,                          // Event -> Event Number
+                webui_internal_id           // Extras -> WebUI Internal ID
             );
         }
     }
@@ -3481,27 +3541,29 @@ bool _webui_show_window(_webui_window_t* win, const char* content, bool is_embed
     return true;
 }
 
-static void _webui_window_event(_webui_window_t* win, char* webui_internal_id, char* element, void* data, unsigned int data_len, int event_type) {
+static void _webui_window_event(_webui_window_t* win, int event_type, char* element, char* data, unsigned int event_number, char* webui_internal_id) {
 
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_window_event([%s], [%s])... \n", webui_internal_id, element);
     #endif
 
     // Create a thread, and call the used cb function
-    _webui_cb_t* arg = (_webui_cb_t*) _webui_malloc(sizeof(_webui_cb_t));
-    arg->win = win;
-    arg->webui_internal_id = webui_internal_id;
-    arg->element_name = element;
-    arg->event_type = event_type;
-    if(data != NULL) {
-        arg->data = data;
-        arg->data_len = data_len;
-    }
-    else {
-        arg->data = (void*) webui_empty_string;
-        arg->data_len = 0;
-    }
+    // no need to wait for the response. This is fire
+    // and forget.
 
+    // Create a new CB args struct
+    _webui_cb_arg_t* arg = (_webui_cb_arg_t*) _webui_malloc(sizeof(_webui_cb_arg_t));
+    
+    // Event
+    arg->window = win;
+    arg->event_type = event_type;
+    arg->element = element;
+    arg->data = data;
+    arg->event_number = event_number;
+    // Extras
+    arg->webui_internal_id = webui_internal_id;
+
+    // fire and forget.
     #ifdef _WIN32
         HANDLE user_fun_thread = CreateThread(NULL, 0, _webui_cb, (void*) arg, 0, NULL);
         if(user_fun_thread != NULL)
@@ -3616,12 +3678,12 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         char* webui_internal_id = _webui_generate_internal_id(win, element);
 
         _webui_window_event(
-            win,                // Window
-            webui_internal_id,  // WebUI Internal ID
-            element,            // User HTML ID
-            NULL,               // User Custom Data
-            0,                  // User Data Len
-            WEBUI_EVENT_MOUSE_CLICK // Type of this event
+            win,                        // Event -> Window
+            WEBUI_EVENT_MOUSE_CLICK,    // Event -> Type of this event
+            element,                    // Event -> HTML Element
+            NULL,                       // Event -> User Custom Data
+            0,                          // Event -> Event Number
+            webui_internal_id           // Extras -> WebUI Internal ID
         );
     }
     else if((unsigned char) packet[1] == WEBUI_HEADER_JS) {
@@ -3682,45 +3744,6 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         // Send ready signal to webui_script()
         _webui_core.run_done[run_id] = true;
     }
-    else if((unsigned char) packet[1] == WEBUI_HEADER_CALL_FUNC) {
-
-        // Function Call (No response)
-
-        // 0: [Signature]
-        // 1: [Type]
-        // 2: 
-        // 3: [ID, Null, Data]
-
-        // Get html element id
-        char* element;
-        size_t element_len;
-        if(!_webui_get_data(packet, len, 3, &element_len, &element))
-            return;
-
-        // Get data
-        void* data;
-        size_t data_len;
-        if(!_webui_get_data(packet, len, (3 + element_len + 1), &data_len, (char **) &data))
-            return;
-        
-        #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_CALL_FUNC \n");
-            printf("[Core]\t\t_webui_window_receive() -> %d bytes \n", (int)element_len);
-            printf("[Core]\t\t_webui_window_receive() -> [%s] \n", element);
-        #endif
-
-        // Generate WebUI internal id
-        char* webui_internal_id = _webui_generate_internal_id(win, element);
-
-        _webui_window_event(
-            win,                // Window
-            webui_internal_id,  // WebUI Internal ID
-            element,            // User HTML ID
-            data,               // User Custom Data
-            data_len,           // User Data Len
-            WEBUI_EVENT_CALLBACK    // Type of this event
-        );
-    }
     else if((unsigned char) packet[1] == WEBUI_HEADER_SWITCH) {
 
         // Navigation Event
@@ -3749,12 +3772,12 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             char* webui_internal_id = _webui_generate_internal_id(win, "");
 
             _webui_window_event(
-                win,                // Window
-                webui_internal_id,  // WebUI Internal ID
-                "",                 // HTML ID
-                url,                // URL
-                url_len,            // URL Len
-                WEBUI_EVENT_NAVIGATION // Type of this event
+                win,                    // Event -> Window
+                WEBUI_EVENT_NAVIGATION, // Event -> Type of this event
+                "",                     // Event -> HTML Element
+                url,                    // Event -> User Custom Data
+                0,                      // Event -> Event Number
+                webui_internal_id       // Extras -> WebUI Internal ID
             );
         }
     }
@@ -4104,23 +4127,24 @@ WEBUI_SERVER_START
 
 WEBUI_CB
 {
-    _webui_cb_t* arg = (_webui_cb_t*) _arg;
-
     #ifdef WEBUI_LOG
         printf("[Core]\t\t[Thread] _webui_cb()... \n");
     #endif
 
+    _webui_cb_arg_t* arg = (_webui_cb_arg_t*) _arg;
+
+    // Event
     webui_event_t e;
-    e.element = arg->element_name;
-    e.window = arg->win;
+    e.window = arg->window;
+    e.event_type = arg->event_type;
+    e.element = arg->element;
     e.data = arg->data;
-    e.response = NULL;
-    e.type = arg->event_type;
+    e.event_number = arg->event_number;
 
-    // Check for all events-binded function
-    if(arg->win->has_events) {
+    // Check for all events-bind functions
+    if(arg->window->has_events) {
 
-        char* events_id = _webui_generate_internal_id(arg->win, "");
+        char* events_id = _webui_generate_internal_id(arg->window, "");
         unsigned int events_cb_index = _webui_get_cb_index(events_id);
         _webui_free_mem((void*)events_id);
 
@@ -4131,8 +4155,8 @@ WEBUI_CB
         }
     }
 
-    // Check for the binded function
-    if(arg->element_name != NULL && !_webui_is_empty(arg->element_name)) {
+    // Check for the regular bind functions
+    if(arg->element != NULL && !_webui_is_empty(arg->element)) {
 
         unsigned int cb_index = _webui_get_cb_index(arg->webui_internal_id);
         if(cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
@@ -4146,10 +4170,11 @@ WEBUI_CB
         printf("[Core]\t\t[Thread] _webui_cb()... Stop.\n");
     #endif    
 
-    // Free
-    _webui_free_mem((void*)e.response);
+    // Free event
+    _webui_free_mem((void*)arg->element);
+    _webui_free_mem((void*)arg->data);
+    // Free event extras
     _webui_free_mem((void*)arg->webui_internal_id);
-    _webui_free_mem((void*)arg->element_name);
     _webui_free_mem((void*)arg);
 
     THREAD_RETURN
