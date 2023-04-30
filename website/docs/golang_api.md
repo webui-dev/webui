@@ -16,7 +16,8 @@
     - [Startup Timeout](/golang_api?id=startup-timeout)
     - [Multi Access](/golang_api?id=multi-access)
 - JavaScript
-    - [Run JavaScript](/golang_api?id=run-javascript)
+    - [Run JavaScript From Go](/golang_api?id=run-javascript-from-go)
+    - [Run Go From JavaScript](/golang_api?id=run-go-from-javascript)
     - [TypeScript Runtimes](/golang_api?id=typescript-runtimes)
 
 ---
@@ -286,7 +287,7 @@ webui.SetMultiAccess(my_window, true)
 ```
 
 ---
-### Run JavaScript
+### Run JavaScript From Go
 
 You can run JavaScript on any window to read values, update the view, or anything else. In addition, you can check if the script execution has errors, as well as receive data.
 
@@ -305,6 +306,32 @@ fmt.Printf("JavaScript Response: %s\n", js.Response)
 
 // Run JavaScript quickly with no waiting for the response
 webui.Run(e.Window, "alert('Fast!')")
+```
+
+---
+### Run Go From JavaScript
+
+To call a Go function from JavaScript and get the result back please use `webui_fn('MyID', 'My Data').then((response) => { ... });`. If the function does not have a response then it's safe to remove the `then` method like this `webui_fn('MyID_NoResponse', 'My Data');`.
+
+```go
+func my_function(e webui.Event) string {
+	
+    // Get data from JavaScript
+    fmt.Printf("Data from JavaScript: %s\n", e.Data) // Message from JS
+
+    // Return back a response to JavaScript
+    return "Message from Go"
+}
+
+webui.Bind(my_window, "MyID", my_function)
+```
+
+JavsScript:
+
+```js
+webui_fn('MyID', 'Message from JS').then((response) => {
+    console.log(response); // "Message from Go
+});
 ```
 
 ---

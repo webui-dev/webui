@@ -16,7 +16,8 @@
     - [Startup Timeout](/python_api?id=startup-timeout)
     - [Multi Access](/python_api?id=multi-access)
 - JavaScript
-    - [Run JavaScript](/python_api?id=run-javascript)
+    - [Run JavaScript From Python](/python_api?id=run-javascript-from-python)
+    - [Run Python From JavaScript](/python_api?id=run-python-from-javascript)
     - [TypeScript Runtimes](/python_api?id=typescript-runtimes)
 
 ---
@@ -167,7 +168,7 @@ else
 Use `bind()` to receive click events when the user clicks on any HTML element with a specific ID, for example `<button id="MyID">Hello</button>`.
 
 ```python
-def my_function(e : webui.event)
+def my_function(e : webui.event):
 	# <button id="MyID">Hello</button> gets clicked!
 
 MyWindow.bind("MyID", my_function)
@@ -176,7 +177,7 @@ MyWindow.bind("MyID", my_function)
 ### Events
 
 ```python
-def events(e : webui.event)
+def events(e : webui.event):
 	print('Hi!, You clicked on ' + e.element + ' element')
 
 # Empty ID means all events on all elements
@@ -259,7 +260,7 @@ MyWindow.set_multi_access(True)
 ```
 
 ---
-### Run JavaScript
+### Run JavaScript From Python
 
 You can run JavaScript on any window to read values, update the view, or anything else. In addition, you can check if the script execution has errors, as well as receive data.
 
@@ -275,6 +276,27 @@ else:
 
 # Run JavaScript quickly with no waiting for the response
 e.window.run("alert('Fast!')")
+```
+
+---
+### Run Python From JavaScript
+
+To call a Python function from JavaScript and get the result back please use `webui_fn('MyID', 'My Data').then((response) => { ... });`. If the function does not have a response then it's safe to remove the `then` method like this `webui_fn('MyID_NoResponse', 'My Data');`.
+
+```python
+def my_function(e : webui.event):
+	print("Data from JavaScript: " + e.data) # Message from JS
+    return "Message from Python"
+
+MyWindow.bind("MyID", my_function)
+```
+
+JavsScript:
+
+```js
+webui_fn('MyID', 'Message from JS').then((response) => {
+    console.log(response); // "Message from Python
+});
 ```
 
 ---

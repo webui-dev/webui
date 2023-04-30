@@ -17,7 +17,8 @@
     - [Startup Timeout](/c_api?id=startup-timeout)
     - [Multi Access](/c_api?id=multi-access)
 - JavaScript
-    - [Run JavaScript](/c_api?id=run-javascript)
+    - [Run JavaScript From C](/c_api?id=run-javascript-from-c)
+    - [Run C From JavaScript](/c_api?id=run-c-from-javascript)
     - [TypeScript Runtimes](/c_api?id=typescript-runtimes)
 
 ---
@@ -285,7 +286,7 @@ void my_function(webui_event_t* e){
     else if(e->event_type == WEBUI_EVENT_MOUSE_CLICK)
         printf("Click. \n");
     else if(e->event_type == WEBUI_EVENT_NAVIGATION)
-        printf("Starting navigation to: %s \n", (char *)e->data);    
+        printf("Starting navigation to: %s \n", e->data);    
 
     // Send back a response to JavaScript
     webui_return_int(e, 123); // As integer
@@ -369,7 +370,7 @@ webui_set_multi_access(my_window, true);
 ```
 
 ---
-### Run JavaScript
+### Run JavaScript From C
 
 You can run JavaScript on any window to read values, update the view, or anything else. In addition, you can check if the script execution has errors, as well as receive data.
 
@@ -397,6 +398,39 @@ void my_function(webui_event_t* e){
     // Run JavaScript quickly with no waiting for the response
     webui_run(e->window, "alert('Fast!');");
 }
+```
+
+---
+### Run C From JavaScript
+
+To call a C function from JavaScript and get the result back please use `webui_fn('MyID', 'My Data').then((response) => { ... });`. If the function does not have a response then it's safe to remove the `then` method like this `webui_fn('MyID_NoResponse', 'My Data');`.
+
+```c
+void my_function(webui_event_t* e) {
+
+    // Get data from JavaScript
+    const char* str = webui_get_string(e);
+    // long long number = webui_get_int(e);
+    // bool status = webui_get_bool(e);
+
+    // Print the received data
+    printf("Data from JavaScript: %s\n", str); // Message from JS
+
+    // Return back a response to JavaScript
+    webui_return_string(e, "Message from C");
+    // webui_return_int(e, number);
+    // webui_return_bool(e, true);
+}
+
+webui_bind(my_window, "MyID", my_function);
+```
+
+JavsScript:
+
+```js
+webui_fn('MyID', 'Message from JS').then((response) => {
+    console.log(response); // "Message from C
+});
 ```
 
 ---

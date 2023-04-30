@@ -33,12 +33,15 @@ static const char* webui_javascript_bridge =
 "var _webui_close_reason = 0; \n"
 "var _webui_close_value; \n"
 "var _webui_has_events = false; \n"
-"const _WEBUI_SIGNATURE = 221; \n"
-"const _WEBUI_JS = 254; \n"
-"const _WEBUI_JS_QUICK = 253; \n"
-"const _WEBUI_CLICK = 252; \n"
-"const _WEBUI_SWITCH = 251; \n"
-"const _WEBUI_CLOSE = 250; \n"
+"var _webui_fn_id = new Uint8Array(1); \n"
+"var _webui_fn_promise_resolve; \n"
+"const WEBUI_HEADER_SIGNATURE = 221; \n"
+"const WEBUI_HEADER_JS = 254; \n"
+"const WEBUI_HEADER_JS_QUICK = 253; \n"
+"const WEBUI_HEADER_CLICK = 252; \n"
+"const WEBUI_HEADER_SWITCH = 251; \n"
+"const WEBUI_HEADER_CLOSE = 250; \n"
+"const WEBUI_HEADER_CALL_FUNC = 249; \n"
 "function _webui_close(reason = 0, value = 0) { \n"
 "    _webui_send_event_navigation(value); \n"
 "    _webui_ws_status = false; \n"
@@ -58,6 +61,7 @@ static const char* webui_javascript_bridge =
 "            _webui_ws.binaryType = 'arraybuffer'; \n"
 "            _webui_ws_status = true; \n"
 "            _webui_ws_status_once = true; \n"
+"            _webui_fn_id[0] = 1; \n"
 "            if(_webui_log) \n"
 "                console.log('WebUI -> Connected'); \n"
 "            _webui_clicks_listener(); \n"
@@ -69,7 +73,7 @@ static const char* webui_javascript_bridge =
 "        }; \n"
 "        _webui_ws.onclose = function (evt) { \n"
 "            _webui_ws_status = false; \n"
-"            if(_webui_close_reason === _WEBUI_SWITCH) { \n"
+"            if(_webui_close_reason === WEBUI_HEADER_SWITCH) { \n"
 "                if(_webui_log) \n"
 "                    console.log('WebUI -> Connection lost -> Navigation to [' + _webui_close_value + ']'); \n"
 "                window.location.replace(_webui_close_value); \n"
@@ -83,7 +87,7 @@ static const char* webui_javascript_bridge =
 "        _webui_ws.onmessage = function (evt) { \n"
 "                const buffer8 = new Uint8Array(evt.data); \n"
 "                if(buffer8.length < 4) return; \n"
-"                if(buffer8[0] !== _WEBUI_SIGNATURE) \n"
+"                if(buffer8[0] !== WEBUI_HEADER_SIGNATURE) \n"
 "                    return; \n"
 "                var len = buffer8.length - 3; \n"
 "                if(buffer8[buffer8.length - 1] === 0) \n"
@@ -92,25 +96,34 @@ static const char* webui_javascript_bridge =
 "                for (i = 0; i < len; i++) data8[i] = buffer8[i + 3]; \n"
 "                var data8utf8 = new TextDecoder('utf-8').decode(data8); \n"
 "                // Process Command \n"
-"                if(buffer8[1] === _WEBUI_SWITCH) { \n"
-"                    _webui_close(_WEBUI_SWITCH, data8utf8); \n"
-"                } else if(buffer8[1] === _WEBUI_CLOSE) { \n"
-"                    _webui_close(_WEBUI_CLOSE); \n"
-"                } else if(buffer8[1] === _WEBUI_JS_QUICK || buffer8[1] === _WEBUI_JS) { \n"
+"                if(buffer8[1] === WEBUI_HEADER_CALL_FUNC) { \n"
+"                    if(_webui_log) \n"
+"                        console.log('WebUI -> Func Reponse [' + data8utf8 + ']'); \n"
+"                    if (_webui_fn_promise_resolve) { \n"
+"                        if(_webui_log) \n"
+"                            console.log('WebUI -> Resolving reponse...'); \n"
+"                        _webui_fn_promise_resolve(data8utf8); \n"
+"                        _webui_fn_promise_resolve = null; \n"
+"                    } \n"
+"                } else if(buffer8[1] === WEBUI_HEADER_SWITCH) { \n"
+"                    _webui_close(WEBUI_HEADER_SWITCH, data8utf8); \n"
+"                } else if(buffer8[1] === WEBUI_HEADER_CLOSE) { \n"
+"                    _webui_close(WEBUI_HEADER_CLOSE); \n"
+"                } else if(buffer8[1] === WEBUI_HEADER_JS_QUICK || buffer8[1] === WEBUI_HEADER_JS) { \n"
 "                    data8utf8 = data8utf8.replace(/(?:\\r\\n|\\r|\\n)/g, \"\\\\n\"); \n"
 "                    if(_webui_log) \n"
 "                        console.log('WebUI -> JS [' + data8utf8 + ']'); \n"
 "                    var FunReturn = 'undefined'; \n"
 "                    var FunError = false; \n"
 "                    try { FunReturn = eval('(() => {' + data8utf8 + '})()'); } catch (e) { FunError = true; FunReturn = e.message } \n"
-"                    if(buffer8[1] === _WEBUI_JS_QUICK) return; \n"
+"                    if(buffer8[1] === WEBUI_HEADER_JS_QUICK) return; \n"
 "                    if(typeof FunReturn === 'undefined' || FunReturn === undefined) FunReturn = 'undefined'; \n"
 "                    if(_webui_log && !FunError) console.log('WebUI -> JS -> Return [' + FunReturn + ']'); \n"
 "                    if(_webui_log && FunError) console.log('WebUI -> JS -> Error [' + FunReturn + ']'); \n"
 "                    var FunReturn8 = new TextEncoder('utf-8').encode(FunReturn); \n"
 "                    var Return8 = new Uint8Array(4 + FunReturn8.length); \n"
-"                    Return8[0] = _WEBUI_SIGNATURE; \n"
-"                    Return8[1] = _WEBUI_JS; \n"
+"                    Return8[0] = WEBUI_HEADER_SIGNATURE; \n"
+"                    Return8[1] = WEBUI_HEADER_JS; \n"
 "                    Return8[2] = buffer8[2]; \n"
 "                    if(FunError) Return8[3] = 0; \n"
 "                    else Return8[3] = 1; \n"
@@ -140,8 +153,8 @@ static const char* webui_javascript_bridge =
 "    if(_webui_ws_status && elem !== '') { \n"
 "        var elem8 = new TextEncoder('utf-8').encode(elem); \n"
 "        var packet = new Uint8Array(3 + elem8.length); \n"
-"        packet[0] = _WEBUI_SIGNATURE; \n"
-"        packet[1] = _WEBUI_CLICK; \n"
+"        packet[0] = WEBUI_HEADER_SIGNATURE; \n"
+"        packet[1] = WEBUI_HEADER_CLICK; \n"
 "        packet[2] = 0; \n"
 "        var p = -1; \n"
 "        for (i = 3; i < elem8.length + 3; i++) \n"
@@ -155,8 +168,8 @@ static const char* webui_javascript_bridge =
 "    if(_webui_ws_status && url !== '') { \n"
 "        var url8 = new TextEncoder('utf-8').encode(url); \n"
 "        var packet = new Uint8Array(3 + url8.length); \n"
-"        packet[0] = _WEBUI_SIGNATURE; \n"
-"        packet[1] = _WEBUI_SWITCH; \n"
+"        packet[0] = WEBUI_HEADER_SIGNATURE; \n"
+"        packet[1] = WEBUI_HEADER_SWITCH; \n"
 "        packet[2] = 0; \n"
 "        var p = -1; \n"
 "        for (i = 3; i < url8.length + 3; i++) \n"
@@ -166,7 +179,7 @@ static const char* webui_javascript_bridge =
 "            console.log('WebUI -> Navigation [' + url + ']'); \n"
 "    } \n"
 "} \n"
-"function webui_is_external_link(url) { \n"
+"function _webui_is_external_link(url) { \n"
 "    const currentUrl = new URL(window.location.href); \n"
 "    const targetUrl = new URL(url, window.location.href); \n"
 "    currentUrl.hash = ''; \n"
@@ -176,23 +189,35 @@ static const char* webui_javascript_bridge =
 "    } \n"
 "        return true; \n"
 "} \n"
+"async function _webui_fn_promise(fn, value) { \n"
+"    if(_webui_log) \n"
+"        console.log('WebUI -> Func [' + fn + '](' + value + ')'); \n"
+"    var fn8 = new TextEncoder('utf-8').encode(fn); \n"
+"    var value8 = new TextEncoder('utf-8').encode(value); \n"
+"    var packet = new Uint8Array(3 + fn8.length + 1 + value8.length); \n"
+"    packet[0] = WEBUI_HEADER_SIGNATURE; \n"
+"    packet[1] = WEBUI_HEADER_CALL_FUNC; \n"
+"    packet[2] = _webui_fn_id[0]++; \n"
+"    var p = 3; \n"
+"    for (var i = 0; i < fn8.length; i++) \n"
+"        { packet[p] = fn8[i]; p++; } \n"
+"    packet[p] = 0; \n"
+"    p++; \n"
+"    if(value8.length > 0) { \n"
+"        for (var i = 0; i < value8.length; i++) \n"
+"            { packet[p] = value8[i]; p++; } \n"
+"    } else { packet[p] = 0; } \n"
+"    return new Promise((resolve) => {_webui_fn_promise_resolve = resolve; _webui_ws.send(packet.buffer); }); \n"
+"} \n"
 " // -- APIs -------------------------- \n"
 "function webui_fn(fn, value) { \n"
-"    if(!_webui_has_events && !_webui_bind_list.includes(_webui_win_num + '/' + fn)) \n"
-"        return; \n"
+"    if(!fn || !_webui_ws_status) \n"
+"        return Promise.resolve(); \n"
 "    if(typeof value == 'undefined') \n"
 "        var value = ''; \n"
-"    var data = ''; \n"
-"    if(_webui_ws_status && fn !== '') { \n"
-"        if(_webui_log) \n"
-"            console.log('WebUI -> Func [' + fn + ']'); \n"
-"        var xmlHttp = new XMLHttpRequest(); \n"
-"        xmlHttp.open('GET', ('http://localhost:' + _webui_port + '/WEBUI/FUNC/' + fn + '/' + value), false); \n"
-"        xmlHttp.send(null); \n"
-"        if(xmlHttp.status == 200) \n"
-"           data = String(xmlHttp.responseText); \n"
-"    } \n"
-"    return data; \n"
+"    if(!_webui_has_events && !_webui_bind_list.includes(_webui_win_num + '/' + fn)) \n"
+"        return Promise.resolve(); \n"
+"    return _webui_fn_promise(fn, value); \n"
 "} \n"
 "function webui_log(status) { \n"
 "    if(status) { \n"
@@ -233,9 +258,9 @@ static const char* webui_javascript_bridge =
 "    const attribute = e.target.closest('a'); \n"
 "    if(attribute) { \n"
 "        const link = attribute.href; \n"
-"        if(webui_is_external_link(link)) { \n"
+"        if(_webui_is_external_link(link)) { \n"
 "            e.preventDefault(); \n"
-"            _webui_close(_WEBUI_SWITCH, link); \n"
+"            _webui_close(WEBUI_HEADER_SWITCH, link); \n"
 "        } \n"
 "    } \n"
 "}); \n"
@@ -1088,7 +1113,7 @@ void* _webui_malloc(int size) {
 
     memset(block, 0, size);
 
-    _webui_ptr_add((void*) block, size);
+    _webui_ptr_add((void*)block, size);
 
     return block;
 }
@@ -1683,7 +1708,7 @@ static void _webui_server_event_handler(struct mg_connection *c, int ev, void *e
             // 0            12
 
             // Get data
-            void* data = &packet[11 + element_len + 2];
+            char* data = &packet[11 + element_len + 2];
             size_t data_len = strlen(data);
 
             // Generate WebUI internal id
@@ -3565,12 +3590,12 @@ static void _webui_window_event(_webui_window_t* win, int event_type, char* elem
 
     // fire and forget.
     #ifdef _WIN32
-        HANDLE user_fun_thread = CreateThread(NULL, 0, _webui_cb, (void*) arg, 0, NULL);
+        HANDLE user_fun_thread = CreateThread(NULL, 0, _webui_cb, (void*)arg, 0, NULL);
         if(user_fun_thread != NULL)
             CloseHandle(user_fun_thread); 
     #else
         pthread_t thread;
-        pthread_create(&thread, NULL, &_webui_cb, (void*) arg);
+        pthread_create(&thread, NULL, &_webui_cb, (void*)arg);
         pthread_detach(thread);
     #endif
 }
@@ -3609,35 +3634,40 @@ bool _webui_get_data(const char* packet, size_t packet_len, unsigned int pos, si
 
     if((pos + 1) > packet_len) {
 
-        *data = NULL;
-        data_len = 0;
+        *data = (char*)webui_empty_string;
+        *data_len = 0;
         return false;
     }
 
-    *data = (char*) _webui_malloc((packet_len - pos));
+    // Calculat the data part size
+    size_t data_size = strlen(&packet[pos]);
+    if(data_size < 1) {
 
-    // Check mem
-    if(*data == NULL) {
-
-        data_len = 0;
+        *data = (char*)webui_empty_string;
+        *data_len = 0;
         return false;
     }
+
+    // Allocat mem
+    *data = (char*) _webui_malloc(data_size);
 
     // Copy data part
     char* p = *data;
-    for(unsigned int i = pos; i < packet_len; i++) {
+    unsigned int j = pos;
+    for(unsigned int i = 0; i < data_size; i++) {
 
-        memcpy(p, &packet[i], 1);
+        memcpy(p, &packet[j], 1);
         p++;
+        j++;
     }
 
     // Check data size
     *data_len = strlen(*data);
     if(*data_len < 1) {
 
-        _webui_free_mem((void*) data);
-        *data = NULL;
-        data_len = 0;
+        _webui_free_mem((void*)data);
+        *data = (char*)webui_empty_string;
+        *data_len = 0;
         return false;
     }
 
@@ -3780,6 +3810,93 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
                 webui_internal_id       // Extras -> WebUI Internal ID
             );
         }
+    }
+    else if((unsigned char) packet[1] == WEBUI_HEADER_CALL_FUNC) {
+
+        // Function Call
+
+        // 0: [Signature]
+        // 1: [Type]
+        // 2: [Call ID]
+        // 3: [Element ID, Null, Data]
+        
+        // Get html element id
+        char* element;
+        size_t element_len;
+        if(!_webui_get_data(packet, len, 3, &element_len, &element))
+            return;
+
+        // Get data
+        char* data;
+        size_t data_len;
+        _webui_get_data(packet, len, (3 + element_len + 1), &data_len, (char **) &data);
+        
+        #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_CALL_FUNC \n");
+            printf("[Core]\t\t_webui_window_receive() -> Call ID: [0x%02x] \n", packet[2]);
+            printf("[Core]\t\t_webui_window_receive() -> Element: [%s] \n", element);
+            printf("[Core]\t\t_webui_window_receive() -> Data size: %llu Bytes \n", data_len);
+            printf("[Core]\t\t_webui_window_receive() -> Data: [%s] \n", data);
+        #endif
+
+        // Generate WebUI internal id
+        char* webui_internal_id = _webui_generate_internal_id(win, element);
+
+        // Create new event core to hold the response
+        webui_event_core_t* event_core = (webui_event_core_t*) _webui_malloc(sizeof(webui_event_core_t));
+        unsigned int event_core_pos = _webui_get_free_event_core_pos(win);
+        win->event_core[event_core_pos] = event_core;
+        char** response = &win->event_core[event_core_pos]->response;
+
+        // Create new event
+        webui_event_t e;
+        e.window = win;
+        e.event_type = WEBUI_EVENT_CALLBACK;
+        e.element = element;
+        e.data = data;
+        e.event_number = event_core_pos;
+
+        // Call user function
+        unsigned int cb_index = _webui_get_cb_index(webui_internal_id);
+        if(cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
+
+            // Call user cb
+            _webui_core.cb[cb_index](&e);
+        }
+
+        // Check the response
+        if(_webui_is_empty(*response))
+            *response = (char*)webui_empty_string;
+
+        #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_window_receive()... user-callback response [%s]\n", *response);
+        #endif
+
+        // 0: [Signature]
+        // 1: [Type]
+        // 2: [Call ID]
+        // 3: [Data]
+
+        // Prepare response packet
+        size_t response_len = strlen(*response);
+        size_t response_packet_len = 3 + response_len + 1;
+        char* response_packet = (char*) _webui_malloc(response_packet_len);
+        response_packet[0] = WEBUI_HEADER_SIGNATURE;    // Signature
+        response_packet[1] = WEBUI_HEADER_CALL_FUNC;    // Type
+        response_packet[2] = packet[2];                 // Call ID
+        for(unsigned int i = 0; i < response_len; i++)  // Data
+            response_packet[3 + i] = (*response)[i];
+
+        // Send response packet
+        _webui_window_send(win, response_packet, response_packet_len);
+        _webui_free_mem((void*)response_packet);
+
+        // Free
+        _webui_free_mem((void*)element);
+        _webui_free_mem((void*)data);
+        _webui_free_mem((void*)webui_internal_id);
+        _webui_free_mem((void*)*response);
+        _webui_free_mem((void*)event_core);
     }
 }
 

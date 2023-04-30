@@ -55,7 +55,7 @@ const dashboard_html string = `<!DOCTYPE html>
     Call Secret() function and get the response
     <br>
     <br>
-    <button OnClick="alert('Response is ' + webui_fn('Sec'))">Secret</button>
+    <button OnClick="webui_fn('Sec').then((response) => { alert('Response is ' + response) });">Secret</button>
     <br>
     <br>
     <button id="Exit">Exit</button>

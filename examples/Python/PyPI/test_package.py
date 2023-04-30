@@ -43,8 +43,9 @@ html = """
 		<script>
 			function MyJS() {
 				const number = document.getElementById('MyInput').value;
-				var result = webui_fn('JS2P', number);
-				document.getElementById('MyInput').value = result;
+				webui_fn('JS2P', number).then((response) => {
+					document.getElementById('MyInput').value = response;
+				});
 			}
 		</script>
     </body></html>

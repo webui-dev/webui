@@ -99,8 +99,9 @@ int main() {
           function MyJS() {
             const MyInput = document.getElementById('MyInputID');
             const number = MyInput.value;
-            const result = webui_fn('MyID_Four', number);
-            MyInput.value = result;
+            webui_fn('MyID_Four', number).then((response) => {
+              MyInput.value = response;
+            });
           }
         </script>
       </body>

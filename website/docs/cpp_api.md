@@ -17,7 +17,8 @@
     - [Startup Timeout](/cpp_api?id=startup-timeout)
     - [Multi Access](/cpp_api?id=multi-access)
 - JavaScript
-    - [Run JavaScript](/cpp_api?id=run-javascript)
+    - [Run JavaScript From C++](/cpp_api?id=run-javascript-from-c++)
+    - [Run C++ From JavaScript](/cpp_api?id=run-c++-from-javascript)
     - [TypeScript Runtimes](/cpp_api?id=typescript-runtimes)
 
 ---
@@ -389,7 +390,7 @@ webui::set_multi_access(my_window, true);
 ```
 
 ---
-### Run JavaScript
+### Run JavaScript From C++
 
 You can run JavaScript on any window to read values, update the view, or anything else. In addition, you can check if the script execution has errors, as well as receive data.
 
@@ -417,6 +418,39 @@ void my_function(webui_event_t* e){
     // Run JavaScript quickly with no waiting for the response
     webui::run(e->window, "alert('Fast!');");
 }
+```
+
+---
+### Run C++ From JavaScript
+
+To call a C++ function from JavaScript and get the result back please use `webui_fn('MyID', 'My Data').then((response) => { ... });`. If the function does not have a response then it's safe to remove the `then` method like this `webui_fn('MyID_NoResponse', 'My Data');`.
+
+```c
+void my_function(webui_event_t* e) {
+
+    // Get data from JavaScript
+    std::string str = webui::get_string(e);
+    // long long number = webui::get_int(e);
+    // bool status = webui::get_bool(e);
+
+    // Print the received data
+    std::cout << "Data from JavaScript: " << str << std::endl; // Message from JS
+
+    // Return back a response to JavaScript
+    webui::return_string(e, "Message from C++");
+    // webui::return_int(e, number);
+    // webui::return_bool(e, true);
+}
+
+webui::bind(my_window, "MyID", my_function);
+```
+
+JavsScript:
+
+```js
+webui_fn('MyID', 'Message from JS').then((response) => {
+    console.log(response); // "Message from C++
+});
 ```
 
 ---
