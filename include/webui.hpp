@@ -51,6 +51,11 @@ namespace webui {
 		webui_close(window);
 	}
 
+	// Enable/Disable Kiosk Mode (Default=False)
+	void set_kiosk(void* window, bool kiosk) {
+		webui_set_kiosk(window, kiosk);
+	}
+
 	// Close all opened windows. wait() will break.
 	void exit(void) {
 		webui_exit();
