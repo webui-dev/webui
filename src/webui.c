@@ -443,6 +443,10 @@ void* webui_new_window(void) {
     return (void*)win;
 }
 
+void webui_set_kiosk (void* win, bool kiosk){
+    ((_webui_window_t*)win)->kiosk = kiosk;
+}
+
 void webui_close(void* window) {
 
     // Dereference
@@ -2910,7 +2914,11 @@ bool _webui_browser_start_chrome(_webui_window_t* win, const char* address) {
         return false;
     
     char arg[1024];
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    if(!win->kiosk){
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    } else {
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --chrome-frame --kiosk ", win->profile_path);
+    }
 
     char full[1024];
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
