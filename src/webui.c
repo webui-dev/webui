@@ -2951,7 +2951,11 @@ bool _webui_browser_start_edge(_webui_window_t* win, const char* address) {
         return false;
 
     char arg[1024];
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    if(!win->kiosk){
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    } else {
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --chrome-frame --kiosk ", win->profile_path);
+    }
 
     char full[1024];
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
@@ -2984,7 +2988,11 @@ bool _webui_browser_start_epic(_webui_window_t* win, const char* address) {
         return false;
 
     char arg[1024];
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    if(!win->kiosk){
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    } else {
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --chrome-frame --kiosk ", win->profile_path);
+    }
 
     char full[1024];
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
@@ -3017,7 +3025,11 @@ bool _webui_browser_start_vivaldi(_webui_window_t* win, const char* address) {
         return false;
 
     char arg[1024];
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    if(!win->kiosk){
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    } else {
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --chrome-frame --kiosk ", win->profile_path);
+    }
 
     char full[1024];
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
@@ -3050,7 +3062,11 @@ bool _webui_browser_start_brave(_webui_window_t* win, const char* address) {
         return false;
 
     char arg[1024];
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    if(!win->kiosk){
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    } else {
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --chrome-frame --kiosk ", win->profile_path);
+    }
 
     char full[1024];
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
@@ -3083,7 +3099,11 @@ bool _webui_browser_start_firefox(_webui_window_t* win, const char* address) {
         return false;
 
     char full[1024];
-    sprintf(full, "%s -P WebUI -purgecaches -new-window %s", win->browser_path, address);
+    if(!win->kiosk){
+        sprintf(full, "%s -P WebUI -purgecaches -new-window %s", win->browser_path, address);
+    } else {
+        sprintf(full, "%s -P WebUI -purgecaches -new-window -kiosk %s", win->browser_path, address);
+    }
 
     if(_webui_run_browser(win, full) == 0) {
 
@@ -3113,7 +3133,11 @@ bool _webui_browser_start_yandex(_webui_window_t* win, const char* address) {
         return false;
 
     char arg[1024];
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    if(!win->kiosk){
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    } else {
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --chrome-frame --kiosk ", win->profile_path);
+    }
 
     char full[1024];
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
@@ -3146,7 +3170,11 @@ bool _webui_browser_start_chromium(_webui_window_t* win, const char* address) {
         return false;
     
     char arg[1024];
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    if(!win->kiosk){
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --app=", win->profile_path);
+    } else {
+        sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences --chrome-frame --kiosk ", win->profile_path);
+    }
 
     char full[1024];
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
