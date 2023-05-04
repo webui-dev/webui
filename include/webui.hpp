@@ -51,7 +51,7 @@ namespace webui {
 		webui_close(window);
 	}
 
-	// Enable/Disable Kiosk Mode (Default=False)
+	// Set the window in Kiosk mode (Full screen)
 	void set_kiosk(void* window, bool status) {
 		webui_set_kiosk(window, status);
 	}
