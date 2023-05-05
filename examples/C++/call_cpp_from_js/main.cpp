@@ -11,7 +11,7 @@ void my_function_string(webui::event* e) {
     // JavaScript:
     // webui_fn('MyID_One', 'Hello');
 
-    std::string str = webui::get_string(e);
+    std::string str = e->window.get_string(e);
     std::cout << "my_function_string: " << str << std::endl; // Hello
 
     // Need Multiple Arguments?
@@ -30,7 +30,7 @@ void my_function_integer(webui::event* e) {
     // JavaScript:
     // webui_fn('MyID_Two', 123456789);
 
-    long long number = webui::get_int(e);
+    long long number = e->window.get_int(e);
     std::cout << "my_function_integer: " << number << std::endl; // 123456789
 }
 
@@ -39,7 +39,7 @@ void my_function_boolean(webui::event* e) {
     // JavaScript:
     // webui_fn('MyID_Three', true);
 
-    bool status = webui::get_bool(e); // True
+    bool status = e->window.get_bool(e); // True
     if(status)
         std::cout << "my_function_boolean: True" << std::endl;
     else
@@ -51,12 +51,12 @@ void my_function_with_response(webui::event* e) {
     // JavaScript:
     // const result = webui_fn('MyID_Four', number);
 
-    long long number = webui::get_int(e);
+    long long number = e->window.get_int(e);
     number = number * 2;
     std::cout << "my_function_with_response: " << number << std::endl;
 
     // Send back the response to JavaScript
-    webui::return_int(e, number);
+    e->window.return_int(e, number);
 }
 
 int main() {
