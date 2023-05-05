@@ -6,7 +6,7 @@
 // Include C++ STD
 #include <iostream>
 
-void my_function_string(webui_event_t* e) {
+void my_function_string(webui::event* e) {
 
     // JavaScript:
     // webui_fn('MyID_One', 'Hello');
@@ -25,7 +25,7 @@ void my_function_string(webui_event_t* e) {
     // bar = my_json[1];
 }
 
-void my_function_integer(webui_event_t* e) {
+void my_function_integer(webui::event* e) {
 
     // JavaScript:
     // webui_fn('MyID_Two', 123456789);
@@ -34,7 +34,7 @@ void my_function_integer(webui_event_t* e) {
     std::cout << "my_function_integer: " << number << std::endl; // 123456789
 }
 
-void my_function_boolean(webui_event_t* e) {
+void my_function_boolean(webui::event* e) {
 
     // JavaScript:
     // webui_fn('MyID_Three', true);
@@ -46,7 +46,7 @@ void my_function_boolean(webui_event_t* e) {
         std::cout << "my_function_boolean: False" << std::endl;
 }
 
-void my_function_with_response(webui_event_t* e) {
+void my_function_with_response(webui::event* e) {
 
     // JavaScript:
     // const result = webui_fn('MyID_Four', number);
@@ -109,16 +109,16 @@ int main() {
     )V0G0N";
 
     // Create a window
-    size_t my_window = webui::new_window();
+    webui::window my_window;
 
     // Bind HTML elements with C++ functions
-    webui::bind(my_window, "MyID_One", my_function_string);
-    webui::bind(my_window, "MyID_Two", my_function_integer);
-    webui::bind(my_window, "MyID_Three", my_function_boolean);
-    webui::bind(my_window, "MyID_Four", my_function_with_response);
+    my_window.bind("MyID_One", my_function_string);
+    my_window.bind("MyID_Two", my_function_integer);
+    my_window.bind("MyID_Three", my_function_boolean);
+    my_window.bind("MyID_Four", my_function_with_response);
 
     // Show the window
-    webui::show(my_window, my_html); // webui_show_browser(my_window, my_html, Chrome);
+    my_window.show(my_html); // webui_show_browser(my_window, my_html, Chrome);
 
     // Wait until all windows get closed
     webui::wait();

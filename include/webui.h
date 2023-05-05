@@ -130,7 +130,7 @@ enum webui_events {
 
 // -- Structs -------------------------
 typedef struct webui_event_t {
-    size_t window; // Pointer to the window object
+    size_t window; // The window object number
     unsigned int event_type; // Event type
     char* element; // HTML element ID
     char* data; // JavaScript data
@@ -194,5 +194,7 @@ WEBUI_EXPORT void webui_interface_set_response(size_t window, unsigned int event
 WEBUI_EXPORT bool webui_interface_is_app_running(void);
 // Get window unique ID
 WEBUI_EXPORT unsigned int webui_interface_get_window_id(size_t window);
+// Get a unique ID. Same ID as `webui_bind()`. Return > 0 if bind exist.
+WEBUI_EXPORT unsigned int webui_interface_get_bind_id(size_t window, const char* element);
 
 #endif /* _WEBUI_H */

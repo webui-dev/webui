@@ -175,6 +175,7 @@ static void _webui_free_all_mem(void);
 static bool _webui_show_window(_webui_window_t* win, const char* content, bool is_embedded_html, unsigned int browser);
 static char* _webui_generate_internal_id(_webui_window_t* win, const char* element);
 static bool _webui_is_empty(const char* s);
+static size_t _webui_strlen(const char* s);
 static unsigned char _webui_get_run_id(void);
 static void* _webui_malloc(int size);
 static void _webui_sleep(long unsigned int ms);

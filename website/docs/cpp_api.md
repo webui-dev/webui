@@ -163,7 +163,7 @@ Please visit [C++ Examples](https://github.com/alifcommunity/webui/tree/main/exa
 To create a new window object, you can use `webui::new_window()`, which returns a void pointer. Please note that this pointer does *NOT* need to be freed.
 
 ```cpp
-size_t my_window = webui::new_window();
+webui::window my_window = webui::window();
 ```
 
 ---

@@ -2,8 +2,8 @@
 #include <iostream>
 
 int main() {
-    size_t my_window = webui::new_window();
-    webui::show(my_window, "<html>Hello World!</html>");
+    webui::window my_window;
+    my_window.show("<html>Hello World!</html>");
     webui::wait();
     return 0;
 }

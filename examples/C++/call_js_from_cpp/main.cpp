@@ -9,13 +9,13 @@
 #include <string>
 #include <stdexcept>
 
-void my_function_exit(webui_event_t* e) {
+void my_function_exit(webui::event* e) {
 
     // Close all opened windows
     webui::exit();
 }
 
-void my_function_count(webui_event_t* e) {
+void my_function_count(webui::event* e) {
 
     // This function gets called every time the user clicks on "MyButton1"
 
@@ -91,14 +91,14 @@ int main() {
     )V0G0N";
 
     // Create a window
-    size_t my_window = webui::new_window();
+    webui::window my_window;
 
     // Bind HTML elements with C++ functions
-    webui::bind(my_window, "MyButton1", my_function_count);
-    webui::bind(my_window, "MyButton2", my_function_exit);
+    my_window.bind("MyButton1", my_function_count);
+    my_window.bind("MyButton2", my_function_exit);
 
     // Show the window
-    webui::show(my_window, my_html); // webui::show_browser(my_window, my_html, Chrome);
+    my_window.show(my_html); // webui::show_browser(my_window, my_html, Chrome);
 
     // Wait until all windows get closed
     webui::wait();

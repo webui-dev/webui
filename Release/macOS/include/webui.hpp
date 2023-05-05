@@ -129,7 +129,7 @@ namespace webui {
 	}
 
 	// -- Interface -----------------------
-	// Bind a specific html element click event with a function. Empty element means all events. This replace bind(). The func is (Window, EventType, Element, Data, Response)
+	// Bind a specific html element click event with a function. Empty element means all events. This replace bind(). The func is (Window, EventType, Element, Data, EventNumber)
 	unsigned int interface_bind(size_t window, std::string element, void (*func)(size_t, unsigned int, char*, char*, unsigned int)) {
 		return webui_interface_bind(window, element.c_str(), func);
 	}

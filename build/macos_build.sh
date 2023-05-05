@@ -44,9 +44,6 @@ cp -f "build/macOS/Clang/webui-2-x64.dyn" "examples/TypeScript/Deno/webui-2-x64.
 # Python
 cp -f "build/macOS/Clang/webui-2-x64.dyn" "examples/Python/PyPI/Package/src/webui/webui-2-x64.dyn"
 
-# C++ (Minimal)
-cp -f "include/webui.hpp" "examples/C++/minimal/webui.hpp"
-
 echo "";
 if [ "$ARG1" = "" ]; then
 
