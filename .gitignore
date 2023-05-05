@@ -78,6 +78,7 @@ nul
 # Zig
 zig-cache/
 zig-out/
+build/
 
 # macOS
 .DS_Store

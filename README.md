@@ -68,9 +68,24 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ## Build
 
- - [Windows](https://github.com/alifcommunity/webui/tree/main/build/Windows)
- - [Linux](https://github.com/alifcommunity/webui/tree/main/build/Linux)
- - [macOS](https://github.com/alifcommunity/webui/tree/main/build/macOS)
+To build WebUI you need to have [Zig](https://ziglang.org/) on your system. This allows for the simplification of compilation on different platforms and architectures without the need for complex toolchains or configurations. Below is a brief example on how to build WebUI. Execute the command from this project's root directory, and the output will be in the `build/` directory:
+
+*Debug mode*
+```
+zig build -Ddebug
+```
+
+*Optimize for smaller artifact size*
+```
+zig build -Drelease-small
+```
+
+You can also cross-compile, or select different CPU architectures:
+
+*Cross-Compile to a 64-bit arm linux platform*
+```
+zig build -Dtarget=aarch64-linux
+```
 
 ## Examples
 
