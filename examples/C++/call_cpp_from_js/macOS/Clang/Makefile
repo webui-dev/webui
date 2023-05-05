@@ -1,4 +1,4 @@
-# WebUI Library 2.2.0
+# WebUI Library 2.3.0
 # C99 Example
 # macOS - Clang
 
@@ -27,10 +27,10 @@ release:
 	@cd "$(LIB)" && $(MAKE)
     # Static Release
 	@echo "Build C99 Example (Static Release)..."
-	@clang -Os -m64 -o main "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static-x64 -lpthread -lm
+	@clang -lstdc++ -Os -m64 -o main "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static-x64 -lpthread -lm
     # Dynamic Release
 	@echo "Build C99 Example (Dynamic Release)..."
-	@clang -m64 -o main-dyn "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" "$(LIB)/webui-2-x64.dyn" -lpthread -lm
+	@clang -lstdc++ -m64 -o main-dyn "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" "$(LIB)/webui-2-x64.dyn" -lpthread -lm
     # Clean
 	@- rm -f *.o
 	@- rm -rf *.dSYM

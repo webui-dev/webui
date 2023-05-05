@@ -2,8 +2,8 @@
 
 #include "webui.h"
 
-void* my_window;
-void* my_second_window;
+size_t my_window;
+size_t my_second_window;
 
 void exit_app(webui_event_t* e) {
 

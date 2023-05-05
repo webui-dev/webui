@@ -1,9 +1,9 @@
 /*
-  WebUI Library 2.2.0
+  WebUI Library 2.3.0
   http://_webui_core.me
   https://github.com/alifcommunity/webui
   Copyright (c) 2020-2023 Hassan Draga.
-  Licensed under GNU General Public License v2.0.
+  Licensed under MIT License.
   All rights reserved.
   Canada.
 */
@@ -16,11 +16,11 @@ package webui
 #cgo darwin LDFLAGS: -L ./ -lwebui-2-static-x64 -lpthread -lm
 #cgo linux LDFLAGS: -L ./ -lwebui-2-static-x64 -lpthread -lm
 #include <webui.h>
-extern void GoWebuiEvent(void* _window, unsigned int _event_type, char* _element, char* _data, unsigned int _event_number);
+extern void GoWebuiEvent(size_t _window, unsigned int _event_type, char* _element, char* _data, unsigned int _event_number);
 static void GoWebuiEvents_handler(webui_event_t* e) {
     GoWebuiEvent(e->window, e->event_type, e->element, e->data, e->event_number);
 }
-static void go_webui_bind(void* win, const char* element) {
+static void go_webui_bind(size_t win, const char* element) {
     webui_bind(win, element, GoWebuiEvents_handler);
 }
 */
@@ -67,7 +67,7 @@ const WEBUI_EVENT_CALLBACK uint = 6            // 6. Function call event
 
 // Events struct
 type Event struct {
-	Window    unsafe.Pointer
+	Window    uint
 	EventType uint
 	Element   string
 	Data      string
@@ -92,7 +92,7 @@ func Ini() {
 // This function receives all events
 //
 //export GoWebuiEvent
-func GoWebuiEvent(window unsafe.Pointer, _event_type C.uint, _element *C.char, _data *C.char, _event_number C.uint) {
+func GoWebuiEvent(window C.size_t, _event_type C.uint, _element *C.char, _data *C.char, _event_number C.uint) {
 	Ini()
 
 	// Create a new event struct
@@ -100,14 +100,14 @@ func GoWebuiEvent(window unsafe.Pointer, _event_type C.uint, _element *C.char, _
 	var element string = C.GoString(_element)
 	var data string = C.GoString(_data)
 	e := Event{
-		Window:    window,
+		Window:    uint(window),
 		EventType: event_type,
 		Element:   element,
 		Data:      data,
 	}
 
 	// Call user callback function
-	var window_id uint = uint(C.webui_interface_get_window_id(unsafe.Pointer(window)))
+	var window_id uint = uint(C.webui_interface_get_window_id(window))
 	var func_id string = strconv.Itoa(int(window_id)) + element
 	response := string(fun_list[func_id](e))
 
@@ -133,7 +133,7 @@ func NewJavaScript() JavaScript {
 }
 
 // Run a JavaScript, and get the response back (Make sure your local buffer can hold the response).
-func Script(window unsafe.Pointer, js *JavaScript, script string) bool {
+func Script(window uint, js *JavaScript, script string) bool {
 	Ini()
 
 	// Convert the JavaScript from Go-String to C-String
@@ -146,7 +146,7 @@ func Script(window unsafe.Pointer, js *JavaScript, script string) bool {
 	ptr := (*C.char)(unsafe.Pointer(&ResponseBuffer[0]))
 
 	// Run the JavaScript and wait for response
-	status := C.webui_script(window, c_script, C.uint(js.Timeout), ptr, C.size_t(uint64(js.BufferSize)))
+	status := C.webui_script(C.size_t(window), c_script, C.uint(js.Timeout), ptr, C.size_t(uint64(js.BufferSize)))
 
 	// Copy the response to the users struct
 	ResponseLen := bytes.IndexByte(ResponseBuffer[:], 0)
@@ -159,46 +159,46 @@ func Script(window unsafe.Pointer, js *JavaScript, script string) bool {
 }
 
 // Run JavaScript quickly with no waiting for the response.
-func Run(window unsafe.Pointer, script string) {
+func Run(window uint, script string) {
 	Ini()
 
 	// Convert the JavaScript from Go-String to C-String
 	c_script := C.CString(script)
 
 	// Run the JavaScript
-	C.webui_run(window, c_script)
+	C.webui_run(C.size_t(window), c_script)
 }
 
 // Chose between Deno and Nodejs runtime for .js and .ts files.
-func SetRuntime(window unsafe.Pointer, runtime uint) {
+func SetRuntime(window uint, runtime uint) {
 	Ini()
 
-	C.webui_set_runtime(window, C.uint(runtime))
+	C.webui_set_runtime(C.size_t(window), C.uint(runtime))
 }
 
 // Create a new window object
-func NewWindow() unsafe.Pointer {
+func NewWindow() uint {
 	Ini()
 
 	// Create a new window object
-	// this return a (void pointer) and we should
+	// this return a (size_t) and we should
 	// never change it. It's only managed by WebUI
-	return unsafe.Pointer(C.webui_new_window())
+	return uint(C.size_t(C.webui_new_window()))
 }
 
 // Check a specific window if it's still running
-func IsShown(window unsafe.Pointer) bool {
+func IsShown(window uint) bool {
 	Ini()
 
-	status := C.webui_is_shown(window)
+	status := C.webui_is_shown(C.size_t(window))
 	return bool(status)
 }
 
 // Close a specific window.
-func Close(window unsafe.Pointer) {
+func Close(window uint) {
 	Ini()
 
-	C.webui_close(window)
+	C.webui_close(C.size_t(window))
 }
 
 // Set the maximum time in seconds to wait for browser to start
@@ -209,10 +209,10 @@ func SetTimeout(seconds uint) {
 }
 
 // Allow the window URL to be re-used in normal web browsers
-func SetMultiAccess(window unsafe.Pointer, access bool) {
+func SetMultiAccess(window uint, access bool) {
 	Ini()
 
-	C.webui_set_multi_access(window, C._Bool(access))
+	C.webui_set_multi_access(C.size_t(window), C._Bool(access))
 }
 
 // Close all opened windows
@@ -223,19 +223,19 @@ func Exit() {
 }
 
 // Show a window using a embedded HTML, or a file. If the window is already opened then it will be refreshed.
-func Show(window unsafe.Pointer, content string) {
+func Show(window uint, content string) {
 	Ini()
 
 	c_content := C.CString(content)
-	C.webui_show(window, c_content)
+	C.webui_show(C.size_t(window), c_content)
 }
 
 // Same as Show(). But with a specific web browser.
-func ShowBrowser(window unsafe.Pointer, content string, browser uint) {
+func ShowBrowser(window uint, content string, browser uint) {
 	Ini()
 
 	c_content := C.CString(content)
-	C.webui_show_browser(window, c_content, C.uint(browser))
+	C.webui_show_browser(C.size_t(window), c_content, C.uint(browser))
 }
 
 // Wait until all opened windows get closed.
@@ -246,15 +246,15 @@ func Wait() {
 }
 
 // Bind a specific html element click event with a function. Empty element means all events.
-func Bind(window unsafe.Pointer, element string, callback func(Event) string) {
+func Bind(window uint, element string, callback func(Event) string) {
 	Ini()
 
 	// Convert element from Go-String to C-String
 	c_element := C.CString(element)
-	C.go_webui_bind(window, c_element)
+	C.go_webui_bind(C.size_t(window), c_element)
 
 	// Get the window ID
-	var window_id uint = uint(C.webui_interface_get_window_id(window))
+	var window_id uint = uint(C.webui_interface_get_window_id(C.size_t(window)))
 
 	// Generate a unique ID for this element
 	var func_id string = strconv.Itoa(int(window_id)) + element

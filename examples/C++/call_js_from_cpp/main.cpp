@@ -91,7 +91,7 @@ int main() {
     )V0G0N";
 
     // Create a window
-    void* my_window = webui::new_window();
+    size_t my_window = webui::new_window();
 
     // Bind HTML elements with C++ functions
     webui::bind(my_window, "MyButton1", my_function_count);

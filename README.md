@@ -1,4 +1,4 @@
-# WebUI v2.2.0
+# WebUI v2.3.0
 
 [![Website](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://github.com/alifcommunity/webui) [![Website](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://github.com/alifcommunity/webui/issues) [![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
 
@@ -136,7 +136,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ### License
 
-> Licensed under GNU General Public License v2.0.
+> Licensed under MIT License.
 
 ### Stargazers
 

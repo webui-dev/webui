@@ -1,18 +1,18 @@
 /*
-  WebUI Library 2.2.0
+  WebUI Library 2.3.0
   
   http://webui.me
   https://github.com/alifcommunity/webui
 
   Copyright (c) 2020-2023 Hassan Draga.
-  Licensed under GNU General Public License v2.0.
+  Licensed under MIT License.
   All rights reserved.
   Canada.
 */
 
 import { existsSync } from "https://deno.land/std/fs/mod.ts";
 
-export const version = '2.2.0';
+export const version = '2.3.0';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -34,7 +34,7 @@ export const browser = {
 };
 
 export interface event {
-  win: Deno.Pointer,
+  win: Deno.usize,
   event_type: number,
   element: string,
   data: string,
@@ -130,44 +130,44 @@ function load_lib() {
         nonblocking: false,
       },
       webui_new_window: {
-        // void* webui_new_window(void)
+        // size_t webui_new_window(void)
         parameters: [],
-        result: 'pointer',
+        result: 'usize',
         nonblocking: false,
       },
       webui_show: {
-        // bool webui_show(void* window, const char* content)
-        parameters: ['pointer', 'buffer'],
+        // bool webui_show(size_t window, const char* content)
+        parameters: ['usize', 'buffer'],
         result: 'i32',
         nonblocking: false,
       },
       webui_show_browser: {
-        // bool webui_show_browser(void* window, const char* content, unsigned int browser)
-        parameters: ['pointer', 'buffer', 'u32'],
+        // bool webui_show_browser(size_t window, const char* content, unsigned int browser)
+        parameters: ['usize', 'buffer', 'u32'],
         result: 'i32',
         nonblocking: false,
       },
       webui_interface_bind: {
-        // unsigned int webui_interface_bind(void* window, const char* element, void (*func)(void*, unsigned int, char*, char*, unsigned int))
-        parameters: ['pointer', 'buffer', 'function'],
+        // unsigned int webui_interface_bind(size_t window, const char* element, void (*func)(size_t, unsigned int, char*, char*, unsigned int))
+        parameters: ['usize', 'buffer', 'function'],
         result: 'u32',
         nonblocking: false,
       },
       webui_script: {
-        // bool webui_script(void* window, const char* script, unsigned int timeout, char* buffer, size_t buffer_length)
-        parameters: ['pointer', 'buffer', 'u32', 'buffer', 'i32'],
+        // bool webui_script(size_t window, const char* script, unsigned int timeout, char* buffer, size_t buffer_length)
+        parameters: ['usize', 'buffer', 'u32', 'buffer', 'i32'],
         result: 'i32',
         nonblocking: false,
       },
       webui_run: {
-        // bool webui_run(void* window, const char* script)
-        parameters: ['pointer', 'buffer'],
+        // bool webui_run(size_t window, const char* script)
+        parameters: ['usize', 'buffer'],
         result: 'i32',
         nonblocking: false,
       },
       webui_interface_set_response: {
-        // void webui_interface_set_response(char* ptr, const char* response)
-        parameters: ['pointer', 'buffer'],
+        // void webui_interface_set_response(size_t window, unsigned int event_number, const char* response)
+        parameters: ['usize', 'u32', 'buffer'],
         result: 'void',
         nonblocking: false,
       },
@@ -188,17 +188,17 @@ export function set_lib_path(path: string) {
 	lib_path = path;
 }
 
-export function new_window(): Deno.Pointer {
+export function new_window(): Deno.usize {
   load_lib();
 	return webui_lib.symbols.webui_new_window();
 }
 
-export function show(win: Deno.Pointer, content: string): number {
+export function show(win: Deno.usize, content: string): number {
   load_lib();
   return webui_lib.symbols.webui_show(win, string_to_uint8array(content));
 }
 
-export function show_browser(win: Deno.Pointer, content: string, browser: number): number {
+export function show_browser(win: Deno.usize, content: string, browser: number): number {
   load_lib();
   return webui_lib.symbols.webui_show_browser(win, string_to_uint8array(content), browser);
 }
@@ -208,7 +208,7 @@ export function exit() {
   webui_lib.symbols.webui_exit();
 }
 
-export function script(win: Deno.Pointer, js, script: string): boolean {
+export function script(win: Deno.usize, js, script: string): boolean {
   load_lib();
 
   // Response Buffer
@@ -224,7 +224,7 @@ export function script(win: Deno.Pointer, js, script: string): boolean {
   return Boolean(status);
 }
 
-export function run(win: Deno.Pointer, script: string): boolean {
+export function run(win: Deno.usize, script: string): boolean {
   load_lib();
 
   // Execute the script
@@ -233,16 +233,16 @@ export function run(win: Deno.Pointer, script: string): boolean {
   return Boolean(status);
 }
 
-export function bind(win: Deno.Pointer, element: string, func: Function) {
+export function bind(win: Deno.usize, element: string, func: Function) {
   load_lib();
   const callbackResource = new Deno.UnsafeCallback(
     {
-      // unsigned int webui_interface_bind(..., void (*func)(void*, unsigned int, char*, char*, unsigned int))
-      parameters: ['pointer', 'u32', 'pointer', 'pointer', 'u32'],
+      // unsigned int webui_interface_bind(..., void (*func)(size_t, unsigned int, char*, char*, unsigned int))
+      parameters: ['usize', 'u32', 'pointer', 'pointer', 'u32'],
       result: 'void',
     } as const,
     (
-      param_window: Deno.Pointer,
+      param_window: Deno.usize,
       param_event_type: Deno.u32,
       param_element: Deno.Pointer,
       param_data: Deno.Pointer,
@@ -277,7 +277,7 @@ export function bind(win: Deno.Pointer, element: string, func: Function) {
 
 // TODO: We should use the Non-blocking FFI to call 
 // `webui_lib.symbols.webui_wait()`. but it breaks
-// the main thread. Lets do it in another way for now.
+// the Deno script main thread. Lets do it in another way for now.
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export async function wait() {
   load_lib();

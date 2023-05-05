@@ -1,4 +1,4 @@
-# WebUI v2.2.0 Python APIs
+# WebUI v2.3.0 Python APIs
 
 - [Download And Install](/python_api?id=download-and-install)
 - [Examples](/python_api?id=examples)

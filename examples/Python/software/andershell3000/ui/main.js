@@ -78,7 +78,7 @@
             prompt: function() {
                 return "$ "
             },
-            banner: "\ndP   dP   dP          dP       dP     dP dP \n88   88   88          88       88     88 88 \n88  .8P  .8P .d8888b. 88d888b. 88     88 88 \n88  d8'  d8' 88ooood8 88'  `88 88     88 88 \n88.d8P8.d8P  88.  ... 88.  .88 Y8.   .8P 88 \n8888' Y88'   `88888P' 88Y8888' `Y88888P' dP\n\nAnderShell 3000 (Python)\n\nWebUI v2.2.0 | webui.me\n\n"
+            banner: "\ndP   dP   dP          dP       dP     dP dP \n88   88   88          88       88     88 88 \n88  .8P  .8P .d8888b. 88d888b. 88     88 88 \n88  d8'  d8' 88ooood8 88'  `88 88     88 88 \n88.d8P8.d8P  88.  ... 88.  .88 Y8.   .8P 88 \n8888' Y88'   `88888P' 88Y8888' `Y88888P' dP\n\nAnderShell 3000 (Python)\n\nWebUI v2.3.0 | webui.me\n\n"
         })
     })
 }, function(n, t) {

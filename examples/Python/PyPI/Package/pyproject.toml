@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "webui2"
-version = "2.2.0"
+version = "2.3.0.0"
 authors = [
   { name="Hassan Draga" },
 ]
@@ -13,7 +13,7 @@ readme = "README.md"
 requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 
@@ -28,4 +28,4 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-webui = ["*.dll", "*.so"]
+webui = ["*.dll", "*.so", "*.dyn"]

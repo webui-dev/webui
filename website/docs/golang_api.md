@@ -1,4 +1,4 @@
-# WebUI v2.2.0 Go APIs
+# WebUI v2.3.0 Go APIs
 
 - [Build From Source](/c_api?id=build-from-source)
 - [Examples](/golang_api?id=examples)

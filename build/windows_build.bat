@@ -38,7 +38,6 @@ cd "build\Windows\GCC"
 
 echo.
 echo Building WebUI using TCC...
-echo WARNING: Auto-running browser detection is disabled in this TCC build due to the unavailability of `tlhelp32.h` header.
 echo.
 
 REM Build WebUI Library using TCC

@@ -1,4 +1,4 @@
-# WebUI v2.2.0 Documentation
+# WebUI v2.3.0 Documentation
 
 > Use any web browser as GUI, with your preferred language in the backend and HTML5 in the frontend, all in a lightweight portable lib.
 
@@ -46,4 +46,4 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ### License
 
-> Licensed under GNU General Public License v2.0.
+> Licensed under MIT License.

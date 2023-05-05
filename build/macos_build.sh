@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WEBUI_VERSION=2.2.0
+WEBUI_VERSION=2.3.0
 
 ARG1=$1
 if [ "$ARG1" = "debug" ]; then

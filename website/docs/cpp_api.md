@@ -1,4 +1,4 @@
-# WebUI v2.2.0 C++ APIs
+# WebUI v2.3.0 C++ APIs
 
 - [Download](/cpp_api?id=download)
 - [Build From Source](/cpp_api?id=build-from-source)
@@ -24,7 +24,7 @@
 ---
 ### Download
 
-Download WebUI v2.2.0 prebuilt binaries here: https://webui.me/#download
+Download WebUI v2.3.0 prebuilt binaries here: https://webui.me/#download
 Download WebUI C++ header file here: https://github.com/alifcommunity/webui/tree/main/examples/C%2B%2B/minimal
 
 ---
@@ -119,7 +119,7 @@ A minimal C++ example
 
 int main() {
 
-    void* win = webui::new_window();
+    size_t win = webui::new_window();
     webui::show(win, "<html>Hello!</html>");
 	webui::wait();
     return 0;
@@ -133,7 +133,7 @@ Using a local HTML file. Please not that you need to add `<script src="/webui.js
 
 int main() {
 
-    void* win = webui::new_window();
+    size_t win = webui::new_window();
     // Please add <script src="/webui.js"></script> to your HTML files
     webui::show(win, "my_file.html");
 	webui::wait();
@@ -148,7 +148,7 @@ Using a specific web browser
 
 int main() {
 
-    void* win = webui::new_window();
+    size_t win = webui::new_window();
     webui::show_browser(win, "<html>Hello!</html>", Chrome);
 	webui::wait();
     return 0;
@@ -163,7 +163,7 @@ Please visit [C++ Examples](https://github.com/alifcommunity/webui/tree/main/exa
 To create a new window object, you can use `webui::new_window()`, which returns a void pointer. Please note that this pointer does *NOT* need to be freed.
 
 ```cpp
-void* my_window = webui::new_window();
+size_t my_window = webui::new_window();
 ```
 
 ---
@@ -287,7 +287,7 @@ webui::bind(my_window, "MyID", my_function_wrapper);
 The *e* corresponds to the word _Event_. `e` is a struct that has these elements:
 
 ```cpp
-void* window; // Pointer to the window struct.
+size_t window; // Pointer to the window struct.
 unsigned int event_type; // Event type (WEBUI_EVENT_MOUSE_CLICK, WEBUI_EVENT_NAVIGATION...).
 char* element; // HTML element ID.
 char* data; // The data are coming from JavaScript, if any.

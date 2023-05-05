@@ -5,7 +5,7 @@
 #include <iostream>
 
 // Making this object global so show_second_window() can access it.
-void* my_second_window;
+size_t my_second_window;
 
 // Example of a simple Class
 class MyClass {
@@ -67,7 +67,7 @@ int main() {
     std::cout << "Starting..." << std::endl;
 
     // Create a new window
-    void* my_window = webui::new_window();
+    size_t my_window = webui::new_window();
     my_second_window = webui::new_window();
 
     // Bind HTML element IDs with a C functions

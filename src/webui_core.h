@@ -1,9 +1,9 @@
 /*
-  WebUI Library 2.2.0
+  WebUI Library 2.3.0
   http://webui.me
   https://github.com/alifcommunity/webui
   Copyright (c) 2020-2023 Hassan Draga.
-  Licensed under GNU General Public License v2.0.
+  Licensed under MIT License.
   All rights reserved.
   Canada.
 */
@@ -41,11 +41,12 @@ typedef struct webui_event_core_t {
 typedef struct _webui_window_t {
     unsigned int window_number;
     bool server_running;
-    bool connected;
+    volatile bool connected;
     bool html_handled;
     bool multi_access;
     bool is_embedded_html;
     unsigned int server_port;
+    unsigned int ws_port;
     char* url;
     const char* html;
     const char* icon;
@@ -67,27 +68,27 @@ typedef struct _webui_window_t {
 } _webui_window_t;
 
 typedef struct _webui_core_t {
-    unsigned int servers;
-    unsigned int connections;
+    volatile unsigned int servers;
+    volatile unsigned int connections;
     char* html_elements[WEBUI_MAX_ARRAY];
     unsigned int used_ports[WEBUI_MAX_ARRAY];
     unsigned int last_window;
     unsigned int startup_timeout;
-    bool exit_now;
+    volatile bool exit_now;
     const char* run_responses[WEBUI_MAX_ARRAY];
-    bool run_done[WEBUI_MAX_ARRAY];
+    volatile bool run_done[WEBUI_MAX_ARRAY];
     bool run_error[WEBUI_MAX_ARRAY];
     unsigned char run_last_id;
-    struct mg_mgr* mg_mgrs[WEBUI_MAX_ARRAY];
-    struct mg_connection* mg_connections[WEBUI_MAX_ARRAY];
     bool initialized;
     void (*cb[WEBUI_MAX_ARRAY])(webui_event_t* e);
-    void (*cb_interface[WEBUI_MAX_ARRAY])(void*, unsigned int, char*, char*, unsigned int);
+    void (*cb_interface[WEBUI_MAX_ARRAY])(size_t, unsigned int, char*, char*, unsigned int);
     char* executable_path;
     void *ptr_list[WEBUI_MAX_ARRAY];
     unsigned int ptr_position;
     size_t ptr_size[WEBUI_MAX_ARRAY];
     unsigned int current_browser;
+    struct mg_connection* mg_connections[WEBUI_MAX_ARRAY];
+    _webui_window_t* wins[WEBUI_MAX_ARRAY];
 } _webui_core_t;
 
 typedef struct _webui_cb_arg_t {
@@ -101,13 +102,6 @@ typedef struct _webui_cb_arg_t {
     char* webui_internal_id;
 } _webui_cb_arg_t;
 
-typedef struct _webui_mg_handler_t {
-    struct mg_connection* c;
-    int ev;
-    void* ev_data;
-    void* fn_data;
-} _webui_mg_handler_t;
-
 typedef struct _webui_cmd_async_t {
     _webui_window_t* win;
     char* cmd;
@@ -116,20 +110,20 @@ typedef struct _webui_cmd_async_t {
 // -- Definitions ---------------------
 #ifdef _WIN32
     static const char* webui_sep = "\\";
-    DWORD WINAPI _webui_cb(LPVOID _arg);
-    DWORD WINAPI _webui_run_browser_task(LPVOID _arg);
-    int _webui_system_win32(char* cmd, bool show);
-    int _webui_system_win32_out(const char *cmd, char **output, bool show);
-    bool _webui_socket_test_listen_win32(unsigned int port_num);
-    bool _webui_get_windows_reg_value(HKEY key, LPCWSTR reg, LPCWSTR value_name, char value[WEBUI_MAX_PATH]);
+    static DWORD WINAPI _webui_cb(LPVOID _arg);
+    static DWORD WINAPI _webui_run_browser_task(LPVOID _arg);
+    static int _webui_system_win32(char* cmd, bool show);
+    static int _webui_system_win32_out(const char *cmd, char **output, bool show);
+    static bool _webui_socket_test_listen_win32(unsigned int port_num);
+    static bool _webui_get_windows_reg_value(HKEY key, LPCWSTR reg, LPCWSTR value_name, char value[WEBUI_MAX_PATH]);
 
     #define WEBUI_CB DWORD WINAPI _webui_cb(LPVOID _arg)
     #define WEBUI_SERVER_START DWORD WINAPI _webui_server_start(LPVOID arg)
     #define THREAD_RETURN return 0;
 #else
     static const char* webui_sep = "/";
-    void* _webui_cb(void* _arg);
-    void* _webui_run_browser_task(void* _arg);
+    static void* _webui_cb(void* _arg);
+    static void* _webui_run_browser_task(void* _arg);
 
     #define WEBUI_CB void* _webui_cb(void* _arg)
     #define WEBUI_SERVER_START void* _webui_server_start(void* arg)
@@ -137,58 +131,62 @@ typedef struct _webui_cmd_async_t {
 #endif
 
 static void _webui_init(void);
-bool _webui_show(_webui_window_t* window, const char* content, unsigned int browser);
-unsigned int _webui_get_cb_index(char* webui_internal_id);
-unsigned int _webui_set_cb_index(char* webui_internal_id);
-unsigned int _webui_get_free_port(void);
-unsigned int _webui_get_new_window_number(void);
+static bool _webui_show(_webui_window_t* window, const char* content, unsigned int browser);
+static unsigned int _webui_get_cb_index(char* webui_internal_id);
+static unsigned int _webui_set_cb_index(char* webui_internal_id);
+static unsigned int _webui_get_free_port(void);
+static unsigned int _webui_get_new_window_number(void);
 static void _webui_wait_for_startup(void);
 static void _webui_free_port(unsigned int port);
-char* _webui_get_current_path(void);
+static char* _webui_get_current_path(void);
 static void _webui_window_receive(_webui_window_t* win, const char* packet, size_t len);
 static void _webui_window_send(_webui_window_t* win, char* packet, size_t packets_size);
 static void _webui_window_event(_webui_window_t* win, int event_type, char* element, char* data, unsigned int event_number, char* webui_internal_id);
-unsigned int _webui_window_get_number(_webui_window_t* win);
+static unsigned int _webui_window_get_number(_webui_window_t* win);
 static void _webui_window_open(_webui_window_t* win, char* link, unsigned int browser);
-int _webui_cmd_sync(char* cmd, bool show);
-int _webui_cmd_async(char* cmd, bool show);
-int _webui_run_browser(_webui_window_t* win, char* cmd);
+static int _webui_cmd_sync(char* cmd, bool show);
+static int _webui_cmd_async(char* cmd, bool show);
+static int _webui_run_browser(_webui_window_t* win, char* cmd);
 static void _webui_clean(void);
-bool _webui_browser_exist(_webui_window_t* win, unsigned int browser);
-const char* _webui_browser_get_temp_path(unsigned int browser);
-bool _webui_folder_exist(char* folder);
-bool _webui_browser_create_profile_folder(_webui_window_t* win, unsigned int browser);
-bool _webui_browser_start_chrome(_webui_window_t* win, const char* address);
-bool _webui_browser_start_edge(_webui_window_t* win, const char* address);
-bool _webui_browser_start_epic(_webui_window_t* win, const char* address);
-bool _webui_browser_start_vivaldi(_webui_window_t* win, const char* address);
-bool _webui_browser_start_brave(_webui_window_t* win, const char* address);
-bool _webui_browser_start_firefox(_webui_window_t* win, const char* address);
-bool _webui_browser_start_yandex(_webui_window_t* win, const char* address);
-bool _webui_browser_start_chromium(_webui_window_t* win, const char* address);
-bool _webui_browser_start(_webui_window_t* win, const char* address, unsigned int browser);
-long _webui_timer_diff(struct timespec *start, struct timespec *end);
+static bool _webui_browser_exist(_webui_window_t* win, unsigned int browser);
+static const char* _webui_browser_get_temp_path(unsigned int browser);
+static bool _webui_folder_exist(char* folder);
+static bool _webui_browser_create_profile_folder(_webui_window_t* win, unsigned int browser);
+static bool _webui_browser_start_chrome(_webui_window_t* win, const char* address);
+static bool _webui_browser_start_edge(_webui_window_t* win, const char* address);
+static bool _webui_browser_start_epic(_webui_window_t* win, const char* address);
+static bool _webui_browser_start_vivaldi(_webui_window_t* win, const char* address);
+static bool _webui_browser_start_brave(_webui_window_t* win, const char* address);
+static bool _webui_browser_start_firefox(_webui_window_t* win, const char* address);
+static bool _webui_browser_start_yandex(_webui_window_t* win, const char* address);
+static bool _webui_browser_start_chromium(_webui_window_t* win, const char* address);
+static bool _webui_browser_start(_webui_window_t* win, const char* address, unsigned int browser);
+static long _webui_timer_diff(struct timespec *start, struct timespec *end);
 static void _webui_timer_start(_webui_timer_t* t);
-bool _webui_timer_is_end(_webui_timer_t* t, unsigned int ms);
+static bool _webui_timer_is_end(_webui_timer_t* t, unsigned int ms);
 static void _webui_timer_clock_gettime(struct timespec *spec);
-bool _webui_set_root_folder(_webui_window_t* win, const char* path);
-const char* _webui_generate_js_bridge(_webui_window_t* win);
+static bool _webui_set_root_folder(_webui_window_t* win, const char* path);
+static const char* _webui_generate_js_bridge(_webui_window_t* win);
 static void _webui_print_hex(const char* data, size_t len);
 static void _webui_free_mem(void* ptr);
-bool _webui_file_exist_mg(void *ev_data);
-bool _webui_file_exist(char* file);
+static bool _webui_file_exist_mg(struct mg_connection *conn);
+static bool _webui_file_exist(char* file);
 static void _webui_free_all_mem(void);
-bool _webui_show_window(_webui_window_t* win, const char* content, bool is_embedded_html, unsigned int browser);
-char* _webui_generate_internal_id(_webui_window_t* win, const char* element);
-bool _webui_is_empty(const char* s);
-unsigned char _webui_get_run_id(void);
-void* _webui_malloc(int size);
+static bool _webui_show_window(_webui_window_t* win, const char* content, bool is_embedded_html, unsigned int browser);
+static char* _webui_generate_internal_id(_webui_window_t* win, const char* element);
+static bool _webui_is_empty(const char* s);
+static unsigned char _webui_get_run_id(void);
+static void* _webui_malloc(int size);
 static void _webui_sleep(long unsigned int ms);
-unsigned int _webui_find_the_best_browser(_webui_window_t* win);
-bool _webui_is_process_running(const char* process_name);
-unsigned int _webui_get_free_event_core_pos(_webui_window_t* win);
+static unsigned int _webui_find_the_best_browser(_webui_window_t* win);
+static bool _webui_is_process_running(const char* process_name);
+static unsigned int _webui_get_free_event_core_pos(_webui_window_t* win);
+static void _webui_http_send(struct mg_connection *conn, const char *mime_type, const char* body);
+static void _webui_print_hex(const char* data, size_t len);
+static void _webui_print_ascii(const char* data, size_t len);
+static void _webui_panic(void);
 
-WEBUI_SERVER_START;
-WEBUI_CB;
+static WEBUI_SERVER_START;
+static WEBUI_CB;
 
 #endif /* _WEBUI_CORE_H */
