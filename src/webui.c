@@ -2105,7 +2105,7 @@ static bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             // Google Chrome on macOS
             if(_webui_cmd_sync("open -R -a \"Google Chrome\"", false) == 0) {
 
-                sprintf(win->browser_path, "open -W \"/Applications/Google Chrome.app\" --args");
+                sprintf(win->browser_path, "open --new -a \"Google Chrome.app\" --args");
                 ChromeExist = true;
                 return true;
             }
@@ -2175,7 +2175,14 @@ static bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         #elif __APPLE__
 
             // Edge on macOS
-            return false;
+            if(_webui_cmd_sync("open -R -a \"Microsoft Edge\"", false) == 0) {
+
+                sprintf(win->browser_path, "open --new -a \"Microsoft Edge.app\" --args");
+                EdgeExist = true;
+                return true;
+            }
+            else
+                return false;
 
         #else
 
@@ -2243,7 +2250,7 @@ static bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             // Epic on macOS
             if(_webui_cmd_sync("open -R -a \"Epic\"", false) == 0) {
 
-                sprintf(win->browser_path, "open -W \"/Applications/Epic.app\" --args");
+                sprintf(win->browser_path, "open --new -a \"Epic.app\" --args");
                 EpicExist = true;
                 return true;
             }
@@ -2308,7 +2315,7 @@ static bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             // Vivaldi on macOS
             if(_webui_cmd_sync("open -R -a \"Vivaldi\"", false) == 0) {
 
-                sprintf(win->browser_path, "open -W \"/Applications/Vivaldi.app\" --args");
+                sprintf(win->browser_path, "open --new -a \"Vivaldi.app\" --args");
                 VivaldiExist = true;
                 return true;
             }
@@ -2371,9 +2378,9 @@ static bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         #elif __APPLE__
 
             // Brave on macOS
-            if(_webui_cmd_sync("open -R -a \"Brave\"", false) == 0) {
+            if(_webui_cmd_sync("open -R -a \"Brave Browser\"", false) == 0) {
 
-                sprintf(win->browser_path, "open -W \"/Applications/Brave.app\" --args");
+                sprintf(win->browser_path, "open --new -a \"Brave Browser.app\" --args");
                 BraveExist = true;
                 return true;
             }
@@ -2436,9 +2443,9 @@ static bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
         #elif __APPLE__
             
             // Firefox on macOS
-            if(_webui_cmd_sync("open -R -a \"firefox\"", false) == 0) {
+            if(_webui_cmd_sync("open -R -a \"Firefox\"", false) == 0) {
 
-                sprintf(win->browser_path, "open -W \"/Applications/Firefox.app\" --args");
+                sprintf(win->browser_path, "open --new -a \"Firefox.app\" --args");
                 FirefoxExist = true;
                 return true;
             }
@@ -2506,7 +2513,7 @@ static bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             // Yandex on macOS
             if(_webui_cmd_sync("open -R -a \"Yandex\"", false) == 0) {
 
-                sprintf(win->browser_path, "open -W \"/Applications/Yandex.app\" --args");
+                sprintf(win->browser_path, "open --new -a \"Yandex.app\" --args");
                 YandexExist = true;
                 return true;
             }
@@ -2571,7 +2578,7 @@ static bool _webui_browser_exist(_webui_window_t* win, unsigned int browser) {
             // Chromium on macOS
             if(_webui_cmd_sync("open -R -a \"Chromium\"", false) == 0) {
 
-                sprintf(win->browser_path, "open -W \"/Applications/Chromium.app\" --args");
+                sprintf(win->browser_path, "open --new -a \"Chromium.app\" --args");
                 ChromiumExist = true;
                 return true;
             }
@@ -2633,6 +2640,7 @@ static int _webui_cmd_sync(char* cmd, bool show) {
 
     char buf[2048] = {0};
 
+    // Sync command
     #ifdef _WIN32
         sprintf(buf, "cmd /c \"%s\" > nul 2>&1", cmd);
         #ifdef WEBUI_LOG
@@ -2660,18 +2668,23 @@ static int _webui_cmd_async(char* cmd, bool show) {
     // and return immediately
 
     char buf[1024] = {0};
-    int res = 0;
 
     // Asynchronous command
     #ifdef _WIN32
-        sprintf(buf, "START \"\" %s", cmd);
-        res = _webui_cmd_sync(buf, show);
+        sprintf(buf, "START \"\" cmd /c \"%s\" > nul 2>&1", cmd);
+        #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_cmd_async() -> Running [%s] \n", buf);
+        #endif
+        return _webui_system_win32(buf, show);
     #else
         sprintf(buf, "%s >>/dev/null 2>>/dev/null &", cmd);
-        res = _webui_cmd_sync(buf, show);
+        #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_cmd_async() -> Running [%s] \n", buf);
+        #endif
+        int r =  system(buf);
+        r = (r != -1 && r != 127 && WIFEXITED(r)) ? WEXITSTATUS(r) : -1;
+        return r;
     #endif
-
-    return res;
 }
 
 static int _webui_run_browser(_webui_window_t* win, char* cmd) {

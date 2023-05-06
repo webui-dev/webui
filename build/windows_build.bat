@@ -1,6 +1,6 @@
 @echo off
 
-set WEBUI_VERSION=2.2.0
+set WEBUI_VERSION=2.3.0
 
 set ARG1=%1
 IF "%ARG1%"=="debug" (
