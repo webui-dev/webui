@@ -1899,11 +1899,10 @@ static bool _webui_browser_create_profile_folder(_webui_window_t* win, unsigned 
             _webui_cmd_sync(buf, false);
 
             // Creating the browser profile
-            for(unsigned int n = 0; n <= (_webui_core.startup_timeout * 4); n++) {
-
+            for(unsigned int n = 0; n <= 12; n++) {
+                // 3000ms
                 if(_webui_folder_exist(firefox_profile_path))
                     break;
-                
                 _webui_sleep(250);
             }
 
@@ -3794,13 +3793,24 @@ static void _webui_wait_for_startup(void) {
     if(_webui_core.connections > 0)
         return;
 
-    // Wait for the first connection
-    for(unsigned int n = 0; n <= (_webui_core.startup_timeout * 10); n++) {
-
-        if(_webui_core.connections > 0)
+    // Wait for the first http request
+    // while the web browser is starting up
+    for(unsigned int n = 0; n < (_webui_core.startup_timeout * 20); n++) {
+        // User/Default timeout
+        if(_webui_core.server_handled)
             break;
-        
         _webui_sleep(50);
+    }
+
+    // Wait for the first connection
+    // while the WS is connecting
+    if(_webui_core.wins[1] != NULL) {
+        // 1500ms
+        for(unsigned int n = 0; n < 30; n++) {
+            if(_webui_core.connections > 0)
+                break;
+            _webui_sleep(50);
+        }
     }
 
     #ifdef WEBUI_LOG
@@ -3985,9 +3995,14 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
         printf("[Core]\t\t_webui_http_handler()...\n");
     #endif
 
+    // Get the window object
+    _webui_window_t* win = (_webui_window_t*)_win;    
+
+    // Initializing
+    _webui_core.server_handled = true; // Main app wait
+    win->server_handled = true; // Window server wait
     int http_status_code = 200;
 
-    _webui_window_t* win = (_webui_window_t*)_win;
     const struct mg_request_info *ri = mg_get_request_info(conn);
     const char* url = ri->local_uri;
 
@@ -4067,10 +4082,12 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                         // Inject WebUI JS-Bridge into HTML
                         size_t len = _webui_strlen(win->html) + _webui_strlen(js) + 128;
                         html = (char*) _webui_malloc(len);
-                        sprintf(html, 
-                            "%s \n <script type = \"text/javascript\"> \n %s \n </script>",
-                            win->html, js
-                        );
+                        if(html != NULL) {
+                            sprintf(html, 
+                                "%s \n <script type = \"text/javascript\"> \n %s \n </script>",
+                                win->html, js
+                            );
+                        }
 
                         _webui_free_mem((void*)js);
                     }
@@ -4335,6 +4352,7 @@ static void _webui_ws_close_handler(const struct mg_connection *conn, void *_win
     _webui_window_t* win = (_webui_window_t*)_win;
 
     win->html_handled = false;
+    win->server_handled = false;
 
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_ws_close_handler() -> WebSocket Closed\n");
@@ -4383,6 +4401,8 @@ static WEBUI_SERVER_START
     // Initialization
     _webui_core.servers++;
     win->server_running = true;
+    win->html_handled = false;
+    win->server_handled = false;
     if(_webui_core.startup_timeout < 1)
         _webui_core.startup_timeout = 0;
     if(_webui_core.startup_timeout > 30)
@@ -4461,15 +4481,16 @@ static WEBUI_SERVER_START
 
                         // Stop if window is connected
                         _webui_sleep(1);
-                        if(win->connected)
+                        if(win->connected || win->server_handled)
                             break;
 
                         // Stop if timer is finished
+                        // default is WEBUI_DEF_TIMEOUT (30 seconds)
                         if(_webui_timer_is_end(&timer_1, (_webui_core.startup_timeout * 1000)))
                             break;
                     }
 
-                    if(!win->connected && win->html_handled) {
+                    if(!win->connected && win->server_handled) {
 
                         // At this moment the browser is already started and HTML
                         // is already handled, so, let's wait more time to give
@@ -4585,6 +4606,7 @@ static WEBUI_SERVER_START
     mg_exit_library();    
     win->server_running = false;
     win->html_handled = false;
+    win->server_handled = false;
     win->connected = false;
     _webui_free_port(win->server_port);
     _webui_free_port(win->ws_port);

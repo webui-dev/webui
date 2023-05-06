@@ -43,6 +43,7 @@ typedef struct _webui_window_t {
     bool server_running;
     volatile bool connected;
     bool html_handled;
+    bool server_handled;
     bool multi_access;
     bool is_embedded_html;
     unsigned int server_port;
@@ -89,6 +90,7 @@ typedef struct _webui_core_t {
     unsigned int current_browser;
     struct mg_connection* mg_connections[WEBUI_MAX_ARRAY];
     _webui_window_t* wins[WEBUI_MAX_ARRAY];
+    bool server_handled;
 } _webui_core_t;
 
 typedef struct _webui_cb_arg_t {

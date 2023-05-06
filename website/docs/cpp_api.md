@@ -187,37 +187,37 @@ Show a window using a specific web browser
 const char* my_html = "<html>Hello!</html>";
 
 // Google Chrome
-webui::show_browser(my_window, my_html, Chrome);
+my_window.show_browser(my_html, Chrome);
 
 // Mozilla Firefox
-webui::show_browser(my_window, my_html, Firefox);
+my_window.show_browser(my_html, Firefox);
 
 // Microsoft Edge
-webui::show_browser(my_window, my_html, Edge);
+my_window.show_browser(my_html, Edge);
 
 // Microsoft Apple Safari (Not Ready)
-webui::show_browser(my_window, my_html, Safari);
+my_window.show_browser(my_html, Safari);
 
 // The Chromium Project
-webui::show_browser(my_window, my_html, Chromium);
+my_window.show_browser(my_html, Chromium);
 
 // Microsoft Opera Browser (Not Ready)
-webui::show_browser(my_window, my_html, Opera);
+my_window.show_browser(my_html, Opera);
 
 // The Brave Browser
-webui::show_browser(my_window, my_html, Brave);
+my_window.show_browser(my_html, Brave);
 
 // The Vivaldi Browser
-webui::show_browser(my_window, my_html, Vivaldi);
+my_window.show_browser(my_html, Vivaldi);
 
 // The Epic Browser
-webui::show_browser(my_window, my_html, Epic);
+my_window.show_browser(my_html, Epic);
 
 // The Yandex Browser
-webui::show_browser(my_window, my_html, Yandex);
+my_window.show_browser(my_html, Yandex);
 
 // Default recommended web browser
-webui::show_browser(my_window, my_html, AnyBrowser);
+my_window.show_browser(my_html, AnyBrowser);
 
 // Or simply
 webui::show(my_window, my_html);

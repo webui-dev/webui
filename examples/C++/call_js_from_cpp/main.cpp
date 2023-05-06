@@ -98,7 +98,7 @@ int main() {
     my_window.bind("MyButton2", my_function_exit);
 
     // Show the window
-    my_window.show(my_html); // webui::show_browser(my_window, my_html, Chrome);
+    my_window.show(my_html); // my_window.show_browser(my_html, Chrome);
 
     // Wait until all windows get closed
     webui::wait();

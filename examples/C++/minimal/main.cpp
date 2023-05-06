@@ -9,6 +9,7 @@ int main() {
 }
 
 #ifdef _WIN32
+    // Release build
     int WINAPI wWinMain(
         _In_ HINSTANCE hInstance,
         _In_opt_ HINSTANCE hPrevInstance,

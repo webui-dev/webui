@@ -79,7 +79,7 @@ int main() {
     my_window.bind("", events_wrp);
 
     // Show a new window
-    my_window.show("index.html"); // webui::show_browser(my_window, "index.html", Chrome);
+    my_window.show("index.html"); // my_window.show_browser("index.html", Chrome);
 
     // Wait until all windows get closed
     webui::wait();
@@ -90,12 +90,14 @@ int main() {
     return 0;
 }
 
-// Release build
-int WINAPI wWinMain(
-    _In_ HINSTANCE hInstance,
-    _In_opt_ HINSTANCE hPrevInstance,
-    _In_ LPWSTR lpCmdLine,
-    _In_ int nShowCmd
-) {
-	return main();
-}
+#ifdef _WIN32
+    // Release build
+    int WINAPI wWinMain(
+        _In_ HINSTANCE hInstance,
+        _In_opt_ HINSTANCE hPrevInstance,
+        _In_ LPWSTR lpCmdLine,
+        _In_ int nShowCmd
+    ) {
+        return main();
+    }
+#endif
