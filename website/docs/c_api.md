@@ -159,7 +159,7 @@ Please visit [C Examples](https://github.com/alifcommunity/webui/tree/main/examp
 ---
 ### New Window
 
-To create a new window object, you can use `webui_new_window()`, which returns a void pointer. Please note that this pointer does *NOT* need to be freed.
+To create a new window object, you can use `webui_new_window()`, which returns a `size_t`.
 
 ```c
 size_t my_window = webui_new_window();
