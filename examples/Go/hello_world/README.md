@@ -1,4 +1,4 @@
-# WebUI Examples - Golang
+# WebUI Examples - Go
 
 ### Windows
 ```sh

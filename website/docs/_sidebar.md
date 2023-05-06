@@ -3,4 +3,5 @@
   - [WebUI C APIs](/c_api)
   - [WebUI C++ APIs](/cpp_api)
   - [WebUI Python APIs](/python_api)
-  - [WebUI Golang APIs](/golang_api)
+  - [WebUI Go APIs](/go_api)
+  - [WebUI V APIs](/v_api)
