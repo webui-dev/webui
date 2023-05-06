@@ -106,7 +106,7 @@ MyWindow.show(my_html, webui.browser.firefox)
 # Microsoft Edge
 MyWindow.show(my_html, webui.browser.edge)
 
-# Microsoft Apple Safari (Not Ready)
+# Apple Safari (Not Ready)
 MyWindow.show(my_html, webui.browser.safari)
 
 # The Chromium Project

@@ -118,7 +118,7 @@ my_window.showBrowser(my_html, Firefox);
 // Microsoft Edge
 my_window.showBrowser(my_html, Edge);
 
-// Microsoft Apple Safari (Not Ready)
+// Apple Safari (Not Ready)
 my_window.showBrowser(my_html, Safari);
 
 // The Chromium Project

@@ -129,7 +129,7 @@ webui.ShowBrowser(my_window, my_html, webui.Firefox)
 // Microsoft Edge
 webui.ShowBrowser(my_window, my_html, webui.Edge)
 
-// Microsoft Apple Safari (Not Ready)
+// Apple Safari (Not Ready)
 webui.ShowBrowser(my_window, my_html, webui.Safari)
 
 // The Chromium Project
