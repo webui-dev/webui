@@ -129,13 +129,13 @@ webui.ShowBrowser(my_window, my_html, webui.Firefox)
 // Microsoft Edge
 webui.ShowBrowser(my_window, my_html, webui.Edge)
 
-// Microsoft Apple Safari (Not Ready)
+// Apple Safari (Not Ready)
 webui.ShowBrowser(my_window, my_html, webui.Safari)
 
 // The Chromium Project
 webui.ShowBrowser(my_window, my_html, webui.Chromium)
 
-// Microsoft Opera Browser (Not Ready)
+// Opera Browser (Not Ready)
 webui.ShowBrowser(my_window, my_html, webui.Opera)
 
 // The Brave Browser
