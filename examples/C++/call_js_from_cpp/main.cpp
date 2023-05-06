@@ -22,10 +22,10 @@ void my_function_count(webui::event* e) {
     // Create a buffer to hold the response
     char response[64];
 
-    // Another way to create a buffer:
+    // This is another way to create a buffer:
     //  std::string buffer;
-    //  buffer.reserve(32);
-    //  webui::script(..., &buffer[0], 32);
+    //  buffer.reserve(64);
+    //  my_window.script(..., ..., &buffer[0], 64);
 
     // Run JavaScript
     if(!e->window.script("return GetCount();", 0, response, 64)) {

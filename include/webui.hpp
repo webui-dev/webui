@@ -51,16 +51,6 @@ namespace webui {
     // List of window objects: webui::window
     webui::window* window_list[512];
 
-    // Wait until all opened windows get closed.
-    void wait(void) {
-        webui_wait();
-    }
-
-    // Close all opened windows. wait() will break.
-    void exit(void) {
-        webui_exit();
-    }
-
     // Event handler
     // WebUI is written in C. So there is no way
     // to make C call a C++ class member. That's
@@ -151,11 +141,6 @@ namespace webui {
             return webui_is_shown(this->webui_window);
         }
 
-        // Set the maximum time in seconds to wait for browser to start
-        void set_timeout(unsigned int second) {
-            webui_set_timeout(second);
-        }
-
         // Set the default embedded HTML favicon
         void set_icon(std::string icon, std::string icon_type) {
             webui_set_icon(this->webui_window, icon.c_str(), icon_type.c_str());
@@ -227,6 +212,21 @@ namespace webui {
             delete c_e;
         }
     };
+
+    // Wait until all opened windows get closed.
+    void wait(void) {
+        webui_wait();
+    }
+
+    // Close all opened windows. wait() will break.
+    void exit(void) {
+        webui_exit();
+    }
+
+    // Set the maximum time in seconds to wait for browser to start
+    void set_timeout(unsigned int second) {
+        webui_set_timeout(second);
+    }
 }
 
 #endif /* _WEBUI_HPP */
