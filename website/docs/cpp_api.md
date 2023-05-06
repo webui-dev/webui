@@ -200,7 +200,7 @@ my_window.show_browser(my_html, Safari);
 // The Chromium Project
 my_window.show_browser(my_html, Chromium);
 
-// Microsoft Opera Browser (Not Ready)
+// Opera Browser (Not Ready)
 my_window.show_browser(my_html, Opera);
 
 // The Brave Browser

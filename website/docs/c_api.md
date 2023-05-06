@@ -200,7 +200,7 @@ webui_show_browser(my_window, my_html, Safari);
 // The Chromium Project
 webui_show_browser(my_window, my_html, Chromium);
 
-// Microsoft Opera Browser (Not Ready)
+// Opera Browser (Not Ready)
 webui_show_browser(my_window, my_html, Opera);
 
 // The Brave Browser
