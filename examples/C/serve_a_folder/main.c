@@ -2,8 +2,11 @@
 
 #include "webui.h"
 
-size_t my_window;
-size_t my_second_window;
+// Those defines is to avoid using global variables
+// you can also use `const size_t MyWindow;`.
+// A window ID can be between 1 and 512 (WEBUI_MAX_IDS)
+#define MyWindow (1)
+#define MySecondWindow (2)
 
 void exit_app(webui_event_t* e) {
 
@@ -42,29 +45,29 @@ void show_second_window(webui_event_t* e) {
 
     // Show a new window, and navigate to `/second.html`
     // if it's already open, then switch in the same window
-    webui_show(my_second_window, "second.html");
+    webui_show(MySecondWindow, "second.html");
 }
 
 int main() {
 
     // Create new windows
-    my_window = webui_new_window();
-    my_second_window = webui_new_window();
+    webui_new_window_id(MyWindow);
+    webui_new_window_id(MySecondWindow);
 
     // Bind HTML element IDs with a C functions
-    webui_bind(my_window, "SwitchToSecondPage", switch_to_second_page);
-    webui_bind(my_window, "OpenNewWindow", show_second_window);
-    webui_bind(my_window, "Exit", exit_app);
-    webui_bind(my_second_window, "Exit", exit_app);
+    webui_bind(MyWindow, "SwitchToSecondPage", switch_to_second_page);
+    webui_bind(MyWindow, "OpenNewWindow", show_second_window);
+    webui_bind(MyWindow, "Exit", exit_app);
+    webui_bind(MySecondWindow, "Exit", exit_app);
 
     // Bind events
-    webui_bind(my_window, "", events);
+    webui_bind(MyWindow, "", events);
 
     // Make Deno as the `.ts` and `.js` interpreter
-    webui_set_runtime(my_window, Deno);
+    webui_set_runtime(MyWindow, Deno);
 
     // Show a new window
-    webui_show(my_window, "index.html"); // webui_show_browser(my_window, "index.html", Chrome);
+    webui_show(MyWindow, "index.html"); // webui_show_browser(MyWindow, "index.html", Chrome);
 
     // Wait until all windows get closed
     webui_wait();

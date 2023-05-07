@@ -12,6 +12,7 @@
 #define _WEBUI_H
 
 #define WEBUI_VERSION "2.3.0"
+#define WEBUI_MAX_IDS (512)
 
 // Dynamic Library Exports
 #if defined(_MSC_VER) || defined(__TINYC__)
@@ -71,6 +72,7 @@
     #include <fcntl.h>
     #include <poll.h>
     #include <sys/time.h>
+    #include <signal.h>
     #define WEBUI_GET_CURRENT_DIR getcwd
     #define WEBUI_FILE_EXIST access
     #define WEBUI_POPEN popen
@@ -90,6 +92,7 @@
     #include <sys/syslimits.h>
     #include <sys/time.h>
     #include <sys/sysctl.h>
+    #include <signal.h>
     #define WEBUI_GET_CURRENT_DIR getcwd
     #define WEBUI_FILE_EXIST access
     #define WEBUI_POPEN popen
@@ -131,27 +134,31 @@ enum webui_events {
 // -- Structs -------------------------
 typedef struct webui_event_t {
     size_t window; // The window object number
-    unsigned int event_type; // Event type
+    size_t event_type; // Event type
     char* element; // HTML element ID
     char* data; // JavaScript data
-    unsigned int event_number; // Internal WebUI
+    size_t event_number; // Internal WebUI
 } webui_event_t;
 
 // -- Definitions ---------------------
 // Create a new webui window object.
 WEBUI_EXPORT size_t webui_new_window(void);
+// Create a new webui window object.
+WEBUI_EXPORT void webui_new_window_id(size_t window_number);
 // Bind a specific html element click event with a function. Empty element means all events.
-WEBUI_EXPORT unsigned int webui_bind(size_t window, const char* element, void (*func)(webui_event_t* e));
+WEBUI_EXPORT size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t* e));
 // Show a window using a embedded HTML, or a file. If the window is already opened then it will be refreshed.
 WEBUI_EXPORT bool webui_show(size_t window, const char* content);
 // Same as webui_show(). But with a specific web browser.
-WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, unsigned int browser);
+WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, size_t browser);
 // Set the window in Kiosk mode (Full screen)
 WEBUI_EXPORT void webui_set_kiosk(size_t window, bool status);
 // Wait until all opened windows get closed.
 WEBUI_EXPORT void webui_wait(void);
-// Close a specific window.
+// Close a specific window only. The window object will still exist.
 WEBUI_EXPORT void webui_close(size_t window);
+// Close a specific window and free all memory resources.
+WEBUI_EXPORT void webui_destroy(size_t window);
 // Close all opened windows. webui_wait() will break.
 WEBUI_EXPORT void webui_exit(void);
 
@@ -159,7 +166,7 @@ WEBUI_EXPORT void webui_exit(void);
 // Check a specific window if it's still running
 WEBUI_EXPORT bool webui_is_shown(size_t window);
 // Set the maximum time in seconds to wait for browser to start
-WEBUI_EXPORT void webui_set_timeout(unsigned int second);
+WEBUI_EXPORT void webui_set_timeout(size_t second);
 // Set the default embedded HTML favicon
 WEBUI_EXPORT void webui_set_icon(size_t window, const char* icon, const char* icon_type);
 // Allow the window URL to be re-used in normal web browsers
@@ -169,9 +176,9 @@ WEBUI_EXPORT void webui_set_multi_access(size_t window, bool status);
 // Run JavaScript quickly with no waiting for the response.
 WEBUI_EXPORT bool webui_run(size_t window, const char* script);
 // Run a JavaScript, and get the response back (Make sure your local buffer can hold the response).
-WEBUI_EXPORT bool webui_script(size_t window, const char* script, unsigned int timeout, char* buffer, size_t buffer_length);
+WEBUI_EXPORT bool webui_script(size_t window, const char* script, size_t timeout, char* buffer, size_t buffer_length);
 // Chose between Deno and Nodejs runtime for .js and .ts files.
-WEBUI_EXPORT void webui_set_runtime(size_t window, unsigned int runtime);
+WEBUI_EXPORT void webui_set_runtime(size_t window, size_t runtime);
 // Parse argument as integer.
 WEBUI_EXPORT long long int webui_get_int(webui_event_t* e);
 // Parse argument as string.
@@ -187,14 +194,14 @@ WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
 
 // -- Interface -----------------------
 // Bind a specific html element click event with a function. Empty element means all events. This replace webui_bind(). The func is (Window, EventType, Element, Data, EventNumber)
-WEBUI_EXPORT unsigned int webui_interface_bind(size_t window, const char* element, void (*func)(size_t, unsigned int, char*, char*, unsigned int));
+WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, char*, size_t));
 // When using `webui_interface_bind()` you may need this function to easily set your callback response.
-WEBUI_EXPORT void webui_interface_set_response(size_t window, unsigned int event_number, const char* response);
+WEBUI_EXPORT void webui_interface_set_response(size_t window, size_t event_number, const char* response);
 // Check if the app still running or not. This replace webui_wait().
 WEBUI_EXPORT bool webui_interface_is_app_running(void);
 // Get window unique ID
-WEBUI_EXPORT unsigned int webui_interface_get_window_id(size_t window);
+WEBUI_EXPORT size_t webui_interface_get_window_id(size_t window);
 // Get a unique ID. Same ID as `webui_bind()`. Return > 0 if bind exist.
-WEBUI_EXPORT unsigned int webui_interface_get_bind_id(size_t window, const char* element);
+WEBUI_EXPORT size_t webui_interface_get_bind_id(size_t window, const char* element);
 
 #endif /* _WEBUI_H */
