@@ -1644,15 +1644,15 @@ static int _webui_serve_file(struct mg_connection *conn) {
 
         // 404 - File not exist
 
-        // mg_send_http_error(
-        //     conn, 404,
-        //     webui_html_res_not_available
-        // );
-        _webui_http_send(
-            conn, // 200
-            "text/html",
+        mg_send_http_error(
+            conn, 404,
             webui_html_res_not_available
         );
+        // _webui_http_send(
+        //     conn, // 200
+        //     "text/html",
+        //     webui_html_res_not_available
+        // );
         http_status_code = 404;
     }
 
@@ -1781,15 +1781,15 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
 
             // File not exist - 404
 
-            // mg_send_http_error(
-            //     conn, 404,
-            //     webui_html_res_not_available
-            // );
-            _webui_http_send(
-                conn, // 200
-                "text/html",
+            mg_send_http_error(
+                conn, 404,
                 webui_html_res_not_available
             );
+            // _webui_http_send(
+            //     conn, // 200
+            //     "text/html",
+            //     webui_html_res_not_available
+            // );
 
             _webui_free_mem((void*)file);
             _webui_free_mem((void*)full_path);
@@ -1847,16 +1847,16 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
 
                 // Deno not installed
 
-                // mg_send_http_error(
-                //     conn, 404,
-                //     webui_deno_not_found
-                // );
-                _webui_http_send(
-                    conn, // 200
-                    "text/html",
+                mg_send_http_error(
+                    conn, 500,
                     webui_deno_not_found
                 );
-                interpret_http_stat = 404;
+                // _webui_http_send(
+                //     conn, // 200
+                //     "text/html",
+                //     webui_deno_not_found
+                // );
+                interpret_http_stat = 500;
             }
         }
         else if(win->runtime == NodeJS) {
@@ -1896,16 +1896,16 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
 
                 // Node.js not installed
 
-                // mg_send_http_error(
-                //     conn, 404,
-                //     webui_nodejs_not_found
-                // );
-                _webui_http_send(
-                    conn, // 200
-                    "text/html",
+                mg_send_http_error(
+                    conn, 500,
                     webui_nodejs_not_found
                 );
-                interpret_http_stat = 404;
+                // _webui_http_send(
+                //     conn, // 200
+                //     "text/html",
+                //     webui_nodejs_not_found
+                // );
+                interpret_http_stat = 500;
             }
         }
         else {
@@ -3976,7 +3976,7 @@ static size_t _webui_get_new_window_number(void) {
     #endif
 
     for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
-        if(_webui_core.wins[i] != NULL)
+        if(_webui_core.wins[i] == NULL)
            return i;
     }
 
@@ -4209,15 +4209,15 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                         printf("[Core]\t\t_webui_http_handler() -> Embedded Index HTML Already Handled (403)\n");
                     #endif
 
-                    // mg_send_http_error(
-                    //     conn, 403,
-                    //     webui_html_served
-                    // );
-                    _webui_http_send(
-                        conn, // 200
-                        "text/html",
+                    mg_send_http_error(
+                        conn, 403,
                         webui_html_served
                     );
+                    // _webui_http_send(
+                    //     conn, // 200
+                    //     "text/html",
+                    //     webui_html_served
+                    // );
                     http_status_code = 403;
                 }
                 else {

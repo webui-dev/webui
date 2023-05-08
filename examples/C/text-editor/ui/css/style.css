@@ -1,0 +1,102 @@
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    font-family: 'Courier New', Courier, monospace;
+    overflow: hidden;
+    background-color: #2d2c2e
+}
+
+.topbar {
+    width: 100%;
+    height: 4px;
+    background-image: linear-gradient(to right, #2b2b2b 0%, #ada2a2 50%, #1c1717 100%);
+}
+
+header {
+    color: white;
+}
+
+.nav {
+    position: relative;
+    overflow: hidden;
+    background-image: linear-gradient(#141111, #2b2b2b);
+}
+  
+.nav button {
+    float: left;
+    color: #f2f2f2;
+    text-align: center;
+    padding: 6px 10px;
+    text-decoration: none;
+    font-size: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+  
+.nav button:hover {
+    background-color: #363636;
+}
+  
+.nav button.active {
+    background-color: #363636;
+    color: white;
+}
+  
+.nav .nav-right {
+    float: right;
+}
+
+/* Code */
+
+.main {
+    height: 100%;
+    color: white;
+    background: #2F263F;
+    overflow-y: auto;
+    display: grid;
+    padding: 0px;    
+}
+
+/* About */
+
+.about-box {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%; 
+    overflow: auto;
+    background-image: linear-gradient(#141111, #2b2b2b);
+}
+  
+.about-box-content {
+    background-image: linear-gradient(#141111, #2b2b2b);
+    position: absolute;
+    margin: 0;
+    padding: 10px;
+    width: 30%;
+    color: white;
+    border-radius: 5px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.about-box-content h1 {
+    text-align: center;
+}
+
+.about-box-content a {
+    color: inherit;
+}
+
+.CodeMirror {
+    height: 100%;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 16px;
+    text-shadow: 1px 1px 2px #0e0a0a;
+}

@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="icon" type="image/png" href="img/icon.png" />
+        <title>Text Editor in C using WebUI</title>
+        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="css/darcula.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/xml/xml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/css/css.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/javascript/javascript.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/clike/clike.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js"></script>
+    </head>
+    <body>
+        <div class="topbar"></div>
+        <div class="nav">
+            <button id="Open">Open</button>
+            <button id="Save">Save</button>
+            <div class="nav-right">
+                <button id="Close">Close</button>
+                <button id="About">About</button>
+            </div>
+        </div> 
+        <div style="height: 8px; background-image: linear-gradient(#121010, #2b2b2b)"></div>
+        <div class="main" id="main">
+            <textarea id="editor"></textarea>
+        </div>
+        <div style="height: 5px"></div>
+        <div id="about-box" class="about-box">
+            <div class="about-box-content">
+                <h1>Text Editor</h1>
+                v1.0
+                <p>Text Editor in C using WebUI library.</p>
+                <p><a href="https://webui.me" target="_blank">webui.me</a></p>
+            </div>
+        </div>
+        <script src="/webui.js"></script>
+        <script src="js/ui.js"></script>
+        <script>
+
+            const editor = document.getElementById("editor");
+            const codeMirrorInstance = CodeMirror.fromTextArea(editor, {
+              mode: "text/html",
+              lineNumbers: true,
+              tabSize: 4,
+              indentUnit: 2,
+              lineWrapping: true,
+              theme: "darcula"
+            });
+        
+            function changeMode(lang) {
+              let mode = "";
+              switch (lang) {
+                case "js":
+                  mode = "text/javascript";
+                  break;
+                case "c":
+                  mode = "text/x-csrc";
+                  break;
+                case "python":
+                  mode = "text/x-python";
+                  break;
+                default:
+                  mode = "text/html";
+              }
+              codeMirrorInstance.setOption("mode", mode);
+            }
+
+            codeMirrorInstance.setSize("100%", "100%");
+
+            function addLine(text) {
+                const lastLine = codeMirrorInstance.lineCount();
+                codeMirrorInstance.replaceRange(text + "\n", { line: lastLine });
+            }
+
+          </script>
+    </body>
+</html>
