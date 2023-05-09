@@ -8,8 +8,6 @@
         <link rel="stylesheet" href="css/lucario.css">
         <link rel="stylesheet" href="css/codemirror.min.css">
         <link rel="stylesheet" href="css/all.min.css">
-        <link rel="stylesheet" href="css/v4-shims.min.css">
-        <link rel="stylesheet" href="css/regular.min.css">
 
         <script src="js/codemirror.min.js"></script>
         <script src="js/xml.min.js"></script>
@@ -23,16 +21,16 @@
         <nav>
             <ul>
                 <li>
-                    <a><i id="Open" class="fas fa-folder-open"></i></a>
+                    <a id="Open"><i class="fas fa-folder-open"></i></a>
                 </li>
                 <li id="SaveLi" style="pointer-events: none; color: #7ca0df;">
-                    <a><i onclick="SaveFile();" class="fa fa-floppy-o"></i></a>
+                    <a onclick="SaveFile();"><i class="fa fa-floppy-disk"></i></a>
                 </li>
                 <li>
-                    <a><i id="Close" class="fas fa-door-open"></i></a>
+                    <a id="Close"><i class="fas fa-circle-xmark"></i></a>
                 </li>
                 <li>
-                    <a><i id="About" class="fas fa-question-circle"></i></a>
+                    <a id="About"><i class="fas fa-question-circle"></i></a>
                 </li>
             </ul>
         </nav>
@@ -42,7 +40,7 @@
         <div id="about-box" class="about-box">
             <div class="about-box-content">
                 <h1>WebUI Text Editor</h1>
-                v1.0
+                v1.1
                 <p>Example of a text editor software in C using WebUI library.</p>
                 <p><a href="https://webui.me" target="_blank">webui.me</a> | (C)2023 Hassan Draga</p>
             </div>

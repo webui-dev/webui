@@ -79,10 +79,10 @@ static const char* webui_javascript_bridge =
 "                    console.log('WebUI -> Connection lost -> Navigation to [' + _webui_close_value + ']'); \n"
 "                window.location.replace(_webui_close_value); \n"
 "            } else { \n"
-"                if(_webui_log) \n"
+"                if(_webui_log) { \n"
 "                    console.log('WebUI -> Connection lost (' + evt.code + ')'); \n"
-"                if(!_webui_log && evt.code != 1005) _webui_close_window_timer(); \n"
-"                else _webui_freeze_ui(); \n"
+"                    _webui_freeze_ui(); \n"
+"                } else _webui_close_window_timer(); \n"
 "            } \n"
 "        }; \n"
 "        _webui_ws.onmessage = function (evt) { \n"
@@ -143,24 +143,32 @@ static const char* webui_javascript_bridge =
 "    Object.keys(window).forEach(key=>{ \n"
 "        if(/^on(click)/.test(key)) { \n"
 "            window.addEventListener(key.slice(2),event=>{ \n"
-"                if(event.target.id !== '') { \n"
-"                    if(_webui_has_events || _webui_bind_list.includes(_webui_win_num + '/' + event.target.id)) \n"
-"                        _webui_send_click(event.target.id); \n"
+"                if(_webui_has_events || ((event.target.id !== '') && (_webui_bind_list.includes(_webui_win_num + '/' + event.target.id)))) { \n"
+"                    _webui_send_click(event.target.id); \n"
 "                } \n"
 "            }); \n"
 "        } \n"
 "    }); \n"
 "} \n"
 "function _webui_send_click(elem) { \n"
-"    if(_webui_ws_status && elem !== '') { \n"
-"        const elem8 = new TextEncoder('utf-8').encode(elem); \n"
-"        var packet = new Uint8Array(3 + elem8.length); \n"
-"        packet[0] = WEBUI_HEADER_SIGNATURE; \n"
-"        packet[1] = WEBUI_HEADER_CLICK; \n"
-"        packet[2] = 0; \n"
-"        var p = -1; \n"
-"        for (i = 3; i < elem8.length + 3; i++) \n"
-"            packet[i] = elem8[++p]; \n"
+"    if(_webui_ws_status) { \n"
+"        var packet; \n"
+"        if(elem !== '') { \n"
+"            const elem8 = new TextEncoder('utf-8').encode(elem); \n"
+"            packet = new Uint8Array(3 + elem8.length); \n"
+"            packet[0] = WEBUI_HEADER_SIGNATURE; \n"
+"            packet[1] = WEBUI_HEADER_CLICK; \n"
+"            packet[2] = 0; \n"
+"            var p = -1; \n"
+"            for (i = 3; i < elem8.length + 3; i++) \n"
+"                packet[i] = elem8[++p]; \n"
+"        } else { \n"
+"            packet = new Uint8Array(4); \n"
+"            packet[0] = WEBUI_HEADER_SIGNATURE; \n"
+"            packet[1] = WEBUI_HEADER_CLICK; \n"
+"            packet[2] = 0; \n"
+"            packet[3] = 0; \n"
+"        } \n"
 "        _webui_ws.send(packet.buffer); \n"
 "        if(_webui_log) \n"
 "            console.log('WebUI -> Click [' + elem + ']'); \n"
@@ -192,7 +200,7 @@ static const char* webui_javascript_bridge =
 "        return true; \n"
 "} \n"
 "function _webui_close_window_timer() { \n"
-"    setTimeout(function(){window.close();},850); \n"
+"    setTimeout(function(){window.close();},1000); \n"
 "} \n"
 "async function _webui_fn_promise(fn, value) { \n"
 "    if(_webui_log) \n"
@@ -246,6 +254,7 @@ static const char* webui_javascript_bridge =
 " // -- DOM --------------------------- \n"
 "document.addEventListener('keydown', function (e) { \n"
 "    // Disable F5 \n"
+"    if(_webui_log) return; \n"
 "    if(e.keyCode === 116) { \n"
 "        e.preventDefault(); \n"
 "        e.returnValue = false; \n"
@@ -474,8 +483,11 @@ size_t webui_get_new_window_id(void) {
     #endif
 
     for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
-        if(_webui_core.wins[i] == NULL)
-           return i;
+        if(_webui_core.wins[i] == NULL) {
+            if(i > _webui_core.last_win_number)
+                _webui_core.last_win_number = i;
+            return i;
+        }
     }
 
     // We should never reach here
@@ -508,6 +520,10 @@ void webui_new_window_id(size_t window_number) {
     win->profile_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     win->server_root_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
+
+    // Save window ID
+    if(window_number > _webui_core.last_win_number)
+        _webui_core.last_win_number = window_number;
     
     #ifdef WEBUI_LOG
         printf("[User] webui_new_window_id() -> New window #%zu @ 0x%p\n", window_number, win);
@@ -960,11 +976,33 @@ void webui_exit(void) {
         printf("[User] webui_exit()...\n");
     #endif
 
+    #ifndef WEBUI_LOG
+        // Close all opened windows
+        // by sending `close` command
+
+        // Prepare packets
+        char* packet = (char*) _webui_malloc(4);
+        packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
+        packet[1] = WEBUI_HEADER_CLOSE;     // Type
+        packet[2] = 0;                      // ID
+        packet[3] = 0;                      // Data
+        for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
+            if(_webui_core.wins[i] != NULL) {
+                if(_webui_core.wins[i]->connected) {
+                    // Send packet
+                    _webui_window_send(_webui_core.wins[i], packet, 4);
+                }
+            }
+        }
+        _webui_free_mem((void*)packet);
+    #endif
+    
+    // Stop all threads
     _webui_core.exit_now = true;
 
     // Let's give other threads more time to 
     // safely exit and finish their cleaning up.
-    _webui_sleep(100);
+    _webui_sleep(120);
 }
 
 void webui_wait(void) {
@@ -3808,13 +3846,12 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         // Get html element id
         char* element;
         size_t element_len;
-        if(!_webui_get_data(packet, len, 3, &element_len, &element))
-            return;
+        _webui_get_data(packet, len, 3, &element_len, &element);
         
         #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_CLICK \n");
-            printf("[Core]\t\t_webui_window_receive() -> %zu bytes \n", element_len);
-            printf("[Core]\t\t_webui_window_receive() -> [%s] \n", element);
+            printf("[Core]\t\t_webui_window_receive() -> Element size: %zu bytes \n", element_len);
+            printf("[Core]\t\t_webui_window_receive() -> Element : [%s] \n", element);
         #endif
 
         // Generate WebUI internal id
@@ -3907,8 +3944,8 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_SWITCH \n");
-                printf("[Core]\t\t_webui_window_receive() -> %zu bytes \n", url_len);
-                printf("[Core]\t\t_webui_window_receive() -> [%s] \n", url);
+                printf("[Core]\t\t_webui_window_receive() -> URL size: %zu bytes \n", url_len);
+                printf("[Core]\t\t_webui_window_receive() -> URL: [%s] \n", url);
             #endif
 
             // Generate WebUI internal id
@@ -4819,7 +4856,7 @@ static WEBUI_SERVER_START
                             break;
                         }
 
-                        if(!win->connected) {
+                        if(!win->connected && !_webui_core.exit_now) {
 
                             // The UI is just get disconnected
                             // probably the user did a refresh

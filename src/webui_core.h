@@ -91,6 +91,7 @@ typedef struct _webui_core_t {
     size_t current_browser;
     struct mg_connection* mg_connections[WEBUI_MAX_ARRAY];
     _webui_window_t* wins[WEBUI_MAX_ARRAY];
+    size_t last_win_number;
     bool server_handled;
 } _webui_core_t;
 
