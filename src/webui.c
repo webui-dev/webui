@@ -9,6 +9,7 @@
 */
 
 // -- Third-party ---------------------
+#define MG_BUF_LEN (1024 * 16)
 #include "civetweb/civetweb.h"
 
 // -- WebUI ---------------------------
@@ -80,7 +81,7 @@ static const char* webui_javascript_bridge =
 "            } else { \n"
 "                if(_webui_log) \n"
 "                    console.log('WebUI -> Connection lost (' + evt.code + ')'); \n"
-"                if(!_webui_log && evt.code != 1005) window.close(); \n"
+"                if(!_webui_log && evt.code != 1005) _webui_close_window_timer(); \n"
 "                else _webui_freeze_ui(); \n"
 "            } \n"
 "        }; \n"
@@ -190,6 +191,9 @@ static const char* webui_javascript_bridge =
 "    } \n"
 "        return true; \n"
 "} \n"
+"function _webui_close_window_timer() { \n"
+"    setTimeout(function(){window.close();},850); \n"
+"} \n"
 "async function _webui_fn_promise(fn, value) { \n"
 "    if(_webui_log) \n"
 "        console.log('WebUI -> Func [' + fn + '](' + value + ')'); \n"
@@ -232,6 +236,12 @@ static const char* webui_javascript_bridge =
 "        console.log('WebUI -> Log Disabled.'); \n"
 "        _webui_log = false; \n"
 "    } \n"
+"} \n"
+"function webui_encode(str) { \n"
+"     return btoa(str); \n"
+"} \n"
+"function webui_decode(str) { \n"
+"     return atob(str); \n"
 "} \n"
 " // -- DOM --------------------------- \n"
 "document.addEventListener('keydown', function (e) { \n"
@@ -293,19 +303,20 @@ static const char* webui_js_timeout = "ERR_WEBUI_TIMEOUT";
 static const char* const webui_empty_string = ""; // In case the compiler optimization is disabled
 
 // -- Functions -----------------------
-bool webui_run(size_t window, const char* script) {
+void webui_run(size_t window, const char* script) {
 
     #ifdef WEBUI_LOG
-        printf("[User] webui_run([%zu], [%s])...\n", window, script);
+        printf("[User] webui_run([%zu])...\n", window);
+        printf("[User] webui_run([%zu]) -> Script: [%s]\n", window, script);
     #endif
 
     size_t js_len = _webui_strlen(script);
     
     if(js_len < 1)
-        return false;
+        return;
     
     // Dereference
-    if(_webui_core.wins[window] == NULL) return false;
+    if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Initializing pipe
@@ -327,8 +338,6 @@ bool webui_run(size_t window, const char* script) {
     // Send packets
     _webui_window_send(win, packet, packet_len);
     _webui_free_mem((void*)packet);
-
-    return true;
 }
 
 bool webui_script(size_t window, const char* script, size_t timeout_second, char* buffer, size_t buffer_length) {
@@ -844,6 +853,89 @@ void webui_return_bool(webui_event_t* e, bool b) {
 
     // Set response
     *response = buf;
+}
+
+char* webui_encode(const char* str) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_encode()...\n");
+    #endif
+
+    size_t len = strlen(str);
+    if(len < 1)
+        return NULL;
+    
+    #ifdef WEBUI_LOG
+        printf("[User] webui_encode() -> Text: [%s]\n", str);
+    #endif
+
+    size_t buf_len = (((len + 2) / 3) * 4) + 8;
+    char* buf = (char*) _webui_malloc(buf_len);
+
+    int ret = mg_base64_encode(str, len, buf, &buf_len);
+
+    if(ret > (-1)) {
+        
+        // Failed
+        #ifdef WEBUI_LOG
+            printf("[User] webui_encode() -> Failed (%d).\n", ret);
+        #endif
+        _webui_free_mem((void*)buf);
+        return NULL;
+    }
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_encode() -> Encoded: [%s]\n", buf);
+    #endif
+
+    // Success
+    return buf;
+}
+
+char* webui_decode(const char* str) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_decode()...\n");
+    #endif
+
+    size_t len = strlen(str);
+    if(len < 1)
+        return NULL;
+    
+    #ifdef WEBUI_LOG
+        printf("[User] webui_decode() -> Encoded: [%s]\n", str);
+    #endif
+
+    size_t buf_len = (((len + 2) / 3) * 4) + 8;
+    char* buf = (char*) _webui_malloc(buf_len);
+
+    int ret = mg_base64_decode(str, len, buf, &buf_len);
+
+    if(ret > (-1)) {
+        
+        // Failed
+        #ifdef WEBUI_LOG
+            printf("[User] webui_decode() -> Failed (%d).\n", ret);
+        #endif
+        _webui_free_mem((void*)buf);
+        return NULL;
+    }
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_decode() -> Decoded: [%s]\n", buf);
+    #endif
+
+    // Success
+    return buf;
+}
+
+void webui_free(void* ptr) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_free([0x%p])...\n", ptr);
+    #endif
+
+    _webui_free_mem(ptr);
 }
 
 void webui_exit(void) {
@@ -4168,6 +4260,13 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
         // GET
 
+        // Let the server thread wait
+        // more time for WS connection
+        // as it may the UI have many
+        // files to handel before first
+        // ws connection established
+        win->file_handled = true;
+
         #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_http_handler() -> GET [%s]\n", url);
         #endif
@@ -4589,6 +4688,9 @@ static WEBUI_SERVER_START
     const char* http_options[] = {
         "listening_ports", server_port,
         "document_root", win->server_root_path,
+        "access_control_allow_headers", "*",
+        "access_control_allow_methods", "*",
+        "access_control_allow_origin", "*",
         NULL, NULL
     };
     struct mg_callbacks http_callbacks;
@@ -4606,6 +4708,8 @@ static WEBUI_SERVER_START
     const char* ws_server_options[] = {
         "listening_ports", ws_port,
         "document_root", "/_webui_ws_connect",
+        "websocket_timeout_ms", "30000",
+        "enable_websocket_ping_pong", "yes",
         NULL, NULL
     };
 	ws_mg_start_init_data.configuration_options = ws_server_options;
@@ -4642,6 +4746,10 @@ static WEBUI_SERVER_START
 
                 if(!win->connected) {
 
+                    #ifdef WEBUI_LOG
+                        printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Waiting for first HTTP request...\n", win->window_number);
+                    #endif
+
                     // Wait for first connection
                     _webui_timer_t timer_1;
                     _webui_timer_start(&timer_1);
@@ -4662,21 +4770,30 @@ static WEBUI_SERVER_START
 
                         // At this moment the browser is already started and HTML
                         // is already handled, so, let's wait more time to give
-                        // the WebSocket an extra one second to connect.
+                        // the WebSocket an extra one and half second to connect.
                         
-                        _webui_timer_t timer_2;
-                        _webui_timer_start(&timer_2);
-                        for(;;) {
+                        do {
+                            #ifdef WEBUI_LOG
+                                printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Waiting for first connection...\n", win->window_number);
+                            #endif
 
-                            // Stop if window is connected
-                            _webui_sleep(1);
-                            if(win->connected)
-                                break;
+                            win->file_handled = false;
 
-                            // Stop if timer is finished
-                            if(_webui_timer_is_end(&timer_2, 1000))
-                                break;
+                            _webui_timer_t timer_2;
+                            _webui_timer_start(&timer_2);
+                            for(;;) {
+
+                                // Stop if window is connected
+                                _webui_sleep(1);
+                                if(win->connected)
+                                    break;
+
+                                // Stop if timer is finished
+                                if(_webui_timer_is_end(&timer_2, 1500))
+                                    break;
+                            }
                         }
+                        while (win->file_handled && !win->connected);
                     }
                     
                     if(!win->connected)
@@ -4685,6 +4802,10 @@ static WEBUI_SERVER_START
                 else {
 
                     // UI is connected
+
+                    #ifdef WEBUI_LOG
+                        printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Window Connected.\n", win->window_number);
+                    #endif
 
                     while(!stop) {
 
@@ -4706,25 +4827,32 @@ static WEBUI_SERVER_START
 
                             #ifdef WEBUI_LOG
                                 printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Window disconnected\n", win->window_number);
-                                printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Waiting for reconnection...\n", win->window_number);
                             #endif
 
-                            _webui_timer_t timer_3;
-                            _webui_timer_start(&timer_3);
-                            for(;;) {
+                            do {
+                                #ifdef WEBUI_LOG
+                                    printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Waiting for reconnection...\n", win->window_number);
+                                #endif
 
-                                // Stop if window is re-connected
-                                _webui_sleep(1);
-                                if(win->connected)
-                                    break;
+                                win->file_handled = false;
 
-                                // Stop if timer is finished
-                                if(_webui_timer_is_end(&timer_3, 1000))
-                                    break;
+                                _webui_timer_t timer_3;
+                                _webui_timer_start(&timer_3);
+                                for(;;) {
+
+                                    // Stop if window is re-connected
+                                    _webui_sleep(1);
+                                    if(win->connected)
+                                        break;
+
+                                    // Stop if timer is finished
+                                    if(_webui_timer_is_end(&timer_3, 1000))
+                                        break;
+                                }
                             }
-
+                            while (win->file_handled && !win->connected);
+                            
                             if(!win->connected) {
-
                                 stop = true;
                                 break;
                             }

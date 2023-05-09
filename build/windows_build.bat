@@ -71,6 +71,10 @@ copy /Y "include\webui.h" "examples\C++\VS2019\serve_a_folder\my_webui_app\webui
 copy /Y "include\webui.hpp" "examples\C++\VS2019\serve_a_folder\my_webui_app\webui.hpp"
 copy /Y "build\Windows\MSVC\webui-2-static-x64.lib" "examples\C++\VS2019\serve_a_folder\my_webui_app\webui-2-static-x64.lib"
 
+REM C - Text Editor
+copy /Y "include\webui.h" "examples\C\text-editor\webui.h"
+copy /Y "build\Windows\MSVC\webui-2-x64.dll" "examples\C\text-editor\webui-2-x64.dll"
+
 echo.
 IF "%ARG1%"=="" (
 
@@ -90,9 +94,9 @@ IF "%ARG1%"=="" (
     copy /Y "build\Windows\GCC\libwebui-2-static-x64.a" "Release\Windows\GCC\libwebui-2-static-x64.a"
 
     REM Release Windows TCC
-    copy /Y "build\Windows\TCC\webui-2-x64.dll" "Release\Windows\TCC\webui-2-x64.dll"
+    REM copy /Y "build\Windows\TCC\webui-2-x64.dll" "Release\Windows\TCC\webui-2-x64.dll"
+    REM copy /Y "build\Windows\TCC\webui-2-x64.def" "Release\Windows\TCC\webui-2-x64.def"    
     copy /Y "build\Windows\TCC\libwebui-2-static-x64.a" "Release\Windows\TCC\libwebui-2-static-x64.a"
-    copy /Y "build\Windows\TCC\webui-2-x64.def" "Release\Windows\TCC\webui-2-x64.def"
 
     echo.
     echo Compressing the release folder...

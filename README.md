@@ -22,6 +22,12 @@
 - Multi-platform & Multi-Browser
 - Using private profile for safety
 
+## Screenshot
+
+This text editor example is written in C using WebUI as the GUI library. The final executable is portable and has less than _1 MB_ in size (_+html and css files_).
+
+![ScreenShot](webui_c_example.png)
+
 ## CppCon 2019 Presentation
 
 [Borislav Stanimirov](https://ibob.bg/) discusses using HTML5 in the web browser as GUI at the [C++ Conference 2019 (*YouTube*)](https://www.youtube.com/watch?v=bbbcZd4cuxg).

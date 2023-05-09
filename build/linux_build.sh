@@ -53,6 +53,10 @@ cp -f "build/Linux/GCC/webui-2-x64.so" "examples/TypeScript/Deno/webui-2-x64.so"
 # Python
 cp -f "build/Linux/GCC/webui-2-x64.so" "examples/Python/PyPI/Package/src/webui/webui-2-x64.so"
 
+# C - Text Editor
+cp -f "include/webui.h" "examples/C/text-editor/webui.h"
+cp -f "build/Linux/GCC/webui-2-x64.so" "examples/C/text-editor/webui-2-x64.so"
+
 echo "";
 if [ "$ARG1" = "" ]; then
 

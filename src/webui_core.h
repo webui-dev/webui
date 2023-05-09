@@ -40,8 +40,9 @@ typedef struct webui_event_core_t {
 
 typedef struct _webui_window_t {
     size_t window_number;
-    bool server_running;
+    volatile bool server_running;
     volatile bool connected;
+    volatile bool file_handled;
     bool html_handled;
     bool server_handled;
     bool multi_access;
