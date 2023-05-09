@@ -42,6 +42,13 @@ size_t read_file_into_buffer(const char *filename, char *buffer, size_t buffer_s
     return bytes_read;
 }
 
+#ifdef _WIN32
+    UINT_PTR OpenDialogHooks(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam) {
+        BringWindowToTop(hdlg);
+        return 0;
+    }
+#endif
+
 char* show_file_open_dialog() {
 
     #ifdef _WIN32
@@ -57,6 +64,7 @@ char* show_file_open_dialog() {
         ofn.lpstrFileTitle = NULL;
         ofn.nMaxFileTitle = 0;
         ofn.lpstrInitialDir = NULL;
+        ofn.lpfnHook = OpenDialogHooks;
         ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
         if (GetOpenFileNameA(&ofn)) {
             return FILE_PATH;
