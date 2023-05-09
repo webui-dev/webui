@@ -1,7 +1,9 @@
 
-# WebUI C - Text Editor (Not Complete)
+# WebUI C - Text Editor
 
-A text editor application in C using WebUI.
+This [text editor example](https://github.com/alifcommunity/webui/tree/main/examples/C/text-editor) is written in C using WebUI as the GUI library. The final executable is portable and has less than _1 MB_ in size (_+html and css files_).
+
+![ScreenShot](webui_c_example.png)
 
 ### Windows
 
