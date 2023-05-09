@@ -138,7 +138,6 @@ static bool _webui_show(_webui_window_t* win, const char* content, size_t browse
 static size_t _webui_get_cb_index(char* webui_internal_id);
 static size_t _webui_set_cb_index(char* webui_internal_id);
 static size_t _webui_get_free_port(void);
-static size_t _webui_get_new_window_number(void);
 static void _webui_wait_for_startup(void);
 static void _webui_free_port(size_t port);
 static char* _webui_get_current_path(void);

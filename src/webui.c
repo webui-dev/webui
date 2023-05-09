@@ -110,7 +110,7 @@ static const char* webui_javascript_bridge =
 "                } else if(buffer8[1] === WEBUI_HEADER_SWITCH) { \n"
 "                    _webui_close(WEBUI_HEADER_SWITCH, data8utf8); \n"
 "                } else if(buffer8[1] === WEBUI_HEADER_CLOSE) { \n"
-"                    _webui_close(WEBUI_HEADER_CLOSE); \n"
+"                    window.close(); \n"
 "                } else if(buffer8[1] === WEBUI_HEADER_JS_QUICK || buffer8[1] === WEBUI_HEADER_JS) { \n"
 "                    data8utf8 = data8utf8.replace(/(?:\\r\\n|\\r|\\n)/g, \"\\\\n\"); \n"
 "                    if(_webui_log) \n"
@@ -445,7 +445,7 @@ size_t webui_new_window(void) {
 
     // Get a new window number
     // starting from 1.
-    size_t window_number = _webui_get_new_window_number();
+    size_t window_number = webui_get_new_window_id();
     if(_webui_core.wins[window_number] != NULL)
         _webui_panic();
 
@@ -465,6 +465,22 @@ size_t webui_new_window(void) {
     #endif
 
     return (size_t)window_number;
+}
+
+size_t webui_get_new_window_id(void) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_get_new_window_id()...\n");
+    #endif
+
+    for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
+        if(_webui_core.wins[i] == NULL)
+           return i;
+    }
+
+    // We should never reach here
+    _webui_panic();
+    return 0;
 }
 
 void webui_new_window_id(size_t window_number) {
@@ -4059,22 +4075,6 @@ static void _webui_wait_for_startup(void) {
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wait_for_startup() -> Finish.\n");
     #endif
-}
-
-static size_t _webui_get_new_window_number(void) {
-
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_get_new_window_number()...\n");
-    #endif
-
-    for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
-        if(_webui_core.wins[i] == NULL)
-           return i;
-    }
-
-    // We should never reach here
-    _webui_panic();
-    return 0;
 }
 
 static size_t _webui_get_free_port(void) {

@@ -145,6 +145,8 @@ typedef struct webui_event_t {
 WEBUI_EXPORT size_t webui_new_window(void);
 // Create a new webui window object.
 WEBUI_EXPORT void webui_new_window_id(size_t window_number);
+// Get a free window ID that can be used with `webui_new_window_id()`
+WEBUI_EXPORT size_t webui_get_new_window_id(void);
 // Bind a specific html element click event with a function. Empty element means all events.
 WEBUI_EXPORT size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t* e));
 // Show a window using a embedded HTML, or a file. If the window is already opened then it will be refreshed.
