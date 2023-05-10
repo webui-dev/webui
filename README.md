@@ -68,7 +68,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
  - Online Documentation - TypeScript / JavaScript (*Not Complete*)
  - [Online Documentation - Go](https://webui.me/docs/#/go_api)
  - Online Documentation - Rust (*Not Complete*)
- - Online Documentation - V (*Not Complete*)
+ - [Online Documentation - V](https://webui.me/docs/#/v_api)
  - [Online Documentation - Nim](https://neroist.github.io/webui-docs/) (*Not Complete*)
  - Online Documentation - Zig (*Not Complete*)
 
@@ -114,14 +114,14 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | Linux | Epic | *Does Not Exist* |
 | Linux | Opera | *coming soon* |
 | - | - | - |
-| macOS | Mozilla Firefox | *coming soon* |
+| macOS | Mozilla Firefox | ✔️ |
 | macOS | Google Chrome | ✔️ |
-| macOS | Microsoft Edge | *coming soon* |
-| macOS | Chromium | *coming soon* |
-| macOS | Yandex | *coming soon* |
-| macOS | Brave | *coming soon* |
-| macOS | Vivaldi | *coming soon* |
-| macOS | Epic | *coming soon* |
+| macOS | Microsoft Edge | ✔️ |
+| macOS | Chromium | ✔️ |
+| macOS | Yandex | ✔️ |
+| macOS | Brave | ✔️ |
+| macOS | Vivaldi | ✔️ |
+| macOS | Epic | ✔️ |
 | macOS | Apple Safari | *coming soon* |
 | macOS | Opera | *coming soon* |
 
