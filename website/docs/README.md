@@ -1,3 +1,5 @@
+![ScreenShot](data/webui_240_shadow.png)
+
 # WebUI v2.3.0 Documentation
 
 > Use any web browser as GUI, with your preferred language in the backend and HTML5 in the frontend, all in a lightweight portable lib.
