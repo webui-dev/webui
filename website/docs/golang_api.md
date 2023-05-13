@@ -27,7 +27,7 @@ You can build WebUI Go wrapper from source by cloning the WebUI repo and compile
 
 ### Windows
 ```sh
-git clone https://github.com/alifcommunity/webui.git
+git clone https://github.com/webui-dev/go-webui.git
 cd webui\examples\Go\hello_world
 go clean
 go build -o hello_world.exe
@@ -36,7 +36,7 @@ hello_world
 
 ### Linux
 ```sh
-git clone https://github.com/alifcommunity/webui.git
+git clone https://github.com/webui-dev/go-webui.git
 cd webui/examples/Go/hello_world
 go clean
 go build -o hello_world
@@ -45,14 +45,14 @@ go build -o hello_world
 
 ### macOS
 ```sh
-git clone https://github.com/alifcommunity/webui.git
+git clone https://github.com/webui-dev/go-webui.git
 cd webui/examples/Go/hello_world
 go clean
 go build -o hello_world
 ./hello_world
 ```
 
-To see the WebUI Go wrapper source code, please visit [WebUI](https://github.com/alifcommunity/webui/) in our GitHub repository.
+To see the WebUI Go wrapper source code, please visit [WebUI](https://github.com/webui-dev/go-webui/) in our GitHub repository.
 
 ---
 ### Examples
@@ -60,7 +60,7 @@ To see the WebUI Go wrapper source code, please visit [WebUI](https://github.com
 A minimal Go example
 
 ```go
-import "github.com/alifcommunity/webui/webui"
+import "github.com/webui-dev/go-webui/webui"
 
 var my_window = webui.NewWindow()
 webui.Show(my_window, "<html>Hello World</html>")
@@ -70,7 +70,7 @@ webui.Wait()
 Using a local HTML file. Please not that you need to add `<script src="/webui.js"></script>` to all your HTML files
 
 ```go
-import "github.com/alifcommunity/webui/webui"
+import "github.com/webui-dev/go-webui/webui"
 
 var my_window = webui.NewWindow()
 webui.Show(my_window, "my_file.html")
@@ -80,7 +80,7 @@ webui.Wait()
 Using a specific web browser
 
 ```go
-import "github.com/alifcommunity/webui/webui"
+import "github.com/webui-dev/go-webui/webui"
 
 var my_window = webui.NewWindow()
 // Please add <script src="/webui.js"></script> to your HTML files
@@ -88,7 +88,7 @@ webui.ShowBrowser(my_window, "my_file.html", webui.Chrome)
 webui.Wait()
 ```
 
-Please visit [Go Examples](https://github.com/alifcommunity/webui/tree/main/examples/Go) in our GitHub repository for more complete examples.
+Please visit [Go Examples](https://github.com/webui-dev/go-webui/tree/main/examples/Go) in our GitHub repository for more complete examples.
 
 ---
 ### New Window

@@ -7,14 +7,14 @@ Example of how to call C++ from JavaScript. To build this example, you will need
 
 - **Build Tools for Microsoft Visual Studio**
 ```sh
-git clone https://github.com/alifcommunity/webui.git
+git clone https://github.com/webui-dev/webui.git
 cd webui\examples\C++\call_cpp_from_js\Windows\MSVC
 nmake
 ```
 
 - **MinGW**
 ```sh
-git clone https://github.com/alifcommunity/webui.git
+git clone https://github.com/webui-dev/webui.git
 cd webui\examples\C++\call_cpp_from_js\Windows\GCC
 mingw32-make
 ```
@@ -23,14 +23,14 @@ mingw32-make
 
 - **GCC**
 ```sh
-git clone https://github.com/alifcommunity/webui.git
+git clone https://github.com/webui-dev/webui.git
 cd webui/examples/C++/call_cpp_from_js/Linux/GCC
 make
 ```
 
 - **Clang**
 ```sh
-git clone https://github.com/alifcommunity/webui.git
+git clone https://github.com/webui-dev/webui.git
 cd webui/examples/C++/call_cpp_from_js/Linux/Clang
 make
 ```
@@ -39,7 +39,7 @@ make
 
 - **Clang**
 ```sh
-git clone https://github.com/alifcommunity/webui.git
+git clone https://github.com/webui-dev/webui.git
 cd webui/examples/C++/call_cpp_from_js/macOS/Clang
 make
 ```

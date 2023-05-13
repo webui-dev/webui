@@ -29,7 +29,7 @@ Install the WebUI package from PyPI (*~360 Kb*).
 pip install webui2
 ```
 
-To see the WebUI Python wrapper source code, please visit [WebUI](https://github.com/alifcommunity/webui/) in our GitHub repository.
+To see the WebUI Python wrapper source code, please visit [WebUI](https://github.com/webui-dev/python-webui/) in our GitHub repository.
 
 ---
 ### Examples
@@ -65,7 +65,7 @@ MyWindow.show('<html>Hello World</html>', webui.browser.chrome)
 webui.wait()
 ```
 
-Please visit [Python Examples](https://github.com/alifcommunity/webui/tree/main/examples/Python) in our GitHub repository for more complete examples.
+Please visit [Python Examples](https://github.com/webui-dev/python-webui/tree/main/examples/Python) in our GitHub repository for more complete examples.
 
 ---
 ### New Window

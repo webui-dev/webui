@@ -2,7 +2,7 @@
 
 # WebUI v2.3.0
 
-[![Website](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://github.com/alifcommunity/webui) [![Website](https://img.shields.io/github/issues/alifcommunity/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://github.com/alifcommunity/webui/issues) [![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
+[![Website](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://github.com/webui-dev/webui) [![Website](https://img.shields.io/github/issues/webui-dev/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://github.com/webui-dev/webui/issues) [![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
 
 > Use any web browser as GUI, with your preferred language in the backend and HTML5 in the frontend, all in a lightweight portable lib.
 
@@ -26,7 +26,7 @@
 
 ## Screenshot
 
-This [text editor example](https://github.com/alifcommunity/webui/tree/main/examples/C/text-editor) is written in C using WebUI as the GUI library. The final executable is portable and has less than _1 MB_ in size (_+html and css files_).
+This [text editor example](https://github.com/webui-dev/webui/tree/main/examples/C/text-editor) is written in C using WebUI as the GUI library. The final executable is portable and has less than _1 MB_ in size (_+html and css files_).
 
 ![ScreenShot](webui_c_example.png)
 
@@ -66,31 +66,27 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
  - [Online Documentation - C](https://webui.me/docs/#/c_api)
  - [Online Documentation - C++](https://webui.me/docs/#/cpp_api)
- - [Online Documentation - Python](https://webui.me/docs/#/python_api)
- - Online Documentation - TypeScript / JavaScript (*Not Complete*)
- - [Online Documentation - Go](https://webui.me/docs/#/go_api)
- - Online Documentation - Rust (*Not Complete*)
- - [Online Documentation - V](https://webui.me/docs/#/v_api)
- - [Online Documentation - Nim](https://neroist.github.io/webui-docs/) (*Not Complete*)
- - Online Documentation - Zig (*Not Complete*)
 
 ## Build
 
- - [Windows](https://github.com/alifcommunity/webui/tree/main/build/Windows)
- - [Linux](https://github.com/alifcommunity/webui/tree/main/build/Linux)
- - [macOS](https://github.com/alifcommunity/webui/tree/main/build/macOS)
+ - [Windows](https://github.com/webui-dev/webui/tree/main/build/Windows)
+ - [Linux](https://github.com/webui-dev/webui/tree/main/build/Linux)
+ - [macOS](https://github.com/webui-dev/webui/tree/main/build/macOS)
 
 ## Examples
 
- - [C](https://github.com/alifcommunity/webui/tree/main/examples/C)
- - [C++](https://github.com/alifcommunity/webui/tree/main/examples/C++)
- - [Python](https://github.com/alifcommunity/webui/tree/main/examples/Python)
- - [TypeScript / JavaScript](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript)
- - [Go](https://github.com/alifcommunity/webui/tree/main/examples/Go/hello_world)
- - [Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust/hello_world) (*Not Complete*)
- - [V - malisipi/vwebui](https://github.com/malisipi/vwebui/tree/main/examples)
- - [Nim - neroist/webui](https://github.com/neroist/webui/tree/main/examples) (*Not Complete*)
- - [Zig - desttinghim/webui](https://github.com/desttinghim/webui/tree/main/examples) (*Not Complete*)
+ - [C](https://github.com/webui-dev/webui/tree/main/examples/C)
+ - [C++](https://github.com/webui-dev/webui/tree/main/examples/C++)
+
+ ## Wrappers
+
+ - [Python](https://github.com/webui-dev/python-webui)
+ - [TypeScript / JavaScript](https://github.com/webui-dev/deno-webui)
+ - [Go](https://github.com/webui-dev/go-webui)
+ - [Rust](https://github.com/webui-dev/rust-webui) (*Not Complete*)
+ - [V](https://github.com/webui-dev/v-webui)
+ - [Nim](https://github.com/webui-dev/nim-webui)
+ - [Zig](https://github.com/webui-dev/zig-webui) (*Not Complete*)
 
 ## Supported Web Browsers
 
@@ -131,16 +127,14 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 | Language | Status | Link |
 | ------ | ------ | ------ |
-| C | ✔️ | [examples/C](https://github.com/alifcommunity/webui/tree/main/examples/C) |
-| C++ |  ✔️ | [examples/C++](https://github.com/alifcommunity/webui/tree/main/examples/C%2B%2B) |
-| Python | ✔️ | [examples/Python](https://github.com/alifcommunity/webui/tree/main/examples/Python) |
-| JavaScript | ✔️ | [examples/TypeScript/Nodejs](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Nodejs) |
-| TypeScript | ✔️ | [examples/TypeScript/Deno](https://github.com/alifcommunity/webui/tree/main/examples/TypeScript/Deno) |
-| Go | ✔️ | [examples/Go](https://github.com/alifcommunity/webui/tree/main/examples/Go) |
-| Rust | *Not Complete* | [examples/Rust](https://github.com/alifcommunity/webui/tree/main/examples/Rust) |
-| V | ✔️ | [malisipi/vwebui](https://github.com/malisipi/vwebui) |
-| Nim | *Not Complete* | [neroist/webui](https://github.com/neroist/webui) |
-| Zig | *Not Complete* | [desttinghim/webui](https://github.com/desttinghim/webui) |
+| C/C++ | ✔️ | [WebUI](https://github.com/webui-dev/webui) |
+| Python | ✔️ | [Python-WebUI](https://github.com/webui-dev/python-webui) |
+| TypeScript / JavaScript | ✔️ | [Deno-WebUI](https://github.com/webui-dev/deno-webui) |
+| Go | ✔️ | [Go-WebUI](https://github.com/webui-dev/go-webui) |
+| Rust | *Not Complete* | [Rust-WebUI](https://github.com/webui-dev/rust-webui) |
+| V | ✔️ | [V-WebUI](https://github.com/webui-dev/v-webui) |
+| Nim | ✔️ | [Nim-WebUI](https://github.com/webui-dev/nim-webui) |
+| Zig | *Not Complete* | [Zig-WebUI](https://github.com/webui-dev/zig-webui) |
 
 ### License
 
@@ -148,4 +142,4 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ### Stargazers
 
-[![Stargazers repo roster for @alifcommunity/webui](https://reporoster.com/stars/alifcommunity/webui)](https://github.com/alifcommunity/webui/stargazers)
+[![Stargazers repo roster for @webui-dev/webui](https://reporoster.com/stars/webui-dev/webui)](https://github.com/webui-dev/webui/stargazers)
