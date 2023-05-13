@@ -51,16 +51,6 @@ echo.
 
 cd "%RootPath%"
 
-REM Golang
-copy /Y "include\webui.h" "examples\Go\hello_world\webui\webui.h"
-copy /Y "build\Windows\GCC\libwebui-2-static-x64.a" "examples\Go\hello_world\webui\libwebui-2-static-x64.a"
-
-REM Deno
-copy /Y "build\Windows\MSVC\webui-2-x64.dll" "examples\TypeScript\Deno\webui-2-x64.dll"
-
-REM Python
-copy /Y "build\Windows\MSVC\webui-2-x64.dll" "examples\Python\PyPI\Package\src\webui\webui-2-x64.dll"
-
 REM C++ (Visual Studio 2022)
 copy /Y "include\webui.h" "examples\C++\VS2022\serve_a_folder\my_webui_app\webui.h"
 copy /Y "include\webui.hpp" "examples\C++\VS2022\serve_a_folder\my_webui_app\webui.hpp"

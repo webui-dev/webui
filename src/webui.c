@@ -904,7 +904,7 @@ char* webui_encode(const char* str) {
     size_t buf_len = (((len + 2) / 3) * 4) + 8;
     char* buf = (char*) _webui_malloc(buf_len);
 
-    int ret = mg_base64_encode(str, len, buf, &buf_len);
+    int ret = mg_base64_encode((const unsigned char*)str, len, buf, &buf_len);
 
     if(ret > (-1)) {
         
@@ -939,7 +939,7 @@ char* webui_decode(const char* str) {
     #endif
 
     size_t buf_len = (((len + 2) / 3) * 4) + 8;
-    char* buf = (char*) _webui_malloc(buf_len);
+    unsigned char* buf = (unsigned char*) _webui_malloc(buf_len);
 
     int ret = mg_base64_decode(str, len, buf, &buf_len);
 
@@ -958,7 +958,7 @@ char* webui_decode(const char* str) {
     #endif
 
     // Success
-    return buf;
+    return (char*)buf;
 }
 
 void webui_free(void* ptr) {
@@ -1792,7 +1792,7 @@ static int _webui_serve_file(struct mg_connection *conn) {
 
         mg_send_http_error(
             conn, 404,
-            webui_html_res_not_available
+            "%s", webui_html_res_not_available
         );
         // _webui_http_send(
         //     conn, // 200
@@ -1929,7 +1929,7 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
 
             mg_send_http_error(
                 conn, 404,
-                webui_html_res_not_available
+                "%s", webui_html_res_not_available
             );
             // _webui_http_send(
             //     conn, // 200
@@ -1995,7 +1995,7 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
 
                 mg_send_http_error(
                     conn, 500,
-                    webui_deno_not_found
+                    "%s", webui_deno_not_found
                 );
                 // _webui_http_send(
                 //     conn, // 200
@@ -2044,7 +2044,7 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
 
                 mg_send_http_error(
                     conn, 500,
-                    webui_nodejs_not_found
+                    "%s", webui_nodejs_not_found
                 );
                 // _webui_http_send(
                 //     conn, // 200
@@ -4347,7 +4347,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
                     mg_send_http_error(
                         conn, 403,
-                        webui_html_served
+                        "%s", webui_html_served
                     );
                     // _webui_http_send(
                     //     conn, // 200
@@ -4376,7 +4376,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                         // Inject WebUI JS-Bridge into HTML
                         size_t len = _webui_strlen(win->html) + _webui_strlen(js) + 128;
                         html = (char*) _webui_malloc(len);
-                        if(html != NULL) {
+                        if(win->html != NULL && js != NULL) {
                             sprintf(html, 
                                 "%s \n <script type = \"text/javascript\"> \n %s \n </script>",
                                 win->html, js
