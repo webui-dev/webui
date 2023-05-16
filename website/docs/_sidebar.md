@@ -5,3 +5,4 @@
   - [WebUI Python APIs](/python_api)
   - [WebUI Go APIs](/go_api)
   - [WebUI V APIs](/v_api)
+  - [WebUI Nim APIs](/nim_api)
