@@ -676,8 +676,25 @@ void webui_set_icon(size_t window, const char* icon, const char* icon_type) {
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
-    win->icon = icon;
-    win->icon_type = icon_type;
+    // Some wrappers does not guarantee `icon` to
+    // stay valid, so, let's make our own copy.
+    // Icon
+    size_t len = _webui_strlen(icon);
+    const char* icon_cpy = (const char*)_webui_malloc(len);
+    memcpy((char*)icon_cpy, icon, len);
+    // Icon Type
+    len = _webui_strlen(icon_type);
+    const char* icon_type_cpy = (const char*)_webui_malloc(len);
+    memcpy((char*)icon_type_cpy, icon_type, len);
+
+    // Clean old sets if any
+    if(win->icon != NULL)
+        _webui_free_mem((void*)win->icon);
+    if(win->icon_type != NULL)
+        _webui_free_mem((void*)win->icon_type);
+
+    win->icon = icon_cpy;
+    win->icon_type = icon_type_cpy;
 }
 
 bool webui_show(size_t window, const char* content) {
@@ -828,7 +845,7 @@ void webui_return_int(webui_event_t* e, long long int n) {
     *response = buf;
 }
 
-void webui_return_string(webui_event_t* e, char* s) {
+void webui_return_string(webui_event_t* e, const char* s) {
 
     #ifdef WEBUI_LOG
         printf("[User] webui_return_string([%s])...\n", s);
