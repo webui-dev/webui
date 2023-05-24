@@ -2624,6 +2624,14 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 VivaldiExist = true;
                 return true;
             }
+
+            // Vivaldi on Arch Linux
+            else if(_webui_cmd_sync(win, "vivaldi-stable --version", false) == 0) {
+
+                sprintf(win->browser_path, "vivaldi-stable");
+                VivaldiExist = true;
+                return true;
+            }
             else
                 return false;
         #endif
