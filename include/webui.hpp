@@ -39,15 +39,13 @@ namespace webui {
     // Event struct
         struct event : public webui_event_t{
             using webui_event_t::webui_event_t;
-            webui::window& window; // The window object
 
             // Window object constructor that
             // initializes the reference, This
             // is to avoid creating copies.
-            event(webui::window& window_obj, webui_event_t c_e = {}) : webui_event_t(c_e),
-                window(window_obj) {
-                    reinterpret_cast<webui_event_t*>(this)->window = window_obj.webui_window;
-                }
+            event(webui::window& window_obj, webui_event_t c_e) : webui_event_t(c_e){
+                reinterpret_cast<webui_event_t*>(this)->window = window_obj.webui_window;
+            }
 
             class handler{
                 public:
