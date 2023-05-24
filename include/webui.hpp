@@ -13,6 +13,7 @@
 
 // C++ STD
 #include <string>
+#include <string_view>
 
 // WebUI C Header
 extern "C" {
@@ -67,12 +68,12 @@ namespace webui {
         webui::event e(*window_list[id]);
         // `e.window` is already initialized by `e` constructor
         e.event_type = c_e->event_type;
-        e.element = (c_e->element != NULL ? std::string(c_e->element) : std::string(""));
-        e.data = (c_e->data != NULL ? std::string(c_e->data) : std::string(""));
+        e.element = (c_e->element != nullptr ? std::string(c_e->element) : std::string(""));
+        e.data = (c_e->data != nullptr ? std::string(c_e->data) : std::string(""));
         e.event_number = c_e->event_number;
 
         // Call the user callback
-        if(callback_list[id] != NULL)
+        if(callback_list[id] != nullptr)
             callback_list[id](&e);
     }
 
@@ -80,7 +81,7 @@ namespace webui {
     private:
         size_t webui_window = 0;
 
-        webui_event_t* convert_event_to_webui_event(webui::event* e) {
+        webui_event_t* convert_event_to_webui_event(webui::event* e) const {
             // Convert C++ `webui::event` to C `webui_event_t`
             webui_event_t* c_e = new webui_event_t;
             c_e->window = this->webui_window;
@@ -92,21 +93,14 @@ namespace webui {
         }
     public:
         // Constructor
-        window() {
-            this->webui_window = webui_new_window();
-        }
-
-        // Destructor
-        ~window() {
-            // Nothing to do.
-            // No needs to call `webui_close()`
+        window() : webui_window (webui_new_window()){
         }
 
         // Bind a specific html element click event with a function. Empty element means all events.
-        void bind(const std::string& element, void (*func)(webui::event* e)) {
+        void bind(const std::string_view element, void (*func)(webui::event* e)) {
 
             // Get unique ID
-            unsigned int id = webui_bind(this->webui_window, element.c_str(), webui::event_handler);
+            unsigned int id = webui_bind(this->webui_window, element.data(), webui::event_handler);
 
             // Save window object
             window_list[id] = this;
@@ -116,59 +110,59 @@ namespace webui {
         }
 
         // Show a window using a embedded HTML, or a file. If the window is already opened then it will be refreshed.
-        bool show(const std::string& content) {
-            return webui_show(this->webui_window, content.c_str());
+        bool show(const std::string_view content) const {
+            return webui_show(this->webui_window, content.data());
         }
 
         // Same as show(). But with a specific web browser.
-        bool show_browser(const std::string& content, unsigned int browser) {
-            return webui_show_browser(this->webui_window, content.c_str(), browser);
+        bool show_browser(const std::string_view content, unsigned int browser) const {
+            return webui_show_browser(this->webui_window, content.data(), browser);
         }
 
         // Close a specific window.
-        void close() {
+        void close() const {
             webui_close(this->webui_window);
         }
 
         // Set the window in Kiosk mode (Full screen)
-        void set_kiosk(bool status) {
+        void set_kiosk(bool status) const {
             webui_set_kiosk(this->webui_window, status);
         }
 
         // -- Other ---------------------------
         // Check a specific window if it's still running
-        bool is_shown() {
+        bool is_shown() const {
             return webui_is_shown(this->webui_window);
         }
 
         // Set the default embedded HTML favicon
-        void set_icon(const std::string& icon, const std::string& icon_type) {
-            webui_set_icon(this->webui_window, icon.c_str(), icon_type.c_str());
+        void set_icon(const std::string_view icon, const std::string& icon_type) const {
+            webui_set_icon(this->webui_window, icon.data(), icon_type.c_str());
         }
 
         // Allow the window URL to be re-used in normal web browsers
-        void set_multi_access(bool status) {
+        void set_multi_access(bool status) const {
             webui_set_multi_access(this->webui_window, status);
         }
 
         // -- JavaScript ----------------------
         // Quickly run a JavaScript (no response waiting).
-        void run(const std::string& script) {
-            webui_run(this->webui_window, script.c_str());
+        void run(const std::string_view script) const {
+            webui_run(this->webui_window, script.data());
         }
 
         // Run a JavaScript, and get the response back (Make sure your local buffer can hold the response).
-        bool script(const std::string& script, unsigned int timeout, char* buffer, size_t buffer_length) {
-            return webui_script(this->webui_window, script.c_str(), timeout, buffer, buffer_length);
+        bool script(const std::string_view script, unsigned int timeout, char* buffer, size_t buffer_length) const {
+            return webui_script(this->webui_window, script.data(), timeout, buffer, buffer_length);
         }
 
         // Chose between Deno and Nodejs runtime for .js and .ts files.
-        void set_runtime(unsigned int runtime) {
+        void set_runtime(unsigned int runtime) const {
             webui_set_runtime(this->webui_window, runtime);
         }
 
         // Parse argument as integer.
-        long long int get_int(webui::event* e) {
+        long long int get_int(webui::event* e) const {
             webui_event_t* c_e = convert_event_to_webui_event(e);
             long long int ret = webui_get_int(c_e);
             delete c_e;
@@ -176,7 +170,7 @@ namespace webui {
         }
 
         // Parse argument as string.
-        std::string get_string(webui::event* e) {
+        std::string get_string(webui::event* e) const {
             webui_event_t* c_e = convert_event_to_webui_event(e);
             std::string ret = std::string(webui_get_string(c_e));
             delete c_e;
@@ -184,7 +178,7 @@ namespace webui {
         }
 
         // Parse argument as boolean.
-        bool get_bool(webui::event* e) {
+        bool get_bool(webui::event* e) const {
             webui_event_t* c_e = convert_event_to_webui_event(e);
             bool ret = webui_get_bool(c_e);
             delete c_e;
@@ -192,21 +186,21 @@ namespace webui {
         }
 
         // Return the response to JavaScript as integer.
-        void return_int(webui::event* e, long long int n) {
+        void return_int(webui::event* e, long long int n) const {
             webui_event_t* c_e = convert_event_to_webui_event(e);
             webui_return_int(c_e, n);
             delete c_e;
         }
 
         // Return the response to JavaScript as string.
-        void return_string(webui::event* e, const std::string& s) {
+        void return_string(webui::event* e, const std::string_view s) const {
             webui_event_t* c_e = convert_event_to_webui_event(e);
-            webui_return_string(c_e, s.c_str());
+            webui_return_string(c_e, s.data());
             delete c_e;
         }
 
         // Return the response to JavaScript as boolean.
-        void return_bool(webui::event* e, bool b) {
+        void return_bool(webui::event* e, bool b) const {
             webui_event_t* c_e = convert_event_to_webui_event(e);
             webui_return_bool(c_e, b);
             delete c_e;
@@ -214,34 +208,34 @@ namespace webui {
     };
 
     // Wait until all opened windows get closed.
-    void wait(void) {
+    inline void wait() {
         webui_wait();
     }
 
     // Close all opened windows. wait() will break.
-    void exit(void) {
+    inline void exit(){
         webui_exit();
     }
 
     // Set the maximum time in seconds to wait for browser to start
-    void set_timeout(unsigned int second) {
+    inline void set_timeout(unsigned int second) {
         webui_set_timeout(second);
     }
 
     // Base64 encoding. Use this to safely send text based data to the UI. If it fails it will return NULL.
-    std::string encode(const std::string& str) {
-        std::string ret = std::string(webui_encode(str.c_str()));
+    inline std::string encode(const std::string_view str) {
+        std::string ret = std::string(webui_encode(str.data()));
         return ret;
     }
 
     // Base64 decoding. Use this to safely decode received Base64 text from the UI. If it fails it will return NULL.
-    std::string decode(const std::string& str) {
-        std::string ret = std::string(webui_decode(str.c_str()));
+    inline std::string decode(const std::string_view str) {
+        std::string ret = std::string(webui_decode(str.data()));
         return ret;
     }
 
     // Safely free a buffer allocated by WebUI, for example when using webui_encode().
-    void free(void* ptr) {
+    inline void free(void* ptr) {
         webui_free(ptr);
     }
 }
