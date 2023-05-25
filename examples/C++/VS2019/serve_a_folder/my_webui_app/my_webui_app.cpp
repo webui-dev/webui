@@ -25,7 +25,7 @@ class MyClass {
     void switch_to_second_page(webui::window::event* e) {
 
         // Switch to `/second.html` in the same opened window.
-        e->window.show("second.html");
+        e->get_window().show("second.html");
     }
 
     // Example of a simple function (Not a method)
