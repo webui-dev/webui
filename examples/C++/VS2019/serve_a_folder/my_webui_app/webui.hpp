@@ -94,6 +94,10 @@ namespace webui {
                     if(callback_list[id] != nullptr)
                         callback_list[id](&e);
                 }
+
+                static webui::window& get_window(const size_t index){
+                    return *window_list[index];
+                }
             };
 
             // Parse argument as integer.
@@ -124,6 +128,10 @@ namespace webui {
             // Return the response to JavaScript as boolean.
             void return_bool(bool b) {
                 webui_return_bool(this, b);
+            }
+
+            webui::window& get_window(){
+                return event::handler::get_window(window);
             }
         };
 
