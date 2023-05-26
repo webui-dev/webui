@@ -9,13 +9,13 @@
 #include <string>
 #include <stdexcept>
 
-void my_function_exit(webui::event* e) {
+void my_function_exit(webui::window::event* e) {
 
     // Close all opened windows
     webui::exit();
 }
 
-void my_function_count(webui::event* e) {
+void my_function_count(webui::window::event* e) {
 
     // This function gets called every time the user clicks on "MyButton1"
 

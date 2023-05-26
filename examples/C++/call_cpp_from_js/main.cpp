@@ -6,12 +6,12 @@
 // Include C++ STD
 #include <iostream>
 
-void my_function_string(webui::event* e) {
+void my_function_string(webui::window::event* e) {
 
     // JavaScript:
     // webui_fn('MyID_One', 'Hello');
 
-    std::string str = e->window.get_string(e);
+    std::string str = e->get_string();
     std::cout << "my_function_string: " << str << std::endl; // Hello
 
     // Need Multiple Arguments?
@@ -25,38 +25,38 @@ void my_function_string(webui::event* e) {
     // bar = my_json[1];
 }
 
-void my_function_integer(webui::event* e) {
+void my_function_integer(webui::window::event* e) {
 
     // JavaScript:
     // webui_fn('MyID_Two', 123456789);
 
-    long long number = e->window.get_int(e);
+    long long number = e->get_int();
     std::cout << "my_function_integer: " << number << std::endl; // 123456789
 }
 
-void my_function_boolean(webui::event* e) {
+void my_function_boolean(webui::window::event* e) {
 
     // JavaScript:
     // webui_fn('MyID_Three', true);
 
-    bool status = e->window.get_bool(e); // True
+    bool status = e->get_bool(); // True
     if(status)
         std::cout << "my_function_boolean: True" << std::endl;
     else
         std::cout << "my_function_boolean: False" << std::endl;
 }
 
-void my_function_with_response(webui::event* e) {
+void my_function_with_response(webui::window::event* e) {
 
     // JavaScript:
     // const result = webui_fn('MyID_Four', number);
 
-    long long number = e->window.get_int(e);
+    long long number = e->get_int();
     number = number * 2;
     std::cout << "my_function_with_response: " << number << std::endl;
 
     // Send back the response to JavaScript
-    e->window.return_int(e, number);
+    e->return_int(number);
 }
 
 int main() {
