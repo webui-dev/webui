@@ -2630,6 +2630,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 VivaldiExist = true;
                 return true;
             }
+            else if(_webui_cmd_sync(win, "vivaldi-snapshot --version", false) == 0) {
+
+                sprintf(win->browser_path, "vivaldi-snapshot");
+                VivaldiExist = true;
+                return true;
+            }
             else
                 return false;
         #endif
