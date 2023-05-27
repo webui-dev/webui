@@ -28,7 +28,7 @@ void my_function_count(webui::window::event* e) {
     //  my_window.script(..., ..., &buffer[0], 64);
 
     // Run JavaScript
-    if(!e->window.script("return GetCount();", 0, response, 64)) {
+    if(!e->get_window().script("return GetCount();", 0, response, 64)) {
 
         std::cout << "JavaScript Error: " << response << std::endl;
         return;
@@ -45,7 +45,7 @@ void my_function_count(webui::window::event* e) {
     js << "SetCount(" << count << ");";
 
     // Run JavaScript (Quick Way)
-    e->window.run(js.str());
+    e->get_window().run(js.str());
 }
 
 int main() {
