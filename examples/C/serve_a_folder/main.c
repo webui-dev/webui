@@ -67,7 +67,9 @@ int main() {
     webui_set_runtime(MyWindow, Deno);
 
     // Show a new window
-    webui_show(MyWindow, "index.html"); // webui_show_browser(MyWindow, "index.html", Chrome);
+    // webui_set_root_folder(MyWindow, "_MY_PATH_HERE_");
+    // webui_show_browser(MyWindow, "index.html", Chrome);
+    webui_show(MyWindow, "index.html");
 
     // Wait until all windows get closed
     webui_wait();

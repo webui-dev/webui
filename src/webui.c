@@ -1102,6 +1102,32 @@ void webui_set_runtime(size_t window, size_t runtime) {
         win->runtime = runtime;
 }
 
+bool webui_set_root_folder(size_t window, const char* path) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_set_root_folder([%zu], [%s])...\n", window, path);
+    #endif
+
+    // Dereference
+    if(_webui_core.wins[window] == NULL) return false;
+    _webui_window_t* win = _webui_core.wins[window];
+
+    if(win->server_running || _webui_is_empty(path) || (_webui_strlen(path) > WEBUI_MAX_PATH) || !_webui_folder_exist((char*)path)) {
+
+        sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
+        #ifdef WEBUI_LOG
+            printf("[User] webui_set_root_folder() -> Failed.\n");
+        #endif
+        return false;
+    }
+    
+    #ifdef WEBUI_LOG
+        printf("[User] webui_set_root_folder() -> Success.\n");
+    #endif
+    sprintf(win->server_root_path, "%s", path);
+    return true;
+}
+
 // -- Interface's Functions ----------------
 static void _webui_interface_bind_handler(webui_event_t* e) {
 
@@ -1574,7 +1600,7 @@ static size_t _webui_strlen(const char* s) {
     return length;
 }
 
-static bool _webui_file_exist_mg(struct mg_connection *conn) {
+static bool _webui_file_exist_mg(_webui_window_t* win, struct mg_connection *conn) {
     
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_file_exist_mg()...\n");
@@ -1595,8 +1621,8 @@ static bool _webui_file_exist_mg(struct mg_connection *conn) {
 
     // Get full path
     // [current folder][/][file]
-    full_path = (char*) _webui_malloc(_webui_strlen(_webui_core.executable_path) + 1 + _webui_strlen(file));
-    sprintf(full_path, "%s%s%s", _webui_core.executable_path, webui_sep, file);
+    full_path = (char*) _webui_malloc(_webui_strlen(win->server_root_path) + 1 + _webui_strlen(file));
+    sprintf(full_path, "%s%s%s", win->server_root_path, webui_sep, file);
 
     bool exist = _webui_file_exist(full_path);
 
@@ -1744,7 +1770,7 @@ static char* _webui_get_file_name_from_url(const char* url) {
     return file;
 }
 
-static char* _webui_get_full_path_from_url(const char* url) {
+static char* _webui_get_full_path_from_url(_webui_window_t* win, const char* url) {
 
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_get_full_path_from_url([%s])...\n", url);
@@ -1760,8 +1786,8 @@ static char* _webui_get_full_path_from_url(const char* url) {
 
     // Get full path
     // [current folder][/][file]
-    char* full_path = (char*) _webui_malloc(_webui_strlen(_webui_core.executable_path) + 1 + _webui_strlen(file));
-    sprintf(full_path, "%s%s%s", _webui_core.executable_path, webui_sep, file);
+    char* full_path = (char*) _webui_malloc(_webui_strlen(win->server_root_path) + 1 + _webui_strlen(file));
+    sprintf(full_path, "%s%s%s", win->server_root_path, webui_sep, file);
 
     #ifdef _WIN32
         // Replace `/` by `\`
@@ -1782,7 +1808,7 @@ static char* _webui_get_full_path_from_url(const char* url) {
     return full_path;
 }
 
-static int _webui_serve_file(struct mg_connection *conn) {
+static int _webui_serve_file(_webui_window_t* win, struct mg_connection *conn) {
 
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_serve_file()...\n");
@@ -1796,7 +1822,7 @@ static int _webui_serve_file(struct mg_connection *conn) {
     const char* url = ri->local_uri;
     
     // Get full path
-    char* full_path = _webui_get_full_path_from_url(url);
+    char* full_path = _webui_get_full_path_from_url(win, url);
 
     if(_webui_file_exist(full_path)) {
 
@@ -1938,7 +1964,7 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
         file = _webui_get_file_name_from_url(url);
 
         // Get full path
-        full_path = _webui_get_full_path_from_url(url);
+        full_path = _webui_get_full_path_from_url(win, url);
 
         if(!_webui_file_exist(full_path)) {
 
@@ -3433,27 +3459,6 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     return true;
 }
 
-static bool _webui_set_root_folder(_webui_window_t* win, const char* path) {
-
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_set_root_folder([%s])...\n", path);
-    #endif
-
-    if((path == NULL) || (_webui_strlen(path) > WEBUI_MAX_PATH))
-        return false;
-
-    win->is_embedded_html = true;
-
-    if(_webui_is_empty(path))
-        sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
-    else
-        sprintf(win->server_root_path, "%s", path);
-    
-    webui_set_multi_access(win->window_number, true);
-
-    return true;
-}
-
 static bool _webui_is_process_running(const char* process_name) {
 
     #ifdef WEBUI_LOG
@@ -4437,31 +4442,31 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
                 // Set full path
                 // [Path][Sep][File Name]
-                char* index = (char*) _webui_malloc(_webui_strlen(_webui_core.executable_path) + 1 + 8); 
+                char* index = (char*) _webui_malloc(_webui_strlen(win->server_root_path) + 1 + 8); 
 
                 // Index.ts
-                sprintf(index, "%s%sindex.ts", _webui_core.executable_path, webui_sep);
+                sprintf(index, "%s%sindex.ts", win->server_root_path, webui_sep);
                 if(_webui_file_exist(index)) {
 
                     // TypeScript Index
                     if(win->runtime != None)
                         http_status_code = _webui_interpret_file(win, conn, index);
                     else
-                        http_status_code = _webui_serve_file(conn);
+                        http_status_code = _webui_serve_file(win, conn);
 
                    _webui_free_mem((void*)index);
                     return 0;
                 }
 
                 // Index.js
-                sprintf(index, "%s%sindex.js", _webui_core.executable_path, webui_sep);
+                sprintf(index, "%s%sindex.js", win->server_root_path, webui_sep);
                 if(_webui_file_exist(index)) {
 
                     // JavaScript Index
                     if(win->runtime != None)
                         http_status_code = _webui_interpret_file(win, conn, index);
                     else
-                        http_status_code = _webui_serve_file(conn);
+                        http_status_code = _webui_serve_file(win, conn);
 
                     _webui_free_mem((void*)index);
                     return 0;
@@ -4471,7 +4476,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                 
                 // Index.html
                 // Serve as a normal HTML text-based file
-                http_status_code = _webui_serve_file(conn);
+                http_status_code = _webui_serve_file(win, conn);
             }
         }
         else if(strcmp(url, "/favicon.ico") == 0 || strcmp(url, "/favicon.svg") == 0) {
@@ -4489,10 +4494,10 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                     win->icon
                 );
             }
-            else if(_webui_file_exist_mg(conn)) {
+            else if(_webui_file_exist_mg(win, conn)) {
 
                 // Local icon file
-                http_status_code = _webui_serve_file(conn);
+                http_status_code = _webui_serve_file(win, conn);
             }
             else {
 
@@ -4533,7 +4538,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                 #endif
                 
                 // Serve as a normal text-based file
-                http_status_code = _webui_serve_file(conn);
+                http_status_code = _webui_serve_file(win, conn);
             }
         }
     }
@@ -4804,6 +4809,7 @@ static WEBUI_SERVER_START
                 printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> HTTP Port: %s\n", win->window_number, server_port);
                 printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> WS Port: %s\n", win->window_number, ws_port);
                 printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Timeout is %zu seconds\n", win->window_number, _webui_core.startup_timeout);
+                printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Root path: %s\n", win->window_number, win->server_root_path);
             #endif
 
             bool stop = false;
