@@ -91,10 +91,10 @@ IF "%ARG1%"=="" (
     echo.
     echo Compressing the release folder...
 
-    set TAR_OUT=webui-windows-x64-v%WEBUI_VERSION%.zip
+    set TAR_OUT=webui-windows-x64-v%WEBUI_VERSION%.tar.gz
     cd "Release"
     timeout 2 > NUL
-    tar.exe -c -f %TAR_OUT% Windows\*
+    tar.exe -czf %TAR_OUT% Windows\*
     cd "%RootPath%"
 
     echo.
