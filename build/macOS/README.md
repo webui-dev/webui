@@ -4,6 +4,6 @@
 
 ```sh
 git clone https://github.com/alifcommunity/webui.git
-cd webui\build\macOS\Clang
+cd webui/build/macOS/Clang
 make
 ```
