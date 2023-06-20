@@ -56,10 +56,10 @@ if [ "$ARG1" = "" ]; then
     echo "Compressing the release folder..."
     echo "";
 
-    TAR_OUT="webui-macos-x64-v$WEBUI_VERSION.zip"
+    TAR_OUT="webui-macos-x64-v$WEBUI_VERSION.tar.gz"
     cd "Release"
     sleep 2
-    tar -c -f $TAR_OUT macOS/*
+    tar -czf $TAR_OUT macOS/*
     cd "$RootPath"
 
     echo "";
