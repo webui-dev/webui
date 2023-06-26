@@ -140,6 +140,8 @@ typedef struct webui_event_t {
     size_t event_number; // Internal WebUI
 } webui_event_t;
 
+typedef void* (*_webui_files_handler)(const char *filename, int *length, bool *allocated);
+
 // -- Definitions ---------------------
 // Create a new webui window object.
 WEBUI_EXPORT size_t webui_new_window(void);
@@ -165,6 +167,8 @@ WEBUI_EXPORT void webui_destroy(size_t window);
 WEBUI_EXPORT void webui_exit(void);
 // Set the web-server root folder path.
 WEBUI_EXPORT bool webui_set_root_folder(size_t window, const char* path);
+// Set a custom handler to serve files
+WEBUI_EXPORT void webui_set_file_handler(size_t window, _webui_files_handler handler);
 
 // -- Other ---------------------------
 // Check a specific window if it's still running
