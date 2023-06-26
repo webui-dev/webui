@@ -48,6 +48,50 @@ void show_second_window(webui_event_t* e) {
     webui_show(MySecondWindow, "second.html");
 }
 
+const void* my_files_handler(const char* filename, int* length) {
+
+    printf("File: %s \n", filename);
+
+    if(!strcmp(filename, "/test.txt")) {
+
+        // Const static file example
+        // Note: The connection will drop if the content
+        // does not have `<script src="/webui.js"></script>`
+        return "This is a embedded file content example.";
+    }
+    else if(!strcmp(filename, "/dynamic.html")) {
+
+        // Dynamic file example
+
+        // Allocate memory
+        char* dynamic_content = webui_malloc(1024);
+
+        // Generate content
+        static int count = 0;
+        sprintf(
+            dynamic_content,
+            "<html>"
+            "   This is a dynamic file content example. <br>"
+            "   Count: %d <a href=\"dynamic.html\">[Refresh]</a><br>"
+            "   <script src=\"/webui.js\"></script>" // To keep connection with WebUI
+            "</html>",
+            ++count
+        );
+
+        // Set len (optional)
+        *length = strlen(dynamic_content);
+
+        // By allocating resources using webui_malloc()
+        // WebUI will automaticaly free the resources.
+        return dynamic_content;
+    }
+
+    // Other files:
+    // A NULL return will make WebUI
+    // looks for the file locally.
+    return NULL;
+}
+
 int main() {
 
     // Create new windows
@@ -65,6 +109,9 @@ int main() {
 
     // Make Deno as the `.ts` and `.js` interpreter
     webui_set_runtime(MyWindow, Deno);
+
+    // Set a custom files handler
+    webui_set_file_handler(MyWindow, my_files_handler);
 
     // Show a new window
     // webui_set_root_folder(MyWindow, "_MY_PATH_HERE_");

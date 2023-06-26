@@ -29,8 +29,6 @@
 #define WEBUI_DEF_TIMEOUT       (30)        // Default startup timeout in seconds
 #define WEBUI_MAX_TIMEOUT       (60)        // Maximum startup timeout in seconds the user can set
 
-typedef void* (*_webui_files_handler)(const char *filename, int *length, bool *allocated);
-
 typedef struct _webui_timer_t {
     struct timespec start;
     struct timespec now;
@@ -70,7 +68,7 @@ typedef struct _webui_window_t {
     #else
         pthread_t server_thread;
     #endif
-    _webui_files_handler files_handler;
+    const void* (*files_handler)(const char* filename, int* length);
 } _webui_window_t;
 
 typedef struct _webui_core_t {
