@@ -294,11 +294,11 @@ static const char* webui_javascript_bridge =
 "        _webui_send_event_navigation(url); \n"
 "    }); \n"
 "} \n"
-"document.body.addEventListener('contextmenu', function(event){ event.preventDefault(); }); \n"
+"function disableCtxMenu() { document.body.addEventListener('contextmenu', function(event){ event.preventDefault(); }); }\n"
 "const inputs = document.getElementsByTagName('input'); \n"
 "for(var i = 0; i < inputs.length; i++){ inputs[i].addEventListener('contextmenu', function(event){ event.stopPropagation(); });} \n"
 "// Load \n"
-"window.addEventListener('load', _webui_start()); \n";
+"window.addEventListener('load', () => { _webui_start(); disableCtxMenu }); \n";
 
 // -- Heap ----------------------------
 static const char* webui_html_served = "<html><head><title>Access Denied</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Access Denied</h2><p>You can't access this content<br>because it's already processed.<br><br>The current security policy denies<br>multiple requests.</p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
@@ -4483,9 +4483,11 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                         size_t len = _webui_strlen(win->html) + _webui_strlen(js) + 128;
                         html = (char*) _webui_malloc(len);
                         if(win->html != NULL && js != NULL) {
-                            sprintf(html, 
-                                "%s \n <script type = \"application/javascript\"> \n %s \n </script>",
-                                win->html, js
+                            sprintf(html,
+                                //! Construct bad html to load js bridge before all user content
+                                //! Temp fix, need to improve this trick by inserting the script tag in html head via an XML/DOM parser
+                                "<html> <script type = \"application/javascript\" src = \" webui.js \"> \n \n </script> \n %s",
+                                win->html
                             );
                         }
 
