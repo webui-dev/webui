@@ -35,7 +35,7 @@ echo "";
 #Converting JS source to C-String using xxd
 cd "$RootPath"
 cd "src/client"
-xxd -i ./webui.js ./webui.c
+xxd -i ./webui.js ./webui.h
 
 echo "";
 echo "Copying WebUI libs to the examples folder..."

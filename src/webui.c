@@ -16,7 +16,7 @@
 #include "webui_core.h"
 
 // -- WebUI JS API --------------------
-#include "client/webui.c"
+#include "client/webui.h"
 static char* webui_javascript_bridge = __webui_js;
 
 // -- Heap ----------------------------

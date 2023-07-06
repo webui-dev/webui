@@ -23,7 +23,7 @@ REM Converting JS source to C-String using xxd
 echo Converting JS source to C-String using xxd
 cd "%RootPath%"
 cd "src\client"
-xxd -i .\webui.js .\webui.c
+xxd -i .\webui.js .\webui.h
 
 echo.
 echo Building WebUI using MSVC...
