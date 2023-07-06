@@ -29,6 +29,15 @@ cd "build/macOS/Clang"
 $CLANG_CMD
 
 echo "";
+echo "Converting JS source to C-String using xxd"
+echo "";
+
+#Converting JS source to C-String using xxd
+cd "$RootPath"
+cd "src/client"
+xxd -i ./webui.js ./webui.c
+
+echo "";
 echo "Copying WebUI libs to the examples folder..."
 echo "";
 
