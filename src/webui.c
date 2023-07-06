@@ -4431,7 +4431,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
             // Send
             _webui_http_send(
                 conn, // 200
-                "text/javascript",
+                "application/javascript",
                 js
             );
 
@@ -4484,7 +4484,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                         html = (char*) _webui_malloc(len);
                         if(win->html != NULL && js != NULL) {
                             sprintf(html, 
-                                "%s \n <script type = \"text/javascript\"> \n %s \n </script>",
+                                "%s \n <script type = \"application/javascript\"> \n %s \n </script>",
                                 win->html, js
                             );
                         }
