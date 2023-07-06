@@ -258,15 +258,21 @@ document.addEventListener('click', e => {
             _webui_close(WEBUI_HEADER_SWITCH, link); 
         } 
     } 
-}); 
+});
+
 if(typeof navigation !== 'undefined') { 
         navigation.addEventListener('navigate', (event) => { 
             const url = new URL(event.destination.url); 
         _webui_send_event_navigation(url); 
     }); 
-} 
-document.body.addEventListener('contextmenu', function(event){ event.preventDefault(); }); 
+}
+
 const inputs = document.getElementsByTagName('input'); 
-for(var i = 0; i < inputs.length; i++){ inputs[i].addEventListener('contextmenu', function(event){ event.stopPropagation(); });} 
+for(var i = 0; i < inputs.length; i++) {
+    inputs[i].addEventListener('contextmenu', function(event){ event.stopPropagation(); });
+} 
 // Load 
-window.addEventListener('load', _webui_start()); \n";
+window.addEventListener('load', () => {
+    _webui_start()
+    document.body.addEventListener('contextmenu', function(event){ event.preventDefault(); }); 
+});
