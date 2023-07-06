@@ -83,7 +83,7 @@ function _webui_start() {
                 } else if(buffer8[1] === WEBUI_HEADER_CLOSE) { 
                         window.close(); 
                 } else if(buffer8[1] === WEBUI_HEADER_JS_QUICK || buffer8[1] === WEBUI_HEADER_JS) { 
-                        data8utf8 = data8utf8.replace(/(?:\\r\\n|\\r|\\n)/g, \"\\\\n\"); 
+                        data8utf8 = data8utf8.replace(/(?:\r\n|\r|\n)/g, "\n"); 
                     if(_webui_log) 
                         console.log('WebUI -> JS [' + data8utf8 + ']'); 
                     var FunReturn = 'undefined'; 
@@ -263,11 +263,12 @@ document.addEventListener('click', e => {
 if(typeof navigation !== 'undefined') { 
         navigation.addEventListener('navigate', (event) => { 
             const url = new URL(event.destination.url); 
-        _webui_send_event_navigation(url); 
+            _webui_send_event_navigation(url); 
     }); 
 }
 
 const inputs = document.getElementsByTagName('input'); 
+
 for(var i = 0; i < inputs.length; i++) {
     inputs[i].addEventListener('contextmenu', function(event){ event.stopPropagation(); });
 } 
