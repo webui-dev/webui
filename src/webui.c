@@ -4480,7 +4480,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                         const char* js = _webui_generate_js_bridge(win);
 
                         // Inject WebUI JS-Bridge into HTML
-                        size_t len = _webui_strlen(win->html) + _webui_strlen(js) + 128;
+                        size_t len = _webui_strlen(win->html) + 128;
                         html = (char*) _webui_malloc(len);
                         if(win->html != NULL && js != NULL) {
                             sprintf(html,
