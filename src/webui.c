@@ -1898,16 +1898,12 @@ static int _webui_serve_file(_webui_window_t* win, struct mg_connection *conn) {
         else {
 
             // 404 - File not exist
-
-            mg_send_http_error(
-                conn, 404,
-                "%s", webui_html_res_not_available
+            _webui_http_send_error_page(
+                conn,
+                webui_html_res_not_available,
+                404
             );
-            // _webui_http_send(
-            //     conn, // 200
-            //     "text/html",
-            //     webui_html_res_not_available
-            // );
+
             http_status_code = 404;
         }
 
@@ -2045,16 +2041,11 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
         if(!_webui_file_exist(full_path)) {
 
             // File not exist - 404
-
-            mg_send_http_error(
-                conn, 404,
-                "%s", webui_html_res_not_available
+            _webui_http_send_error_page(
+                conn,
+                webui_html_res_not_available,
+                404
             );
-            // _webui_http_send(
-            //     conn, // 200
-            //     "text/html",
-            //     webui_html_res_not_available
-            // );
 
             _webui_free_mem((void*)file);
             _webui_free_mem((void*)full_path);
@@ -2104,15 +2095,12 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
 
                 // Deno not installed
 
-                mg_send_http_error(
-                    conn, 500,
-                    "%s", webui_deno_not_found
+                _webui_http_send_error_page(
+                    conn,
+                    webui_deno_not_found,
+                    500
                 );
-                // _webui_http_send(
-                //     conn, // 200
-                //     "text/html",
-                //     webui_deno_not_found
-                // );
+                
                 interpret_http_stat = 500;
             }
         }
@@ -2151,17 +2139,13 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
             }
             else {
 
-                // Node.js not installed
-
-                mg_send_http_error(
-                    conn, 500,
-                    "%s", webui_nodejs_not_found
+                // Node.js not installed                
+                _webui_http_send_error_page(
+                    conn,
+                    webui_nodejs_not_found,
+                    500
                 );
-                // _webui_http_send(
-                //     conn, // 200
-                //     "text/html",
-                //     webui_nodejs_not_found
-                // );
+                
                 interpret_http_stat = 500;
             }
         }
@@ -4368,6 +4352,28 @@ static void _webui_http_send(struct mg_connection *conn, const char* mime_type, 
     );
 }
 
+static void _webui_http_send_error_page(struct mg_connection *conn, const char* body, int status) {
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_http_send_error_page()...\n");
+    #endif
+
+    // Send header
+    mg_response_header_start(conn, status);
+    mg_response_header_add(conn, "Content-Type", "text/html; charset=utf-8", -1);
+    mg_response_header_add(conn, "Cache-Control", "no-cache, no-store, must-revalidate, private, max-age=0", -1);
+    mg_response_header_add(conn, "Pragma", "no-cache", -1);
+    mg_response_header_add(conn, "Expires", "0", -1);
+    mg_response_header_send(conn);
+
+    // Send body
+    mg_write(
+        conn,
+        body,
+        strlen(body)
+    );
+}
+
 static int _webui_http_log(const struct mg_connection *conn, const char* message) {
 
     #ifdef WEBUI_LOG
@@ -4448,15 +4454,12 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                         printf("[Core]\t\t_webui_http_handler() -> Embedded Index HTML Already Handled (403)\n");
                     #endif
 
-                    mg_send_http_error(
-                        conn, 403,
-                        "%s", webui_html_served
+                    _webui_http_send_error_page(
+                        conn,
+                        webui_html_served,
+                        403
                     );
-                    // _webui_http_send(
-                    //     conn, // 200
-                    //     "text/html",
-                    //     webui_html_served
-                    // );
+                    
                     http_status_code = 403;
                 }
                 else {
