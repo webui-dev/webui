@@ -14,8 +14,7 @@ jobs:
       - name: Windows-WebUI
         shell: cmd
         run: |
-          cd src/client
-          xxd -i webui.js webui.c
+          xxd -i src/client/webui.js src/client/webui.c
           cd build\Windows\GCC
           mingw32-make
           cd ..\..\..
@@ -29,8 +28,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Linux-WebUI
         run: |
-          cd src/client
-          xxd -i webui.js webui.c
+          xxd -i src/client/webui.js src/client/webui.c
           cd build/Linux/GCC
           make
           cd ../../..
@@ -45,7 +43,6 @@ jobs:
       - uses: actions/checkout@v2
       - name: macOS-WebUI
         run: |
-          cd src/client
-          xxd -i webui.js webui.c
+          xxd -i src/client/webui.js src/client/webui.c
           cd build/macOS/Clang
           make
