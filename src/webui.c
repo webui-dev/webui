@@ -4208,12 +4208,14 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                         const char* js = _webui_generate_js_bridge(win);
 
                         // Inject WebUI JS-Bridge into HTML
-                        size_t len = _webui_strlen(win->html) + _webui_strlen(js) + 128;
+                        size_t len = _webui_strlen(win->html) + 128;
                         html = (char*) _webui_malloc(len);
                         if(win->html != NULL && js != NULL) {
-                            sprintf(html, 
-                                "%s \n <script type = \"application/javascript\"> \n %s \n </script>",
-                                win->html, js
+                            sprintf(html,
+                                //! Construct bad html to load js bridge before all user content
+                                //! Temp fix, need to improve this trick by inserting the script tag in html head via an XML/DOM parser
+                                "<html> <script type = \"application/javascript\" src = \" webui.js \"> \n \n </script> \n %s",
+                                win->html
                             );
                         }
 
