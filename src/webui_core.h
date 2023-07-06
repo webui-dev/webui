@@ -191,6 +191,7 @@ static void _webui_kill_pid(size_t pid);
 static _webui_window_t* _webui_dereference_win_ptr(void* ptr);
 
 static void _webui_http_send(struct mg_connection *conn, const char* mime_type, const char* body);
+static void _webui_http_send_error_page(struct mg_connection *conn, const char* body, int status);
 static int _webui_http_log(const struct mg_connection *conn, const char* message);
 static int _webui_http_handler(struct mg_connection *conn, void *_win);
 static int _webui_ws_connect_handler(const struct mg_connection *conn, void *_win);
