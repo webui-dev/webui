@@ -1,0 +1,2 @@
+# Do not track xxd output files
+*.c
