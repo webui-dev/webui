@@ -8,8 +8,8 @@ class WebUiClient {
 	#winNum: number = _webui_win_num
 	//@ts-ignore injected by webui.c
 	#log = _webui_log ?? false //If webui.c define _webui_log then use it, instead set it to false
-	
-    #ws: WebSocket
+
+	#ws: WebSocket
 	#wsStatus = false
 	#wsStatusOnce = false
 	#closeReason = 0
@@ -78,12 +78,6 @@ class WebUiClient {
 				if (!webui.log) globalThis.close()
 			}
 		}, 1500)
-
-		addEventListener('load', () => {
-			document.body.addEventListener('contextmenu', function (event) {
-				event.preventDefault()
-			})
-		})
 	}
 
 	#close(reason = 0, value = '') {
@@ -372,10 +366,7 @@ export const webui = new WebUiClient()
 //@ts-ignore globally expose webui APIs
 globalThis.webui = webui
 
-const inputs = document.getElementsByTagName('input')
-
-for (let i = 0; i < inputs.length; i++) {
-	inputs[i].addEventListener('contextmenu', function (event) {
-		event.stopPropagation()
-	})
-}
+document.body.addEventListener('contextmenu', (event) => event.preventDefault())
+document.querySelectorAll('input').forEach((input) => {
+	input.addEventListener('contextmenu', (event) => event.stopPropagation())
+})
