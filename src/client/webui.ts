@@ -58,7 +58,7 @@ class WebUiClient {
             if(this.#closeReason === this.#HEADER_SWITCH) { 
                     if(this.#log) 
                     console.log('WebUI -> Connection lost -> Navigation to [' + this.#closeValue + ']'); 
-                window.location.replace(this.#closeValue); 
+                globalThis.location.replace(this.#closeValue); 
             } else { 
                     if(this.#log) { 
                         console.log('WebUI -> Connection lost (' + evt.code + ')'); 
@@ -91,7 +91,7 @@ class WebUiClient {
                 } else if(buffer8[1] === this.#HEADER_SWITCH) { 
                         this.#close(this.#HEADER_SWITCH, data8utf8); 
                 } else if(buffer8[1] === this.#HEADER_CLOSE) { 
-                        window.close(); 
+                        globalThis.close(); 
                 } else if(buffer8[1] === this.#HEADER_JS_QUICK || buffer8[1] === this.#HEADER_JS) { 
                         data8utf8 = data8utf8.replace(/(?:\r\n|\r|\n)/g, "\n"); 
                     if(this.#log) 
@@ -117,13 +117,13 @@ class WebUiClient {
         }; 
     } else { 
             alert('Sorry. WebSocket not supported by your Browser.'); 
-        if(!this.#log) window.close(); 
+        if(!this.#log) globalThis.close(); 
     } 
     }
     #clicksListener() {
             Object.keys(window).forEach(key=>{ 
                 if(/^on(click)/.test(key)) { 
-                    window.addEventListener(key.slice(2),event=>{ 
+                    globalThis.addEventListener(key.slice(2),event=>{ 
                         if(this.#hasEvents || ((event.target.id !== '') && (this.#bindList.includes(this.#winNum + '/' + event.target.id)))) { 
                             this.#sendClick(event.target.id); 
                     } 
@@ -169,8 +169,8 @@ class WebUiClient {
         }
     }
     isExternalLink(url) {
-        const currentUrl = new URL(window.location.href); 
-        const targetUrl = new URL(url, window.location.href); 
+        const currentUrl = new URL(globalThis.location.href); 
+        const targetUrl = new URL(url, globalThis.location.href); 
         currentUrl.hash = ''; 
         targetUrl.hash = ''; 
         if (url.startsWith('#') || url === currentUrl.href + '#' || currentUrl.href === targetUrl.href) { 
@@ -179,7 +179,7 @@ class WebUiClient {
             return true; 
     }
     #closeWindowTimer() {
-        setTimeout(function(){window.close();},1000); 
+        setTimeout(function(){globalThis.close();},1000); 
     }
     #fnPromise(fn: string, value: string) {
             if(this.#log) 
@@ -274,12 +274,12 @@ setTimeout(() => {
     if(!webui.wsStatusOnce) { 
         webui.freezeUi(); 
     alert('WebUI failed to connect to the background application. Please try again.'); 
-    if(!webui.log) window.close(); 
+    if(!webui.log) globalThis.close(); 
 } 
 }, 1500)
 function unloadHandler() {
         // Unload for 'back' & 'forward' navigation 
-    window.removeEventListener('unload', unloadHandler, false); 
+    globalThis.removeEventListener('unload', unloadHandler, false); 
 }
 
 if(typeof navigation !== 'undefined') { 
