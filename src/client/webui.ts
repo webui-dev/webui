@@ -234,6 +234,8 @@ class WebUiClient {
 }
 
 const webui = new WebUiClient()
+//@ts-ignore globally expose webui APIs
+globalThis.webui = webui
 
 // -- DOM --------------------------- 
 document.addEventListener('keydown', (e) => {
