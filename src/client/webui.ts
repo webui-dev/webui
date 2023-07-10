@@ -1,3 +1,5 @@
+type B64string = string
+
 var _webui_log = _webui_log ?? false //If webui.c define _webui_log then use it, instead set it to false
 
 class WebUiClient {
@@ -29,12 +31,12 @@ class WebUiClient {
 	#HEADER_CALL_FUNC = 249
 
 	constructor() {
-        if (!('WebSocket' in window)) {
+		if (!('WebSocket' in window)) {
 			alert('Sorry. WebSocket not supported by your Browser.')
 			if (!this.#log) globalThis.close()
 		}
 
-        this.#start()
+		this.#start()
 
 		if ('navigation' in globalThis) {
 			globalThis.navigation.addEventListener('navigate', (event) => {
@@ -185,7 +187,7 @@ class WebUiClient {
 						if (this.#log)
 							console.log(`WebUI -> JS [${data8utf8sanitize}]`)
 
-                        // Get callback result
+						// Get callback result
 						let FunReturn = 'undefined'
 						let FunError = false
 						try {
@@ -199,13 +201,13 @@ class WebUiClient {
 							FunReturn = 'undefined'
 						}
 
-                        // Logging
+						// Logging
 						if (this.#log && !FunError)
 							console.log(`WebUI -> JS -> Return [${FunReturn}]`)
 						if (this.#log && FunError)
 							console.log(`WebUI -> JS -> Error [${FunReturn}]`)
 
-                        // Format ws response
+						// Format ws response
 						const Return8 = Uint8Array.of(
 							this.#HEADER_SIGNATURE,
 							this.#HEADER_JS,
@@ -299,7 +301,34 @@ class WebUiClient {
 	}
 
 	// -- APIs --------------------------
-	fn(fn: string, value: string) {
+
+	/**
+	 * Call a backend function from the frontend.
+	 * @param fn - Backend bind name.
+	 * @param value - Payload to send.
+	 * @return - Response of the backend callback.
+	 * @example
+	 * ```c
+	 * //Backend (C)
+	 * webui_bind(window, "get_cwd", get_current_working_directory);
+	 * ```
+	 * ```js
+	 * //Frontend (JS)
+	 * const cwd = await webui_fn("get_cwd");
+	 * ```
+	 * @example
+	 * ```c
+	 * //Backend (C)
+	 * webui_bind(window, "write_file", write_file);
+	 * ```
+	 * ```js
+	 * //Frontend (JS)
+	 * webui_fn("write_file", "content to write")
+	 *  .then(() => console.log("file writed"))
+	 *  .catch(() => console.error("can't write the file"))
+	 * ```
+	 */
+	fn(fn: string, value?: string): Promise<string | void> {
 		if (!fn || !this.#wsStatus) return Promise.resolve()
 		if (typeof value === 'undefined') value = ''
 		if (
@@ -307,8 +336,13 @@ class WebUiClient {
 			!this.#bindList.includes(this.#winNum + '/' + fn)
 		)
 			return Promise.resolve()
-		return this.#fnPromise(fn, value)
+		return this.#fnPromise(fn, value) as Promise<string | void>
 	}
+
+	/**
+	 * Active or deactivate webui debug logging.
+	 * @param status - log status to set.
+	 */
 	log(status: boolean) {
 		if (status) {
 			console.log('WebUI -> Log Enabled.')
@@ -318,10 +352,20 @@ class WebUiClient {
 			this.#log = false
 		}
 	}
-	encode(str: string) {
+
+	/**
+	 * Encode a string into base64.
+	 * @param str - string to encode.
+	 */
+	encode(str: string): B64string {
 		return btoa(str)
 	}
-	decode(str: string) {
+
+	/**
+	 * Decode a base64 string.
+	 * @param str - base64 string to decode.
+	 */
+	decode(str: B64string): string {
 		return atob(str)
 	}
 }
