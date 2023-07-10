@@ -2,6 +2,12 @@ var _webui_log = _webui_log ?? false //If webui.c define _webui_log then use it,
 
 class WebUiClient {
 	//webui settings
+    //@ts-ignore injected by webui.c
+    #port: number = _webui_port
+    //@ts-ignore injected by webui.c
+	#winNum: number = _webui_win_num
+    
+
 	#log = _webui_log
 	#ws: WebSocket
 	#wsStatus = false
@@ -13,7 +19,6 @@ class WebUiClient {
 	#fnPromiseResolve: ((data: string) => unknown)[] = []
 
 	#bindList: unknown[] = []
-	#winNum: number
 
 	//webui const
 	#HEADER_SIGNATURE = 221
@@ -79,8 +84,8 @@ class WebUiClient {
 				if (buffer8[0] !== this.#HEADER_SIGNATURE) return
 				let len = buffer8.length - 3
 				if (buffer8[buffer8.length - 1] === 0) len-- // Null byte (0x00) can break eval()
-				data8 = new Uint8Array(len)
-				for (i = 0; i < len; i++) data8[i] = buffer8[i + 3]
+				const data8 = new Uint8Array(len)
+				for (let i = 0; i < len; i++) data8[i] = buffer8[i + 3]
 				let data8utf8 = new TextDecoder().decode(data8)
 				// Process Command
 				if (buffer8[1] === this.#HEADER_CALL_FUNC) {
@@ -133,7 +138,7 @@ class WebUiClient {
 					if (FunError) Return8[3] = 0
 					else Return8[3] = 1
 					let p = -1
-					for (i = 4; i < FunReturn8.length + 4; i++)
+					for (let i = 4; i < FunReturn8.length + 4; i++)
 						Return8[i] = FunReturn8[++p]
 					if (this.#wsStatus) this.#ws.send(Return8.buffer)
 				}
@@ -171,7 +176,7 @@ class WebUiClient {
 				packet[1] = this.#HEADER_CLICK
 				packet[2] = 0
 				let p = -1
-				for (i = 3; i < elem8.length + 3; i++) packet[i] = elem8[++p]
+				for (let i = 3; i < elem8.length + 3; i++) packet[i] = elem8[++p]
 			} else {
 				packet = new Uint8Array(4)
 				packet[0] = this.#HEADER_SIGNATURE
@@ -191,7 +196,7 @@ class WebUiClient {
 			packet[1] = this.#HEADER_SWITCH
 			packet[2] = 0
 			let p = -1
-			for (i = 3; i < url8.length + 3; i++) packet[i] = url8[++p]
+			for (let i = 3; i < url8.length + 3; i++) packet[i] = url8[++p]
 			this.#ws.send(packet.buffer)
 			if (this.#log) console.log('WebUI -> Navigation [' + url + ']')
 		}
