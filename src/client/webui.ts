@@ -312,7 +312,7 @@ class WebUiClient {
 	 * ```
 	 * ```js
 	 * //Frontend (JS)
-	 * const cwd = await webui_fn("get_cwd");
+	 * const cwd = await webui.fn("get_cwd");
 	 * ```
 	 * @example
 	 * ```c
@@ -321,7 +321,7 @@ class WebUiClient {
 	 * ```
 	 * ```js
 	 * //Frontend (JS)
-	 * webui_fn("write_file", "content to write")
+	 * webui.fn("write_file", "content to write")
 	 *  .then(() => console.log("file writed"))
 	 *  .catch(() => console.error("can't write the file"))
 	 * ```
