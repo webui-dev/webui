@@ -210,7 +210,7 @@ class WebUiClient {
     fn (fn: string, value: string) {
             if(!fn || !this.#wsStatus) 
             return Promise.resolve(); 
-        if(typeof value == 'undefined') 
+        if(typeof value === 'undefined') 
             value = ''; 
         if(!this.#hasEvents && !this.#bindList.includes(this.#winNum + '/' + fn)) 
             return Promise.resolve(); 
