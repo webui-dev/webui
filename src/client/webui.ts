@@ -332,14 +332,6 @@ const webui = new WebUiClient()
 //@ts-ignore globally expose webui APIs
 globalThis.webui = webui
 
-// -- Global listener ---------------
-addEventListener('unload', unloadHandler, false)
-
-function unloadHandler() {
-	// Unload for 'back' & 'forward' navigation
-	globalThis.removeEventListener('unload', unloadHandler, false)
-}
-
 const inputs = document.getElementsByTagName('input')
 
 for (let i = 0; i < inputs.length; i++) {
