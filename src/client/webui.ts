@@ -71,12 +71,12 @@ class WebUiClient {
                 if(buffer8.length < 4) return; 
                 if(buffer8[0] !== this.#HEADER_SIGNATURE) 
                     return; 
-                var len = buffer8.length - 3; 
+                let len = buffer8.length - 3; 
                 if(buffer8[buffer8.length - 1] === 0) 
                    len--; // Null byte (0x00) can break eval() 
                 data8 = new Uint8Array(len); 
                 for (i = 0; i < len; i++) data8[i] = buffer8[i + 3]; 
-                var data8utf8 = new TextDecoder('utf-8').decode(data8); 
+                const data8utf8 = new TextDecoder('utf-8').decode(data8); 
                 // Process Command 
                 if(buffer8[1] === this.#HEADER_CALL_FUNC) { 
                         const call_id = buffer8[2];
@@ -96,21 +96,21 @@ class WebUiClient {
                         data8utf8 = data8utf8.replace(/(?:\r\n|\r|\n)/g, "\n"); 
                     if(this.#log) 
                         console.log('WebUI -> JS [' + data8utf8 + ']'); 
-                    var FunReturn = 'undefined'; 
-                    var FunError = false; 
+                    let FunReturn = 'undefined'; 
+                    let FunError = false; 
                     try { FunReturn = eval('(() => {' + data8utf8 + '})()'); } catch (e) { FunError = true; FunReturn = e.message } 
                     if(buffer8[1] === this.#HEADER_JS_QUICK) return; 
                     if(typeof FunReturn === 'undefined' || FunReturn === undefined) FunReturn = 'undefined'; 
                     if(this.#log && !FunError) console.log('WebUI -> JS -> Return [' + FunReturn + ']'); 
                     if(this.#log && FunError) console.log('WebUI -> JS -> Error [' + FunReturn + ']'); 
                     const FunReturn8 = new TextEncoder('utf-8').encode(FunReturn); 
-                    var Return8 = new Uint8Array(4 + FunReturn8.length); 
+                    const Return8 = new Uint8Array(4 + FunReturn8.length); 
                     Return8[0] = this.#HEADER_SIGNATURE; 
                     Return8[1] = this.#HEADER_JS; 
                     Return8[2] = buffer8[2]; 
                     if(FunError) Return8[3] = 0; 
                     else Return8[3] = 1; 
-                    var p = -1; 
+                    let p = -1; 
                     for (i = 4; i < FunReturn8.length + 4; i++) Return8[i] = FunReturn8[++p]; 
                     if(this.#wsStatus) this.#ws.send(Return8.buffer); 
                 } 
@@ -133,14 +133,14 @@ class WebUiClient {
     }
     #sendClick(elem: string) {
         if(this.#wsStatus) { 
-            var packet; 
+            let packet; 
         if(elem !== '') { 
                 const elem8 = new TextEncoder('utf-8').encode(elem); 
             packet = new Uint8Array(3 + elem8.length); 
             packet[0] = this.#HEADER_SIGNATURE; 
             packet[1] = this.#HEADER_CLICK; 
             packet[2] = 0; 
-            var p = -1; 
+            let p = -1; 
             for (i = 3; i < elem8.length + 3; i++) 
                 packet[i] = elem8[++p]; 
         } else { 
@@ -158,7 +158,7 @@ class WebUiClient {
     sendEventNavigation(url: string) {
         if (this.#hasEvents && this.#wsStatus && url !== '') {
             const url8 = new TextEncoder('utf-8').encode(url)
-            var packet = new Uint8Array(3 + url8.length); 
+            const packet = new Uint8Array(3 + url8.length); 
             packet[0] = this.#HEADER_SIGNATURE; 
             packet[1] = this.#HEADER_SWITCH; 
             packet[2] = 0; 
@@ -186,18 +186,18 @@ class WebUiClient {
             console.log('WebUI -> Func [' + fn + '](' + value + ')'); 
         const fn8 = new TextEncoder().encode(fn); 
         const value8 = new TextEncoder().encode(value); 
-        var packet = new Uint8Array(3 + fn8.length + 1 + value8.length); 
+        const packet = new Uint8Array(3 + fn8.length + 1 + value8.length); 
         const call_id = this.#fnId[0]++; 
         packet[0] = this.#HEADER_SIGNATURE; 
         packet[1] = this.#HEADER_CALL_FUNC; 
         packet[2] = call_id; 
-        var p = 3; 
-        for (var i = 0; i < fn8.length; i++) 
+        let p = 3; 
+        for (let i = 0; i < fn8.length; i++) 
             { packet[p] = fn8[i]; p++; } 
         packet[p] = 0; 
         p++; 
         if(value8.length > 0) { 
-                for (var i = 0; i < value8.length; i++) 
+                for (let i = 0; i < value8.length; i++) 
                 { packet[p] = value8[i]; p++; } 
         } else { packet[p] = 0; } 
         return new Promise((resolve) => { 
@@ -211,7 +211,7 @@ class WebUiClient {
             if(!fn || !this.#wsStatus) 
             return Promise.resolve(); 
         if(typeof value == 'undefined') 
-            var value = ''; 
+            value = ''; 
         if(!this.#hasEvents && !this.#bindList.includes(this.#winNum + '/' + fn)) 
             return Promise.resolve(); 
         return this.#fnPromise(fn, value); 
@@ -289,6 +289,6 @@ if(typeof navigation !== 'undefined') {
 
 const inputs = document.getElementsByTagName('input'); 
 
-for(var i = 0; i < inputs.length; i++) {
+for(let i = 0; i < inputs.length; i++) {
     inputs[i].addEventListener('contextmenu', function(event){ event.stopPropagation(); });
 } 
