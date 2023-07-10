@@ -28,55 +28,57 @@ class WebUiClient {
 	#HEADER_CLOSE = 250
 	#HEADER_CALL_FUNC = 249
 
-    constructor() {
-        if ('navigation' in globalThis) {
-            globalThis.navigation.addEventListener('navigate', (event) => {
-                const url = new URL(event.destination.url)
-                this.#sendEventNavigation(url.href)
-            })
-        } else {
-            console.error('navigation API not supported, some features may be missing')
-        }
+	constructor() {
+		if ('navigation' in globalThis) {
+			globalThis.navigation.addEventListener('navigate', (event) => {
+				const url = new URL(event.destination.url)
+				this.#sendEventNavigation(url.href)
+			})
+		} else {
+			console.error(
+				'navigation API not supported, some features may be missing'
+			)
+		}
 
-        // -- DOM ---------------------------
-        document.addEventListener('keydown', (event) => {
-            // Disable F5
-            if (this.#log) return
-            if (event.key === 'F5') event.preventDefault()
-        })
-        document.addEventListener('click', (event) => {
-            const anchor = (event.target as HTMLElement).closest('a')
-            if (anchor) {
-                const link = anchor.href
-                if (this.#isExternalLink(link)) {
-                    event.preventDefault()
-                    //TODO fic webui.close declaration
-                    this.#close(this.#HEADER_SWITCH) //, link)
-                }
-            }
-        })
+		// -- DOM ---------------------------
+		document.addEventListener('keydown', (event) => {
+			// Disable F5
+			if (this.#log) return
+			if (event.key === 'F5') event.preventDefault()
+		})
+		document.addEventListener('click', (event) => {
+			const anchor = (event.target as HTMLElement).closest('a')
+			if (anchor) {
+				const link = anchor.href
+				if (this.#isExternalLink(link)) {
+					event.preventDefault()
+					//TODO fic webui.close declaration
+					this.#close(this.#HEADER_SWITCH) //, link)
+				}
+			}
+		})
 
-        // -- Links -------------------------
-        onbeforeunload = () => {
-            this.#close()
-        }
-        setTimeout(() => {
-            if (!this.#wsStatusOnce) {
-                this.#freezeUi()
-                alert(
-                    'WebUI failed to connect to the background application. Please try again.'
-                )
-                if (!webui.log) globalThis.close()
-            }
-        }, 1500)
+		// -- Links -------------------------
+		onbeforeunload = () => {
+			this.#close()
+		}
+		setTimeout(() => {
+			if (!this.#wsStatusOnce) {
+				this.#freezeUi()
+				alert(
+					'WebUI failed to connect to the background application. Please try again.'
+				)
+				if (!webui.log) globalThis.close()
+			}
+		}, 1500)
 
-        addEventListener('load', () => {
-            this.#start()
-            document.body.addEventListener('contextmenu', function (event) {
-                event.preventDefault()
-            })
-        })
-    }
+		addEventListener('load', () => {
+			this.#start()
+			document.body.addEventListener('contextmenu', function (event) {
+				event.preventDefault()
+			})
+		})
+	}
 
 	#close(reason = 0, value = 0) {
 		if (reason === this.#HEADER_SWITCH) this.#sendEventNavigation(value)
@@ -217,36 +219,37 @@ class WebUiClient {
 	}
 	#sendClick(elem: string) {
 		if (this.#wsStatus) {
-			let packet
-			if (elem !== '') {
-				const elem8 = new TextEncoder().encode(elem)
-				packet = new Uint8Array(3 + elem8.length)
-				packet[0] = this.#HEADER_SIGNATURE
-				packet[1] = this.#HEADER_CLICK
-				packet[2] = 0
-				let p = -1
-				for (let i = 3; i < elem8.length + 3; i++)
-					packet[i] = elem8[++p]
-			} else {
-				packet = new Uint8Array(4)
-				packet[0] = this.#HEADER_SIGNATURE
-				packet[1] = this.#HEADER_CLICK
-				packet[2] = 0
-				packet[3] = 0
-			}
+			const packet =
+				elem !== ''
+					? Uint8Array.of(
+							this.#HEADER_SIGNATURE,
+							this.#HEADER_CLICK,
+							0,
+							...new TextEncoder().encode(elem)
+					  )
+					: Uint8Array.of(
+							this.#HEADER_SIGNATURE,
+							this.#HEADER_CLICK,
+							0,
+							0
+					  )
 			this.#ws.send(packet.buffer)
-			if (this.#log) console.log('WebUI -> Click [' + elem + ']')
+			if (this.#log) console.log(`WebUI -> Click [${elem}]`)
 		}
 	}
 	#sendEventNavigation(url: string) {
 		if (this.#hasEvents && this.#wsStatus && url !== '') {
-            const packet = Uint8Array.of(this.#HEADER_SIGNATURE, this.#HEADER_SWITCH, ...new TextEncoder().encode(url))
+			const packet = Uint8Array.of(
+				this.#HEADER_SIGNATURE,
+				this.#HEADER_SWITCH,
+				...new TextEncoder().encode(url)
+			)
 			this.#ws.send(packet.buffer)
 			if (this.#log) console.log(`WebUI -> Navigation [${url}]`)
 		}
 	}
 	#isExternalLink(url: string) {
-        return new URL(url).host === globalThis.location.host
+		return new URL(url).host === globalThis.location.host
 	}
 	#closeWindowTimer() {
 		setTimeout(function () {
@@ -255,17 +258,17 @@ class WebUiClient {
 	}
 	#fnPromise(fn: string, value: string) {
 		if (this.#log) console.log(`WebUI -> Func [${fn}](${value})`)
-        const callId = this.#fnId++
+		const callId = this.#fnId++
 
-        const packet = Uint8Array.of(
-            this.#HEADER_SIGNATURE,
-            this.#HEADER_CALL_FUNC,
-            callId,
-            ...new TextEncoder().encode(fn),
-            0,
-            ...new TextEncoder().encode(value),
-            0
-        )
+		const packet = Uint8Array.of(
+			this.#HEADER_SIGNATURE,
+			this.#HEADER_CALL_FUNC,
+			callId,
+			...new TextEncoder().encode(fn),
+			0,
+			...new TextEncoder().encode(value),
+			0
+		)
 
 		return new Promise((resolve) => {
 			this.#fnPromiseResolve[callId] = resolve
