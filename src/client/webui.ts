@@ -276,15 +276,10 @@ const webui = new WebUiClient()
 globalThis.webui = webui
 
 // -- DOM ---------------------------
-document.addEventListener('keydown', (e) => {
+document.addEventListener('keydown', (event) => {
 	// Disable F5
 	if (this.#log) return
-	if (e.keyCode === 116) {
-		e.preventDefault()
-		e.returnValue = false
-		e.keyCode = 0
-		return false
-	}
+	if (event.key === 'F5') event.preventDefault()
 })
 document.addEventListener('click', (e) => {
 	const attribute = e.target.closest('a')
