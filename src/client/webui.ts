@@ -282,11 +282,13 @@ function unloadHandler() {
     globalThis.removeEventListener('unload', unloadHandler, false); 
 }
 
-if(typeof navigation !== 'undefined') { 
-        navigation.addEventListener('navigate', (event) => { 
+if ('navigation' in globalThis) {
+    globalThis.navigation.addEventListener('navigate', (event) => { 
             const url = new URL(event.destination.url); 
             webui.sendEventNavigation(url); 
-    }); 
+    });
+} else {
+    console.error('navigation API not supported, some features may be missing')
 }
 
 const inputs = document.getElementsByTagName('input'); 
