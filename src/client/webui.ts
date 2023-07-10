@@ -251,19 +251,8 @@ class WebUiClient {
 			if (this.#log) console.log('WebUI -> Navigation [' + url + ']')
 		}
 	}
-	#isExternalLink(url) {
-		const currentUrl = new URL(globalThis.location.href)
-		const targetUrl = new URL(url, globalThis.location.href)
-		currentUrl.hash = ''
-		targetUrl.hash = ''
-		if (
-			url.startsWith('#') ||
-			url === currentUrl.href + '#' ||
-			currentUrl.href === targetUrl.href
-		) {
-			return false
-		}
-		return true
+	#isExternalLink(url: string) {
+        return new URL(url).host === globalThis.location.host
 	}
 	#closeWindowTimer() {
 		setTimeout(function () {
