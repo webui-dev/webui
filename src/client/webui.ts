@@ -10,7 +10,7 @@ class WebUiClient {
 	#closeValue
 	#hasEvents = false
 	#fnId = new Uint8Array(1)
-	#fnPromiseResolve: unknown[] = []
+	#fnPromiseResolve: ((data: string) => unknown)[] = []
 
 	#bindList: unknown[] = []
 	#winNum: number
@@ -81,7 +81,7 @@ class WebUiClient {
 				if (buffer8[buffer8.length - 1] === 0) len-- // Null byte (0x00) can break eval()
 				data8 = new Uint8Array(len)
 				for (i = 0; i < len; i++) data8[i] = buffer8[i + 3]
-				const data8utf8 = new TextDecoder('utf-8').decode(data8)
+				let data8utf8 = new TextDecoder().decode(data8)
 				// Process Command
 				if (buffer8[1] === this.#HEADER_CALL_FUNC) {
 					const callId = buffer8[2]
@@ -93,7 +93,8 @@ class WebUiClient {
 								'WebUI -> Resolving reponse #' + callId + '...'
 							)
 						this.#fnPromiseResolve[callId](data8utf8)
-						this.#fnPromiseResolve[callId] = null
+                        //TODO fix null assignation (determine utility)
+						// this.#fnPromiseResolve[callId] = null
 					}
 				} else if (buffer8[1] === this.#HEADER_SWITCH) {
 					this.#close(this.#HEADER_SWITCH, data8utf8)
@@ -146,11 +147,12 @@ class WebUiClient {
 		Object.keys(window).forEach((key) => {
 			if (/^on(click)/.test(key)) {
 				globalThis.addEventListener(key.slice(2), (event) => {
+                    if (!(event.target instanceof HTMLElement)) return
 					if (
 						this.#hasEvents ||
 						(event.target.id !== '' &&
 							this.#bindList.includes(
-								this.#winNum + '/' + event.target.id
+								this.#winNum + '/' + event.target?.id
 							))
 					) {
 						this.#sendClick(event.target.id)
@@ -281,13 +283,14 @@ document.addEventListener('keydown', (event) => {
 	if (this.#log) return
 	if (event.key === 'F5') event.preventDefault()
 })
-document.addEventListener('click', (e) => {
-	const attribute = e.target.closest('a')
-	if (attribute) {
-		const link = attribute.href
+document.addEventListener('click', (event) => {
+	const anchor = (event.target as HTMLElement).closest('a')
+	if (anchor) {
+		const link = anchor.href
 		if (webui.isExternalLink(link)) {
-			e.preventDefault()
-			webui.close(webui.HEADER_SWITCH, link)
+			event.preventDefault()
+            //TODO fic webui.close declaration
+			webui.close(webui.HEADER_SWITCH)//, link)
 		}
 	}
 })
@@ -322,7 +325,7 @@ function unloadHandler() {
 if ('navigation' in globalThis) {
 	globalThis.navigation.addEventListener('navigate', (event) => {
 		const url = new URL(event.destination.url)
-		webui.sendEventNavigation(url)
+		webui.sendEventNavigation(url.href)
 	})
 } else {
 	console.error('navigation API not supported, some features may be missing')
