@@ -369,7 +369,7 @@ class WebUiClient {
 	}
 }
 
-const webui = new WebUiClient()
+export const webui = new WebUiClient()
 //@ts-ignore globally expose webui APIs
 globalThis.webui = webui
 
