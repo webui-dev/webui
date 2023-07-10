@@ -12,7 +12,7 @@ class WebUiClient {
 	#wsStatus = false
 	#wsStatusOnce = false
 	#closeReason = 0
-	#closeValue
+	#closeValue: string
 	#hasEvents = false
 	#fnId = 1
 	#fnPromiseResolve: (((data: string) => unknown) | undefined)[] = []
@@ -86,7 +86,7 @@ class WebUiClient {
 		})
 	}
 
-	#close(reason = 0, value = 0) {
+	#close(reason = 0, value = '') {
 		if (reason === this.#HEADER_SWITCH) this.#sendEventNavigation(value)
 		this.#wsStatus = false
 		this.#closeReason = reason
