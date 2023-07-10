@@ -14,7 +14,7 @@ class WebUiClient {
 	#closeReason = 0
 	#closeValue
 	#hasEvents = false
-	#fnId = new Uint8Array(1)
+	#fnId = 1
 	#fnPromiseResolve: ((data: string) => unknown)[] = []
 
 	#bindList: unknown[] = []
@@ -100,7 +100,7 @@ class WebUiClient {
 				this.#ws.binaryType = 'arraybuffer'
 				this.#wsStatus = true
 				this.#wsStatusOnce = true
-				this.#fnId[0] = 1
+				this.#fnId = 1
 				if (this.#log) console.log('WebUI -> Connected')
 				this.#clicksListener()
 			}
@@ -260,29 +260,19 @@ class WebUiClient {
 		}, 1000)
 	}
 	#fnPromise(fn: string, value: string) {
-		if (this.#log) console.log('WebUI -> Func [' + fn + '](' + value + ')')
-		const fn8 = new TextEncoder().encode(fn)
-		const value8 = new TextEncoder().encode(value)
-		const packet = new Uint8Array(3 + fn8.length + 1 + value8.length)
-		const callId = this.#fnId[0]++
-		packet[0] = this.#HEADER_SIGNATURE
-		packet[1] = this.#HEADER_CALL_FUNC
-		packet[2] = callId
-		let p = 3
-		for (let i = 0; i < fn8.length; i++) {
-			packet[p] = fn8[i]
-			p++
-		}
-		packet[p] = 0
-		p++
-		if (value8.length > 0) {
-			for (let i = 0; i < value8.length; i++) {
-				packet[p] = value8[i]
-				p++
-			}
-		} else {
-			packet[p] = 0
-		}
+		if (this.#log) console.log(`WebUI -> Func [${fn}](${value})`)
+        const callId = this.#fnId++
+
+        const packet = Uint8Array.of(
+            this.#HEADER_SIGNATURE,
+            this.#HEADER_CALL_FUNC,
+            callId,
+            ...new TextEncoder().encode(fn),
+            0,
+            ...new TextEncoder().encode(value),
+            0
+        )
+
 		return new Promise((resolve) => {
 			this.#fnPromiseResolve[callId] = resolve
 			this.#ws.send(packet.buffer)
