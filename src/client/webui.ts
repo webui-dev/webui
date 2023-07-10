@@ -79,14 +79,14 @@ class WebUiClient {
                 const data8utf8 = new TextDecoder('utf-8').decode(data8); 
                 // Process Command 
                 if(buffer8[1] === this.#HEADER_CALL_FUNC) { 
-                        const call_id = buffer8[2];
+                        const callId = buffer8[2];
                     if(this.#log) 
                         console.log('WebUI -> Func Reponse [' + data8utf8 + ']'); 
-                    if (this.#fnPromiseResolve[call_id]) { 
+                    if (this.#fnPromiseResolve[callId]) { 
                             if(this.#log) 
-                            console.log('WebUI -> Resolving reponse #' + call_id + '...'); 
-                        this.#fnPromiseResolve[call_id](data8utf8); 
-                        this.#fnPromiseResolve[call_id] = null; 
+                            console.log('WebUI -> Resolving reponse #' + callId + '...'); 
+                        this.#fnPromiseResolve[callId](data8utf8); 
+                        this.#fnPromiseResolve[callId] = null; 
                     } 
                 } else if(buffer8[1] === this.#HEADER_SWITCH) { 
                         this.#close(this.#HEADER_SWITCH, data8utf8); 
@@ -187,10 +187,10 @@ class WebUiClient {
         const fn8 = new TextEncoder().encode(fn); 
         const value8 = new TextEncoder().encode(value); 
         const packet = new Uint8Array(3 + fn8.length + 1 + value8.length); 
-        const call_id = this.#fnId[0]++; 
+        const callId = this.#fnId[0]++; 
         packet[0] = this.#HEADER_SIGNATURE; 
         packet[1] = this.#HEADER_CALL_FUNC; 
-        packet[2] = call_id; 
+        packet[2] = callId; 
         let p = 3; 
         for (let i = 0; i < fn8.length; i++) 
             { packet[p] = fn8[i]; p++; } 
@@ -201,7 +201,7 @@ class WebUiClient {
                 { packet[p] = value8[i]; p++; } 
         } else { packet[p] = 0; } 
         return new Promise((resolve) => { 
-                this.#fnPromiseResolve[call_id] = resolve; 
+                this.#fnPromiseResolve[callId] = resolve; 
             this.#ws.send(packet.buffer); 
         });     
     }
@@ -277,7 +277,7 @@ setTimeout(() => {
 }, 1500)
 function unloadHandler() {
         // Unload for 'back' & 'forward' navigation 
-    window.removeEventListener('unload', unload_handler, false); 
+    window.removeEventListener('unload', unloadHandler, false); 
 }
 
 if(typeof navigation !== 'undefined') { 
