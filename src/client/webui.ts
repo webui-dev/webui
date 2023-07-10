@@ -60,8 +60,7 @@ class WebUiClient {
 				const link = anchor.href
 				if (this.#isExternalLink(link)) {
 					event.preventDefault()
-					//TODO fic webui.close declaration
-					this.#close(this.#HEADER_SWITCH) //, link)
+					this.#close(this.#HEADER_SWITCH, link)
 				}
 			}
 		})
