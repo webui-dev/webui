@@ -15,7 +15,7 @@ class WebUiClient {
 	#closeValue
 	#hasEvents = false
 	#fnId = 1
-	#fnPromiseResolve: ((data: string) => unknown)[] = []
+	#fnPromiseResolve: (((data: string) => unknown) | undefined)[] = []
 
 	#bindList: unknown[] = []
 
@@ -29,6 +29,13 @@ class WebUiClient {
 	#HEADER_CALL_FUNC = 249
 
 	constructor() {
+        if (!('WebSocket' in window)) {
+			alert('Sorry. WebSocket not supported by your Browser.')
+			if (!this.#log) globalThis.close()
+		}
+
+        this.#start()
+
 		if ('navigation' in globalThis) {
 			globalThis.navigation.addEventListener('navigate', (event) => {
 				const url = new URL(event.destination.url)
@@ -73,7 +80,6 @@ class WebUiClient {
 		}, 1500)
 
 		addEventListener('load', () => {
-			this.#start()
 			document.body.addEventListener('contextmenu', function (event) {
 				event.preventDefault()
 			})
@@ -91,114 +97,130 @@ class WebUiClient {
 		document.body.style.filter = 'contrast(1%)'
 	}
 	#start() {
-		if ('WebSocket' in window) {
-			if (this.#bindList.includes(this.#winNum + '/'))
-				this.#hasEvents = true
-			this.#ws = new WebSocket(
-				'ws://localhost:' + this.#port + '/_webui_ws_connect'
-			)
-			this.#ws.binaryType = 'arraybuffer'
-			this.#ws.onopen = () => {
-				this.#ws.binaryType = 'arraybuffer'
-				this.#wsStatus = true
-				this.#wsStatusOnce = true
-				this.#fnId = 1
-				if (this.#log) console.log('WebUI -> Connected')
-				this.#clicksListener()
-			}
-			this.#ws.onerror = () => {
-				if (this.#log) console.log('WebUI -> Connection Failed')
-				this.#freezeUi()
-			}
-			this.#ws.onclose = (evt) => {
-				this.#wsStatus = false
-				if (this.#closeReason === this.#HEADER_SWITCH) {
-					if (this.#log)
-						console.log(
-							'WebUI -> Connection lost -> Navigation to [' +
-								this.#closeValue +
-								']'
-						)
-					globalThis.location.replace(this.#closeValue)
-				} else {
-					if (this.#log) {
-						console.log(
-							'WebUI -> Connection lost (' + evt.code + ')'
-						)
-						this.#freezeUi()
-					} else this.#closeWindowTimer()
-				}
-			}
-			this.#ws.onmessage = (evt) => {
-				const buffer8 = new Uint8Array(evt.data)
-				if (buffer8.length < 4) return
-				if (buffer8[0] !== this.#HEADER_SIGNATURE) return
-				let len = buffer8.length - 3
-				if (buffer8[buffer8.length - 1] === 0) len-- // Null byte (0x00) can break eval()
-				const data8 = new Uint8Array(len)
-				for (let i = 0; i < len; i++) data8[i] = buffer8[i + 3]
-				let data8utf8 = new TextDecoder().decode(data8)
-				// Process Command
-				if (buffer8[1] === this.#HEADER_CALL_FUNC) {
-					const callId = buffer8[2]
-					if (this.#log)
-						console.log('WebUI -> Func Reponse [' + data8utf8 + ']')
-					if (this.#fnPromiseResolve[callId]) {
-						if (this.#log)
-							console.log(
-								'WebUI -> Resolving reponse #' + callId + '...'
-							)
-						this.#fnPromiseResolve[callId](data8utf8)
-						//TODO fix null assignation (determine utility)
-						// this.#fnPromiseResolve[callId] = null
-					}
-				} else if (buffer8[1] === this.#HEADER_SWITCH) {
-					this.#close(this.#HEADER_SWITCH, data8utf8)
-				} else if (buffer8[1] === this.#HEADER_CLOSE) {
-					globalThis.close()
-				} else if (
-					buffer8[1] === this.#HEADER_JS_QUICK ||
-					buffer8[1] === this.#HEADER_JS
-				) {
-					data8utf8 = data8utf8.replace(/(?:\r\n|\r|\n)/g, '\n')
-					if (this.#log)
-						console.log('WebUI -> JS [' + data8utf8 + ']')
-					let FunReturn = 'undefined'
-					let FunError = false
-					try {
-						FunReturn = eval('(() => {' + data8utf8 + '})()')
-					} catch (e) {
-						FunError = true
-						FunReturn = e.message
-					}
-					if (buffer8[1] === this.#HEADER_JS_QUICK) return
-					if (
-						typeof FunReturn === 'undefined' ||
-						FunReturn === undefined
+		if (this.#bindList.includes(this.#winNum + '/')) {
+			this.#hasEvents = true
+		}
+
+		this.#ws = new WebSocket(
+			`ws://localhost:${this.#port}/_webui_ws_connect`
+		)
+		this.#ws.binaryType = 'arraybuffer'
+
+		this.#ws.onopen = () => {
+			this.#wsStatus = true
+			this.#wsStatusOnce = true
+			this.#fnId = 1
+			if (this.#log) console.log('WebUI -> Connected')
+			this.#clicksListener()
+		}
+
+		this.#ws.onerror = () => {
+			if (this.#log) console.log('WebUI -> Connection Failed')
+			this.#freezeUi()
+		}
+
+		this.#ws.onclose = (event) => {
+			this.#wsStatus = false
+			if (this.#closeReason === this.#HEADER_SWITCH) {
+				if (this.#log) {
+					console.log(
+						`WebUI -> Connection lost -> Navigation to [${
+							this.#closeValue
+						}]`
 					)
-						FunReturn = 'undefined'
-					if (this.#log && !FunError)
-						console.log('WebUI -> JS -> Return [' + FunReturn + ']')
-					if (this.#log && FunError)
-						console.log('WebUI -> JS -> Error [' + FunReturn + ']')
-					const FunReturn8 = new TextEncoder().encode(FunReturn)
-					const Return8 = new Uint8Array(4 + FunReturn8.length)
-					Return8[0] = this.#HEADER_SIGNATURE
-					Return8[1] = this.#HEADER_JS
-					Return8[2] = buffer8[2]
-					if (FunError) Return8[3] = 0
-					else Return8[3] = 1
-					let p = -1
-					for (let i = 4; i < FunReturn8.length + 4; i++)
-						Return8[i] = FunReturn8[++p]
-					if (this.#wsStatus) this.#ws.send(Return8.buffer)
+				}
+				globalThis.location.replace(this.#closeValue)
+			} else {
+				if (this.#log) {
+					console.log(`WebUI -> Connection lost (${event.code})`)
+					this.#freezeUi()
+				} else {
+					this.#closeWindowTimer()
 				}
 			}
-		} else {
-			alert('Sorry. WebSocket not supported by your Browser.')
-			if (!this.#log) globalThis.close()
+		}
+
+		this.#ws.onmessage = (event) => {
+			const buffer8 = new Uint8Array(event.data)
+			if (buffer8.length < 4) return
+			if (buffer8[0] !== this.#HEADER_SIGNATURE) return
+			const data8 =
+				buffer8[buffer8.length - 1] === 0
+					? buffer8.slice(3, -1)
+					: buffer8.slice(3) // Null byte (0x00) can break eval()
+			const data8utf8 = new TextDecoder().decode(data8)
+
+			// Process Command
+			switch (buffer8[1]) {
+				case this.#HEADER_CALL_FUNC:
+					{
+						const callId = buffer8[2]
+						if (this.#log) {
+							console.log(`WebUI -> Func Reponse [${data8utf8}]`)
+						}
+						if (this.#fnPromiseResolve[callId]) {
+							if (this.#log) {
+								console.log(
+									`WebUI -> Resolving reponse #${callId}...`
+								)
+							}
+							this.#fnPromiseResolve[callId]?.(data8utf8)
+							this.#fnPromiseResolve[callId] = undefined
+						}
+					}
+					break
+				case this.#HEADER_SWITCH:
+					this.#close(this.#HEADER_SWITCH, data8utf8)
+					break
+				case this.#HEADER_CLOSE:
+					globalThis.close()
+					break
+				case this.#HEADER_JS_QUICK:
+				case this.#HEADER_JS:
+					{
+						const data8utf8sanitize = data8utf8.replace(
+							/(?:\r\n|\r|\n)/g,
+							'\n'
+						)
+						if (this.#log)
+							console.log(`WebUI -> JS [${data8utf8sanitize}]`)
+
+                        // Get callback result
+						let FunReturn = 'undefined'
+						let FunError = false
+						try {
+							FunReturn = eval(`(() => {${data8utf8sanitize}})()`)
+						} catch (e) {
+							FunError = true
+							FunReturn = e.message
+						}
+						if (buffer8[1] === this.#HEADER_JS_QUICK) return
+						if (FunReturn === undefined) {
+							FunReturn = 'undefined'
+						}
+
+                        // Logging
+						if (this.#log && !FunError)
+							console.log(`WebUI -> JS -> Return [${FunReturn}]`)
+						if (this.#log && FunError)
+							console.log(`WebUI -> JS -> Error [${FunReturn}]`)
+
+                        // Format ws response
+						const Return8 = Uint8Array.of(
+							this.#HEADER_SIGNATURE,
+							this.#HEADER_JS,
+							buffer8[2],
+							FunError ? 0 : 1,
+							...new TextEncoder().encode(FunReturn)
+						)
+
+						if (this.#wsStatus) this.#ws.send(Return8.buffer)
+					}
+					break
+			}
 		}
 	}
+
 	#clicksListener() {
 		Object.keys(window).forEach((key) => {
 			if (/^on(click)/.test(key)) {
