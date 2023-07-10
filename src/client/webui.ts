@@ -2,11 +2,10 @@ var _webui_log = _webui_log ?? false //If webui.c define _webui_log then use it,
 
 class WebUiClient {
 	//webui settings
-    //@ts-ignore injected by webui.c
-    #port: number = _webui_port
-    //@ts-ignore injected by webui.c
+	//@ts-ignore injected by webui.c
+	#port: number = _webui_port
+	//@ts-ignore injected by webui.c
 	#winNum: number = _webui_win_num
-    
 
 	#log = _webui_log
 	#ws: WebSocket
@@ -98,7 +97,7 @@ class WebUiClient {
 								'WebUI -> Resolving reponse #' + callId + '...'
 							)
 						this.#fnPromiseResolve[callId](data8utf8)
-                        //TODO fix null assignation (determine utility)
+						//TODO fix null assignation (determine utility)
 						// this.#fnPromiseResolve[callId] = null
 					}
 				} else if (buffer8[1] === this.#HEADER_SWITCH) {
@@ -152,7 +151,7 @@ class WebUiClient {
 		Object.keys(window).forEach((key) => {
 			if (/^on(click)/.test(key)) {
 				globalThis.addEventListener(key.slice(2), (event) => {
-                    if (!(event.target instanceof HTMLElement)) return
+					if (!(event.target instanceof HTMLElement)) return
 					if (
 						this.#hasEvents ||
 						(event.target.id !== '' &&
@@ -176,7 +175,8 @@ class WebUiClient {
 				packet[1] = this.#HEADER_CLICK
 				packet[2] = 0
 				let p = -1
-				for (let i = 3; i < elem8.length + 3; i++) packet[i] = elem8[++p]
+				for (let i = 3; i < elem8.length + 3; i++)
+					packet[i] = elem8[++p]
 			} else {
 				packet = new Uint8Array(4)
 				packet[0] = this.#HEADER_SIGNATURE
@@ -294,8 +294,8 @@ document.addEventListener('click', (event) => {
 		const link = anchor.href
 		if (webui.isExternalLink(link)) {
 			event.preventDefault()
-            //TODO fic webui.close declaration
-			webui.close(webui.HEADER_SWITCH)//, link)
+			//TODO fic webui.close declaration
+			webui.close(webui.HEADER_SWITCH) //, link)
 		}
 	}
 })
