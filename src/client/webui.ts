@@ -1,16 +1,15 @@
 type B64string = string
 
-var _webui_log = _webui_log ?? false //If webui.c define _webui_log then use it, instead set it to false
-
 class WebUiClient {
 	//webui settings
 	//@ts-ignore injected by webui.c
 	#port: number = _webui_port
 	//@ts-ignore injected by webui.c
 	#winNum: number = _webui_win_num
-
-	#log = _webui_log
-	#ws: WebSocket
+	//@ts-ignore injected by webui.c
+	#log = _webui_log ?? false //If webui.c define _webui_log then use it, instead set it to false
+	
+    #ws: WebSocket
 	#wsStatus = false
 	#wsStatusOnce = false
 	#closeReason = 0
