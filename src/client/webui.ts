@@ -240,15 +240,9 @@ class WebUiClient {
 	}
 	#sendEventNavigation(url: string) {
 		if (this.#hasEvents && this.#wsStatus && url !== '') {
-			const url8 = new TextEncoder().encode(url)
-			const packet = new Uint8Array(3 + url8.length)
-			packet[0] = this.#HEADER_SIGNATURE
-			packet[1] = this.#HEADER_SWITCH
-			packet[2] = 0
-			let p = -1
-			for (let i = 3; i < url8.length + 3; i++) packet[i] = url8[++p]
+            const packet = Uint8Array.of(this.#HEADER_SIGNATURE, this.#HEADER_SWITCH, ...new TextEncoder().encode(url))
 			this.#ws.send(packet.buffer)
-			if (this.#log) console.log('WebUI -> Navigation [' + url + ']')
+			if (this.#log) console.log(`WebUI -> Navigation [${url}]`)
 		}
 	}
 	#isExternalLink(url: string) {
