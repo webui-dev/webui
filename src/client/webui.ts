@@ -103,7 +103,7 @@ class WebUiClient {
                     if(typeof FunReturn === 'undefined' || FunReturn === undefined) FunReturn = 'undefined'; 
                     if(this.#log && !FunError) console.log('WebUI -> JS -> Return [' + FunReturn + ']'); 
                     if(this.#log && FunError) console.log('WebUI -> JS -> Error [' + FunReturn + ']'); 
-                    const FunReturn8 = new TextEncoder('utf-8').encode(FunReturn); 
+                    const FunReturn8 = new TextEncoder().encode(FunReturn); 
                     const Return8 = new Uint8Array(4 + FunReturn8.length); 
                     Return8[0] = this.#HEADER_SIGNATURE; 
                     Return8[1] = this.#HEADER_JS; 
@@ -135,7 +135,7 @@ class WebUiClient {
         if(this.#wsStatus) { 
             let packet; 
         if(elem !== '') { 
-                const elem8 = new TextEncoder('utf-8').encode(elem); 
+                const elem8 = new TextEncoder().encode(elem); 
             packet = new Uint8Array(3 + elem8.length); 
             packet[0] = this.#HEADER_SIGNATURE; 
             packet[1] = this.#HEADER_CLICK; 
@@ -157,7 +157,7 @@ class WebUiClient {
     }
     sendEventNavigation(url: string) {
         if (this.#hasEvents && this.#wsStatus && url !== '') {
-            const url8 = new TextEncoder('utf-8').encode(url)
+            const url8 = new TextEncoder().encode(url)
             const packet = new Uint8Array(3 + url8.length); 
             packet[0] = this.#HEADER_SIGNATURE; 
             packet[1] = this.#HEADER_SWITCH; 
