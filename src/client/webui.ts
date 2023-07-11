@@ -366,16 +366,22 @@ class WebUiClient {
 	 * @param datas - string or JSON value.
 	 */
 	encode(datas: JSONValue): B64string {
+		if (typeof datas === 'string') return btoa(datas)
 		return btoa(JSON.stringify(datas))
 	}
 
 	/**
 	 * Decode a base64 string into any JSON valid format
-	 * (string, array, object, boolean, undefined).
+	 * (string, number, array, object, boolean).
 	 * @param b64 - base64 string to decode.
 	 */
 	decode<T extends JSONValue>(b64: B64string): T {
-		return JSON.parse(atob(b64))
+		try {
+			return JSON.parse(atob(b64))
+		} catch {
+			//@ts-ignore string a valid JSON value
+			return atob(b64)
+		}
 	}
 }
 
