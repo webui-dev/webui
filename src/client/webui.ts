@@ -86,7 +86,7 @@ class WebUiClient {
 				alert(
 					'WebUI failed to connect to the background application. Please try again.'
 				)
-				if (!webui.log) globalThis.close()
+				if (!webui.#log) globalThis.close()
 			}
 		}, 1500)
 	}
