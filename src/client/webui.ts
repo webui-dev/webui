@@ -311,9 +311,9 @@ class WebUiClient {
 	// -- APIs --------------------------
 
 	/**
-	 * Call a backend function from the frontend.
-	 * @param fn - Backend bind name.
-	 * @param value - Payload to send.
+	 * Call a backend binding from the frontend.
+	 * @param bindingName - Backend bind name.
+	 * @param payload - Payload to send to the binding.
 	 * @return - Response of the backend callback.
 	 * @example
 	 * ```c
@@ -322,7 +322,7 @@ class WebUiClient {
 	 * ```
 	 * ```js
 	 * //Frontend (JS)
-	 * const cwd = await webui.fn("get_cwd");
+	 * const cwd = await webui.call("get_cwd");
 	 * ```
 	 * @example
 	 * ```c
@@ -331,27 +331,27 @@ class WebUiClient {
 	 * ```
 	 * ```js
 	 * //Frontend (JS)
-	 * webui.fn("write_file", "content to write")
+	 * webui.call("write_file", "content to write")
 	 *  .then(() => console.log("file writed"))
 	 *  .catch(() => console.error("can't write the file"))
 	 * ```
 	 */
-	fn(fn: string, value?: string): Promise<string | void> {
-		if (!fn || !this.#wsStatus) return Promise.resolve()
-		if (typeof value === 'undefined') value = ''
+	call(bindingName: string, payload?: string): Promise<string | void> {
+		if (!bindingName || !this.#wsStatus) return Promise.resolve()
+		if (typeof payload === 'undefined') payload = ''
 		if (
 			!this.#hasEvents &&
-			!this.#bindList.includes(this.#winNum + '/' + fn)
+			!this.#bindList.includes(this.#winNum + '/' + bindingName)
 		)
 			return Promise.resolve()
-		return this.#fnPromise(fn, value) as Promise<string | void>
+		return this.#fnPromise(bindingName, payload) as Promise<string | void>
 	}
 
 	/**
 	 * Active or deactivate webui debug logging.
 	 * @param status - log status to set.
 	 */
-	log(status: boolean) {
+	setLogging(status: boolean) {
 		if (status) {
 			console.log('WebUI -> Log Enabled.')
 			this.#log = true
@@ -365,13 +365,13 @@ class WebUiClient {
 	 * Encode datas into base64 string.
 	 * @param datas - string or JSON value.
 	 */
-	encode(datas: JSONValue | Blob): B64string {
+	encode(datas: JSONValue): B64string {
 		return btoa(JSON.stringify(datas))
 	}
 
 	/**
 	 * Decode a base64 string into any JSON valid format
-     * (string, array, object, boolean, undefined).
+	 * (string, array, object, boolean, undefined).
 	 * @param b64 - base64 string to decode.
 	 */
 	decode<T extends JSONValue>(b64: B64string): T {
