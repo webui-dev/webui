@@ -1,4 +1,4 @@
-'use-strict' //force strict mode for transpilled 
+'use-strict' //force strict mode for transpilled
 import { addRefreshableEventListener } from './utils.js'
 
 type B64string = string
@@ -39,6 +39,12 @@ class WebUiClient {
 	#HEADER_CALL_FUNC = 249
 
 	constructor() {
+		if ('webui' in globalThis) {
+			throw new Error(
+				'webui is already defined, only one instance is allowed'
+			)
+		}
+
 		if (!('WebSocket' in window)) {
 			alert('Sorry. WebSocket not supported by your Browser.')
 			if (!this.#log) globalThis.close()
