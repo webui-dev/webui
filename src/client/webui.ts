@@ -11,13 +11,12 @@ type JSONValue =
 
 class WebUiClient {
 	//webui settings
-	//@ts-ignore injected by webui.c
-	#port: number = _webui_port
-	//@ts-ignore injected by webui.c
-	#winNum: number = _webui_win_num
-	//@ts-ignore injected by webui.c
-	#log = _webui_log ?? false //If webui.c define _webui_log then use it, instead set it to false
+	#port: number
+	#winNum: number
+	#log: boolean
+	#bindList: unknown[] = []
 
+	//Internals
 	#ws: WebSocket
 	#wsStatus = false
 	#wsStatusOnce = false
@@ -26,8 +25,6 @@ class WebUiClient {
 	#hasEvents = false
 	#fnId = 1
 	#fnPromiseResolve: (((data: string) => unknown) | undefined)[] = []
-
-	#bindList: unknown[] = []
 
 	//webui const
 	#HEADER_SIGNATURE = 221
@@ -38,7 +35,13 @@ class WebUiClient {
 	#HEADER_CLOSE = 250
 	#HEADER_CALL_FUNC = 249
 
-	constructor() {
+	constructor({ port, winNum, bindList, log = false }: { port: number, winNum: number, bindList: unknown[], log?: boolean }) {
+		// constructor arguments are injected by webui.c
+		this.#port = port
+		this.#winNum = winNum
+		this.#bindList = bindList
+		this.#log = log 
+
 		if ('webui' in globalThis) {
 			throw new Error(
 				'webui is already defined, only one instance is allowed'
@@ -439,9 +442,7 @@ class WebUiClient {
 	}
 }
 
-export const webui = new WebUiClient()
-//@ts-ignore globally expose webui APIs
-globalThis.webui = webui
+export type webui = InstanceType<typeof WebUiClient>
 
 document.body.addEventListener('contextmenu', (event) => event.preventDefault())
 addRefreshableEventListener(document.body, 'input', 'contextmenu', (event) =>
