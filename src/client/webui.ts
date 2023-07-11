@@ -313,38 +313,79 @@ class WebUiClient {
 	/**
 	 * Call a backend binding from the frontend.
 	 * @param bindingName - Backend bind name.
-	 * @param payload - Payload to send to the binding.
-	 * @return - Response of the backend callback.
+	 * @param payload - Payload to send to the binding, accept any JSON valid data
+	 * (string, number, array, object, boolean, undefined).
+	 * @return - Response of the backend callback as JSON compatible value.
 	 * @example
+	 * __Backend (C)__
 	 * ```c
-	 * //Backend (C)
 	 * webui_bind(window, "get_cwd", get_current_working_directory);
 	 * ```
+	 * __Frontend (JS)__
 	 * ```js
-	 * //Frontend (JS)
 	 * const cwd = await webui.call("get_cwd");
 	 * ```
 	 * @example
+	 * __Backend (C)__
 	 * ```c
-	 * //Backend (C)
 	 * webui_bind(window, "write_file", write_file);
 	 * ```
+	 * __Frontend (JS)__
 	 * ```js
-	 * //Frontend (JS)
 	 * webui.call("write_file", "content to write")
 	 *  .then(() => console.log("file writed"))
 	 *  .catch(() => console.error("can't write the file"))
 	 * ```
+	 * @example
+	 * __Backend (C)__
+	 * ```c
+	 * //complex_datas() returns the following JSON string
+	 * //'{ "count": 1, "list": [ 1, 2, 3 ], "isGood": true }'
+	 * webui_bind(window, "complex_datas", complex_datas);
+	 * ```
+	 * __Frontend (JS)__
+	 * ```js
+	 * type ComplexDatas = {
+	 *  count: number;
+	 *  list: number[];
+	 *  isGood: boolean;
+	 * }
+	 *
+	 * const { count, list, isGood } = await webui
+	 *  .call<ComplexDatas>("complex_datas");
+	 *
+	 * //count = 1;
+	 * //list = [ 1, 2, 3 ];
+	 * //isGood = true;
+	 * ```
 	 */
-	call(bindingName: string, payload?: string): Promise<string | void> {
+	async call<
+		Response extends JSONValue = string,
+		Payload extends JSONValue = JSONValue
+	>(bindingName: string, payload?: Payload): Promise<Response | void> {
 		if (!bindingName || !this.#wsStatus) return Promise.resolve()
-		if (typeof payload === 'undefined') payload = ''
+        //Check binding list
 		if (
 			!this.#hasEvents &&
-			!this.#bindList.includes(this.#winNum + '/' + bindingName)
+			!this.#bindList.includes(`${this.#winNum}/${bindingName}`)
 		)
 			return Promise.resolve()
-		return this.#fnPromise(bindingName, payload) as Promise<string | void>
+
+        //Get the binding response
+		const response = (await this.#fnPromise(
+			bindingName,
+			payload === undefined ? '' : JSON.stringify(payload)
+		)) as string | void
+
+        //Handle response type (void, string or JSON value)
+		if (response === undefined) return
+
+		try {
+			return JSON.parse(response)
+		} catch {
+			//@ts-ignore string is a valid JSON value
+			return response
+		}
 	}
 
 	/**
