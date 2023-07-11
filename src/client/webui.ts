@@ -400,7 +400,11 @@ class WebUiClient {
 		//Get the binding response
 		const response = (await this.#fnPromise(
 			bindingName,
-			payload === undefined ? '' : JSON.stringify(payload)
+			payload === undefined
+				? ''
+				: typeof payload === 'string'
+				? payload
+				: JSON.stringify(payload)
 		)) as string | void
 
 		//Handle response type (void, string or JSON value)
