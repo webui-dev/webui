@@ -19,6 +19,11 @@ echo Compiler: MSVC, GCC and TCC
 Set RootPath=%CD%\..\
 cd "%RootPath%"
 
+REM Transpiling TS to JS
+echo Transpile and bundle TS sources to webui.js
+cd "%RootPath%"
+esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --outdir=.\src\client .\src\client\webui.ts
+
 REM Converting JS source to C-String using xxd
 echo Converting JS source to C-String using xxd
 cd "%RootPath%"
