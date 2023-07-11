@@ -363,21 +363,27 @@ class WebUiClient {
 		Response extends JSONValue = string,
 		Payload extends JSONValue = JSONValue
 	>(bindingName: string, payload?: Payload): Promise<Response | void> {
-		if (!bindingName || !this.#wsStatus) return Promise.resolve()
-        //Check binding list
+		if (!bindingName)
+			return Promise.reject(new SyntaxError('no binding name provided'))
+
+		if (!this.#wsStatus)
+			return Promise.reject(new Error('websocket is not connected'))
+		//Check binding list
 		if (
 			!this.#hasEvents &&
 			!this.#bindList.includes(`${this.#winNum}/${bindingName}`)
 		)
-			return Promise.resolve()
+			return Promise.reject(
+				new ReferenceError(`no binding was found for "${bindingName}"`)
+			)
 
-        //Get the binding response
+		//Get the binding response
 		const response = (await this.#fnPromise(
 			bindingName,
 			payload === undefined ? '' : JSON.stringify(payload)
 		)) as string | void
 
-        //Handle response type (void, string or JSON value)
+		//Handle response type (void, string or JSON value)
 		if (response === undefined) return
 
 		try {
