@@ -1,3 +1,4 @@
+'use-strict' //force strict mode for transpilled 
 import { addRefreshableEventListener } from './utils.js'
 
 type B64string = string
