@@ -1,3 +1,5 @@
+import { addRefreshableEventListener } from './utils.js'
+
 type B64string = string
 
 class WebUiClient {
@@ -43,8 +45,17 @@ class WebUiClient {
 				this.#sendEventNavigation(url.href)
 			})
 		} else {
-			console.error(
-				'navigation API not supported, some features may be missing'
+			// Handle all link click to prevent natural navigation
+			// Rebind listener if user inject new html
+			addRefreshableEventListener(
+				document.body,
+				'a',
+				'click',
+				(event) => {
+					event.preventDefault()
+					const { href } = event.target as HTMLAnchorElement
+					this.#sendEventNavigation(href)
+				}
 			)
 		}
 
