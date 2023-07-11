@@ -1,6 +1,12 @@
 import { addRefreshableEventListener } from './utils.js'
 
 type B64string = string
+type JSONValue =
+	| string
+	| number
+	| boolean
+	| { [x: string]: JSONValue | undefined }
+	| JSONValue[]
 
 class WebUiClient {
 	//webui settings
@@ -356,19 +362,20 @@ class WebUiClient {
 	}
 
 	/**
-	 * Encode a string into base64.
-	 * @param str - string to encode.
+	 * Encode datas into base64 string.
+	 * @param datas - string or JSON value.
 	 */
-	encode(str: string): B64string {
-		return btoa(str)
+	encode(datas: JSONValue | Blob): B64string {
+		return btoa(JSON.stringify(datas))
 	}
 
 	/**
-	 * Decode a base64 string.
-	 * @param str - base64 string to decode.
+	 * Decode a base64 string into any JSON valid format
+     * (string, array, object, boolean, undefined).
+	 * @param b64 - base64 string to decode.
 	 */
-	decode(str: B64string): string {
-		return atob(str)
+	decode<T extends JSONValue>(b64: B64string): T {
+		return JSON.parse(atob(b64))
 	}
 }
 
