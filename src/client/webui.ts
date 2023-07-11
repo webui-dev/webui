@@ -216,7 +216,7 @@ class WebUiClient {
 						let FunReturn = 'undefined'
 						let FunError = false
 						try {
-							FunReturn = eval(`(() => {${data8utf8sanitize}})()`)
+							FunReturn = Function(data8utf8sanitize)()
 						} catch (e) {
 							FunError = true
 							FunReturn = e.message
