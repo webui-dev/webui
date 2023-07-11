@@ -39,6 +39,7 @@ class WebUiClient {
 
 		this.#start()
 
+		// Handle navigation server side
 		if ('navigation' in globalThis) {
 			globalThis.navigation.addEventListener('navigate', (event) => {
 				const url = new URL(event.destination.url)
@@ -54,29 +55,22 @@ class WebUiClient {
 				(event) => {
 					event.preventDefault()
 					const { href } = event.target as HTMLAnchorElement
-					this.#sendEventNavigation(href)
+					if (this.#isExternalLink(href)) {
+						this.#close(this.#HEADER_SWITCH, href)
+					} else {
+						this.#sendEventNavigation(href)
+					}
 				}
 			)
 		}
 
-		// -- DOM ---------------------------
+		// Prevent F5 refresh
 		document.addEventListener('keydown', (event) => {
 			// Disable F5
 			if (this.#log) return
 			if (event.key === 'F5') event.preventDefault()
 		})
-		document.addEventListener('click', (event) => {
-			const anchor = (event.target as HTMLElement).closest('a')
-			if (anchor) {
-				const link = anchor.href
-				if (this.#isExternalLink(link)) {
-					event.preventDefault()
-					this.#close(this.#HEADER_SWITCH, link)
-				}
-			}
-		})
 
-		// -- Links -------------------------
 		onbeforeunload = () => {
 			this.#close()
 		}
@@ -98,9 +92,11 @@ class WebUiClient {
 		this.#closeValue = value
 		this.#ws.close()
 	}
+
 	#freezeUi() {
 		document.body.style.filter = 'contrast(1%)'
 	}
+
 	#start() {
 		if (this.#bindList.includes(this.#winNum + '/')) {
 			this.#hasEvents = true
@@ -244,6 +240,7 @@ class WebUiClient {
 			}
 		})
 	}
+
 	#sendClick(elem: string) {
 		if (this.#wsStatus) {
 			const packet =
@@ -264,6 +261,7 @@ class WebUiClient {
 			if (this.#log) console.log(`WebUI -> Click [${elem}]`)
 		}
 	}
+
 	#sendEventNavigation(url: string) {
 		if (this.#hasEvents && this.#wsStatus && url !== '') {
 			const packet = Uint8Array.of(
@@ -275,6 +273,7 @@ class WebUiClient {
 			if (this.#log) console.log(`WebUI -> Navigation [${url}]`)
 		}
 	}
+
 	#isExternalLink(url: string) {
 		return new URL(url).host === globalThis.location.host
 	}
@@ -378,6 +377,6 @@ export const webui = new WebUiClient()
 globalThis.webui = webui
 
 document.body.addEventListener('contextmenu', (event) => event.preventDefault())
-document.querySelectorAll('input').forEach((input) => {
-	input.addEventListener('contextmenu', (event) => event.stopPropagation())
-})
+addRefreshableEventListener(document.body, 'input', 'contextmenu', (event) =>
+	event.stopPropagation()
+)
