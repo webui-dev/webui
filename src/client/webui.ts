@@ -35,12 +35,22 @@ class WebUiClient {
 	#HEADER_CLOSE = 250
 	#HEADER_CALL_FUNC = 249
 
-	constructor({ port, winNum, bindList, log = false }: { port: number, winNum: number, bindList: unknown[], log?: boolean }) {
+	constructor({
+		port,
+		winNum,
+		bindList,
+		log = false,
+	}: {
+		port: number
+		winNum: number
+		bindList: unknown[]
+		log?: boolean
+	}) {
 		// constructor arguments are injected by webui.c
 		this.#port = port
 		this.#winNum = winNum
 		this.#bindList = bindList
-		this.#log = log 
+		this.#log = log
 
 		if ('webui' in globalThis) {
 			throw new Error(
@@ -444,7 +454,15 @@ class WebUiClient {
 
 export type webui = InstanceType<typeof WebUiClient>
 
-document.body.addEventListener('contextmenu', (event) => event.preventDefault())
-addRefreshableEventListener(document.body, 'input', 'contextmenu', (event) =>
-	event.stopPropagation()
-)
+//wait for the html to be parsed
+addEventListener('load', () => {
+	document.body.addEventListener('contextmenu', (event) =>
+		event.preventDefault()
+	)
+	addRefreshableEventListener(
+		document.body,
+		'input',
+		'contextmenu',
+		(event) => event.stopPropagation()
+	)
+})
