@@ -25,8 +25,8 @@ echo "";
 
 #Converting JS source to C-String using xxd
 cd "$RootPath"
-cd "src/client"
-xxd -i ./webui.js ./webui.h
+cd "src"
+xxd -i client/webui.js client/webui.h
 
 echo "";
 echo "Building WebUI using GCC...";
