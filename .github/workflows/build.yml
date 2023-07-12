@@ -14,6 +14,8 @@ jobs:
       - name: Windows-WebUI
         shell: cmd
         run: |
+          npm install --save-exact -g esbuild
+          esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --log-level=silent --outdir=./src/client ./src/client/webui.ts
           cd src
           xxd -i client\webui.js client\webui.h
           cd ..
@@ -30,6 +32,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: Linux-WebUI
         run: |
+          npm install --save-exact -g esbuild
+          esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --log-level=silent --outdir=./src/client ./src/client/webui.ts
           cd src
           xxd -i client/webui.js client/webui.h
           cd ..
@@ -47,6 +51,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: macOS-WebUI
         run: |
+          npm install --save-exact -g esbuild
+          esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --log-level=silent --outdir=./src/client ./src/client/webui.ts
           cd src
           xxd -i client/webui.js client/webui.h
           cd ..
