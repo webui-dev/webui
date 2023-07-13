@@ -1901,7 +1901,7 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
     
     // Generate the cb array
     char* event_cb_js_array = (char*) _webui_malloc(cb_mem_size);
-    strcat(event_cb_js_array, "const _webui_bind_list = [");
+    strcat(event_cb_js_array, "[");
     for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
         if(_webui_core.html_elements[i] != NULL && !_webui_is_empty(_webui_core.html_elements[i])) {
             strcat(event_cb_js_array, "\"");
@@ -1909,24 +1909,21 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
             strcat(event_cb_js_array, "\",");
         }
     }
-    strcat(event_cb_js_array, "]; \n");
+    strcat(event_cb_js_array, "]");
 
     // Generate the full WebUI JS-Bridge
+    size_t len = cb_mem_size + _webui_strlen(webui_javascript_bridge);
+    char* js = (char*) _webui_malloc(len);
     #ifdef WEBUI_LOG
-        char* webui_javascript_log = "var _webui_log = true;";
-        size_t len = cb_mem_size + _webui_srtlen(webui_javascript_log) + _webui_strlen(webui_javascript_bridge);
-        char* js = (char*) _webui_malloc(len);
         sprintf(js, 
-            "%s\n _webui_port = %zu; \n_webui_win_num = %zu; \n%s \n%s \n",
-            webui_javascript_log, win->ws_port, win->window_number, event_cb_js_array, webui_javascript_bridge
+            "%s\nglobalThis.webui = new WebUiClient({ port: %zu, winNum: %zu, bindList: %s, log: true });",
+            webui_javascript_bridge, win->ws_port, win->window_number, event_cb_js_array
         );
         printf("[Core]\t\t_webui_generate_js_bridge()...\n");
     #else
-        size_t len = cb_mem_size + _webui_strlen(webui_javascript_bridge);
-        char* js = (char*) _webui_malloc(len);
         sprintf(js, 
-            "_webui_port = %zu; \n_webui_win_num = %zu; \n%s \n%s \n",
-            win->ws_port, win->window_number, event_cb_js_array, webui_javascript_bridge
+            "%s\nglobalThis.webui = new WebUiClient({ port: %zu, winNum: %zu, bindList: %s, log: false });",
+            webui_javascript_bridge, win->ws_port, win->window_number, event_cb_js_array
         );
     #endif
 

@@ -23,7 +23,12 @@ echo "";
 echo "Converting JS source to C-String using xxd"
 echo "";
 
-#Converting JS source to C-String using xxd
+# Transpiling TS to JS
+echo "Transpile and bundle TS sources to webui.js";
+cd "%RootPath%"
+esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --outdir=./src/client ./src/client/webui.ts
+
+# Converting JS source to C-String using xxd
 cd "$RootPath"
 cd "src"
 xxd -i client/webui.js client/webui.h
