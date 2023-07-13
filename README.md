@@ -162,7 +162,19 @@ browser**.
 | Nim                     | ✔️              | [Nim-WebUI](https://github.com/webui-dev/nim-webui)       |
 | Zig                     | _Not Complete_ | [Zig-WebUI](https://github.com/webui-dev/zig-webui)       |
 
-### Guidelines
+## Contributing
+
+### Tools
+
+To build locally, use the devcontainer or install the followings tools.
+
+| Tool                          | Usage                   |
+| ----------------------------- | ----------------------- |
+| xxd[^1]                       | Embed js into c library |
+| [esbuild](https://esbuild.io) | Bundle the js bridge    |
+
+[^1]: xxd is generally install on macos, most linux and came with git for
+windows.
 
 ## License
 
