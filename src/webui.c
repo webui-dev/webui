@@ -2817,6 +2817,62 @@ static int _webui_run_browser(_webui_window_t* win, char* cmd) {
     return _webui_cmd_async(win, cmd, false);
 }
 
+static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *buffer, size_t max) {
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_get_browser_args([%zu])...\n", browser);
+    #endif
+
+    const char *chromium_options[] = {
+        "--no-first-run",
+        "--disable-gpu",
+        "--disable-software-rasterizer",
+        "--no-proxy-server",
+        "--safe-mode",
+        "--disable-extensions",
+        "--disable-background-mode",
+        "--disable-plugins",
+        "--disable-plugins-discovery",
+        "--disable-translate",
+        "--bwsi",
+        "--disable-sync",
+        "--disable-sync-preferences",
+    };
+
+    int c = 0;
+    switch (browser) {
+    case Chrome:
+    case Edge:
+    case Epic:
+    case Vivaldi:
+    case Brave:
+    case Yandex:
+    case Chromium:
+        c = sprintf(buffer, " --user-data-dir=\"%s\"", win->profile_path);
+        for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
+            c += sprintf(buffer + c, " %s", chromium_options[i]);
+        }
+
+        if (win->kiosk_mode)
+            c += sprintf(buffer + c, " %s", "--chrome-frame --kiosk");   
+
+        c += sprintf(buffer + c, " %s", "--app=");
+        return c;
+    case Firefox:
+        c = sprintf(buffer, " -P WebUI -purgecaches");
+        if (win->kiosk_mode)
+            c += sprintf(buffer, "%s", " -kiosk");
+        c += sprintf(buffer, " -new-window ");
+        return c;
+    }
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_get_browser_args() -> Unknown Browser (%zu)\n", browser);
+    #endif
+    strcpy(buffer, "");
+    return 0;
+}
+
 static bool _webui_browser_start_chrome(_webui_window_t* win, const char* address) {
 
     #ifdef WEBUI_LOG
@@ -2834,14 +2890,8 @@ static bool _webui_browser_start_chrome(_webui_window_t* win, const char* addres
     if(!_webui_browser_create_profile_folder(win, Chrome))
         return false;
     
-    // Kiosk mode argument
-    char kiosk_arg[32] = {0};
-    if(win->kiosk_mode)
-        sprintf(kiosk_arg, "--chrome-frame --kiosk");
-
-    // Full command
     char arg[1024] = {0};
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences %s --app=", win->profile_path, kiosk_arg);
+    _webui_get_browser_args(win, Chrome, arg, sizeof(arg));
 
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
@@ -2873,14 +2923,8 @@ static bool _webui_browser_start_edge(_webui_window_t* win, const char* address)
     if(!_webui_browser_create_profile_folder(win, Edge))
         return false;
 
-    // Kiosk mode argument
-    char kiosk_arg[32] = {0};
-    if(win->kiosk_mode)
-        sprintf(kiosk_arg, "--chrome-frame --kiosk");
-
-    // Full command
     char arg[1024] = {0};
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences %s --app=", win->profile_path, kiosk_arg);
+    _webui_get_browser_args(win, Edge, arg, sizeof(arg));
 
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
@@ -2912,14 +2956,8 @@ static bool _webui_browser_start_epic(_webui_window_t* win, const char* address)
     if(!_webui_browser_create_profile_folder(win, Epic))
         return false;
 
-    // Kiosk mode argument
-    char kiosk_arg[32] = {0};
-    if(win->kiosk_mode)
-        sprintf(kiosk_arg, "--chrome-frame --kiosk");
-
-    // Full command
     char arg[1024] = {0};
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences %s --app=", win->profile_path, kiosk_arg);
+    _webui_get_browser_args(win, Epic, arg, sizeof(arg));
 
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
@@ -2951,14 +2989,8 @@ static bool _webui_browser_start_vivaldi(_webui_window_t* win, const char* addre
     if(!_webui_browser_create_profile_folder(win, Vivaldi))
         return false;
 
-    // Kiosk mode argument
-    char kiosk_arg[32] = {0};
-    if(win->kiosk_mode)
-        sprintf(kiosk_arg, "--chrome-frame --kiosk");
-
-    // Full command
     char arg[1024] = {0};
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences %s --app=", win->profile_path, kiosk_arg);
+    _webui_get_browser_args(win, Vivaldi, arg, sizeof(arg));
 
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
@@ -2990,14 +3022,8 @@ static bool _webui_browser_start_brave(_webui_window_t* win, const char* address
     if(!_webui_browser_create_profile_folder(win, Brave))
         return false;
 
-    // Kiosk mode argument
-    char kiosk_arg[32] = {0};
-    if(win->kiosk_mode)
-        sprintf(kiosk_arg, "--chrome-frame --kiosk");
-
-    // Full command
     char arg[1024] = {0};
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences %s --app=", win->profile_path, kiosk_arg);
+    _webui_get_browser_args(win, Brave, arg, sizeof(arg));
 
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
@@ -3029,14 +3055,11 @@ static bool _webui_browser_start_firefox(_webui_window_t* win, const char* addre
     if(!_webui_browser_create_profile_folder(win, Firefox))
         return false;
 
-    // Kiosk mode argument
-    char kiosk_arg[32] = {0};
-    if(win->kiosk_mode)
-        sprintf(kiosk_arg, "-kiosk");
+    char arg[1024] = {0};
+    _webui_get_browser_args(win, Firefox, arg, sizeof(arg));
 
-    // Full command
     char full[1024] = {0};
-    sprintf(full, "%s -P WebUI -purgecaches %s -new-window %s", win->browser_path, kiosk_arg, address);
+    sprintf(full, "%s%s%s", win->browser_path, arg, address);
 
     if(_webui_run_browser(win, full) == 0) {
 
@@ -3065,14 +3088,8 @@ static bool _webui_browser_start_yandex(_webui_window_t* win, const char* addres
     if(!_webui_browser_create_profile_folder(win, Yandex))
         return false;
 
-    // Kiosk mode argument
-    char kiosk_arg[32] = {0};
-    if(win->kiosk_mode)
-        sprintf(kiosk_arg, "--chrome-frame --kiosk");
-
-    // Full command
     char arg[1024] = {0};
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences %s --app=", win->profile_path, kiosk_arg);
+    _webui_get_browser_args(win, Yandex, arg, sizeof(arg));
 
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
@@ -3104,14 +3121,8 @@ static bool _webui_browser_start_chromium(_webui_window_t* win, const char* addr
     if (!_webui_browser_create_profile_folder(win, Chromium))
         return false;
     
-    // Kiosk mode argument
-    char kiosk_arg[32] = {0};
-    if(win->kiosk_mode)
-        sprintf(kiosk_arg, "--chrome-frame --kiosk");
-
-    // Full command
     char arg[1024] = {0};
-    sprintf(arg, " --user-data-dir=\"%s\" --no-first-run --disable-gpu --disable-software-rasterizer --no-proxy-server --safe-mode --disable-extensions --disable-background-mode --disable-plugins --disable-plugins-discovery --disable-translate --bwsi --disable-sync --disable-sync-preferences %s --app=", win->profile_path, kiosk_arg);
+    _webui_get_browser_args(win, Chromium, arg, sizeof(arg));
 
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
