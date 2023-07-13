@@ -2864,12 +2864,11 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
             c += sprintf(buffer, "%s", " -kiosk");
         c += sprintf(buffer, " -new-window ");
         return c;
-    default:
-        #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_get_browser_args() -> Unknown Browser (%zu)\n", browser);
-        #endif
     }
 
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_get_browser_args() -> Unknown Browser (%zu)\n", browser);
+    #endif
     strcpy(buffer, "");
     return 0;
 }
