@@ -2818,6 +2818,11 @@ static int _webui_run_browser(_webui_window_t* win, char* cmd) {
 }
 
 static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *buffer, size_t max) {
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_get_browser_args([%zu])...\n", browser);
+    #endif
+
     const char *chromium_options[] = {
         "--no-first-run",
         "--disable-gpu",
@@ -2852,17 +2857,20 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
             c += sprintf(buffer + c, " %s", "--chrome-frame --kiosk");   
 
         c += sprintf(buffer + c, " %s", "--app=");
-        return 0;
+        return c;
     case Firefox:
         c = sprintf(buffer, " -P WebUI -purgecaches");
         if (win->kiosk_mode)
             c += sprintf(buffer, "%s", " -kiosk");
         c += sprintf(buffer, " -new-window ");
-        return 0;
+        return c;
+    default:
+        #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_get_browser_args() -> Unknown Browser (%zu)\n", browser);
+        #endif
     }
 
     strcpy(buffer, "");
-
     return 0;
 }
 
