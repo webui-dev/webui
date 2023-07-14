@@ -1,8 +1,9 @@
 FROM mcr.microsoft.com/vscode/devcontainers/base:debian-10
 
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
 RUN apt update
 RUN apt install -y nodejs npm
-RUN npm i -g esbuild clang-format
+RUN npm i -g esbuild clang-format prettier
 
 # [Optional] Uncomment this section to install additional OS packages.
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
