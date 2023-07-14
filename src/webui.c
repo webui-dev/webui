@@ -3598,7 +3598,7 @@ static bool _webui_get_data(const char* packet, size_t packet_len, size_t pos, s
         return false;
     }
 
-    // Calculat the data part size
+    // Calculate the data part size
     size_t data_size = _webui_strlen(&packet[pos]);
     if(data_size < 1) {
 
