@@ -400,6 +400,222 @@ void webui_set_multi_access(size_t window, bool status) {
     win->multi_access = status;
 }
 
+void webui_set_title(size_t window, const char* title) {
+    #ifdef WEBUI_LOG
+        printf("[User] webui_set_title([%zu], [%s])...\n", window, title);
+    #endif
+
+    // Check window
+    if(_webui_core.wins[window] == NULL) return;
+
+    // Construct JSON internal callback
+    char* internal_callback = _webui_malloc(40 + _webui_strlen(title));
+    sprintf(internal_callback, "{ \"name\": \"set_title\", \"args\": [ \"%s\" ] }", title);
+    size_t len = _webui_strlen(internal_callback);
+
+    // Construct payload
+    char* query = (char*) _webui_malloc(3 + len);
+    query[0] = WEBUI_HEADER_SIGNATURE;
+    query[1] = WEBUI_HEADER_CALL_INTERNAL;
+    query[2] = 0;
+    for(size_t i = 0; i < len; i++) {
+        query[i + 3] = internal_callback[i];
+    }
+
+    _webui_window_send(_webui_core.wins[window], query, 3 + len);
+    _webui_free_mem((void*)internal_callback);
+    _webui_free_mem((void*)query);
+}
+
+void webui_set_position(size_t window, unsigned int position_x, unsigned int position_y) {
+    #ifdef WEBUI_LOG
+        printf("[User] webui_set_position([%zu], [%d], [%d])...\n", window, position_x, position_y);
+    #endif
+
+    // Check window
+    if(_webui_core.wins[window] == NULL) return;
+
+    // Construct JSON internal callback
+    char* internal_callback = _webui_malloc(47 + 20);
+    sprintf(internal_callback, "{ \"name\": \"set_position\", \"args\": [ \"%u\", \"%u\" ] }", position_x, position_y);
+    size_t len = _webui_strlen(internal_callback);
+
+    // Construct payload
+    char* query = (char*) _webui_malloc(3 + len);
+    query[0] = WEBUI_HEADER_SIGNATURE;
+    query[1] = WEBUI_HEADER_CALL_INTERNAL;
+    query[2] = 0;
+    for(size_t i = 0; i < len; i++) {
+        query[i + 3] = internal_callback[i];
+    }
+
+    _webui_window_send(_webui_core.wins[window], query, 3 + len);
+    _webui_free_mem((void*)internal_callback);
+    _webui_free_mem((void*)query);
+}
+
+void webui_set_size(size_t window, unsigned int width, unsigned int height) {
+    #ifdef WEBUI_LOG
+        printf("[User] webui_set_size([%zu], [%d], [%d])...\n", window, width, height);
+    #endif
+
+    // Check window
+    if(_webui_core.wins[window] == NULL) return;
+
+    // Construct JSON internal callback
+    char* internal_callback = _webui_malloc(43 + 20);
+    sprintf(internal_callback, "{ \"name\": \"set_size\", \"args\": [ \"%u\", \"%u\" ] }", width, height);
+    size_t len = _webui_strlen(internal_callback);
+
+    // Construct payload
+    char* query = (char*) _webui_malloc(3 + len);
+    query[0] = WEBUI_HEADER_SIGNATURE;
+    query[1] = WEBUI_HEADER_CALL_INTERNAL;
+    query[2] = 0;
+    for(size_t i = 0; i < len; i++) {
+        query[i + 3] = internal_callback[i];
+    }
+
+    _webui_window_send(_webui_core.wins[window], query, 3 + len);
+    _webui_free_mem((void*)internal_callback);
+    _webui_free_mem((void*)query);
+}
+
+bool webui_get_title(size_t window, char* buffer, size_t buffer_len) {
+    #ifdef WEBUI_LOG
+        printf("[User] webui_get_title([%zu])...\n", window);
+    #endif
+
+    // Check window
+    if(_webui_core.wins[window] == NULL) return false;
+
+    // Construct JSON internal callback
+    char* internal_callback = "{ \"name\": \"get_title\" }";
+    size_t len = _webui_strlen(internal_callback);
+
+    // Initializing response pipe
+    unsigned char run_id = _webui_get_run_id();
+    _webui_core.run_done[run_id] = false;
+    _webui_core.run_error[run_id] = false;
+    if((void*)_webui_core.run_responses[run_id] != NULL)
+        _webui_free_mem((void*)_webui_core.run_responses[run_id]);
+
+    // Construct payload
+    char* query = (char*) _webui_malloc(3 + len);
+    query[0] = WEBUI_HEADER_SIGNATURE;
+    query[1] = WEBUI_HEADER_CALL_INTERNAL;
+    query[2] = run_id;
+    for(size_t i = 0; i < len; i++) {
+        query[i + 3] = internal_callback[i];
+    }
+
+    // Send query
+    _webui_window_send(_webui_core.wins[window], query, 3 + len);
+    _webui_free_mem((void*)query);
+
+    // Wait for UI response
+    for(;;) {
+        if(_webui_core.run_done[run_id])
+            break;
+        
+        _webui_sleep(1);
+    }
+
+    if(_webui_core.run_responses[run_id] != NULL) {
+
+        #ifdef WEBUI_LOG
+            printf("[User] webui_get_title -> Response found [%s] \n", _webui_core.run_responses[run_id]);
+        #endif
+
+        // Response found
+        if(buffer != NULL && buffer_len > 1) {
+
+            // Copy response to the user's response buffer
+            size_t response_len = _webui_strlen(_webui_core.run_responses[run_id]) + 1;
+            size_t bytes_to_cpy = (response_len <= buffer_len ? response_len : buffer_len);
+            memcpy(buffer, _webui_core.run_responses[run_id], bytes_to_cpy);
+        }
+
+        _webui_free_mem((void*)_webui_core.run_responses[run_id]);
+
+        return _webui_core.run_error[run_id];
+    }
+
+    return false;
+}
+
+bool webui_get_size(size_t window, unsigned int* width, unsigned int* height) {
+    #ifdef WEBUI_LOG
+        printf("[User] webui_get_size([%zu])...\n", window);
+    #endif
+
+    // Check window
+    if(_webui_core.wins[window] == NULL) return false;
+
+    // Construct JSON internal callback
+    char* internal_callback = "{ \"name\": \"get_size\" }";
+    size_t len = _webui_strlen(internal_callback);
+
+    // Initializing response pipe
+    unsigned char run_id = _webui_get_run_id();
+    _webui_core.run_done[run_id] = false;
+    _webui_core.run_error[run_id] = false;
+    if((void*)_webui_core.run_responses[run_id] != NULL)
+        _webui_free_mem((void*)_webui_core.run_responses[run_id]);
+
+    // Construct payload
+    char* query = (char*) _webui_malloc(3 + len);
+    query[0] = WEBUI_HEADER_SIGNATURE;
+    query[1] = WEBUI_HEADER_CALL_INTERNAL;
+    query[2] = run_id;
+    for(size_t i = 0; i < len; i++) {
+        query[i + 3] = internal_callback[i];
+    }
+
+    // Send query
+    _webui_window_send(_webui_core.wins[window], query, 3 + len);
+    _webui_free_mem((void*)query);
+
+    // Wait for UI response
+    for(;;) {
+        if(_webui_core.run_done[run_id])
+            break;
+        
+        _webui_sleep(1);
+    }
+
+    if(_webui_core.run_responses[run_id] != NULL) {
+
+        #ifdef WEBUI_LOG
+            printf("[User] webui_get_title -> Response found [%s] \n", _webui_core.run_responses[run_id]);
+        #endif
+
+        // Response found
+        if(width != NULL && height != NULL) {
+
+            // Copy response to the user's response buffer
+            // Convert 8 bytes buffer to 2 32byte integer
+            *width =
+                (unsigned char)_webui_core.run_responses[run_id][3] << 24 |
+                (unsigned char)_webui_core.run_responses[run_id][2] << 16 |
+                (unsigned char)_webui_core.run_responses[run_id][1] << 8 |
+                (unsigned char)_webui_core.run_responses[run_id][0];
+
+            *height =
+                (unsigned char)_webui_core.run_responses[run_id][7] << 24 |
+                (unsigned char)_webui_core.run_responses[run_id][6] << 16 |
+                (unsigned char)_webui_core.run_responses[run_id][5] << 8 |
+                (unsigned char)_webui_core.run_responses[run_id][4];
+        }
+
+        _webui_free_mem((void*)_webui_core.run_responses[run_id]);
+
+        return _webui_core.run_error[run_id];
+    }
+
+    return false;
+}
+
 void webui_set_icon(size_t window, const char* icon, const char* icon_type) {
 
     #ifdef WEBUI_LOG
@@ -3609,7 +3825,7 @@ static bool _webui_get_data(const char* packet, size_t packet_len, size_t pos, s
         return false;
     }
 
-    // Calculat the data part size
+    // Calculate the data part size
     size_t data_size = _webui_strlen(&packet[pos]);
     if(data_size < 1) {
 
@@ -3733,6 +3949,67 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
 
         // Set pipe
         if(data_status && data_len > 0) {
+
+            _webui_core.run_error[run_id] = error;
+            _webui_core.run_responses[run_id] = data;
+        }
+        else {
+
+            // Empty Result
+            _webui_core.run_error[run_id] = error;
+            _webui_core.run_responses[run_id] = webui_empty_string;
+        }
+
+        // Send ready signal to webui_script()
+        _webui_core.run_done[run_id] = true;
+    }
+    else if((unsigned char) packet[1] == WEBUI_HEADER_CALL_INTERNAL) {
+
+        // JS Payload
+
+        // 0: [Signature]
+        // 1: [Type]
+        // 2: [ID]
+        // 3: [Error]
+        // 4: [Data_len]
+        // 5: [Data]
+
+        // Get pipe id
+        unsigned char run_id = packet[2];
+        if(run_id < 0x01) {
+
+            // Fatal.
+            // The pipe ID is not valid
+            // we can't send the ready signal to webui_script()
+            return;
+        }
+
+        // Get data part
+        size_t data_len = packet[4];
+        char* data =_webui_malloc(data_len);
+        for (size_t i = 0; i < data_len; i++) {
+            data[i] = (unsigned char) packet[i + 5];
+        }
+
+        // Get js-error
+        bool error = true;
+        if((unsigned char) packet[3] == 0x00)
+            error = false;
+
+        #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_CALL_INTERNAL \n");
+            printf("[Core]\t\t_webui_window_receive() -> run_id = 0x%02x \n", run_id);
+            printf("[Core]\t\t_webui_window_receive() -> error = 0x%02x \n", error);
+            printf("[Core]\t\t_webui_window_receive() -> %zu bytes of data\n", data_len);
+            printf("[Core]\t\t_webui_window_receive() -> data = [%s] @ 0x%p\n", data, data);
+        #endif
+
+        // Initialize pipe
+        if((void*)_webui_core.run_responses[run_id] != NULL)
+            _webui_free_mem((void*)_webui_core.run_responses[run_id]);
+
+        // Set pipe
+        if(data_len > 0) {
 
             _webui_core.run_error[run_id] = error;
             _webui_core.run_responses[run_id] = data;

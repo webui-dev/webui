@@ -1,0 +1,28 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/alpine
+{
+	"name": "WebUI",
+	"dockerFile": "Dockerfile",
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"explorer.fileNesting.enabled": true,
+				"explorer.fileNesting.patterns": {
+					"*.ts": "${capture}.test.ts,${capture}.js",
+					"*.js": "${capture}.js.map, ${capture}.*.js, ${capture}.d.ts",
+					"*.jsx": "${capture}.js, ${capture}.*.jsx",
+					"*.tsx": "${capture}.js, ${capture}.jsx, ${capture}.ts, ${capture}.*.tsx"
+				}
+			},
+			"extensions": [
+				"yoavbls.pretty-ts-errors",
+				"vivaxy.vscode-conventional-commits",
+				"dbaeumer.vscode-eslint",
+				"ms-vscode.cpptools-extension-pack",
+				"esbenp.prettier-vscode"
+			]
+		}
+	},
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	"remoteUser": "root"
+}
