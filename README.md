@@ -1,6 +1,6 @@
 ![ScreenShot](logo/webui_240_shadow.png)
 
-# WebUI v2.3.0
+#WebUI v2 .3.0
 
 [![Website](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://github.com/webui-dev/webui)
 [![Website](https://img.shields.io/github/issues/webui-dev/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://github.com/webui-dev/webui/issues)
@@ -14,7 +14,7 @@
 > :warning: **Notice**:
 >
 > - WebUI it's not a web-server solution or a framework, but it's an lightweight
-  > portable lib to use any installed web browser as a user interface.
+>   portable lib to use any installed web browser as a user interface.
 > - We are currently writing documentation.
 
 ## Features
@@ -118,34 +118,34 @@ browser**.
 
 | OS      | Browser         | Status           |
 | ------- | --------------- | ---------------- |
-| Windows | Mozilla Firefox | ✔️                |
-| Windows | Google Chrome   | ✔️                |
-| Windows | Microsoft Edge  | ✔️                |
-| Windows | Chromium        | ✔️                |
-| Windows | Yandex          | ✔️                |
-| Windows | Brave           | ✔️                |
-| Windows | Vivaldi         | ✔️                |
-| Windows | Epic            | ✔️                |
+| Windows | Mozilla Firefox | ✔️               |
+| Windows | Google Chrome   | ✔️               |
+| Windows | Microsoft Edge  | ✔️               |
+| Windows | Chromium        | ✔️               |
+| Windows | Yandex          | ✔️               |
+| Windows | Brave           | ✔️               |
+| Windows | Vivaldi         | ✔️               |
+| Windows | Epic            | ✔️               |
 | Windows | Opera           | _coming soon_    |
 | -       | -               | -                |
-| Linux   | Mozilla Firefox | ✔️                |
-| Linux   | Google Chrome   | ✔️                |
-| Linux   | Microsoft Edge  | ✔️                |
-| Linux   | Chromium        | ✔️                |
-| Linux   | Yandex          | ✔️                |
-| Linux   | Brave           | ✔️                |
-| Linux   | Vivaldi         | ✔️                |
+| Linux   | Mozilla Firefox | ✔️               |
+| Linux   | Google Chrome   | ✔️               |
+| Linux   | Microsoft Edge  | ✔️               |
+| Linux   | Chromium        | ✔️               |
+| Linux   | Yandex          | ✔️               |
+| Linux   | Brave           | ✔️               |
+| Linux   | Vivaldi         | ✔️               |
 | Linux   | Epic            | _Does Not Exist_ |
 | Linux   | Opera           | _coming soon_    |
 | -       | -               | -                |
-| macOS   | Mozilla Firefox | ✔️                |
-| macOS   | Google Chrome   | ✔️                |
-| macOS   | Microsoft Edge  | ✔️                |
-| macOS   | Chromium        | ✔️                |
-| macOS   | Yandex          | ✔️                |
-| macOS   | Brave           | ✔️                |
-| macOS   | Vivaldi         | ✔️                |
-| macOS   | Epic            | ✔️                |
+| macOS   | Mozilla Firefox | ✔️               |
+| macOS   | Google Chrome   | ✔️               |
+| macOS   | Microsoft Edge  | ✔️               |
+| macOS   | Chromium        | ✔️               |
+| macOS   | Yandex          | ✔️               |
+| macOS   | Brave           | ✔️               |
+| macOS   | Vivaldi         | ✔️               |
+| macOS   | Epic            | ✔️               |
 | macOS   | Apple Safari    | _coming soon_    |
 | macOS   | Opera           | _coming soon_    |
 
@@ -153,13 +153,13 @@ browser**.
 
 | Language                | Status         | Link                                                      |
 | ----------------------- | -------------- | --------------------------------------------------------- |
-| C/C++                   | ✔️              | [WebUI](https://github.com/webui-dev/webui)               |
-| Python                  | ✔️              | [Python-WebUI](https://github.com/webui-dev/python-webui) |
-| TypeScript / JavaScript | ✔️              | [Deno-WebUI](https://github.com/webui-dev/deno-webui)     |
-| Go                      | ✔️              | [Go-WebUI](https://github.com/webui-dev/go-webui)         |
+| C/C++                   | ✔️             | [WebUI](https://github.com/webui-dev/webui)               |
+| Python                  | ✔️             | [Python-WebUI](https://github.com/webui-dev/python-webui) |
+| TypeScript / JavaScript | ✔️             | [Deno-WebUI](https://github.com/webui-dev/deno-webui)     |
+| Go                      | ✔️             | [Go-WebUI](https://github.com/webui-dev/go-webui)         |
 | Rust                    | _Not Complete_ | [Rust-WebUI](https://github.com/webui-dev/rust-webui)     |
-| V                       | ✔️              | [V-WebUI](https://github.com/webui-dev/v-webui)           |
-| Nim                     | ✔️              | [Nim-WebUI](https://github.com/webui-dev/nim-webui)       |
+| V                       | ✔️             | [V-WebUI](https://github.com/webui-dev/v-webui)           |
+| Nim                     | ✔️             | [Nim-WebUI](https://github.com/webui-dev/nim-webui)       |
 | Zig                     | _Not Complete_ | [Zig-WebUI](https://github.com/webui-dev/zig-webui)       |
 
 ## Contributing
@@ -173,8 +173,9 @@ To build locally, use the devcontainer or install the followings tools.
 | xxd[^1]                       | Embed js into c library |
 | [esbuild](https://esbuild.io) | Bundle the js bridge    |
 
-[^1]: xxd is generally install on macos, most linux and came with git for
-windows.
+[^1]:
+    xxd is generally install on macos, most linux and came with git for
+    windows.
 
 ## License
 

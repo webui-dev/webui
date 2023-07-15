@@ -9,6 +9,7 @@ nmake
 ```
 
 - **MinGW**
+
 ```sh
 git clone https://github.com/webui-dev/webui.git
 cd webui\build\Windows\GCC
@@ -16,6 +17,7 @@ mingw32-make
 ```
 
 - **TCC**
+
 ```sh
 git clone https://github.com/webui-dev/webui.git
 cd webui\build\Windows\TCC

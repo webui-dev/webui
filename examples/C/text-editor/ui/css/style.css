@@ -1,110 +1,122 @@
 body {
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    font-family: 'Courier New', Courier, monospace;
-    background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
-    background-repeat: no-repeat;
-    background-position: center center;
-    background-size: cover;
-    background-attachment : fixed;
-    color: #ddecf9;
+	margin: 0;
+	padding: 0;
+	height: 100vh;
+	font-family: 'Courier New', Courier, monospace;
+	background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
+	background-repeat: no-repeat;
+	background-position: center center;
+	background-size: cover;
+	background-attachment: fixed;
+	color: #ddecf9;
 }
 
 .topbar {
-    width: 100%;
-    height: 4px;
-    background-image: linear-gradient(to right, #4ed2e7 0%, #db57eb 50%, #f98818 100%);
+	width: 100%;
+	height: 4px;
+	background-image: linear-gradient(
+		to right,
+		#4ed2e7 0%,
+		#db57eb 50%,
+		#f98818 100%
+	);
 }
 
 header {
-    color: #fff;
+	color: #fff;
 }
 
 /* Nav */
 
 nav {
-    margin: 0 auto;
-    padding: 0px;
-    text-shadow: 1px 1px 2px #000000;
-    position: relative;
-    z-index: 99;
-    font-family: 'Font Awesome 5 Free';
-    font-size: 18px;
-  }
-  
-  nav ul {
-    margin-top: 0px;
-    margin-bottom: 0px;
-    text-align: center;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 25%, rgba(255, 255, 255, 0.2) 75%, rgba(255, 255, 255, 0) 100%);
-    box-shadow: 0 0 25px rgba(0, 0, 0, 0.1), inset 0 0 1px rgba(255, 255, 255, 0.6);
-    cursor: pointer;
-  }
-  
-  nav ul li {
-    display: inline-block;
-  }
-  
-  nav ul li a {
-    padding: 18px;
-    font-family: "Open Sans";
-    text-transform:uppercase;
-    text-decoration: none;
-    display: block;
-  }
-  
-  nav ul li a:hover {
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1), inset 0 0 1px rgba(255, 255, 255, 0.6);
-    background: rgba(255, 255, 255, 0.1);
-  }
+	margin: 0 auto;
+	padding: 0px;
+	text-shadow: 1px 1px 2px #000000;
+	position: relative;
+	z-index: 99;
+	font-family: 'Font Awesome 5 Free';
+	font-size: 18px;
+}
+
+nav ul {
+	margin-top: 0px;
+	margin-bottom: 0px;
+	text-align: center;
+	background: linear-gradient(
+		90deg,
+		rgba(255, 255, 255, 0) 0%,
+		rgba(255, 255, 255, 0.2) 25%,
+		rgba(255, 255, 255, 0.2) 75%,
+		rgba(255, 255, 255, 0) 100%
+	);
+	box-shadow: 0 0 25px rgba(0, 0, 0, 0.1),
+		inset 0 0 1px rgba(255, 255, 255, 0.6);
+	cursor: pointer;
+}
+
+nav ul li {
+	display: inline-block;
+}
+
+nav ul li a {
+	padding: 18px;
+	font-family: 'Open Sans';
+	text-transform: uppercase;
+	text-decoration: none;
+	display: block;
+}
+
+nav ul li a:hover {
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.1),
+		inset 0 0 1px rgba(255, 255, 255, 0.6);
+	background: rgba(255, 255, 255, 0.1);
+}
 
 /* Code */
 
 .main {
-    padding: 0px;    
+	padding: 0px;
 }
 
 /* About */
 
 .about-box {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%; 
-    background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
+	display: none;
+	position: fixed;
+	z-index: 1;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
 }
-  
+
 .about-box-content {
-    background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
-    position: absolute;
-    margin: 0;
-    padding: 10px;
-    width: 30%;
-    border-radius: 5px;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+	background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
+	position: absolute;
+	margin: 0;
+	padding: 10px;
+	width: 30%;
+	border-radius: 5px;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
 }
 
 .about-box-content h1 {
-    text-align: center;
+	text-align: center;
 }
 
 .about-box-content a {
-    color: inherit;
+	color: inherit;
 }
 
 .CodeMirror {
-    height: 100%;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 16px;
-    text-shadow: 1px 1px 2px #000000;
+	height: 100%;
+	font-family: 'Courier New', Courier, monospace;
+	font-size: 16px;
+	text-shadow: 1px 1px 2px #000000;
 }
 
 .CodeMirror-scroll {
-
 }
