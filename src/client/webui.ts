@@ -1,5 +1,5 @@
 'use-strict' //force strict mode for transpilled
-import { addRefreshableEventListener } from './utils.js'
+import { AsyncFunction, addRefreshableEventListener } from './utils.js'
 
 type B64string = string
 type JSONValue =
@@ -167,7 +167,7 @@ class WebUiClient {
 			}
 		}
 
-		this.#ws.onmessage = (event) => {
+		this.#ws.onmessage = async (event) => {
 			const buffer8 = new Uint8Array(event.data)
 			if (buffer8.length < 4) return
 			if (buffer8[0] !== this.#HEADER_SIGNATURE) return
@@ -216,7 +216,7 @@ class WebUiClient {
 						let FunReturn = 'undefined'
 						let FunError = false
 						try {
-							FunReturn = Function(data8utf8sanitize)()
+							FunReturn = await AsyncFunction(data8utf8sanitize)()
 						} catch (e) {
 							FunError = true
 							FunReturn = e.message

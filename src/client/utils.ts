@@ -39,3 +39,8 @@ export function addRefreshableEventListener<
 	observer.observe(root, { subtree: true, childList: true }) // Observe root element and all his children
 	return observer // Allow user to stop observer for performance issues
 }
+
+/**
+ * Async function constructor
+ */
+export const AsyncFunction = async function () {}.constructor
