@@ -16,17 +16,17 @@ echo WebUI v%WEBUI_VERSION% Build Script
 echo Platform: Microsoft Windows x64
 echo Compiler: MSVC, GCC and TCC
 
-Set RootPath=%CD%\..\
+Set RootPath=%CD%\..
+Set BuildPath=%RootPath%\build\Windows
+Set DistPath=%RootPath%\dist\Windows
 cd "%RootPath%"
 
 REM Transpiling TS to JS
 echo Transpile and bundle TS sources to webui.js
-cd "%RootPath%"
 cmd /c esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=.\src\client .\src\client\webui.ts
 
 REM Converting JS source to C-String using xxd
 echo Converting JS source to C-String using xxd
-cd "%RootPath%"
 cd "src"
 xxd -i client\webui.js client\webui.h
 
@@ -34,8 +34,7 @@ echo.
 echo Building WebUI using MSVC...
 
 REM Build WebUI Library using MSVC
-cd "%RootPath%"
-cd "build\Windows\MSVC"
+cd "%BuildPath%\MSVC"
 %MSVC_CMD%
 
 echo.
@@ -43,8 +42,7 @@ echo Building WebUI using GCC...
 echo.
 
 REM Build WebUI Library using GCC
-cd "%RootPath%"
-cd "build\Windows\GCC"
+cd "%BuildPath%\GCC"
 %GCC_CMD%
 
 echo.
@@ -52,8 +50,7 @@ echo Building WebUI using TCC...
 echo.
 
 REM Build WebUI Library using TCC
-cd "%RootPath%"
-cd "build\Windows\TCC"
+cd "%BuildPath%\TCC"
 %GCC_CMD%
 
 echo.
@@ -65,45 +62,53 @@ cd "%RootPath%"
 REM C++ (Visual Studio 2022)
 copy /Y "include\webui.h" "examples\C++\VS2022\serve_a_folder\my_webui_app\webui.h"
 copy /Y "include\webui.hpp" "examples\C++\VS2022\serve_a_folder\my_webui_app\webui.hpp"
-copy /Y "build\Windows\MSVC\webui-2-static-x64.lib" "examples\C++\VS2022\serve_a_folder\my_webui_app\webui-2-static-x64.lib"
+copy /Y "%BuildPath%\MSVC\webui-2-static-x64.lib" "examples\C++\VS2022\serve_a_folder\my_webui_app\webui-2-static-x64.lib"
 
 REM C++ (Visual Studio 2019)
 copy /Y "include\webui.h" "examples\C++\VS2019\serve_a_folder\my_webui_app\webui.h"
 copy /Y "include\webui.hpp" "examples\C++\VS2019\serve_a_folder\my_webui_app\webui.hpp"
-copy /Y "build\Windows\MSVC\webui-2-static-x64.lib" "examples\C++\VS2019\serve_a_folder\my_webui_app\webui-2-static-x64.lib"
+copy /Y "%BuildPath%\MSVC\webui-2-static-x64.lib" "examples\C++\VS2019\serve_a_folder\my_webui_app\webui-2-static-x64.lib"
 
 REM C - Text Editor
 copy /Y "include\webui.h" "examples\C\text-editor\webui.h"
-copy /Y "build\Windows\MSVC\webui-2-x64.dll" "examples\C\text-editor\webui-2-x64.dll"
+copy /Y "%BuildPath%\MSVC\webui-2-x64.dll" "examples\C\text-editor\webui-2-x64.dll"
 
 echo.
 IF "%ARG1%"=="" (
 
-    echo Copying WebUI libs to the release folder...
+    echo Copying WebUI libs to %DistPath%...
     echo.
 
-    REM Release Windows Include
-    copy /Y "include\webui.h" "Release\Windows\include\webui.h"    
+    REM Remove Windows distributable files directory if it exits
+    if exist "%DistPath%" rmdir /s /q "%DistPath%"
 
-    REM Release Windows MSVC
-    copy /Y "build\Windows\MSVC\webui-2-x64.dll" "Release\Windows\MSVC\webui-2-x64.dll"
-    copy /Y "build\Windows\MSVC\webui-2-x64.lib" "Release\Windows\MSVC\webui-2-x64.lib"
-    copy /Y "build\Windows\MSVC\webui-2-static-x64.lib" "Release\Windows\MSVC\webui-2-static-x64.lib"
+    REM Create Windows output directories
+    mkdir "%DistPath%\include" 2>nul
+    mkdir "%DistPath%\MSVC" 2>nul
+    mkdir "%DistPath%\GCC" 2>nul
 
-    REM Release Windows GCC
-    copy /Y "build\Windows\GCC\webui-2-x64.dll" "Release\Windows\GCC\webui-2-x64.dll"
-    copy /Y "build\Windows\GCC\libwebui-2-static-x64.a" "Release\Windows\GCC\libwebui-2-static-x64.a"
+    REM Copy include files
+    copy /Y "include\webui.h" "%DistPath%\include\webui.h"
 
-    REM Release Windows TCC
-    REM copy /Y "build\Windows\TCC\webui-2-x64.dll" "Release\Windows\TCC\webui-2-x64.dll"
-    REM copy /Y "build\Windows\TCC\webui-2-x64.def" "Release\Windows\TCC\webui-2-x64.def"    
-    copy /Y "build\Windows\TCC\libwebui-2-static-x64.a" "Release\Windows\TCC\libwebui-2-static-x64.a"
+    REM Copy Windows MSVC
+    copy /Y "%BuildPath%\MSVC\webui-2-x64.dll" "%DistPath%\MSVC\webui-2-x64.dll"
+    copy /Y "%BuildPath%\MSVC\webui-2-x64.lib" "%DistPath%\MSVC\webui-2-x64.lib"
+    copy /Y "%BuildPath%\MSVC\webui-2-static-x64.lib" "%DistPath%\MSVC\webui-2-static-x64.lib"
+
+    REM Copy Windows GCC
+    copy /Y "%BuildPath%\GCC\webui-2-x64.dll" "%DistPath%\GCC\webui-2-x64.dll"
+    copy /Y "%BuildPath%\GCC\libwebui-2-static-x64.a" "%DistPath%\GCC\libwebui-2-static-x64.a"
+
+    REM Copy Windows TCC
+    REM copy /Y "%BuildPath%\TCC\webui-2-x64.dll" "%DistPath%\TCC\webui-2-x64.dll"
+    REM copy /Y "%BuildPath%\TCC\webui-2-x64.def" "%DistPath%\TCC\webui-2-x64.def"
+    copy /Y "%BuildPath%\TCC\libwebui-2-static-x64.a" "%DistPath%\TCC\libwebui-2-static-x64.a"
 
     echo.
     echo Compressing the release folder...
 
     set TAR_OUT=webui-windows-x64-v%WEBUI_VERSION%.tar.gz
-    cd "Release"
+    cd "dist"
     timeout 2 > NUL
     tar.exe -czf %TAR_OUT% Windows\*
     cd "%RootPath%"

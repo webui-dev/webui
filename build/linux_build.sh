@@ -16,7 +16,9 @@ echo "WebUI v$WEBUI_VERSION Build Script"
 echo "Platform: Linux x64"
 echo "Compiler: GCC and Clang"
 
-RootPath="$PWD/../"
+RootPath="$PWD/.."
+BuildPath="$RootPath/build/Linux"
+DistPath="$RootPath/dist/Linux"
 cd "$RootPath"
 
 echo "";
@@ -25,11 +27,9 @@ echo "";
 
 # Transpiling TS to JS
 echo "Transpile and bundle TS sources to webui.js";
-cd "%RootPath%"
 esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./src/client ./src/client/webui.ts
 
 # Converting JS source to C-String using xxd
-cd "$RootPath"
 cd "src"
 xxd -i client/webui.js client/webui.h
 
@@ -38,8 +38,7 @@ echo "Building WebUI using GCC...";
 echo "";
 
 # Build WebUI Library using GCC
-cd "$RootPath"
-cd "build/Linux/GCC"
+cd "$BuildPath/GCC"
 $GCC_CMD
 
 echo "";
@@ -47,8 +46,7 @@ echo "Building WebUI using Clang...";
 echo "";
 
 # Build WebUI Library using Clang
-cd "$RootPath"
-cd "build/Linux/Clang"
+cd "$BuildPath/Clang"
 $CLANG_CMD
 
 echo "";
@@ -59,32 +57,40 @@ cd "$RootPath"
 
 # C - Text Editor
 cp -f "include/webui.h" "examples/C/text-editor/webui.h"
-cp -f "build/Linux/GCC/webui-2-x64.so" "examples/C/text-editor/webui-2-x64.so"
+cp -f "$BuildPath/GCC/webui-2-x64.so" "examples/C/text-editor/webui-2-x64.so"
 
 echo "";
 if [ "$ARG1" = "" ]; then
 
-    echo "Copying WebUI libs to the release folder..."
+    echo "Copying WebUI libs to $DistPath..."
     echo "";
 
-    # Release Linux Include
-    cp -f "include/webui.h" "Release/Linux/include/webui.h"
-    cp -f "include/webui.hpp" "Release/Linux/include/webui.hpp"
+    # Remove Linux distributable files directory if it exits
+    [ -d "$DistPath" ] && rm -r "$DistPath"
 
-    # Release Linux GCC
-    cp -f "build/Linux/GCC/webui-2-x64.so" "Release/Linux/GCC/webui-2-x64.so"
-    cp -f "build/Linux/GCC/libwebui-2-static-x64.a" "Release/Linux/GCC/libwebui-2-static-x64.a"
+    # Create Linux output directories
+    mkdir -p "$DistPath/include"
+    mkdir "$DistPath/GCC"
+    mkdir "$DistPath/Clang"
 
-    # Release Linux Clang
-    cp -f "build/Linux/Clang/webui-2-x64.so" "Release/Linux/Clang/webui-2-x64.so"
-    cp -f "build/Linux/Clang/libwebui-2-static-x64.a" "Release/Linux/Clang/libwebui-2-static-x64.a"
+    # Copy include files
+    cp "include/webui.h" "$DistPath/include/webui.h"
+    cp "include/webui.hpp" "$DistPath/include/webui.hpp"
+
+    # Copy Linux GCC
+    cp "$BuildPath/GCC/webui-2-x64.so" "$DistPath/GCC/webui-2-x64.so"
+    cp "$BuildPath/GCC/libwebui-2-static-x64.a" "$DistPath/GCC/libwebui-2-static-x64.a"
+
+    # Copy Linux Clang
+    cp "$BuildPath/Clang/webui-2-x64.so" "$DistPath/Clang/webui-2-x64.so"
+    cp "$BuildPath/Clang/libwebui-2-static-x64.a" "$DistPath/Clang/libwebui-2-static-x64.a"
 
     echo "";
-    echo "Compressing the release folder..."
+    echo "Compressing distributable files..."
     echo "";
 
     TAR_OUT="webui-linux-x64-v$WEBUI_VERSION.tar.gz"
-    cd "Release"
+    cd "dist"
     sleep 2
     tar -czf $TAR_OUT Linux/*
     cd "$RootPath"
