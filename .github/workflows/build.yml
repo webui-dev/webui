@@ -1,60 +1,127 @@
-name: Build WebUI
+name: Build
 on:
   push:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
+  setup:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+        with:
+          version: latest
+      - name: Bundle WebUI Client
+        shell: bash
+        run: |
+          pnpm i -g esbuild
+          esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./src/client ./src/client/webui.ts
+          cd src
+          xxd -i client/webui.js client/webui.h
+      - uses: actions/cache@v3
+        with:
+          path: src/client/webui.h
+          key: ${{ runner.os }}-${{ github.sha }}-client
 
-  Windows-WebUI:
+  windows:
+    needs: setup
     runs-on: windows-latest
+    strategy:
+      matrix:
+        compiler: [GCC, MSVC]
+      fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache/restore@v3
+        with:
+          path: src/client/webui.h
+          key: ${{ runner.os }}-${{ github.sha }}-client
+          fail-on-cache-miss: true
       - uses: microsoft/setup-msbuild@v1.1
-      - name: Windows-WebUI
-        shell: cmd
+      - if: ${{ matrix.compiler == 'MSVC' }}
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Build
         run: |
-          npm install --save-exact -g esbuild
-          esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./src/client ./src/client/webui.ts
-          cd src
-          xxd -i client\webui.js client\webui.h
-          cd ..
-          cd build\Windows\GCC
-          mingw32-make
-          cd ..\..\..
-          cd build\Windows\MSVC
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          nmake
+          cd build\/${{ runner.os }}\${{ matrix.compiler }}
+          if ('${{ matrix.compiler }}' -eq 'MSVC') {
+            nmake
+          } else {
+            mingw32-make
+          }
+      - name: Prepare Artifacts
+        shell: bash
+        run: |
+          rm build/${{ runner.os }}/README.md
+          rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
+          cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ runner.os }}-${{ matrix.compiler }}
+          path: build/${{ runner.os }}/${{ matrix.compiler }}
 
-  Linux-WebUI:
+  linux:
+    needs: setup
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [GCC, Clang]
+      fail-fast: false
     steps:
-      - uses: actions/checkout@v2
-      - name: Linux-WebUI
+      - uses: actions/checkout@v3
+      - uses: actions/cache/restore@v3
+        with:
+          path: src/client/webui.h
+          key: ${{ runner.os }}-${{ github.sha }}-client
+          fail-on-cache-miss: true
+      - name: Build
         run: |
-          npm install --save-exact -g esbuild
-          esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./src/client ./src/client/webui.ts
-          cd src
-          xxd -i client/webui.js client/webui.h
-          cd ..
-          cd build/Linux/GCC
+          cd build//${{ runner.os }}/${{ matrix.compiler }}
+          if [ "${{ matrix.compiler }}" == "Clang" ]; then
+            sudo ln -s llvm-ar-13 /usr/bin/llvm-ar
+            sudo ln -s llvm-ranlib-13 /usr/bin/llvm-ranlib
+          fi
           make
-          cd ../../..
-          cd build/Linux/Clang
-          sudo ln -s llvm-ar-13 /usr/bin/llvm-ar
-          sudo ln -s llvm-ranlib-13 /usr/bin/llvm-ranlib
-          make
+      - name: Prepare Artifacts
+        run: |
+          rm build/${{ runner.os }}/README.md
+          rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
+          cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ runner.os }}-${{ matrix.compiler }}
+          path: build/${{ runner.os }}/${{ matrix.compiler }}
 
-  macOS-WebUI:
-    runs-on: macOS-latest
+  macOS:
+    needs: setup
+    runs-on: macos-latest
+    name: macOS
+    strategy:
+      matrix:
+        compiler: [Clang]
     steps:
-      - uses: actions/checkout@v2
-      - name: macOS-WebUI
+      - uses: actions/checkout@v3
+      - uses: actions/cache/restore@v3
+        with:
+          path: src/client/webui.h
+          key: ${{ runner.os }}-${{ github.sha }}-client
+          fail-on-cache-miss: true
+      - name: Build
         run: |
-          npm install --save-exact -g esbuild
-          esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./src/client ./src/client/webui.ts
-          cd src
-          xxd -i client/webui.js client/webui.h
-          cd ..
-          cd build/macOS/Clang
+          cd build//${{ runner.os }}/${{ matrix.compiler }}
           make
+      - name: Prepare Artifacts
+        run: |
+          rm build/${{ runner.os }}/README.md
+          rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
+          cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ runner.os }}-${{ matrix.compiler }}
+          path: build/${{ runner.os }}/${{ matrix.compiler }}
