@@ -6,9 +6,24 @@
 *.res
 *.out
 *.def
-*.obj
-*.iobj
+
+# Compiled Object files
+*.slo
+*.lo
 *.o
+*.obj
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
 
 # Logs
 *.log
@@ -23,6 +38,7 @@
 .idea/
 *.recipe
 *.idb
+*.iobj
 
 # Visual Studio for Mac
 .idea/
