@@ -1,8 +1,12 @@
+<div align="center">
+
 ![Logo](https://github.com/webui-dev/webui/assets/34311583/c92e712f-0698-486a-a460-d4acea28a4f8)
 
 # WebUI v2.3.0
 
 [![BuildStatus](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://github.com/webui-dev/webui/actions?query=branch%3Amain) [![Issues](https://img.shields.io/github/issues/webui-dev/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://github.com/webui-dev/webui/issues) [![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
+
+</div>
 
 > Use any web browser as GUI, with your preferred language in the backend and HTML5 in the frontend, all in a lightweight portable lib.
 
@@ -42,7 +46,11 @@ This [text editor example](https://github.com/webui-dev/webui/tree/main/examples
   <a href="https://www.youtube.com/watch?v=bbbcZd4cuxg"><img src="https://img.youtube.com/vi/bbbcZd4cuxg/0.jpg" alt="Embrace Modern Technology: Using HTML 5 for GUI in C++ - Borislav Stanimirov - CppCon 2019"></a>
 </div> -->
 
+<div align="center">
+
 ![CPPCon](https://github.com/webui-dev/webui/assets/34311583/cf796ead-66d3-4298-ac80-b551c25f3e41)
+
+</div>
 
 ## UI & The Web Technologies
 
@@ -54,7 +62,11 @@ Today's web browsers have everything a modern UI needs. Web browsers are very so
 
 ## How does it work?
 
+<div align="center">
+
 ![Diagram](https://github.com/webui-dev/webui/assets/34311583/ef56944a-d92c-44cb-935a-affc8a442eb4)
+
+</div>
 
 Think of WebUI like a WebView controller, but instead of embedding the WebView controller in your program, which makes the final program big in size, and non-portable as it needs the WebView runtimes. Instead, by using WebUI, you use a tiny static/dynamic library to run any installed web browser and use it as GUI, which makes your program small, fast, and portable. **All it needs is a web browser**.
 
