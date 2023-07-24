@@ -1,8 +1,10 @@
 name: Build
 on:
   push:
+    paths-ignore: ['**/*.md']
   pull_request:
     branches: [main]
+    paths-ignore: ['**/*.md']
 
 jobs:
   setup:
