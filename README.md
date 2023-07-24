@@ -1,4 +1,4 @@
-![ScreenShot](logo/webui_240_shadow.png)
+![Logo](https://github.com/webui-dev/webui/assets/34311583/c92e712f-0698-486a-a460-d4acea28a4f8)
 
 # WebUI v2.3.0
 
@@ -6,7 +6,7 @@
 
 > Use any web browser as GUI, with your preferred language in the backend and HTML5 in the frontend, all in a lightweight portable lib.
 
-![ScreenShot](screenshot.png)
+![Screenshot](https://github.com/webui-dev/webui/assets/34311583/57992ef1-4f7f-4d60-8045-7b07df4088c6)
 
 > :warning: **Notice**:
 > 
@@ -28,7 +28,11 @@
 
 This [text editor example](https://github.com/webui-dev/webui/tree/main/examples/C/text-editor) is written in C using WebUI as the GUI library. The final executable is portable and has less than _1 MB_ in size (_+html and css files_).
 
-![ScreenShot](webui_c_example.png)
+<div align="center">
+
+![Example](https://github.com/webui-dev/webui/assets/34311583/ea7644e3-e307-4970-bc02-35f74e345529)
+
+</div>
 
 ## CppCon 2019 Presentation
 
@@ -38,7 +42,7 @@ This [text editor example](https://github.com/webui-dev/webui/tree/main/examples
   <a href="https://www.youtube.com/watch?v=bbbcZd4cuxg"><img src="https://img.youtube.com/vi/bbbcZd4cuxg/0.jpg" alt="Embrace Modern Technology: Using HTML 5 for GUI in C++ - Borislav Stanimirov - CppCon 2019"></a>
 </div> -->
 
-![ScreenShot](cppcon_2019.png)
+![CPPCon](https://github.com/webui-dev/webui/assets/34311583/cf796ead-66d3-4298-ac80-b551c25f3e41)
 
 ## UI & The Web Technologies
 
@@ -50,7 +54,7 @@ Today's web browsers have everything a modern UI needs. Web browsers are very so
 
 ## How does it work?
 
-![ScreenShot](webui_diagram.png)
+![Diagram](https://github.com/webui-dev/webui/assets/34311583/ef56944a-d92c-44cb-935a-affc8a442eb4)
 
 Think of WebUI like a WebView controller, but instead of embedding the WebView controller in your program, which makes the final program big in size, and non-portable as it needs the WebView runtimes. Instead, by using WebUI, you use a tiny static/dynamic library to run any installed web browser and use it as GUI, which makes your program small, fast, and portable. **All it needs is a web browser**.
 
