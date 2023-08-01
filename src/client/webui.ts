@@ -457,7 +457,9 @@ class WebUiClient {
 	}
 }
 
-export type webui = WebUiClient
+type webui = WebUiClient
+export default webui
+export type { WebUiClient }
 
 //wait for the html to be parsed
 addEventListener('load', () => {
