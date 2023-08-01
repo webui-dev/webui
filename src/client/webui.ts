@@ -1,5 +1,6 @@
 'use-strict' //force strict mode for transpilled
-import { AsyncFunction, addRefreshableEventListener } from './utils.js'
+//@ts-ignore use *.ts import real extension
+import { AsyncFunction, addRefreshableEventListener } from './utils.ts'
 
 type B64string = string
 type JSONValue =
