@@ -457,7 +457,7 @@ class WebUiClient {
 	}
 }
 
-export type webui = InstanceType<typeof WebUiClient>
+export type webui = WebUiClient
 
 //wait for the html to be parsed
 addEventListener('load', () => {
