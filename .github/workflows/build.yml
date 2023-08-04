@@ -60,10 +60,13 @@ jobs:
           rm build/${{ runner.os }}/README.md
           rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
           cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
+          artifact=${{ runner.os }}-${{ matrix.compiler }}-x86_64
+          # Add the ARTIFACT name(`,,` ^= lowercase shell param) as GitHub environment variable.
+          echo "ARTIFACT=${artifact,,}" >> $GITHUB_ENV
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ runner.os }}-${{ matrix.compiler }}
+          name: ${{ env.ARTIFACT }}
           path: build/${{ runner.os }}/${{ matrix.compiler }}
 
   linux:
@@ -93,10 +96,13 @@ jobs:
           rm build/${{ runner.os }}/README.md
           rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
           cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
+          artifact=${{ runner.os }}-${{ matrix.compiler }}-x86_64
+          # Add the ARTIFACT name(`,,` ^= lowercase shell param) as GitHub environment variable.
+          echo "ARTIFACT=${artifact,,}" >> $GITHUB_ENV
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ runner.os }}-${{ matrix.compiler }}
+          name: ${{ env.ARTIFACT }}
           path: build/${{ runner.os }}/${{ matrix.compiler }}
 
   macOS:
@@ -122,8 +128,11 @@ jobs:
           rm build/${{ runner.os }}/README.md
           rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
           cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
+          # Add the ARTIFACT name(lowercased) as GitHub environment variable.
+          artifact=$(echo ${{ runner.os }}-${{ matrix.compiler }}-x86_64 | tr '[:upper:]' '[:lower:]')
+          echo "ARTIFACT=$artifact" >> $GITHUB_ENV
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ runner.os }}-${{ matrix.compiler }}
+          name: ${{ env.ARTIFACT }}
           path: build/${{ runner.os }}/${{ matrix.compiler }}
