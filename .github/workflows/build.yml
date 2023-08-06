@@ -62,7 +62,7 @@ jobs:
           rm build/${{ runner.os }}/README.md
           rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
           cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
-          artifact=${{ runner.os }}-${{ matrix.compiler }}-x86_64
+          artifact=${{ runner.os }}-${{ matrix.compiler }}-x64
           # Add the ARTIFACT name(`,,` ^= lowercase shell param) as GitHub environment variable.
           echo "ARTIFACT=${artifact,,}" >> $GITHUB_ENV
       - name: Upload Artifact
@@ -105,7 +105,7 @@ jobs:
           rm build/${{ runner.os }}/README.md
           rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
           cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
-          artifact=${{ runner.os }}-${{ matrix.compiler }}-x86_64
+          artifact=${{ runner.os }}-${{ matrix.compiler }}-x64
           # Add the ARTIFACT name(`,,` ^= lowercase shell param) as GitHub environment variable.
           echo "ARTIFACT=${artifact,,}" >> $GITHUB_ENV
       - name: Upload Artifact
@@ -145,7 +145,7 @@ jobs:
           rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
           cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
           # Add the ARTIFACT name(lowercased) as GitHub environment variable.
-          artifact=$(echo ${{ runner.os }}-${{ matrix.compiler }}-x86_64 | tr '[:upper:]' '[:lower:]')
+          artifact=$(echo ${{ runner.os }}-${{ matrix.compiler }}-x64 | tr '[:upper:]' '[:lower:]')
           echo "ARTIFACT=$artifact" >> $GITHUB_ENV
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
