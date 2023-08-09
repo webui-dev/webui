@@ -106,3 +106,7 @@ Thumbs.db
 
 # User-specific private settings
 *.DotSettings.user
+
+# Example binaries
+examples/**/main
+examples/**/main-dyn
