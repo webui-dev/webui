@@ -32,6 +32,8 @@ jobs:
   windows:
     needs: setup
     runs-on: windows-latest
+    permissions:
+      contents: write
     strategy:
       matrix:
         compiler: [GCC, MSVC]
@@ -54,21 +56,31 @@ jobs:
           } else {
             mingw32-make
           }
-      - name: Prepare Artifacts
+      - name: Prepare Artifact
         shell: bash
         run: |
           rm build/${{ runner.os }}/README.md
           rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
           cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
-      - name: Upload Artifacts
+          artifact=${{ runner.os }}-${{ matrix.compiler }}-x64
+          # Add the ARTIFACT name(`,,` ^= lowercase shell param) as GitHub environment variable.
+          echo "ARTIFACT=${artifact,,}" >> $GITHUB_ENV
+      - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ runner.os }}-${{ matrix.compiler }}
+          name: ${{ env.ARTIFACT }}
           path: build/${{ runner.os }}/${{ matrix.compiler }}
+      - name: Release Artifact
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARTIFACT }}
 
   linux:
     needs: setup
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     strategy:
       matrix:
         compiler: [GCC, Clang]
@@ -88,21 +100,31 @@ jobs:
             sudo ln -s llvm-ranlib-13 /usr/bin/llvm-ranlib
           fi
           make
-      - name: Prepare Artifacts
+      - name: Prepare Artifact
         run: |
           rm build/${{ runner.os }}/README.md
           rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
           cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
-      - name: Upload Artifacts
+          artifact=${{ runner.os }}-${{ matrix.compiler }}-x64
+          # Add the ARTIFACT name(`,,` ^= lowercase shell param) as GitHub environment variable.
+          echo "ARTIFACT=${artifact,,}" >> $GITHUB_ENV
+      - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ runner.os }}-${{ matrix.compiler }}
+          name: ${{ env.ARTIFACT }}
           path: build/${{ runner.os }}/${{ matrix.compiler }}
+      - name: Release Artifact
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARTIFACT }}
 
   macOS:
     needs: setup
     runs-on: macos-latest
     name: macOS
+    permissions:
+      contents: write
     strategy:
       matrix:
         compiler: [Clang]
@@ -122,8 +144,16 @@ jobs:
           rm build/${{ runner.os }}/README.md
           rm build/${{ runner.os }}/${{ matrix.compiler }}/Makefile
           cp -r include build/${{ runner.os }}/${{ matrix.compiler }}
-      - name: Upload Artifacts
+          # Add the ARTIFACT name(lowercased) as GitHub environment variable.
+          artifact=$(echo ${{ runner.os }}-${{ matrix.compiler }}-x64 | tr '[:upper:]' '[:lower:]')
+          echo "ARTIFACT=$artifact" >> $GITHUB_ENV
+      - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ runner.os }}-${{ matrix.compiler }}
+          name: ${{ env.ARTIFACT }}
           path: build/${{ runner.os }}/${{ matrix.compiler }}
+      - name: Release Artifact
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARTIFACT }}
