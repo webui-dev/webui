@@ -62,6 +62,7 @@ typedef struct _webui_window_t {
     bool has_events;
     char* server_root_path;
     bool kiosk_mode;
+    bool hide;
     size_t process_id;
     webui_event_core_t* event_core[WEBUI_MAX_ARRAY];
     #ifdef _WIN32

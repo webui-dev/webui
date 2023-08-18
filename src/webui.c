@@ -635,6 +635,19 @@ void webui_return_bool(webui_event_t* e, bool b) {
     *response = buf;
 }
 
+void webui_set_hide(size_t window, bool status) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_set_hide(%zu, %d)...\n", window, status);
+    #endif
+
+    // Dereference
+    if(_webui_core.wins[window] == NULL) return;
+    _webui_window_t* win = _webui_core.wins[window];
+
+    win->hide = status;
+}
+
 void webui_send_raw(size_t window, const char* function, const void* raw, size_t size) {
 
     #ifdef WEBUI_LOG
@@ -2901,16 +2914,18 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
         for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
             c += sprintf(buffer + c, " %s", chromium_options[i]);
         }
-
         if (win->kiosk_mode)
-            c += sprintf(buffer + c, " %s", "--chrome-frame --kiosk");   
-
+            c += sprintf(buffer + c, " %s", "--chrome-frame --kiosk");
+        if (win->hide)
+            c += sprintf(buffer + c, " %s", "--headless");
         c += sprintf(buffer + c, " %s", "--app=");
         return c;
     case Firefox:
         c = sprintf(buffer, " -P WebUI -purgecaches");
         if (win->kiosk_mode)
             c += sprintf(buffer, "%s", " -kiosk");
+        if (win->hide)
+            c += sprintf(buffer, "%s", " -headless");
         c += sprintf(buffer, " -new-window ");
         return c;
     }
@@ -4669,7 +4684,7 @@ static WEBUI_SERVER_START
             (void*)win
         );
 
-        if(_webui_core.startup_timeout > 0) {
+        if(_webui_core.startup_timeout > 0 && !win->hide) {
 
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Listening Success\n", win->window_number);
@@ -4804,7 +4819,7 @@ static WEBUI_SERVER_START
         // Let's check the flag again, there is a change that
         // the flag has ben changed during the first loop for
         // example when set_timeout() get called later
-        if(_webui_core.startup_timeout == 0) {
+        if(_webui_core.startup_timeout == 0 || win->hide) {
 
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Listening success\n", win->window_number);
