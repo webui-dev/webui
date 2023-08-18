@@ -17,16 +17,16 @@ jobs:
       - uses: pnpm/action-setup@v2
         with:
           version: latest
-      - name: Bundle WebUI Client
+      - name: Bundle WebUI Bridge
         shell: bash
         run: |
           pnpm i -g esbuild
-          esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./src/client ./src/client/webui.ts
-          cd src
-          xxd -i client/webui.js client/webui.h
+          esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./bridge ./bridge/webui_bridge.ts
+          cd bridge
+          python js2c.py
       - uses: actions/cache@v3
         with:
-          path: src/client/webui.h
+          path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-client
 
   windows:
@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/cache/restore@v3
         with:
-          path: src/client/webui.h
+          path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-client
           fail-on-cache-miss: true
       - uses: microsoft/setup-msbuild@v1.1
@@ -89,7 +89,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/cache/restore@v3
         with:
-          path: src/client/webui.h
+          path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-client
           fail-on-cache-miss: true
       - name: Build
@@ -132,7 +132,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/cache/restore@v3
         with:
-          path: src/client/webui.h
+          path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-client
           fail-on-cache-miss: true
       - name: Build
