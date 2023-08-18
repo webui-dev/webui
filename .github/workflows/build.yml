@@ -23,7 +23,7 @@ jobs:
           pnpm i -g esbuild
           esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./bridge ./bridge/webui_bridge.ts
           cd bridge
-          python js2c.py
+          python3 js2c.py
       - uses: actions/cache@v3
         with:
           path: bridge/webui_bridge.h
