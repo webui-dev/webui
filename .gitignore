@@ -110,3 +110,7 @@ Thumbs.db
 # Example binaries
 examples/**/main
 examples/**/main-dyn
+
+# Compressed
+*.zip
+*.gz
