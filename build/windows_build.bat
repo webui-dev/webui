@@ -21,15 +21,6 @@ Set BuildPath=%RootPath%\build\Windows
 Set DistPath=%RootPath%\dist\Windows
 cd "%RootPath%"
 
-REM Transpiling TS to JS
-echo Transpile and bundle TS sources to webui.js
-cmd /c esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=.\src\client .\src\client\webui.ts
-
-REM Converting JS source to C-String using xxd
-echo Converting JS source to C-String using xxd
-cd "src"
-xxd -i client\webui.js client\webui.h
-
 echo.
 echo Building WebUI using MSVC...
 

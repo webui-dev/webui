@@ -22,18 +22,6 @@ DistPath="$RootPath/dist/Linux"
 cd "$RootPath"
 
 echo "";
-echo "Converting JS source to C-String using xxd"
-echo "";
-
-# Transpiling TS to JS
-echo "Transpile and bundle TS sources to webui.js";
-esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./src/client ./src/client/webui.ts
-
-# Converting JS source to C-String using xxd
-cd "src"
-xxd -i client/webui.js client/webui.h
-
-echo "";
 echo "Building WebUI using GCC...";
 echo "";
 
