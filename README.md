@@ -2,7 +2,7 @@
 
 ![Logo](https://github.com/webui-dev/webui/assets/34311583/c92e712f-0698-486a-a460-d4acea28a4f8)
 
-# WebUI v2.3.0
+# WebUI v2.4.0
 
 [![BuildStatus](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://github.com/webui-dev/webui/actions?query=branch%3Amain) [![Issues](https://img.shields.io/github/issues/webui-dev/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://github.com/webui-dev/webui/issues) [![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
 
