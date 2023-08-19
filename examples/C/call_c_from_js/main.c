@@ -5,7 +5,7 @@
 void my_function_string(webui_event_t* e) {
 
     // JavaScript:
-    // webui_fn('MyID_One', 'Hello');
+    // webui.call('MyID_One', 'Hello');
 
     const char* str = webui_get_string(e);
     printf("my_function_string: %s\n", str); // Hello
@@ -24,7 +24,7 @@ void my_function_string(webui_event_t* e) {
 void my_function_integer(webui_event_t* e) {
 
     // JavaScript:
-    // webui_fn('MyID_Two', 123456789);
+    // webui.call('MyID_Two', 123456789);
 
     long long number = webui_get_int(e);
     printf("my_function_integer: %lld\n", number); // 123456789
@@ -33,7 +33,7 @@ void my_function_integer(webui_event_t* e) {
 void my_function_boolean(webui_event_t* e) {
 
     // JavaScript:
-    // webui_fn('MyID_Three', true);
+    // webui.call('MyID_Three', true);
 
     bool status = webui_get_bool(e); // True
     if(status)
@@ -45,7 +45,7 @@ void my_function_boolean(webui_event_t* e) {
 void my_function_with_response(webui_event_t* e) {
 
     // JavaScript:
-    // const result = webui_fn('MyID_Four', number);
+    // const result = webui.call('MyID_Four', number);
 
     long long number = webui_get_int(e);
     number = number * 2;
@@ -76,13 +76,13 @@ int main() {
     "    <h2>WebUI - Call C from JavaScript Example</h2>"
     "    <p>Call C function with argument (<em>See the logs in your terminal</em>)</p>"
     "    <br>"
-    "    <button onclick=\"webui_fn('MyID_One', 'Hello');\">Call my_function_string()</button>"
+    "    <button onclick=\"webui.call('MyID_One', 'Hello');\">Call my_function_string()</button>"
     "    <br>"
     "    <br>"
-    "    <button onclick=\"webui_fn('MyID_Two', 123456789);\">Call my_function_integer()</button>"
+    "    <button onclick=\"webui.call('MyID_Two', 123456789);\">Call my_function_integer()</button>"
     "    <br>"
     "    <br>"
-    "    <button onclick=\"webui_fn('MyID_Three', true);\">Call my_function_boolean()</button>"
+    "    <button onclick=\"webui.call('MyID_Three', true);\">Call my_function_boolean()</button>"
     "    <br>"
     "    <br>"
     "    <p>Call C function and wait for the response</p>"
@@ -95,7 +95,7 @@ int main() {
     "      function MyJS() {"
     "        const MyInput = document.getElementById('MyInputID');"
     "        const number = MyInput.value;"
-    "        webui_fn('MyID_Four', number).then((response) => {"
+    "        webui.call('MyID_Four', number).then((response) => {"
     "            MyInput.value = response;"
     "        });"
     "      }"

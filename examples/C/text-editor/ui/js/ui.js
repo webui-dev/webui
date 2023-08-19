@@ -75,7 +75,7 @@ function addText(text) {
 // Save the file
 function SaveFile() {
     const content = codeMirrorInstance.getValue();
-    webui_fn('Save', content);
+    webui.call('Save', content);
 }
 
 window.addEventListener("DOMContentLoaded", (event) => {
