@@ -32,8 +32,10 @@
 // Mutex
 #ifdef _WIN32
     typedef CRITICAL_SECTION webui_mutex_t;
+    typedef CONDITION_VARIABLE webui_condition_t;
 #else
     typedef pthread_mutex_t webui_mutex_t;
+    typedef pthread_cond_t webui_condition_t;
 #endif
 
 // Timer
@@ -109,6 +111,9 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_server_start;
     webui_mutex_t mutex_send;
     webui_mutex_t mutex_receive;
+    webui_mutex_t mutex_wait;
+    webui_condition_t condition_wait;
+    bool ui;
 } _webui_core_t;
 
 typedef struct _webui_cb_arg_t {
@@ -204,10 +209,15 @@ static void _webui_print_ascii(const char* data, size_t len);
 static void _webui_panic(void);
 static void _webui_kill_pid(size_t pid);
 static _webui_window_t* _webui_dereference_win_ptr(void* ptr);
+
 static void _webui_mutex_init(webui_mutex_t *mutex);
 static void _webui_mutex_lock(webui_mutex_t *mutex);
 static void _webui_mutex_unlock(webui_mutex_t *mutex);
 static void _webui_mutex_destroy(webui_mutex_t *mutex);
+static void _webui_condition_init(webui_condition_t *cond);
+static void _webui_condition_wait(webui_condition_t *cond, webui_mutex_t *mutex);
+static void _webui_condition_signal(webui_condition_t *cond);
+static void _webui_condition_destroy(webui_condition_t *cond);
 
 static void _webui_http_send(struct mg_connection *conn, const char* mime_type, const char* body);
 static void _webui_http_send_error_page(struct mg_connection *conn, const char* body, int status);

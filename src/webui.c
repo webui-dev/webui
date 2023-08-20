@@ -437,6 +437,8 @@ bool webui_show(size_t window, const char* content) {
         printf("[User] webui_show([%zu])...\n", window);
     #endif
 
+    _webui_core.ui = true;
+
     // Dereference
     if(_webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
@@ -833,6 +835,9 @@ void webui_exit(void) {
     // Let's give other threads more time to 
     // safely exit and finish their cleaning up.
     _webui_sleep(120);
+
+    // Fire the mutex condition wait
+    _webui_condition_signal(&_webui_core.condition_wait);
 }
 
 void webui_wait(void) {
@@ -845,24 +850,20 @@ void webui_wait(void) {
 
     if(_webui_core.startup_timeout > 0) {
 
+        // Check if there is atleast one window (UI)
+        // is running. Otherwise the mutex condition
+        // signal will never come
+        if(!_webui_core.ui)
+            return;
+
         #ifdef WEBUI_LOG
-            printf("[Loop] webui_wait() -> Using timeout %zu second\n", _webui_core.startup_timeout);
+            printf("[Loop] webui_wait() -> Timeout in %zu seconds\n", _webui_core.startup_timeout);
+            printf("[Loop] webui_wait() -> Waiting for connected UI...\n");
         #endif
 
-        // Wait for browser to start
-        _webui_wait_for_startup();
-
-        #ifdef WEBUI_LOG
-            printf("[Loop] webui_wait() -> Wait for connected UI...\n");
-        #endif
-
-        while(_webui_core.servers > 0) {
-
-            #ifdef WEBUI_LOG
-                // printf("[%zu/%zu]", _webui_core.servers, _webui_core.connections);
-            #endif
-            _webui_sleep(50);
-        }
+        // The mutex conditional signal will
+        // be fired when no more UI (servers)
+        // is running.
     }
     else {
 
@@ -870,14 +871,20 @@ void webui_wait(void) {
             printf("[Loop] webui_wait() -> Infinite wait...\n");
         #endif
 
-        // Infinite wait
-        while(!_webui_core.exit_now)
-            _webui_sleep(50);
+        // The mutex conditional signal will
+        // be fired when `webui_exit()` is
+        // called by the user.
     }
 
+    // Waiting for the mutex conditional signal
+    _webui_mutex_lock(&_webui_core.mutex_wait);
+    _webui_condition_wait(&_webui_core.condition_wait, &_webui_core.mutex_wait);
+
     #ifdef WEBUI_LOG
-        printf("[Loop] webui_wait() -> Wait finished.\n");
+        printf("[Loop] webui_wait() -> Wait is finished.\n");
     #endif
+
+    _webui_mutex_unlock(&_webui_core.mutex_wait);
 
     // Final cleaning
     _webui_clean();
@@ -1786,7 +1793,43 @@ static const char* _webui_interpret_command(const char* cmd) {
     return (const char*)out;
 }
 
-void _webui_mutex_init(webui_mutex_t *mutex) {
+static void _webui_condition_init(webui_condition_t *cond) {
+
+    #ifdef _WIN32
+        InitializeConditionVariable(cond);
+    #else
+        pthread_cond_init(cond, NULL);
+    #endif
+}
+
+static void _webui_condition_wait(webui_condition_t *cond, webui_mutex_t *mutex) {
+
+    #ifdef _WIN32
+        SleepConditionVariableCS(cond, mutex, INFINITE);
+    #else
+        pthread_cond_wait(cond, mutex);
+    #endif
+}
+
+static void _webui_condition_signal(webui_condition_t *cond) {
+
+    #ifdef _WIN32
+        WakeConditionVariable(cond);
+    #else
+        pthread_cond_signal(cond);
+    #endif
+}
+
+static void _webui_condition_destroy(webui_condition_t *cond) {
+
+    #ifdef _WIN32
+        // No need
+    #else
+        pthread_cond_destroy(cond);
+    #endif
+}
+
+static void _webui_mutex_init(webui_mutex_t *mutex) {
 
     #ifdef _WIN32
         InitializeCriticalSection(mutex);
@@ -1795,7 +1838,7 @@ void _webui_mutex_init(webui_mutex_t *mutex) {
     #endif
 }
 
-void _webui_mutex_lock(webui_mutex_t *mutex) {
+static void _webui_mutex_lock(webui_mutex_t *mutex) {
 
     #ifdef _WIN32
         EnterCriticalSection(mutex);
@@ -1804,7 +1847,7 @@ void _webui_mutex_lock(webui_mutex_t *mutex) {
     #endif
 }
 
-void _webui_mutex_unlock(webui_mutex_t *mutex) {
+static void _webui_mutex_unlock(webui_mutex_t *mutex) {
 
     #ifdef _WIN32
         LeaveCriticalSection(mutex);
@@ -1813,7 +1856,7 @@ void _webui_mutex_unlock(webui_mutex_t *mutex) {
     #endif
 }
 
-void _webui_mutex_destroy(webui_mutex_t *mutex) {
+static void _webui_mutex_destroy(webui_mutex_t *mutex) {
 
     #ifdef _WIN32
         DeleteCriticalSection(mutex);
@@ -2846,6 +2889,17 @@ static void _webui_clean(void) {
 
     // Free all non-freed memory allocations
     _webui_free_all_mem();
+
+    // Destroy all mutex
+    _webui_mutex_destroy(&_webui_core.mutex_server_start);
+    _webui_mutex_destroy(&_webui_core.mutex_send);
+    _webui_mutex_destroy(&_webui_core.mutex_receive);
+    _webui_mutex_destroy(&_webui_core.mutex_wait);
+    _webui_condition_destroy(&_webui_core.condition_wait);
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\tDone.\n");
+    #endif
 }
 
 static int _webui_cmd_sync(_webui_window_t* win, char* cmd, bool show) {
@@ -4139,6 +4193,8 @@ static void _webui_init(void) {
     _webui_mutex_init(&_webui_core.mutex_server_start);
     _webui_mutex_init(&_webui_core.mutex_send);
     _webui_mutex_init(&_webui_core.mutex_receive);
+    _webui_mutex_init(&_webui_core.mutex_wait);
+    _webui_condition_init(&_webui_core.condition_wait);
 }
 
 static size_t _webui_get_cb_index(char* webui_internal_id) {
@@ -4943,6 +4999,10 @@ static WEBUI_SERVER_START
     // end as it may take time
     mg_stop(ws_ctx);
     mg_stop(http_ctx);
+
+    // Fire the mutex condition wait
+    if(_webui_core.startup_timeout > 0 && _webui_core.servers < 1)
+	    _webui_condition_signal(&_webui_core.condition_wait);
 
     THREAD_RETURN
 }
