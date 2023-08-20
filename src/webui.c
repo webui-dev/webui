@@ -8,11 +8,14 @@
   Canada.
 */
 
+// 64Mb max dynamic memory allocation
+#define WEBUI_MAX_BUF (64000000)
+
 // -- Third-party ---------------------
-#define MG_BUF_LEN (1024 * 16)
+#define MG_BUF_LEN (WEBUI_MAX_BUF)
 #include "civetweb/civetweb.h"
 
-// -- WebUI ---------------------------
+// -- WebUI Core ----------------------
 #include "webui_core.h"
 
 // -- WebUI JS Bridge APIs ------------
@@ -24,11 +27,11 @@ static const char* webui_html_served = "<html><head><title>Access Denied</title>
 static const char* webui_html_res_not_available = "<html><head><title>Resource Not Available</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Resource Not Available</h2><p>The requested resource is not available.</p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
 static const char* webui_deno_not_found = "<html><head><title>Deno Not Found</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Deno Not Found</h2><p>Deno is not found on this system.<br>Please download it from <a href=\"https://github.com/denoland/deno/releases\">https://github.com/denoland/deno/releases</a></p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
 static const char* webui_nodejs_not_found = "<html><head><title>Node.js Not Found</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Node.js Not Found</h2><p>Node.js is not found on this system.<br>Please download it from <a href=\"https://nodejs.org/en/download/\">https://nodejs.org/en/download/</a></p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
-static const char* webui_def_icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"64px\" height=\"64px\"><g><path style=\"opacity:0.946\" fill=\"#0dedfe\" d=\"M 32.5,16.5 C 31.8535,18.1561 31.1869,19.8228 30.5,21.5C 30.7189,23.9153 32.0523,24.9153 34.5,24.5C 32.9249,28.0781 30.9249,31.4114 28.5,34.5C 26.1391,38.5172 23.8058,42.5172 21.5,46.5C 16.7715,49.6539 12.7715,48.8206 9.5,44C 9.72845,43.6012 10.0618,43.4346 10.5,43.5C 12.9032,43.607 14.7365,42.607 16,40.5C 17.4814,37.89 18.6481,35.2234 19.5,32.5C 21.6552,28.8609 23.8218,25.1943 26,21.5C 27.7581,19.2345 29.9248,17.5678 32.5,16.5 Z\"/></g><g><path style=\"opacity:0.927\" fill=\"#3cbdf2\" d=\"M 14.5,22.5 C 10.0664,23.8825 5.73309,25.5492 1.5,27.5C -1.03001,19.4231 1.96999,15.9231 10.5,17C 12.4641,18.451 13.7974,20.2843 14.5,22.5 Z\"/></g><g><path style=\"opacity:1\" fill=\"#8df3ff\" d=\"M 42.5,23.5 C 39.7697,24.2073 37.103,24.5406 34.5,24.5C 32.0523,24.9153 30.7189,23.9153 30.5,21.5C 31.1869,19.8228 31.8535,18.1561 32.5,16.5C 37.0039,13.261 41.6705,12.9277 46.5,15.5C 48.3325,19.6833 46.9991,22.35 42.5,23.5 Z\"/></g><g><path style=\"opacity:1\" fill=\"#13dcf8\" d=\"M 42.5,23.5 C 42.0679,24.7095 41.4013,25.7095 40.5,26.5C 37.4531,28.9181 35.1198,31.9181 33.5,35.5C 31.8828,34.962 30.2161,34.6287 28.5,34.5C 30.9249,31.4114 32.9249,28.0781 34.5,24.5C 37.103,24.5406 39.7697,24.2073 42.5,23.5 Z\"/></g><g><path style=\"opacity:0.922\" fill=\"#5b75db\" d=\"M 58.5,34.5 C 54.0469,32.7737 49.7136,30.7737 45.5,28.5C 47.0043,24.1422 49.3376,20.3088 52.5,17C 58.6903,15.419 62.0236,17.7524 62.5,24C 61.8235,27.8357 60.4902,31.3357 58.5,34.5 Z\"/></g><g><path style=\"opacity:1\" fill=\"#29a7e8\" d=\"M 14.5,22.5 C 15.5,24.5 16.5,26.5 17.5,28.5C 13.2909,30.7712 8.95759,32.7712 4.5,34.5C 3.26377,32.351 2.26377,30.0177 1.5,27.5C 5.73309,25.5492 10.0664,23.8825 14.5,22.5 Z\"/></g><g><path style=\"opacity:0.943\" fill=\"#158fdd\" d=\"M 17.5,28.5 C 17.9887,29.9952 18.6554,31.3285 19.5,32.5C 18.6481,35.2234 17.4814,37.89 16,40.5C 14.7365,42.607 12.9032,43.607 10.5,43.5C 9.70951,42.5987 8.70951,41.9321 7.5,41.5C 6.22713,39.2872 5.22713,36.9538 4.5,34.5C 8.95759,32.7712 13.2909,30.7712 17.5,28.5 Z\"/></g><g><path style=\"opacity:1\" fill=\"#4f9be1\" d=\"M 40.5,26.5 C 41.5,28.5 42.5,30.5 43.5,32.5C 43.5569,33.609 43.8902,34.609 44.5,35.5C 40.7254,37.939 36.7254,39.939 32.5,41.5C 32.1667,41.5 31.8333,41.5 31.5,41.5C 31.6036,39.2972 32.2702,37.2972 33.5,35.5C 35.1198,31.9181 37.4531,28.9181 40.5,26.5 Z\"/></g><g><path style=\"opacity:1\" fill=\"#3868c9\" d=\"M 45.5,28.5 C 49.7136,30.7737 54.0469,32.7737 58.5,34.5C 57.7729,36.9538 56.7729,39.2872 55.5,41.5C 54.5,41.8333 53.8333,42.5 53.5,43.5C 50.6874,43.9754 48.6874,42.9754 47.5,40.5C 46.2485,38.9991 45.2485,37.3325 44.5,35.5C 43.8902,34.609 43.5569,33.609 43.5,32.5C 44.3446,31.3285 45.0113,29.9952 45.5,28.5 Z\"/></g><g><path style=\"opacity:0.878\" fill=\"#19c3ed\" d=\"M 28.5,34.5 C 30.2161,34.6287 31.8828,34.962 33.5,35.5C 32.2702,37.2972 31.6036,39.2972 31.5,41.5C 30.0787,44.0094 28.4121,46.3428 26.5,48.5C 24.8333,47.8333 23.1667,47.1667 21.5,46.5C 23.8058,42.5172 26.1391,38.5172 28.5,34.5 Z\"/></g><g><path style=\"opacity:1\" fill=\"#52d6fd\" d=\"M 47.5,40.5 C 48.6874,42.9754 50.6874,43.9754 53.5,43.5C 51.5232,47.9704 48.1898,49.4704 43.5,48C 40.8065,43.7833 42.1398,41.2833 47.5,40.5 Z\"/></g><g><path style=\"opacity:0.912\" fill=\"#44bcf1\" d=\"M 44.5,35.5 C 45.2485,37.3325 46.2485,38.9991 47.5,40.5C 42.1398,41.2833 40.8065,43.7833 43.5,48C 48.1898,49.4704 51.5232,47.9704 53.5,43.5C 53.8333,42.5 54.5,41.8333 55.5,41.5C 53.8152,46.3707 51.4818,50.8707 48.5,55C 44.4087,56.2272 40.9087,55.3939 38,52.5C 36.1401,48.7802 34.3068,45.1136 32.5,41.5C 36.7254,39.939 40.7254,37.939 44.5,35.5 Z\"/></g><g><path style=\"opacity:0.877\" fill=\"#26a6e1\" d=\"M 7.5,41.5 C 8.70951,41.9321 9.70951,42.5987 10.5,43.5C 10.0618,43.4346 9.72845,43.6012 9.5,44C 12.7715,48.8206 16.7715,49.6539 21.5,46.5C 23.1667,47.1667 24.8333,47.8333 26.5,48.5C 24.9942,55.0462 20.9942,57.2128 14.5,55C 11.503,50.8392 9.16965,46.3392 7.5,41.5 Z\"/></g></svg>";
+static const char* webui_def_icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"64\" height=\"64\" viewBox=\"0 0 64 64\" version=\"1.1\"><path d=\"M 35.315 15.983 C 30.885 17.816, 29.305 25.835, 33.500 25.195 C 34.600 25.027, 37.177 24.802, 39.227 24.695 C 44.084 24.441, 49.054 19.899, 47.386 17.239 C 46.146 15.262, 38.884 14.507, 35.315 15.983 M 54.602 17.835 C 54.058 18.716, 60.204 22.022, 62.284 21.968 C 63.958 21.925, 58.228 17, 56.503 17 C 55.741 17, 54.886 17.376, 54.602 17.835\" stroke=\"none\" fill=\"#789dcc\" fill-rule=\"evenodd\"/><path d=\"M 3.635 19.073 C 2.098 20.282, 1 22.144, 1 23.542 C 1 26.692, 12.655 53.139, 14.754 54.750 C 15.650 55.437, 17.882 56, 19.716 56 C 23.227 56, 22.667 56.645, 30.331 43.762 L 32.163 40.684 36.109 47.830 C 40.333 55.479, 42.889 57.131, 47.815 55.394 C 49.855 54.675, 51.575 51.765, 56.620 40.500 C 60.068 32.800, 62.904 25.600, 62.921 24.500 C 62.944 23.042, 61.572 21.893, 57.862 20.262 C 55.062 19.031, 52.336 18.292, 51.806 18.620 C 51.275 18.948, 49.385 22.428, 47.604 26.353 L 44.367 33.490 42.504 30.647 C 41.121 28.536, 40.907 27.379, 41.673 26.152 C 42.567 24.721, 42.224 24.526, 39.103 24.695 C 37.121 24.802, 34.600 25.027, 33.500 25.195 C 31.780 25.457, 31.517 24.966, 31.620 21.688 L 31.739 17.876 28.799 20.688 C 27.182 22.235, 24.694 25.637, 23.270 28.250 C 21.847 30.863, 20.354 33, 19.954 33 C 19.553 33, 17.969 30.044, 16.433 26.431 C 12.452 17.064, 8.833 14.984, 3.635 19.073\" stroke=\"none\" fill=\"#294fb7\" fill-rule=\"evenodd\"/></svg>";
 static const char* webui_def_icon_type = "image/svg+xml";
 static const char* webui_js_empty = "ERR_WEBUI_NO_SCRIPT_FOUND";
 static const char* webui_js_timeout = "ERR_WEBUI_TIMEOUT";
-static const char* const webui_empty_string = ""; // In case the compiler optimization is disabled
+static const char* const webui_empty_string = "";
 
 // -- Functions -----------------------
 void webui_run(size_t window, const char* script) {
@@ -60,7 +63,7 @@ void webui_run(size_t window, const char* script) {
     packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
     packet[1] = WEBUI_HEADER_JS_QUICK;  // Type
     packet[2] = run_id;                 // ID
-    for(size_t i = 0; i < js_len; i++) // Data
+    for(size_t i = 0; i < js_len; i++)  // Data
         packet[i + 3] = script[i];
     
     // Send packets
@@ -121,7 +124,7 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
     packet[0] = WEBUI_HEADER_SIGNATURE;         // Signature
     packet[1] = WEBUI_HEADER_JS;                // Type
     packet[2] = run_id;                         // ID
-    for(size_t i = 0; i < js_len; i++)    // Data
+    for(size_t i = 0; i < js_len; i++)          // Data
         packet[i + 3] = script[i];
     
     // Send packets

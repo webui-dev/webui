@@ -24,7 +24,6 @@
 #define WEBUI_MAX_ARRAY         (512)       // Max threads, servers, windows, pointers..
 #define WEBUI_MIN_PORT          (10000)     // Minimum socket port
 #define WEBUI_MAX_PORT          (65500)     // Should be less than 65535
-#define WEBUI_MAX_BUF           (4096000)   // 4096 Kb max dynamic memory allocation
 #define WEBUI_CMD_STDOUT_BUF    (10240)     // Command STDOUT output buffer size
 #define WEBUI_DEFAULT_PATH      "."         // Default root path
 #define WEBUI_DEF_TIMEOUT       (30)        // Default startup timeout in seconds
