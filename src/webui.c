@@ -1786,6 +1786,42 @@ static const char* _webui_interpret_command(const char* cmd) {
     return (const char*)out;
 }
 
+void _webui_mutex_init(webui_mutex_t *mutex) {
+
+    #ifdef _WIN32
+        InitializeCriticalSection(mutex);
+    #else
+        pthread_mutex_init(mutex, NULL);
+    #endif
+}
+
+void _webui_mutex_lock(webui_mutex_t *mutex) {
+
+    #ifdef _WIN32
+        EnterCriticalSection(mutex);
+    #else
+        pthread_mutex_lock(mutex);
+    #endif
+}
+
+void _webui_mutex_unlock(webui_mutex_t *mutex) {
+
+    #ifdef _WIN32
+        LeaveCriticalSection(mutex);
+    #else
+        pthread_mutex_unlock(mutex);
+    #endif
+}
+
+void _webui_mutex_destroy(webui_mutex_t *mutex) {
+
+    #ifdef _WIN32
+        DeleteCriticalSection(mutex);
+    #else
+        pthread_mutex_destroy(mutex);
+    #endif
+}
+
 static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *conn, char* index) {
 
     #ifdef WEBUI_LOG
@@ -3657,12 +3693,18 @@ static void _webui_window_send(_webui_window_t* win, char* packet, size_t packet
         struct mg_connection* conn = _webui_core.mg_connections[win->window_number];
 
         if(conn != NULL) {
+
+            // Mutex
+            _webui_mutex_lock(&_webui_core.mutex_send);
+
             ret = mg_websocket_write(
                 conn,
                 MG_WEBSOCKET_OPCODE_BINARY,
                 packet,
                 packets_size
             );
+
+            _webui_mutex_unlock(&_webui_core.mutex_send);
         }
     }
 
@@ -3731,6 +3773,9 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
 
     if((unsigned char) packet[0] != WEBUI_HEADER_SIGNATURE || len < 4)
         return;
+    
+    // Mutex
+    _webui_mutex_lock(&_webui_core.mutex_receive);
 
     if((unsigned char) packet[1] == WEBUI_HEADER_CLICK) {
 
@@ -3781,6 +3826,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             // Fatal.
             // The pipe ID is not valid
             // we can't send the ready signal to webui_script()
+            _webui_mutex_unlock(&_webui_core.mutex_receive);
             return;
         }
 
@@ -3837,9 +3883,12 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             // Get URL
             char* url;
             size_t url_len;
-            if(!_webui_get_data(packet, len, 3, &url_len, &url))
+            if(!_webui_get_data(packet, len, 3, &url_len, &url)) {
+
+                _webui_mutex_unlock(&_webui_core.mutex_receive);
                 return;
-            
+            }
+
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_SWITCH \n");
                 printf("[Core]\t\t_webui_window_receive() -> URL size: %zu bytes \n", url_len);
@@ -3871,8 +3920,12 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         // Get html element id
         char* element;
         size_t element_len;
-        if(!_webui_get_data(packet, len, 3, &element_len, &element))
+        if(!_webui_get_data(packet, len, 3, &element_len, &element)) {
+
+            _webui_mutex_unlock(&_webui_core.mutex_receive);
             return;
+        }
+
 
         // Get data
         char* data;
@@ -3949,6 +4002,8 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         _webui_free_mem((void*)*response);
         _webui_free_mem((void*)event_core);
     }
+
+    _webui_mutex_unlock(&_webui_core.mutex_receive);
 }
 
 static char* _webui_get_current_path(void) {
@@ -4079,6 +4134,11 @@ static void _webui_init(void) {
 
     // Initializing server services
     mg_init_library(0);
+
+    // Initializing mutex
+    _webui_mutex_init(&_webui_core.mutex_server_start);
+    _webui_mutex_init(&_webui_core.mutex_send);
+    _webui_mutex_init(&_webui_core.mutex_receive);
 }
 
 static size_t _webui_get_cb_index(char* webui_internal_id) {
@@ -4613,6 +4673,9 @@ static WEBUI_SERVER_START
         printf("[Core]\t\t[Thread] _webui_server_start()...\n");
     #endif
 
+    // Mutex
+    _webui_mutex_lock(&_webui_core.mutex_server_start);
+
     _webui_window_t* win = _webui_dereference_win_ptr(arg);
     if(win == NULL) {
         THREAD_RETURN
@@ -4686,6 +4749,9 @@ static WEBUI_SERVER_START
             _webui_ws_close_handler,
             (void*)win
         );
+
+        // Mutex
+        _webui_mutex_unlock(&_webui_core.mutex_server_start);
 
         if(_webui_core.startup_timeout > 0 && !win->hide) {
 
@@ -4843,6 +4909,9 @@ static WEBUI_SERVER_START
         #ifdef WEBUI_LOG
             printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Listening failed\n", win->window_number);
         #endif
+
+        // Mutex
+        _webui_mutex_unlock(&_webui_core.mutex_server_start);
     }
 
     #ifdef WEBUI_LOG

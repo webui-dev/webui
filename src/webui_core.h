@@ -29,15 +29,25 @@
 #define WEBUI_DEF_TIMEOUT       (30)        // Default startup timeout in seconds
 #define WEBUI_MAX_TIMEOUT       (60)        // Maximum startup timeout in seconds the user can set
 
+// Mutex
+#ifdef _WIN32
+    typedef CRITICAL_SECTION webui_mutex_t;
+#else
+    typedef pthread_mutex_t webui_mutex_t;
+#endif
+
+// Timer
 typedef struct _webui_timer_t {
     struct timespec start;
     struct timespec now;
 } _webui_timer_t;
 
+// Events
 typedef struct webui_event_core_t {
     char* response; // Callback response
 } webui_event_core_t;
 
+// Window
 typedef struct _webui_window_t {
     size_t window_number;
     volatile bool server_running;
@@ -72,6 +82,7 @@ typedef struct _webui_window_t {
     const void* (*files_handler)(const char* filename, int* length);
 } _webui_window_t;
 
+// Core
 typedef struct _webui_core_t {
     volatile size_t servers;
     volatile size_t connections;
@@ -95,6 +106,9 @@ typedef struct _webui_core_t {
     _webui_window_t* wins[WEBUI_MAX_ARRAY];
     size_t last_win_number;
     bool server_handled;
+    webui_mutex_t mutex_server_start;
+    webui_mutex_t mutex_send;
+    webui_mutex_t mutex_receive;
 } _webui_core_t;
 
 typedef struct _webui_cb_arg_t {
@@ -190,6 +204,10 @@ static void _webui_print_ascii(const char* data, size_t len);
 static void _webui_panic(void);
 static void _webui_kill_pid(size_t pid);
 static _webui_window_t* _webui_dereference_win_ptr(void* ptr);
+static void _webui_mutex_init(webui_mutex_t *mutex);
+static void _webui_mutex_lock(webui_mutex_t *mutex);
+static void _webui_mutex_unlock(webui_mutex_t *mutex);
+static void _webui_mutex_destroy(webui_mutex_t *mutex);
 
 static void _webui_http_send(struct mg_connection *conn, const char* mime_type, const char* body);
 static void _webui_http_send_error_page(struct mg_connection *conn, const char* body, int status);
