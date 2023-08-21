@@ -26,8 +26,6 @@ debug:
 	@echo Done.
 
 release:
-#	Build Lib
-	@cd "$(LIB)" && $(MAKE)
 #	Static Release
 	@echo Build C99 Example (Static Release)...
 	@windres win.rc -O coff -o win.res

@@ -26,8 +26,6 @@ debug:
 	@echo Done.
 
 release:
-#	Build Lib
-	@cd "$(LIB)" && $(MAKE)
 #	Static Release
 	@echo Build C++ Example (Release Static)...
 	@windres win.rc -O coff -o win.res

@@ -24,8 +24,6 @@ debug:
 	@echo Done.
 
 release:
-#	Build Lib
-	@cd "$(LIB)" && $(MAKE)
 #	Static Release
 	@echo Build C99 Example (Static Release)...
 	@tcc -m64 -o main.exe "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static-x64 -lws2_32 -lAdvapi32 -Wall -Wl,-subsystem=windows -w -luser32
