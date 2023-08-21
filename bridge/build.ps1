@@ -2,6 +2,7 @@ $current_location = Get-Location
 $project_root = git rev-parse --show-toplevel
 Set-Location $project_root/bridge
 
+# Arguments
 foreach ($opt in $args) {
     switch ($opt) {
         "--silent" { $silent = $true }
@@ -11,14 +12,44 @@ foreach ($opt in $args) {
         }
     }
 }
-
 if ($silent) { $log_level = "--log-level=warning" }
 
-if (!$silent) { Write-Host "Transpile and bundle TS sources to webui.js" }
-esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=. ./webui_bridge.ts $log_level
+# Check which python command is available
+$commandResult = python3 --version 2>&1 > $null
+if (!$?) {
+    $commandResult = python --version 2>&1 > $null
+    if (!$?) {
+        Write-Host "Error: Please install Python."
+        Set-Location $current_location
+        exit 
+    }
+    else {
+        $python_cmd = "python"
+    }
+} else {
+    $python_cmd = "python3"
+}
 
-if (!$silent) { Write-Host "Convert JS source to C header" }
-python3 js2c.py
+# Check if node_modules\esbuild exists, if not, install using npm
+if (-not (Test-Path "$project_root\bridge\node_modules\esbuild")) {
+    if (Get-Command npm -ErrorAction SilentlyContinue) {
+        if (!$silent) { Write-Host "Installing esbuild..." }
+        npm install esbuild
+    } else {
+        Write-Host "Error: Please install NPM."
+        Set-Location $current_location
+        exit
+    }
+}
 
+# Transpile WebUI-Bridge (TS to JS)
+if (!$silent) { Write-Host "Transpile and bundle WebUI-Bridge from TypeScript to JavaScript..." }
+.\node_modules\.bin\esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=. ./webui_bridge.ts $log_level
+
+# Convert WebUI-Bridge (JS to C)
+if (!$silent) { Write-Host "Convert WebUI-Bridge JavaScript to C99 Header..." }
+& $python_cmd js2c.py
+
+# Done
 if (!$silent) { Write-Host "Done." }
 Set-Location $current_location
