@@ -25,7 +25,7 @@ type JSONValue =
 	| { [x: string]: JSONValue | undefined }
 	| JSONValue[]
 
-class WebUiClient {
+class WebuiBridge {
 	// WebUI settings
 	#port: number
 	#winNum: number
@@ -526,9 +526,9 @@ class WebUiClient {
 	}
 }
 
-type webui = WebUiClient
+type webui = WebuiBridge
 export default webui
-export type { WebUiClient }
+export type { WebuiBridge }
 
 // Wait for the html to be parsed
 addEventListener('load', () => {

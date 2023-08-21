@@ -2067,13 +2067,13 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
     char* js = (char*) _webui_malloc(len);
     #ifdef WEBUI_LOG
         sprintf(js, 
-            "%s\nglobalThis.webui = new WebUiClient({ port: %zu, winNum: %zu, bindList: %s, log: true });",
+            "%s\nglobalThis.webui = new WebuiBridge({ port: %zu, winNum: %zu, bindList: %s, log: true });",
             webui_javascript_bridge, win->ws_port, win->window_number, event_cb_js_array
         );
         printf("[Core]\t\t_webui_generate_js_bridge()...\n");
     #else
         sprintf(js, 
-            "%s\nglobalThis.webui = new WebUiClient({ port: %zu, winNum: %zu, bindList: %s, log: false });",
+            "%s\nglobalThis.webui = new WebuiBridge({ port: %zu, winNum: %zu, bindList: %s, log: false });",
             webui_javascript_bridge, win->ws_port, win->window_number, event_cb_js_array
         );
     #endif
