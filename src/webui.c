@@ -18,7 +18,7 @@
 // -- WebUI Core ----------------------
 #include "webui_core.h"
 
-// -- WebUI JS Bridge APIs ------------
+// -- WebUI Bridge (JavaScript) -------
 #include "../bridge/webui_bridge.h"
 
 // -- Heap ----------------------------
@@ -2062,7 +2062,7 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
     }
     strcat(event_cb_js_array, "]");
 
-    // Generate the full WebUI JS-Bridge
+    // Generate the full WebUI Bridge
     size_t len = cb_mem_size + _webui_strlen(webui_javascript_bridge);
     char* js = (char*) _webui_malloc(len);
     #ifdef WEBUI_LOG
@@ -4348,7 +4348,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
         if(strcmp(url, "/webui.js") == 0) {
 
-            // WebUI JS-Bridge
+            // WebUI Bridge
 
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t_webui_http_handler() -> HTML WebUI JS\n");
@@ -4405,15 +4405,15 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
                     if(win->html != NULL) {
 
-                        // Generate the full WebUI JS-Bridge
+                        // Generate the full WebUI Bridge
                         const char* js = _webui_generate_js_bridge(win);
 
-                        // Inject WebUI JS-Bridge into HTML
+                        // Inject WebUI Bridge into HTML
                         size_t len = _webui_strlen(win->html) + 128;
                         html = (char*) _webui_malloc(len);
                         if(win->html != NULL && js != NULL) {
                             sprintf(html,
-                                //! Construct bad html to load js bridge before all user content
+                                //! Construct bad html to load webui bridge before all user content
                                 //! Temp fix, need to improve this trick by inserting the script tag in html head via an XML/DOM parser
                                 "<html> <script type = \"application/javascript\" src = \" webui.js \"> \n \n </script> \n %s",
                                 win->html
@@ -5342,7 +5342,7 @@ static WEBUI_CB
                 if(VALUE_TYPE == REG_SZ)
                     sprintf(value, "%S", (LPCWSTR)VALUE_DATA);
                 else if(VALUE_TYPE == REG_DWORD)
-                    sprintf(value, "%zu", *((DWORD *)VALUE_DATA));
+                    sprintf(value, "%lu", *((DWORD *)VALUE_DATA));
                 
                 RegCloseKey(hKey);
                 return true;
