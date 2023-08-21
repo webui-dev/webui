@@ -2,7 +2,7 @@
 # C99 Example
 # Linux - Clang
 
-LIB=../../../../../build
+LIB=../../../../../dist
 INCLUDE=../../../../../include
 SOURCE=../..
 

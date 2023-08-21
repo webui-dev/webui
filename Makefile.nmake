@@ -5,7 +5,7 @@
 
 # Paths
 MAKEFILE_DIR  = ./
-BUILD_DIR = $(MAKEFILE_DIR)/build
+BUILD_DIR = $(MAKEFILE_DIR)/dist
 
 # Build Flags
 CIVETWEB_BUILD_FLAGS = /Focivetweb.obj /c /EHsc "$(MAKEFILE_DIR)/src/civetweb/civetweb.c" /I "$(MAKEFILE_DIR)/src/civetweb/"

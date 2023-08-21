@@ -2,7 +2,7 @@
 # C++ Example
 # Linux - GCC
 
-LIB=../../../../../build
+LIB=../../../../../dist
 INCLUDE=../../../../../include
 SOURCE=../..
 

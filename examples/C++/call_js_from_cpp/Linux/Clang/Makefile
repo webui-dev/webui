@@ -2,7 +2,7 @@
 # C++ Example
 # Linux - Clang
 
-LIB=../../../../../build
+LIB=../../../../../dist
 INCLUDE=../../../../../include
 SOURCE=../..
 
