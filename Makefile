@@ -12,7 +12,7 @@ ARCH_TARGET ?=
 COMPILER ?=
 
 # Build flags
-CIVETWEB_BUILD_FLAGS = -m64 -o civetweb.o -I "$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/civetweb/civetweb.c"
+CIVETWEB_BUILD_FLAGS := -m64 -o civetweb.o -I "$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/civetweb/civetweb.c"
 CIVETWEB_DEFINE_FLAGS = -DNDEBUG -DNO_CACHING -DNO_CGI -DNO_SSL -DUSE_WEBSOCKET
 WEBUI_BUILD_FLAGS := -m64 -o webui.o -I "$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webui.c"
 
@@ -31,6 +31,7 @@ ifeq ($(OS),Windows_NT)
 	ifeq ($(COMPILER),tcc)
 		BUILD_TARGET := --tcc
 	else
+		CIVETWEB_DEFINE_FLAGS += -DMUST_IMPLEMENT_CLOCK_GETTIME
 		BUILD_TARGET := --gcc-clang
 		COMPILER = gcc
 	endif
