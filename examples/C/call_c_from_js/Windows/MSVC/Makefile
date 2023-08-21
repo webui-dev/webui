@@ -3,15 +3,13 @@
 # Windows - Microsoft Visual C
 
 SHELL=CMD
-_LIB=../../../../../build/Windows/MSVC/
+_LIB=../../../../../build
 _INCLUDE=../../../../../include/
 _SOURCE=../../
 
 all: release
 
 debug:
-#	Build Lib
-	@cd "$(_LIB)" && $(MAKE) debug
 #	Static with Debug info
 	@echo Build C99 Example (Static Debug)...
 	@rc win.rc 1>NUL 2>&1
@@ -22,8 +20,6 @@ debug:
 	@cl /Zi "$(_SOURCE)/main.c" /I "$(_INCLUDE)" /link /LIBPATH:"$(_LIB)" /MACHINE:X64 /SUBSYSTEM:CONSOLE win.res webui-2-x64.lib user32.lib Advapi32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 
 release:
-#	Build Lib
-	@cd "$(_LIB)" && $(MAKE)
 #	Static Release
 	@echo Build C99 Example (Static Release)...
 	@rc win.rc 1>NUL 2>&1

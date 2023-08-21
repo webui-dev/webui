@@ -3,7 +3,7 @@
 # Windows - GCC
 
 SHELL=CMD
-LIB=../../../../../build/Windows/GCC
+LIB=../../../../../build
 INCLUDE=../../../../../include
 SOURCE=../..
 

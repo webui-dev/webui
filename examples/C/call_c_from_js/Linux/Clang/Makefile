@@ -2,15 +2,13 @@
 # C99 Example
 # Linux - Clang
 
-LIB=../../../../../build/Linux/Clang
+LIB=../../../../../build
 INCLUDE=../../../../../include
 SOURCE=../..
 
 all: release
 
 debug:
-#	Build Lib
-	@cd "$(LIB)" && $(MAKE) debug
 #	Static with Debug info
 	@echo "Build C99 Example (Static Debug)..."
 	@clang -g -m64 -o main "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static-x64 -lpthread -lm
@@ -22,8 +20,6 @@ debug:
 	@echo "Done."
 
 release:
-#	Build Lib
-	@cd "$(LIB)" && $(MAKE)
 #	Static Release
 	@echo "Build C99 Example (Static Release)..."
 	@clang -lstdc++ -Os -m64 -o main "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static-x64 -lpthread -lm

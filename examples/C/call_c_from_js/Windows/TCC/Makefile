@@ -3,15 +3,13 @@
 # Windows - Tiny C Compiler
 
 SHELL=CMD
-LIB=../../../../../build/Windows/TCC/
+LIB=../../../../../build
 INCLUDE=../../../../../include/
 SOURCE=../../
 
 all: release
 
 debug:
-#	Build Lib
-	@cd "$(LIB)" && $(MAKE) debug
 #	Static with Debug info
 	@echo Build C99 Example (Static Debug)...
 	@tcc -g -m64 -o main.exe "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static-x64 -lws2_32 -lAdvapi32 -Wall -Wl,-subsystem=console -w -luser32
@@ -24,8 +22,6 @@ debug:
 	@echo Done.
 
 release:
-#	Build Lib
-	@cd "$(LIB)" && $(MAKE)
 #	Static Release
 	@echo Build C99 Example (Static Release)...
 	@tcc -m64 -o main.exe "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static-x64 -lws2_32 -lAdvapi32 -Wall -Wl,-subsystem=windows -w -luser32

@@ -2,7 +2,7 @@
 # C++ Example
 # macOS - Clang
 
-LIB=../../../../../build/macOS/Clang
+LIB=../../../../../build
 INCLUDE=../../../../../include
 SOURCE=../..
 
