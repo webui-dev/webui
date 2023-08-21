@@ -85,9 +85,26 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ## Build
 
- - [Windows](https://github.com/webui-dev/webui/tree/main/build/Windows)
- - [Linux](https://github.com/webui-dev/webui/tree/main/build/Linux)
- - [macOS](https://github.com/webui-dev/webui/tree/main/build/macOS)
+- **Windows**
+  ```powershell
+  # GCC
+  mingw32-make
+  # TCC
+  mingw32-make COMPILER=tcc
+  # MSVC
+  nmake
+  ```
+- **Linux**
+  ```sh
+  # GCC
+  make
+  # Clang
+  make COMPILER=clang
+  ```
+- **macOS**
+  ```sh
+  make
+  ```
 
 ## Examples
 
