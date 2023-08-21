@@ -1,4 +1,5 @@
 # Build
+build/
 *.exe
 *.ilk
 *.pdb
