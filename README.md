@@ -108,53 +108,33 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ## Examples
 
- - [C](https://github.com/webui-dev/webui/tree/main/examples/C)
- - [C++](https://github.com/webui-dev/webui/tree/main/examples/C++)
+- [C](https://github.com/webui-dev/webui/tree/main/examples/C)
+- [C++](https://github.com/webui-dev/webui/tree/main/examples/C++)
 
  ## Wrappers
 
- - [Python](https://github.com/webui-dev/python-webui)
- - [TypeScript / JavaScript](https://github.com/webui-dev/deno-webui)
- - [Go](https://github.com/webui-dev/go-webui)
- - [Rust](https://github.com/webui-dev/rust-webui) (*Not Complete*)
- - [V](https://github.com/webui-dev/v-webui)
- - [Nim](https://github.com/webui-dev/nim-webui)
- - [Zig](https://github.com/webui-dev/zig-webui) (*Not Complete*)
+- [Python](https://github.com/webui-dev/python-webui)
+- [TypeScript / JavaScript](https://github.com/webui-dev/deno-webui)
+- [Go](https://github.com/webui-dev/go-webui)
+- [Rust](https://github.com/webui-dev/rust-webui) (*Not Complete*)
+- [V](https://github.com/webui-dev/v-webui)
+- [Nim](https://github.com/webui-dev/nim-webui)
+- [Zig](https://github.com/webui-dev/zig-webui) (*Not Complete*)
 
 ## Supported Web Browsers
 
-| OS | Browser | Status |
-| ------ | ------ | ------ |
-| Windows | Mozilla Firefox | ✔️ |
-| Windows | Google Chrome | ✔️ |
-| Windows | Microsoft Edge | ✔️ |
-| Windows | Chromium | ✔️ |
-| Windows | Yandex | ✔️ |
-| Windows | Brave | ✔️ |
-| Windows | Vivaldi | ✔️ |
-| Windows | Epic | ✔️ |
-| Windows | Opera | *coming soon* |
-| - | - | - |
-| Linux | Mozilla Firefox | ✔️ |
-| Linux | Google Chrome | ✔️ |
-| Linux | Microsoft Edge | ✔️ |
-| Linux | Chromium | ✔️ |
-| Linux | Yandex | ✔️ |
-| Linux | Brave | ✔️ |
-| Linux | Vivaldi | ✔️ |
-| Linux | Epic | *Does Not Exist* |
-| Linux | Opera | *coming soon* |
-| - | - | - |
-| macOS | Mozilla Firefox | ✔️ |
-| macOS | Google Chrome | ✔️ |
-| macOS | Microsoft Edge | ✔️ |
-| macOS | Chromium | ✔️ |
-| macOS | Yandex | ✔️ |
-| macOS | Brave | ✔️ |
-| macOS | Vivaldi | ✔️ |
-| macOS | Epic | ✔️ |
-| macOS | Apple Safari | *coming soon* |
-| macOS | Opera | *coming soon* |
+| Browser | Windows | macOS | Linux |
+| ------ | ------ | ------ | ------ |
+| Mozilla Firefox | ✔️ | ✔️ | ✔️ |
+| Google Chrome | ✔️ | ✔️ | ✔️ |
+| Microsoft Edge | ✔️ | ✔️ | ✔️ |
+| Chromium | ✔️ | ✔️ | ✔️ |
+| Yandex | ✔️ | ✔️ | ✔️ |
+| Brave | ✔️ | ✔️ | ✔️ |
+| Vivaldi | ✔️ | ✔️ | ✔️ |
+| Epic | ✔️ | ✔️ | *not available* |
+| Apple Safari | *not available* | *coming soon* | *not available* |
+| Opera | *coming soon* | *coming soon* | *coming soon* |
 
 ## Supported Languages
 
