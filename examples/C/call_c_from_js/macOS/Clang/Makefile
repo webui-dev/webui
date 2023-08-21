@@ -2,7 +2,7 @@
 # C99 Example
 # macOS - Clang
 
-LIB=../../../../../build
+LIB=../../../../../dist
 INCLUDE=../../../../../include
 SOURCE=../..
 

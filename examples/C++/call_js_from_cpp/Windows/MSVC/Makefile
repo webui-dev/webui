@@ -3,7 +3,7 @@
 # Windows - Microsoft Visual C++
 
 SHELL=CMD
-_LIB=../../../../../build
+_LIB=../../../../../dist
 _INCLUDE=../../../../../include/
 _SOURCE=../../
 

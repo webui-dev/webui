@@ -48,7 +48,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
       - name: Build
         run: |
-          mkdir build
+          mkdir dist
           if ('${{ matrix.compiler }}' -eq 'MSVC') {
             nmake -f Makefile.nmake
           } else {
@@ -57,7 +57,7 @@ jobs:
       - name: Prepare Artifact
         shell: bash
         run: |
-          cp -r include build
+          cp -r include dist
           artifact=${{ runner.os }}-${{ matrix.compiler }}-x64
           # Add the ARTIFACT name(`,,` ^= lowercase shell param) as GitHub environment variable.
           echo "ARTIFACT=${artifact,,}" >> $GITHUB_ENV
@@ -65,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT }}
-          path: build
+          path: dist
       - name: Release Artifact
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v1
@@ -97,7 +97,7 @@ jobs:
           make
       - name: Prepare Artifact
         run: |
-          cp -r include build
+          cp -r include dist
           artifact=${{ runner.os }}-${{ matrix.compiler }}-x64
           # Add the ARTIFACT name(`,,` ^= lowercase shell param) as GitHub environment variable.
           echo "ARTIFACT=${artifact,,}" >> $GITHUB_ENV
@@ -105,7 +105,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT }}
-          path: build
+          path: dist
       - name: Release Artifact
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v1
@@ -133,7 +133,7 @@ jobs:
           make
       - name: Prepare Artifacts
         run: |
-          cp -r include build
+          cp -r include dist
           # Add the ARTIFACT name(lowercased) as GitHub environment variable.
           artifact=$(echo ${{ runner.os }}-${{ matrix.compiler }}-x64 | tr '[:upper:]' '[:lower:]')
           echo "ARTIFACT=$artifact" >> $GITHUB_ENV
@@ -141,7 +141,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT }}
-          path: build
+          path: dist
       - name: Release Artifact
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v1

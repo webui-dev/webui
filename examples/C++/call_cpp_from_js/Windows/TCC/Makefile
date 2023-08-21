@@ -3,7 +3,7 @@
 # Windows - Tiny C Compiler
 
 SHELL=CMD
-LIB=../../../../../build
+LIB=../../../../../dist
 INCLUDE=../../../../../include/
 SOURCE=../../
 
