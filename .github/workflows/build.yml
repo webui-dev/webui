@@ -14,18 +14,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
-        with:
-          version: latest
       - name: Bundle WebUI Bridge
-        shell: bash
+        if: runner.os != 'Windows'
         run: |
-          pnpm i -g esbuild
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            powershell -command bridge/build.ps1
-          else
-            bridge/build.sh
-          fi
+          npm i -g esbuild
+          bridge/build.sh
+      - name: Bundle WebUI Bridge on Windows
+        if: runner.os == 'Windows'
+        run: bridge/build.ps1
       - uses: actions/cache@v3
         with:
           path: bridge/webui_bridge.h
