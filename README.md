@@ -26,7 +26,7 @@
 - [Documentation](#documentation)
 - [Build](#build)
 - [Examples](#examples)
-- [Supported Languages](#supported-languages)
+- [Wrappers](#wrappers)
 - [Supported Web Browsers](#supported-web-browsers)
 - [License](#license)
 
@@ -99,8 +99,10 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
   ```powershell
   # GCC
   mingw32-make
+  
   # TCC
   mingw32-make COMPILER=tcc
+  
   # MSVC
   nmake
   ```
@@ -108,6 +110,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
   ```sh
   # GCC
   make
+  
   # Clang
   make COMPILER=clang
   ```
@@ -121,13 +124,10 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 - [C](https://github.com/webui-dev/webui/tree/main/examples/C)
 - [C++](https://github.com/webui-dev/webui/tree/main/examples/C++)
 
-## Supported Languages
+## Wrappers
 
 | Language | Status | Link |
 | ------ | ------ | ------ |
-| C/C++ | ✔️ | [WebUI](https://github.com/webui-dev/webui) |
-| | | |
-| **Wrapper Libraries** |
 | Python | ✔️ | [Python-WebUI](https://github.com/webui-dev/python-webui) |
 | TypeScript / JavaScript | ✔️ | [Deno-WebUI](https://github.com/webui-dev/deno-webui) |
 | Go | ✔️ | [Go-WebUI](https://github.com/webui-dev/go-webui) |
