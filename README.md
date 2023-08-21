@@ -104,7 +104,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
   mingw32-make COMPILER=tcc
   
   # MSVC
-  nmake
+  nmake -f Makefile.nmake
   ```
 - **Linux**
   ```sh
