@@ -456,6 +456,8 @@ bool webui_show_browser(size_t window, const char* content, size_t browser) {
         printf("[User] webui_show_browser([%zu], [%zu])...\n", window, browser);
     #endif
 
+    _webui_core.ui = true;
+
     // Dereference
     if(_webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
@@ -995,7 +997,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
 size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, char*, size_t)) {
 
     #ifdef WEBUI_LOG
-        printf("[User] webui_interface_bind()...\n");
+        printf("[User] webui_interface_bind([%zu], [%s], [0x%p])...\n", window, element, func);
     #endif
 
     // Bind
