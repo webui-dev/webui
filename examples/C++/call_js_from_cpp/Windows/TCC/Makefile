@@ -3,7 +3,7 @@
 # Windows - Tiny C Compiler
 
 SHELL=CMD
-LIB=../../../../../build/Windows/TCC/
+LIB=../../../../../build
 INCLUDE=../../../../../include/
 SOURCE=../../
 

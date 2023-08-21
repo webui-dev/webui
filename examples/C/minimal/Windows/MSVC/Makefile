@@ -3,7 +3,7 @@
 # Windows - Microsoft Visual C
 
 SHELL=CMD
-_LIB=../../../../../build/Windows/MSVC/
+_LIB=../../../../../build
 _INCLUDE=../../../../../include/
 _SOURCE=../../
 
