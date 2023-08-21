@@ -8,24 +8,41 @@ The WebUI Bridge connects the UI (_Web Browser_) with the backend application th
 - Install [Python](https://www.python.org/downloads/)
 - Install [Node.js](https://nodejs.org/en/download)
 - cd `webui\bridge`
-- Run `npm install esbuild`
-- Run `.\node_modules\.bin\esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=.\ .\webui_bridge.ts`
-- Run `python js2c.py`
+- `npm install esbuild`
+- `.\node_modules\.bin\esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=.\ .\webui_bridge.ts`
+- `python js2c.py`
+
+### Windows PowerShell
+
+- cd `webui\bridge`
+- `./build.ps1`
+- If you get _running scripts is disabled on this
+system_ error. Then run `Set-ExecutionPolicy RemoteSigned` to enable script execution. After done, you can roll back by running `Set-ExecutionPolicy Restricted`
 
 ### Linux
 
 - Install [Python](https://www.python.org/downloads/)
 - Install [Node.js](https://nodejs.org/en/download)
 - cd `webui/bridge`
-- Run `npm install esbuild`
-- Run `./node_modules/.bin/esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./ ./webui_bridge.ts`
-- Run `python js2c.py`
+- `npm install esbuild`
+- `./node_modules/.bin/esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./ ./webui_bridge.ts`
+- `python js2c.py`
+
+### Linux Bash
+
+- cd `webui\bridge`
+- sh `./build.sh`
 
 ### macOS
 
 - Install [Python](https://www.python.org/downloads/)
 - Install [Node.js](https://nodejs.org/en/download)
 - cd `webui/bridge`
-- Run `npm install esbuild`
-- Run `./node_modules/.bin/esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./ ./webui_bridge.ts`
-- Run `python js2c.py`
+- `npm install esbuild`
+- `./node_modules/.bin/esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./ ./webui_bridge.ts`
+- `python js2c.py`
+
+### macOS Bash
+
+- cd `webui\bridge`
+- sh `./build.sh`
