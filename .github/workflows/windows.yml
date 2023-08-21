@@ -1,0 +1,60 @@
+name: Windows
+on:
+  workflow_call:
+
+jobs:
+  setup:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Bundle WebUI Bridge
+        run: bridge/build.ps1
+      - uses: actions/cache@v3
+        with:
+          path: bridge/webui_bridge.h
+          key: ${{ runner.os }}-${{ github.sha }}-bridge
+
+  build-release:
+    needs: setup
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        compiler: [GCC, MSVC]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache/restore@v3
+        with:
+          path: bridge/webui_bridge.h
+          key: ${{ runner.os }}-${{ github.sha }}-bridge
+          fail-on-cache-miss: true
+      - uses: microsoft/setup-msbuild@v1.1
+      - if: ${{ matrix.compiler == 'MSVC' }}
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Build
+        run: |
+          mkdir dist
+          if ('${{ matrix.compiler }}' -eq 'MSVC') {
+            nmake -f ./Makefile.nmake
+          } else {
+            mingw32-make
+          }
+      - name: Prepare Artifact
+        shell: bash
+        run: |
+          cp -r include dist
+          artifact=${{ runner.os }}-${{ matrix.compiler }}-x64
+          # Add the ARTIFACT name(`,,` ^= lowercase shell param) as GitHub environment variable.
+          echo "ARTIFACT=${artifact,,}" >> $GITHUB_ENV
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.ARTIFACT }}
+          path: dist
+      - name: Release Artifact
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARTIFACT }}
