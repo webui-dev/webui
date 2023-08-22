@@ -6,17 +6,11 @@
 
 [![BuildStatus](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://github.com/webui-dev/webui/actions?query=branch%3Amain) [![Issues](https://img.shields.io/github/issues/webui-dev/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://github.com/webui-dev/webui/issues) [![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
 
-</div>
-
-> Use any web browser as GUI, with your preferred language in the backend and HTML5 in the frontend, all in a lightweight portable lib.
+> WebUI is not a web-server solution or a framework, but it allows you to use any web browser as a GUI, with your preferred language in the backend and HTML5 in the frontend. All in a lightweight portable lib.
 
 ![Screenshot](https://github.com/webui-dev/webui/assets/34311583/57992ef1-4f7f-4d60-8045-7b07df4088c6)
 
-> :warning: **Notice**:
-> 
-> * WebUI it's not a web-server solution or a framework, but it's an lightweight portable lib to use any installed web browser as a user interface.
-> 
-> * We are currently writing documentation.
+</div>
 
 ## Contents
 
@@ -89,6 +83,9 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | Runtime Dependencies on macOS | *Cocoa, WebKit* | *QtCore, QtGui, QtWidgets* | ***A Web Browser*** |
 
 ## Documentation
+
+> **Note**
+> We are currently writing documentation.
 
  - [Online Documentation - C](https://webui.me/docs/#/c_api)
  - [Online Documentation - C++](https://webui.me/docs/#/cpp_api)
