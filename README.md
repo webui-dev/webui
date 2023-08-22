@@ -125,12 +125,13 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 | Language | Status | Link |
 | ------ | ------ | ------ |
-| Python | ✔️ | [Python-WebUI](https://github.com/webui-dev/python-webui) |
-| TypeScript / JavaScript | ✔️ | [Deno-WebUI](https://github.com/webui-dev/deno-webui) |
 | Go | ✔️ | [Go-WebUI](https://github.com/webui-dev/go-webui) |
-| Rust | *not complete* | [Rust-WebUI](https://github.com/webui-dev/rust-webui) |
-| V | ✔️ | [V-WebUI](https://github.com/webui-dev/v-webui) |
 | Nim | ✔️ | [Nim-WebUI](https://github.com/webui-dev/nim-webui) |
+| Pascal | ✔️ | [Pascal-WebUI](https://github.com/webui-dev/pascal-webui) |
+| Python | ✔️ | [Python-WebUI](https://github.com/webui-dev/python-webui) |
+| Rust | *not complete* | [Rust-WebUI](https://github.com/webui-dev/rust-webui) |
+| TypeScript / JavaScript | ✔️ | [Deno-WebUI](https://github.com/webui-dev/deno-webui) |
+| V | ✔️ | [V-WebUI](https://github.com/webui-dev/v-webui) |
 | Zig | *not complete* | [Zig-WebUI](https://github.com/webui-dev/zig-webui) |
 
 ## Supported Web Browsers
