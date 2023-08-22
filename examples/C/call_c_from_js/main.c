@@ -42,6 +42,21 @@ void my_function_boolean(webui_event_t* e) {
         printf("my_function_boolean: False\n");
 }
 
+void my_function_raw_binary(webui_event_t* e) {
+
+    // JavaScript:
+    // webui.call('MyID_RawBinary', new Uint8Array([0x42, 0x43, 0x44]));
+
+    const unsigned char* raw = (const unsigned char*)e->data;
+    long long len = e->size;
+
+    printf("my_function_raw_binary: %lld bytes\n", len);
+    printf("my_function_raw_binary: ");
+    for (size_t i = 0; i < len; i++)
+        printf("0x%02x ", raw[i]);
+    printf("\n");
+}
+
 void my_function_with_response(webui_event_t* e) {
 
     // JavaScript:
@@ -85,6 +100,9 @@ int main() {
     "    <button onclick=\"webui.call('MyID_Three', true);\">Call my_function_boolean()</button>"
     "    <br>"
     "    <br>"
+    "    <button onclick=\"webui.call('MyID_RawBinary', new Uint8Array([0x41, 0x42, 0x43]));\">Call my_function_raw_binary()</button>"
+    "    <br>"
+    "    <br>"
     "    <p>Call C function and wait for the response</p>"
     "    <br>"
     "    <button onclick=\"MyJS();\">Call my_function_with_response()</button>"
@@ -111,6 +129,7 @@ int main() {
     webui_bind(my_window, "MyID_Two", my_function_integer);
     webui_bind(my_window, "MyID_Three", my_function_boolean);
     webui_bind(my_window, "MyID_Four", my_function_with_response);
+    webui_bind(my_window, "MyID_RawBinary", my_function_raw_binary);
 
     // Show the window
     webui_show(my_window, my_html); // webui_show_browser(my_window, my_html, Chrome);

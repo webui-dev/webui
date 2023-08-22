@@ -24,6 +24,7 @@ type JSONValue =
 	| boolean
 	| { [x: string]: JSONValue | undefined }
 	| JSONValue[]
+	| Uint8Array
 
 class WebuiBridge {
 	// WebUI settings
@@ -117,6 +118,7 @@ class WebuiBridge {
 		onbeforeunload = () => {
 			this.#close()
 		}
+
 		setTimeout(() => {
 			if (!this.#wsStatusOnce) {
 				this.#freezeUi()
@@ -220,7 +222,7 @@ class WebuiBridge {
 						{
 							const callId = buffer8[2]
 							if (this.#log) {
-								console.log(`WebUI -> Func Response [${data8utf8}]`)
+								console.log(`WebUI -> Call Response [${data8utf8}]`)
 							}
 							if (this.#fnPromiseResolve[callId]) {
 								if (this.#log) {
@@ -378,8 +380,8 @@ class WebuiBridge {
 			globalThis.close()
 		}, 1000)
 	}
-	#fnPromise(fn: string, value: string) {
-		if (this.#log) console.log(`WebUI -> Func [${fn}](${value})`)
+	#fnPromise(fn: string, value: any) {
+		if (this.#log) console.log(`WebUI -> Call [${fn}](${value})`)
 		const callId = this.#fnId++
 
 		const packet = Uint8Array.of(
@@ -388,7 +390,9 @@ class WebuiBridge {
 			callId,
 			...new TextEncoder().encode(fn),
 			0,
-			...new TextEncoder().encode(value),
+			...new TextEncoder().encode(String(value.length)),
+			0,
+			...typeof value === 'object' ? value : new TextEncoder().encode(value),
 			0
 		)
 
@@ -454,17 +458,17 @@ class WebuiBridge {
 		Payload extends JSONValue = JSONValue
 	>(bindingName: string, payload?: Payload): Promise<Response | void> {
 		if (!bindingName)
-			return Promise.reject(new SyntaxError('no binding name provided'))
+			return Promise.reject(new SyntaxError('No binding name is provided'))
 
 		if (!this.#wsStatus)
-			return Promise.reject(new Error('websocket is not connected'))
+			return Promise.reject(new Error('WebSocket is not connected'))
 		// Check binding list
 		if (
 			!this.#hasEvents &&
 			!this.#bindList.includes(`${this.#winNum}/${bindingName}`)
 		)
 			return Promise.reject(
-				new ReferenceError(`no binding was found for "${bindingName}"`)
+				new ReferenceError(`No binding was found for "${bindingName}"`)
 			)
 
 		// Get the binding response
@@ -472,9 +476,11 @@ class WebuiBridge {
 			bindingName,
 			payload === undefined
 				? ''
-				: typeof payload === 'string'
+				: typeof payload === 'string'	// String()
 				? payload
-				: JSON.stringify(payload)
+				: typeof payload === 'object'	// Uint8Array()
+				? payload
+				: JSON.stringify(payload)		// JSON String
 		)) as string | void
 
 		// Handle response type (void, string or JSON value)

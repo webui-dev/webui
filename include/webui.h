@@ -137,6 +137,7 @@ typedef struct webui_event_t {
     size_t event_type; // Event type
     char* element; // HTML element ID
     char* data; // JavaScript data
+    long long int size; // JavaScript data len
     size_t event_number; // Internal WebUI
 } webui_event_t;
 
@@ -207,7 +208,7 @@ WEBUI_EXPORT void webui_free(void* ptr);
 WEBUI_EXPORT void* webui_malloc(size_t size);
 // Safely send raw data to the UI.
 WEBUI_EXPORT void webui_send_raw(size_t window, const char* function, const void* raw, size_t size);
-// Run the window in hidden mode
+// Run the window in hidden mode.
 WEBUI_EXPORT void webui_set_hide(size_t window, bool status);
 
 // -- Interface -----------------------
