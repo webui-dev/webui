@@ -46,15 +46,19 @@ jobs:
         run: |
           cp -r include dist
           artifact=${{ runner.os }}-${{ matrix.compiler }}-x64
-          # Add the ARTIFACT name(`,,` ^= lowercase shell param) as GitHub environment variable.
-          echo "ARTIFACT=${artifact,,}" >> $GITHUB_ENV
+          # Convert to lowercase (`,,` ^= lowercase shell param)
+          artifact=${artifact,,}
+          # Add the ARTIFACT name as GitHub environment variable.
+          echo "ARTIFACT=$artifact" >> $GITHUB_ENV
+          mv dist/ $artifact
+          7z a -tzip $artifact.zip $artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT }}
-          path: dist
+          path: ${{ env.ARTIFACT }}
       - name: Release Artifact
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ env.ARTIFACT }}
+          files: ${{ env.ARTIFACT }}.zip

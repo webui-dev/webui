@@ -38,20 +38,25 @@ jobs:
             sudo ln -s llvm-ar-13 /usr/bin/llvm-ar
             sudo ln -s llvm-ranlib-13 /usr/bin/llvm-ranlib
           fi
-          make
+          compiler=${{ matrix.compiler }}
+          make COMPILER=${compiler,,}
       - name: Prepare Artifact
         run: |
           cp -r include dist
           artifact=${{ runner.os }}-${{ matrix.compiler }}-x64
-          # Add the ARTIFACT name(`,,` ^= lowercase shell param) as GitHub environment variable.
-          echo "ARTIFACT=${artifact,,}" >> $GITHUB_ENV
+          # Convert to lowercase (`,,` ^= lowercase shell param)
+          artifact=${artifact,,}
+          # Add the ARTIFACT name as GitHub environment variable.
+          echo "ARTIFACT=$artifact" >> $GITHUB_ENV
+          mv dist/ $artifact
+          tar -czvf $artifact.tar.gz $artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT }}
-          path: dist
+          path: ${{ env.ARTIFACT }}
       - name: Release Artifact
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ env.ARTIFACT }}
+          files: ${{ env.ARTIFACT }}.tar.gz

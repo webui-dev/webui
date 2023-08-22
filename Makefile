@@ -84,11 +84,9 @@ ifneq ($(filter $(COMPILER),$(VALID_COMPILERS)),$(COMPILER))
 endif
 # Arch target is for CI cross-compilation
 ifneq ($(ARCH_TARGET),)
-	ifneq ($(PLATFORM),macos)
-		$(error ARCH_TARGET is only available on macOS)
-	else ifeq ($(ARCH_TARGET),arm64-apple-darwin)
-		ARCH_TARGET := -target $(ARCH_TARGET)
-	endif
+ifneq ($(PLATFORM),macos)
+	$(error ARCH_TARGET is only available on macOS)
+endif
 endif
 
 # == 2.1.1 GCC / CLANG ========================================================
