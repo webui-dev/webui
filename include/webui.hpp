@@ -182,7 +182,6 @@ namespace webui {
             webui_set_kiosk(webui_window, status);
         }
 
-        // -- Other ---------------------------
         // Check a specific window if it's still running
         bool is_shown() const {
             return webui_is_shown(webui_window);
@@ -198,7 +197,18 @@ namespace webui {
             webui_set_multi_access(webui_window, status);
         }
 
+        // Safely send raw data to the UI
+        void send_raw(const std::string_view function, const void* raw, size_t size) const {
+            webui_send_raw(webui_window, function.data(), raw, size);
+        }
+
+        // Run the window in hidden mode
+        void set_hide(bool status) const {
+            webui_set_hide(webui_window, status);
+        }
+
         // -- JavaScript ----------------------
+
         // Quickly run a JavaScript (no response waiting).
         void run(const std::string_view script) const {
             webui_run(webui_window, script.data());
