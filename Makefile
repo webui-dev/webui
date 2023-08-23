@@ -4,7 +4,7 @@
 
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 MAKEFILE_DIR  := $(dir $(MAKEFILE_PATH))
-BUILD_DIR  := $(MAKEFILE_DIR)/dist
+BUILD_DIR  := "$(MAKEFILE_DIR)/dist"
 
 # Args
 # Allow to add arch-target for macOS CI cross compilation
@@ -74,9 +74,9 @@ clean: --clean-$(PLATFORM)
 --setup:
 # Create build directory
 ifeq ($(PLATFORM),windows)
-	@mkdir $(BUILD_DIR) >nul 2>&1 ||:
+	@mkdir "$(BUILD_DIR)" >nul 2>&1 ||:
 else
-	@mkdir -p $(BUILD_DIR)
+	@mkdir -p "$(BUILD_DIR)"
 endif
 # If a compiler is specified check if it's valid
 ifneq ($(filter $(COMPILER),$(VALID_COMPILERS)),$(COMPILER))
@@ -95,36 +95,36 @@ endif
 
 --gcc-clang-debug:
 #	Static with Debug info
-	@cd $(BUILD_DIR) \
+	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(COMPILER) debug static)..." \
 	&& $(COMPILER) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g \
 	&& $(COMPILER) $(WEBUI_BUILD_FLAGS) -g -DWEBUI_LOG \
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o \
 	&& $(LLVM_OPT)ranlib $(LIB_STATIC_OUT)
 #	Dynamic with Debug info
-	@cd $(BUILD_DIR) \
+	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(COMPILER) debug dynamic)..." \
 	&& $(COMPILER) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
 	&& $(COMPILER) $(WEBUI_BUILD_FLAGS) -g -fPIC -DWEBUI_LOG \
 	&& $(COMPILER) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o -g $(LWS2_OPT)
 ifeq ($(PLATFORM),windows)
-	@strip --strip-unneeded $(BUILD_DIR)/$(LIB_DYN_OUT)
-	@-cd $(BUILD_DIR) && del *.o >nul 2>&1
+	@strip --strip-unneeded "$(BUILD_DIR)/$(LIB_DYN_OUT)"
+	@-cd "$(BUILD_DIR)" && del *.o >nul 2>&1
 else
-	@- rm -f $(BUILD_DIR)/*.o
+	@- rm -f "$(BUILD_DIR)/*.o"
 endif
 	@echo "Done."
 
 --gcc-clang-release:
 #	Static Release
-	@cd $(BUILD_DIR) \
+	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(COMPILER) release static)..." \
 	&& $(COMPILER) $(ARCH_TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os \
 	&& $(COMPILER) $(ARCH_TARGET) $(WEBUI_BUILD_FLAGS) -Os \
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o \
 	&& $(LLVM_OPT)ranlib $(LIB_STATIC_OUT)
 #	Dynamic Release
-	@cd $(BUILD_DIR) \
+	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(COMPILER) release dynamic)..." \
 	&& $(COMPILER) $(ARCH_TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os -fPIC \
 	&& $(COMPILER) $(ARCH_TARGET) $(WEBUI_BUILD_FLAGS) -O3 -fPIC \
@@ -132,7 +132,7 @@ endif
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@strip --strip-unneeded $(BUILD_DIR)/$(LIB_DYN_OUT)
-	@-cd $(BUILD_DIR) && del *.o >nul 2>&1
+	@-cd "$(BUILD_DIR)" && del *.o >nul 2>&1
 else
 	@- rm -f $(BUILD_DIR)/*.o
 endif
@@ -142,13 +142,13 @@ endif
 
 --tcc-debug:
 #	Static with Debug info
-	@cd $(BUILD_DIR) \
+	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(COMPILER) debug static)..." \
 	&& $(COMPILER) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g \
 	&& $(COMPILER) $(WEBUI_BUILD_FLAGS) -g -w -DWEBUI_LOG \
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o
 ifeq ($(PLATFORM),windows)
-	@-cd $(BUILD_DIR) && del *.o >nul 2>&1
+	@-cd "$(BUILD_DIR)" && del *.o >nul 2>&1
 else
 	@- rm -f $(BUILD_DIR)/*.o
 endif
@@ -156,14 +156,14 @@ endif
 
 --tcc-release:
 #	Static Release
-	@cd $(BUILD_DIR) \
+	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(COMPILER) release static)..." \
 	&& $(COMPILER) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) \
 	&& $(COMPILER) $(WEBUI_BUILD_FLAGS) -w \
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o
 #	Clean
 ifeq ($(PLATFORM),windows)
-	@-cd $(BUILD_DIR) && del *.o >nul 2>&1
+	@-cd "$(BUILD_DIR)" && del *.o >nul 2>&1
 else
 	@- rm -f $(BUILD_DIR)/*.o
 endif
@@ -176,14 +176,14 @@ endif
 --clean-macos: --clean-unix
 
 --clean-unix:
-	@- cd $(BUILD_DIR) \
+	@- cd "$(BUILD_DIR)" \
 	&& rm -f *.o \
 	&& rm -f *.so \
 	&& rm -f *.dylib \
 	&& rm -f *.a
 
 --clean-windows:
-	@- cd $(BUILD_DIR) \
+	@- cd "$(BUILD_DIR)" \
 	&& del *.a >nul 2>&1 \
 	&& del *.o >nul 2>&1 \
 	&& del *.dll >nul 2>&1 \
