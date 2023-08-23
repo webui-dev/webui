@@ -21,6 +21,7 @@ LIB_DYN_OUT = /DLL /OUT:$(BUILD_DIR)webui-2-x64.dll $(BUILD_DIR)webui.obj $(BUIL
 all: release
 
 debug:
+	@- mkdir dist >nul 2>&1
 #	Static with Debug info
 	@echo Build WebUI Library (MSVC Debug Static)...
 	@cl /Zl /Zi $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS)
@@ -36,6 +37,7 @@ debug:
 	@echo Done.
 
 release:
+	@- mkdir dist >nul 2>&1
 #	Static Release
 	@echo Build WebUI Library (MSVC Release Static)...
 	@cl /Zl $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS)
