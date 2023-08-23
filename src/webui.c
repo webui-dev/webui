@@ -979,7 +979,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
         #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user callback...\n\n");
         #endif
-        _webui_core.cb_interface[cb_index](e->window, e->event_type, e->element, e->data, e->event_number);
+        _webui_core.cb_interface[cb_index](e->window, e->event_type, e->element, e->data, e->size, e->event_number);
     }
 
     // Free
@@ -994,7 +994,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
     #endif
 }
 
-size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, char*, size_t)) {
+size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, char*, long long, size_t)) {
 
     #ifdef WEBUI_LOG
         printf("[User] webui_interface_bind([%zu], [%s], [0x%p])...\n", window, element, func);

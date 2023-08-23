@@ -212,8 +212,8 @@ WEBUI_EXPORT void webui_send_raw(size_t window, const char* function, const void
 WEBUI_EXPORT void webui_set_hide(size_t window, bool status);
 
 // -- Interface -----------------------
-// Bind a specific html element click event with a function. Empty element means all events. This replace webui_bind(). The func is (Window, EventType, Element, Data, EventNumber)
-WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, char*, size_t));
+// Bind a specific html element click event with a function. Empty element means all events. This replace webui_bind(). The func is (Window, EventType, Element, Data, DataSize, EventNumber)
+WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, char*, long long, size_t));
 // When using `webui_interface_bind()` you may need this function to easily set your callback response.
 WEBUI_EXPORT void webui_interface_set_response(size_t window, size_t event_number, const char* response);
 // Check if the app still running or not. This replace webui_wait().

@@ -98,7 +98,7 @@ typedef struct _webui_core_t {
     unsigned char run_last_id;
     bool initialized;
     void (*cb[WEBUI_MAX_ARRAY])(webui_event_t* e);
-    void (*cb_interface[WEBUI_MAX_ARRAY])(size_t, size_t, char*, char*, size_t);
+    void (*cb_interface[WEBUI_MAX_ARRAY])(size_t, size_t, char*, char*, long long, size_t);
     char* executable_path;
     void *ptr_list[WEBUI_MAX_ARRAY];
     size_t ptr_position;
