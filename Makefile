@@ -109,7 +109,8 @@ endif
 	&& $(COMPILER) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o -g $(LWS2_OPT)
 ifeq ($(PLATFORM),windows)
 	@strip --strip-unneeded "$(BUILD_DIR)/$(LIB_DYN_OUT)"
-	@-cd "$(BUILD_DIR)" && del *.o >nul 2>&1
+	@cd "$(BUILD_DIR)" \
+	&& powershell -command "Remove-Item -Path *.o -Force -ErrorAction SilentlyContinue"
 else
 	@- rm -f "$(BUILD_DIR)/*.o"
 endif
@@ -132,7 +133,8 @@ endif
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@strip --strip-unneeded $(BUILD_DIR)/$(LIB_DYN_OUT)
-	@-cd "$(BUILD_DIR)" && del *.o >nul 2>&1
+	@cd "$(BUILD_DIR)" \
+	&& powershell -command "Remove-Item -Path *.o -Force -ErrorAction SilentlyContinue"
 else
 	@- rm -f $(BUILD_DIR)/*.o
 endif
@@ -148,7 +150,9 @@ endif
 	&& $(COMPILER) $(WEBUI_BUILD_FLAGS) -g -w -DWEBUI_LOG \
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o
 ifeq ($(PLATFORM),windows)
-	@-cd "$(BUILD_DIR)" && del *.o >nul 2>&1
+# Specify `powershell` to call the command to prevent an issue with switching to bash in CI
+	@cd "$(BUILD_DIR)" \
+	&& powershell -command "Remove-Item -Path *.o -Force -ErrorAction SilentlyContinue"
 else
 	@- rm -f $(BUILD_DIR)/*.o
 endif
@@ -163,7 +167,8 @@ endif
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o
 #	Clean
 ifeq ($(PLATFORM),windows)
-	@-cd "$(BUILD_DIR)" && del *.o >nul 2>&1
+	@cd "$(BUILD_DIR)" \
+	&& powershell -command "Remove-Item -Path *.o -Force -ErrorAction SilentlyContinue"
 else
 	@- rm -f $(BUILD_DIR)/*.o
 endif
