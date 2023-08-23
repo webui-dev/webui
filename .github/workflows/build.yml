@@ -48,7 +48,6 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
       - name: Build
         run: |
-          mkdir dist
           if ('${{ matrix.compiler }}' -eq 'MSVC') {
             nmake -f Makefile.nmake
           } else {
