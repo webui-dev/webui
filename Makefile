@@ -4,7 +4,7 @@
 
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 MAKEFILE_DIR  := $(dir $(MAKEFILE_PATH))
-BUILD_DIR  := "$(MAKEFILE_DIR)/dist"
+BUILD_DIR  := $(MAKEFILE_DIR)/dist
 
 # Args
 # Allow to add arch-target for macOS CI cross compilation
@@ -112,7 +112,7 @@ ifeq ($(PLATFORM),windows)
 	@cd "$(BUILD_DIR)" \
 	&& powershell -command "Remove-Item -Path *.o -Force -ErrorAction SilentlyContinue"
 else
-	@- rm -f "$(BUILD_DIR)/*.o"
+	@- rm -f $(BUILD_DIR)/*.o
 endif
 	@echo "Done."
 
