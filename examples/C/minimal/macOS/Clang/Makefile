@@ -13,10 +13,10 @@ debug:
 	@cd "$(LIB)" && $(MAKE) debug
     # Static with Debug info
 	@echo "Build C99 Example (Static Debug)..."
-	@clang -g -m64 -o main "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static-x64 -lpthread -lm
+	@clang -g -m64 -o main "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static -lpthread -lm
     # Dynamic with Debug info
 	@echo "Build C99 Example (Dynamic Debug)..."
-	@clang -g -m64 -o main-dyn "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" "$(LIB)/webui-2-x64.dyn" -lpthread -lm
+	@clang -g -m64 -o main-dyn "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" "$(LIB)/webui-2.dyn" -lpthread -lm
     # Clean
 	@- rm -f *.o
 	@- rm -rf *.dSYM
@@ -27,10 +27,10 @@ release:
 	@cd "$(LIB)" && $(MAKE)
     # Static Release
 	@echo "Build C99 Example (Static Release)..."
-	@clang -lstdc++ -Os -m64 -o main "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static-x64 -lpthread -lm
+	@clang -lstdc++ -Os -m64 -o main "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static -lpthread -lm
     # Dynamic Release
 	@echo "Build C99 Example (Dynamic Release)..."
-	@clang -lstdc++ -m64 -o main-dyn "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" "$(LIB)/webui-2-x64.dyn" -lpthread -lm
+	@clang -lstdc++ -m64 -o main-dyn "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" "$(LIB)/webui-2.dyn" -lpthread -lm
     # Clean
 	@- rm -f *.o
 	@- rm -rf *.dSYM

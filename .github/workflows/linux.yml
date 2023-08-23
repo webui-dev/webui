@@ -43,7 +43,7 @@ jobs:
       - name: Prepare Artifact
         run: |
           cp -r include dist
-          artifact=${{ runner.os }}-${{ matrix.compiler }}-x64
+          artifact=webui-${{ runner.os }}-${{ matrix.compiler }}-x64
           # Convert to lowercase (`,,` ^= lowercase shell param)
           artifact=${artifact,,}
           # Add the ARTIFACT name as GitHub environment variable.

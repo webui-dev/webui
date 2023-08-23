@@ -35,7 +35,6 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
       - name: Build
         run: |
-          mkdir dist
           if ('${{ matrix.compiler }}' -eq 'MSVC') {
             nmake -f ./Makefile.nmake
           } else {
@@ -45,7 +44,7 @@ jobs:
         shell: bash
         run: |
           cp -r include dist
-          artifact=${{ runner.os }}-${{ matrix.compiler }}-x64
+          artifact=webui-${{ runner.os }}-${{ matrix.compiler }}-x64
           # Convert to lowercase (`,,` ^= lowercase shell param)
           artifact=${artifact,,}
           # Add the ARTIFACT name as GitHub environment variable.

@@ -11,5 +11,5 @@ This [text editor example](https://github.com/webui-dev/webui/tree/main/examples
 ```sh
 git clone https://github.com/webui-dev/webui.git
 cd webui\examples\C\text-editor
-gcc -o text-editor.exe text-editor.c webui-2-x64.dll -Wl,-subsystem=windows -lcomdlg32
+gcc -o text-editor.exe text-editor.c webui-2.dll -Wl,-subsystem=windows -lcomdlg32
 ```
