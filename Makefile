@@ -74,7 +74,7 @@ clean: --clean-$(PLATFORM)
 --setup:
 # Create build directory
 ifeq ($(PLATFORM),windows)
-	@-$(shell if not exist $(BUILD_DIR) mkdir -p "$(BUILD_DIR)" >nul 2>&1)
+	@mkdir $(BUILD_DIR) >nul 2>&1 ||:
 else
 	@mkdir -p $(BUILD_DIR)
 endif
