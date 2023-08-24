@@ -52,6 +52,7 @@ class WebuiBridge {
 	#HEADER_CLOSE = 250
 	#HEADER_CALL_FUNC = 249
 	#HEADER_SEND_RAW = 248
+	#HEADER_NEW_ID = 247
 
 	constructor({
 		port,
@@ -142,6 +143,12 @@ class WebuiBridge {
 		document.body.style.filter = 'contrast(1%)'
 	}
 
+	#isTextBasedCommand(cmd: number): Boolean {
+		if(cmd !== this.#HEADER_SEND_RAW)
+			return true;
+		return false;
+	}
+
 	#getString(buffer: Uint8Array, startIndex: number): string {
 		let stringBytes: number[] = [];
 	
@@ -207,7 +214,7 @@ class WebuiBridge {
 			if (buffer8.length < 4) return
 			if (buffer8[0] !== this.#HEADER_SIGNATURE) return
 
-			if(buffer8[1] !== this.#HEADER_SEND_RAW) {
+			if(this.#isTextBasedCommand(buffer8[1])) {
 				// UTF8 Text based commands
 
 				const data8 =
@@ -236,9 +243,16 @@ class WebuiBridge {
 						}
 						break
 					case this.#HEADER_SWITCH:
+						console.log(`WebUI -> Switch [${data8utf8}]`)
 						this.#close(this.#HEADER_SWITCH, data8utf8)
 						break
+					case this.#HEADER_NEW_ID:
+						console.log(`WebUI -> New Bind ID [${data8utf8}]`)
+						if(!this.#bindList.includes(data8utf8))
+							this.#bindList.push(data8utf8)
+						break
 					case this.#HEADER_CLOSE:
+						console.log(`WebUI -> Close`)
 						globalThis.close()
 						break
 					case this.#HEADER_JS_QUICK:

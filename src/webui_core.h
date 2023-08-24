@@ -21,6 +21,7 @@
 #define WEBUI_HEADER_CLOSE      0xFA        // Close window
 #define WEBUI_HEADER_CALL_FUNC  0xF9        // Backend function call
 #define WEBUI_HEADER_SEND_RAW   0xF8        // Send raw binary data to the UI
+#define WEBUI_HEADER_NEW_ID     0xF7        // Add new bind ID
 #define WEBUI_MAX_ARRAY         (512)       // Max threads, servers, windows, pointers..
 #define WEBUI_MIN_PORT          (10000)     // Minimum socket port
 #define WEBUI_MAX_PORT          (65500)     // Should be less than 65535
@@ -56,6 +57,7 @@ typedef struct _webui_window_t {
     volatile bool connected;
     volatile bool file_handled;
     bool html_handled;
+    bool bridge_handled;
     bool server_handled;
     bool multi_access;
     bool is_embedded_html;
@@ -112,6 +114,7 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_send;
     webui_mutex_t mutex_receive;
     webui_mutex_t mutex_wait;
+    webui_mutex_t mutex_bridge;
     webui_condition_t condition_wait;
     bool ui;
 } _webui_core_t;

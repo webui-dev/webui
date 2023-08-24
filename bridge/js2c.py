@@ -24,7 +24,7 @@ def js_to_c_header(input_filename, output_filename):
         for i in range(0, len(hex_values), 10):
             header_content += "\n    " + ', '.join(hex_values[i:i+10]) + ','
 
-        header_content += "\n};\n\n#endif // WEBUI_BRIDGE_H"
+        header_content += "\n    0x00\n};\n\n#endif // WEBUI_BRIDGE_H"
 
         # Write the header content to the output file
         with open(output_filename, 'w', encoding='utf-8') as f:
