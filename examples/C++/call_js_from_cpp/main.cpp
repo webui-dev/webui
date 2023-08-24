@@ -57,32 +57,30 @@ int main() {
         <title>Call JavaScript from C++ Example</title>
         <style>
           body {
-            color: white;
-            background: #0F2027;
+            background: linear-gradient(to left, #36265a, #654da9);
+            color: AliceBlue;
+            font-size: 16px sans-serif;
             text-align: center;
-            font-size: 16px;
-            font-family: sans-serif;
+            margin-top: 30px;
+          }
+          button {
+            margin: 5px 0 10px;
           }
         </style>
       </head>
       <body>
-        <h2>WebUI - Call JavaScript from C++ Example</h2>
+        <h1>WebUI - Call JavaScript from C++</h1>
         <br>
-        <h1 id="MyElementID">Count is ?</h1>
-        <br>
-        <br>
-        <button id="MyButton1">Count</button>
-        <br>
+        <button id="MyButton1">Count <span id="count">0</span>!</button>
         <br>
         <button id="MyButton2">Exit</button>
         <script>
-          var count = 0;
+          let count = 0;
           function GetCount() {
             return count;
           }
           function SetCount(number) {
-            const MyElement = document.getElementById('MyElementID');
-            MyElement.innerHTML = 'Count is ' + number;
+            document.getElementById('count').innerHTML = number;
             count = number;
           }
         </script>

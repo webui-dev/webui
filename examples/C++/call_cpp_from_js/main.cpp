@@ -68,33 +68,29 @@ int main() {
         <title>Call C++ from JavaScript Example</title>
         <style>
           body {
-            color: white;
-            background: #0F2027;
+            background: linear-gradient(to left, #36265a, #654da9);
+            color: AliceBlue;
+            font-size: 16px sans-serif;
             text-align: center;
-            font-size: 16px;
-            font-family: sans-serif;
+            margin-top: 30px;
+          }
+          button {
+            margin: 5px 0 10px;
           }
         </style>
       </head>
       <body>
-        <h2>WebUI - Call C++ from JavaScript Example</h2>
-        <p>Call C++ function with argument (<em>See the logs in your terminal</em>)</p>
-        <br>
+        <h1>WebUI - Call C++ from JavaScript</h1>
+        <p>Call C++ functions with arguments (<em>See the logs in your terminal</em>)</p>
         <button onclick="webui.call('MyID_One', 'Hello');">Call my_function_string()</button>
-        <br>
         <br>
         <button onclick="webui.call('MyID_Two', 123456789);">Call my_function_integer()</button>
         <br>
-        <br>
         <button onclick="webui.call('MyID_Three', true);">Call my_function_boolean()</button>
         <br>
-        <br>
-        <p>Call C++ function and wait for the response</p>
-        <br>
+        <p>Call a C++ function that returns a response</p>
         <button onclick="MyJS();">Call my_function_with_response()</button>
-        <br>
-        <br>
-        <input type="text" id="MyInputID" value="2">
+        <div>Double: <input type="text" id="MyInputID" value="2"></div>
         <script>
           function MyJS() {
             const MyInput = document.getElementById('MyInputID');
