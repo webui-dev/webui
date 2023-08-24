@@ -4920,7 +4920,7 @@ static WEBUI_SERVER_START
 
                         // At this moment the browser is already started and HTML
                         // is already handled, so, let's wait more time to give
-                        // the WebSocket an extra one and half second to connect.
+                        // the WebSocket an extra three seconds to connect.
                         
                         do {
                             #ifdef WEBUI_LOG
@@ -4939,7 +4939,7 @@ static WEBUI_SERVER_START
                                     break;
 
                                 // Stop if timer is finished
-                                if(_webui_timer_is_end(&timer_2, 1500))
+                                if(_webui_timer_is_end(&timer_2, 3000))
                                     break;
                             }
                         }
