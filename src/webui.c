@@ -3880,6 +3880,9 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         // 2: 
         // 3: [Data]
 
+        // We should copy `element` using `_webui_get_data()` as
+        // the `packet[]` will be freed by WS after end of this call.
+
         // Get html element id
         char* element;
         size_t element_len;
@@ -3923,6 +3926,9 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             _webui_mutex_unlock(&_webui_core.mutex_receive);
             return;
         }
+
+        // We should copy `data` using `_webui_get_data()` as
+        // the `packet[]` will be freed by WS after end of this call.
 
         // Get data part
         char* data;
@@ -3974,6 +3980,9 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         // Events
         if(win->has_events) {
 
+            // We should copy `url` using `_webui_get_data()` as
+            // the `packet[]` will be freed by WS after end of this call.
+
             // Get URL
             char* url;
             size_t url_len;
@@ -4010,6 +4019,9 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         // 1: [Type]
         // 2: [Call ID]
         // 3: [Element ID, Null, Len, Null, Data, Null]
+
+        // No need to copy `element` and `data` using `_webui_get_data()` as
+        // we don't need the `packet[]` after the end of this call.
         
         // Get html element id
         char* element = (char*)&packet[3];
