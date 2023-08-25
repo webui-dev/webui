@@ -146,13 +146,13 @@ typedef struct webui_event_t {
 WEBUI_EXPORT size_t webui_new_window(void);
 // Create a new webui window object.
 WEBUI_EXPORT void webui_new_window_id(size_t window_number);
-// Get a free window ID that can be used with `webui_new_window_id()`
+// Get a free window ID that can be used with `webui_new_window_id()`.
 WEBUI_EXPORT size_t webui_get_new_window_id(void);
 // Bind a specific html element click event with a function. Empty element means all events.
 WEBUI_EXPORT size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t* e));
-// Show a window using a embedded HTML, or a file. If the window is already opened then it will be refreshed.
+// Show a window using embedded HTML, or a file. If the window is already open, it will be refreshed.
 WEBUI_EXPORT bool webui_show(size_t window, const char* content);
-// Same as webui_show(). But with a specific web browser.
+// Same as `webui_show()`. But with a specific web browser.
 WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, size_t browser);
 // Set the window in Kiosk mode (Full screen)
 WEBUI_EXPORT void webui_set_kiosk(size_t window, bool status);
@@ -162,31 +162,31 @@ WEBUI_EXPORT void webui_wait(void);
 WEBUI_EXPORT void webui_close(size_t window);
 // Close a specific window and free all memory resources.
 WEBUI_EXPORT void webui_destroy(size_t window);
-// Close all opened windows. webui_wait() will break.
+// Close all open windows. `webui_wait()` will break.
 WEBUI_EXPORT void webui_exit(void);
 // Set the web-server root folder path for a specific window.
 WEBUI_EXPORT bool webui_set_root_folder(size_t window, const char* path);
 // Set the web-server root folder path for all windows.
 WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
-// Set a custom handler to serve files
+// Set a custom handler to serve files.
 WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(const char* filename, int* length));
 
 // -- Other ---------------------------
-// Check a specific window if it's still running
+// Check if the specified window is still running.
 WEBUI_EXPORT bool webui_is_shown(size_t window);
-// Set the maximum time in seconds to wait for browser to start
+// Set the maximum time in seconds to wait for the browser to start.
 WEBUI_EXPORT void webui_set_timeout(size_t second);
-// Set the default embedded HTML favicon
+// Set the default embedded HTML favicon.
 WEBUI_EXPORT void webui_set_icon(size_t window, const char* icon, const char* icon_type);
-// Allow the window URL to be re-used in normal web browsers
+// Allow the window URL to be re-used in normal web browsers.
 WEBUI_EXPORT void webui_set_multi_access(size_t window, bool status);
 
 // -- JavaScript ----------------------
-// Run JavaScript quickly with no waiting for the response.
+// Run JavaScript without waiting for the response.
 WEBUI_EXPORT void webui_run(size_t window, const char* script);
-// Run a JavaScript, and get the response back (Make sure your local buffer can hold the response).
+// Run JavaScript and get the response back (Make sure your local buffer can hold the response).
 WEBUI_EXPORT bool webui_script(size_t window, const char* script, size_t timeout, char* buffer, size_t buffer_length);
-// Chose between Deno and Nodejs runtime for .js and .ts files.
+// Chose between Deno and Nodejs as runtime for .js and .ts files.
 WEBUI_EXPORT void webui_set_runtime(size_t window, size_t runtime);
 // Parse argument as integer.
 WEBUI_EXPORT long long int webui_get_int(webui_event_t* e);
@@ -204,9 +204,9 @@ WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
 WEBUI_EXPORT char* webui_encode(const char* str);
 // Base64 decoding. Use this to safely decode received Base64 text from the UI. If it fails it will return NULL.
 WEBUI_EXPORT char* webui_decode(const char* str);
-// Safely free a buffer allocated by WebUI, for example when using webui_encode().
+// Safely free a buffer allocated by WebUI, for example when using `webui_encode()`.
 WEBUI_EXPORT void webui_free(void* ptr);
-// Safely allocate memory using the WebUI memory management system. It can be safely free using webui_free().
+// Safely allocate memory using the WebUI memory management system. It can be safely freed using `webui_free()`.
 WEBUI_EXPORT void* webui_malloc(size_t size);
 // Safely send raw data to the UI.
 WEBUI_EXPORT void webui_send_raw(size_t window, const char* function, const void* raw, size_t size);
@@ -214,13 +214,13 @@ WEBUI_EXPORT void webui_send_raw(size_t window, const char* function, const void
 WEBUI_EXPORT void webui_set_hide(size_t window, bool status);
 
 // -- Interface -----------------------
-// Bind a specific html element click event with a function. Empty element means all events. This replace webui_bind(). The func is (Window, EventType, Element, Data, DataSize, EventNumber)
+// Bind a specific html element click event with a function. Empty element means all events. This replaces `webui_bind()`. The func is (Window, EventType, Element, Data, DataSize, EventNumber).
 WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, char*, long long, size_t));
-// When using `webui_interface_bind()` you may need this function to easily set your callback response.
+// When using `webui_interface_bind()`, you may need this function to easily set your callback response.
 WEBUI_EXPORT void webui_interface_set_response(size_t window, size_t event_number, const char* response);
-// Check if the app still running or not. This replace webui_wait().
+// Check if the app still running. This replaces `webui_wait()`.
 WEBUI_EXPORT bool webui_interface_is_app_running(void);
-// Get window unique ID
+// Get a unique window ID.
 WEBUI_EXPORT size_t webui_interface_get_window_id(size_t window);
 // Get a unique ID. Same ID as `webui_bind()`. Return > 0 if bind exist.
 WEBUI_EXPORT size_t webui_interface_get_bind_id(size_t window, const char* element);
