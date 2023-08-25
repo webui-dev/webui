@@ -62,7 +62,7 @@ void webui_run(size_t window, const char* script) {
     size_t packet_len = 3 + js_len; // [header][js]
     char* packet = (char*) _webui_malloc(packet_len);
     packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
-    packet[1] = WEBUI_HEADER_JS_QUICK;  // Type
+    packet[1] = WEBUI_HEADER_JS_QUICK;  // CMD
     packet[2] = run_id;                 // ID
     for(size_t i = 0; i < js_len; i++)  // Data
         packet[i + 3] = script[i];
@@ -118,14 +118,19 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
     _webui_core.run_error[run_id] = false;
     if((void*)_webui_core.run_responses[run_id] != NULL)
         _webui_free_mem((void*)_webui_core.run_responses[run_id]);
+    
+    // 0: [Signature]
+    // 1: [CMD]
+    // 2: [ID]
+    // 3: [Script]
 
     // Prepare the packet
     size_t packet_len = 3 + js_len;             // [header][js]
     char* packet = (char*) _webui_malloc(packet_len);
     packet[0] = WEBUI_HEADER_SIGNATURE;         // Signature
-    packet[1] = WEBUI_HEADER_JS;                // Type
+    packet[1] = WEBUI_HEADER_JS;                // CMD
     packet[2] = run_id;                         // ID
-    for(size_t i = 0; i < js_len; i++)          // Data
+    for(size_t i = 0; i < js_len; i++)          // Script
         packet[i + 3] = script[i];
     
     // Send packets
@@ -297,15 +302,16 @@ void webui_close(size_t window) {
 
     if(win->connected) {
 
+        // 0: [Signature]
+        // 1: [CMD]
+
         // Prepare packets
-        char* packet = (char*) _webui_malloc(4);
+        char* packet = (char*) _webui_malloc(2);
         packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
-        packet[1] = WEBUI_HEADER_CLOSE;     // Type
-        packet[2] = 0;                      // ID
-        packet[3] = 0;                      // Data
+        packet[1] = WEBUI_HEADER_CLOSE;     // CMD
 
         // Send packets
-        _webui_window_send(win, packet, 4);
+        _webui_window_send(win, packet, 2);
         _webui_free_mem((void*)packet);
     }
 }
@@ -527,15 +533,18 @@ size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t
                     }
                 }
 
+                // 0: [Signature]
+                // 1: [CMD]
+                // 2: [New Element]
+
                 // Prepare the packet
                 size_t id_len = _webui_strlen(webui_internal_id);
-                size_t packet_len = 3 + id_len + 1; // [header][element]
+                size_t packet_len = 2 + id_len + 1; // [header][element]
                 char* packet = (char*) _webui_malloc(packet_len);
                 packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
-                packet[1] = WEBUI_HEADER_NEW_ID;    // Type
-                packet[2] = 0;                      // ID
-                for(size_t i = 0; i < id_len; i++)  // Element
-                    packet[i + 3] = webui_internal_id[i];
+                packet[1] = WEBUI_HEADER_NEW_ID;    // CMD
+                for(size_t i = 0; i < id_len; i++)  // New Element
+                    packet[i + 2] = webui_internal_id[i];
                 
                 // Send packets
                 _webui_window_send(win, packet, packet_len);
@@ -718,25 +727,23 @@ void webui_send_raw(size_t window, const char* function, const void* raw, size_t
     _webui_window_t* win = _webui_core.wins[window];
 
     // 0: [Signature]
-    // 1: [Type]
-    // 2: [ID]
-    // 3: [Function]
-    // 4: [Null]
-    // 5: [Raw Data]
+    // 1: [CMD]
+    // 2: [Function]
+    // 3: [Null]
+    // 4: [Raw Data]
 
     // Prepare packet
     size_t packet_len = 
-        3 +                         // Signature, Type, ID
+        2 +                         // Signature, CMD
         _webui_strlen(function) +   // Function
         1 +                         // Null
-        size;                       // Data
+        size;                       // Raw Data
     char* packet = (char*) _webui_malloc(packet_len);
     packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
-    packet[1] = WEBUI_HEADER_SEND_RAW;  // Type
-    packet[2] = 0;                      // Call ID
+    packet[1] = WEBUI_HEADER_SEND_RAW;  // CMD
     
     // Function
-    size_t p = 3;
+    size_t p = 2;
     for(size_t i = 0; i < _webui_strlen(function); i++) { 
         packet[p] = function[i];
         p++;
@@ -876,7 +883,7 @@ void webui_exit(void) {
         // Prepare packets
         char* packet = (char*) _webui_malloc(4);
         packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
-        packet[1] = WEBUI_HEADER_CLOSE;     // Type
+        packet[1] = WEBUI_HEADER_CLOSE;     // CMD
         packet[2] = 0;                      // ID
         packet[3] = 0;                      // Data
         for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
@@ -3778,14 +3785,17 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 
         // Refresh an existing running window
 
+        // 0: [Signature]
+        // 1: [CMD]
+        // 2: [URL]
+
         // Prepare packets
-        size_t packet_len = 3 + _webui_strlen(url); // [header][url]
+        size_t packet_len = 2 + _webui_strlen(url); // [header][url]
         char* packet = (char*) _webui_malloc(packet_len);
         packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
-        packet[1] = WEBUI_HEADER_SWITCH;    // Type
-        packet[2] = 0;                      // ID
+        packet[1] = WEBUI_HEADER_SWITCH;    // CMD
         for(size_t i = 0; i < _webui_strlen(win->url); i++) // URL
-            packet[i + 3] = win->url[i];
+            packet[i + 2] = win->url[i];
 
         // Send the packet
         _webui_window_send(win, packet, packet_len);
@@ -3941,9 +3951,8 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         // Click Event
 
         // 0: [Signature]
-        // 1: [Type]
-        // 2: 
-        // 3: [Data]
+        // 1: [CMD]
+        // 2: [Element]
 
         // We should copy `element` using `_webui_get_data()` as
         // the `packet[]` will be freed by WS after end of this call.
@@ -3951,7 +3960,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         // Get html element id
         char* element;
         size_t element_len;
-        _webui_get_data(packet, len, 3, &element_len, &element);
+        _webui_get_data(packet, len, 2, &element_len, &element);
         
         #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_CLICK \n");
@@ -3976,10 +3985,10 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         // JS Result
 
         // 0: [Signature]
-        // 1: [Type]
+        // 1: [CMD]
         // 2: [ID]
         // 3: [Error]
-        // 4: [Data]
+        // 4: [Script Response]
 
         // Get pipe id
         unsigned char run_id = packet[2];
@@ -4038,9 +4047,8 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         // Navigation Event
 
         // 0: [Signature]
-        // 1: [Type]
-        // 2: 
-        // 3: [URL]
+        // 1: [CMD]
+        // 2: [URL]
 
         // Events
         if(win->has_events) {
@@ -4051,7 +4059,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             // Get URL
             char* url;
             size_t url_len;
-            if(!_webui_get_data(packet, len, 3, &url_len, &url)) {
+            if(!_webui_get_data(packet, len, 2, &url_len, &url)) {
 
                 _webui_mutex_unlock(&_webui_core.mutex_receive);
                 return;
@@ -4081,7 +4089,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         // Function Call
 
         // 0: [Signature]
-        // 1: [Type]
+        // 1: [CMD]
         // 2: [Call ID]
         // 3: [Element ID, Null, Len, Null, Data, Null]
 
@@ -4157,16 +4165,16 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         #endif
 
         // 0: [Signature]
-        // 1: [Type]
+        // 1: [CMD]
         // 2: [Call ID]
-        // 3: [Data]
+        // 3: [Call Response]
 
         // Prepare response packet
         size_t response_len = _webui_strlen(*response);
         size_t response_packet_len = 3 + response_len + 1;
         char* response_packet = (char*) _webui_malloc(response_packet_len);
         response_packet[0] = WEBUI_HEADER_SIGNATURE;    // Signature
-        response_packet[1] = WEBUI_HEADER_CALL_FUNC;    // Type
+        response_packet[1] = WEBUI_HEADER_CALL_FUNC;    // CMD
         response_packet[2] = packet[2];                 // Call ID
         for(size_t i = 0; i < response_len; i++)        // Data
             response_packet[3 + i] = (*response)[i];

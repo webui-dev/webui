@@ -149,9 +149,8 @@ class WebuiBridge {
 		return false;
 	}
 
-	#getString(buffer: Uint8Array, startIndex: number): string {
+	#getDataStrFromPacket(buffer: Uint8Array, startIndex: number): string {
 		let stringBytes: number[] = [];
-	
 		for (let i = startIndex; i < buffer.length; i++) {
 			if (buffer[i] === 0) { // Check for null byte
 				break;
@@ -160,8 +159,7 @@ class WebuiBridge {
 		}
 	
 		// Convert the array of bytes to a string
-		let stringText = new TextDecoder().decode(new Uint8Array(stringBytes));
-	
+		const stringText = new TextDecoder().decode(new Uint8Array(stringBytes));
 		return stringText;
 	}
 
@@ -217,19 +215,21 @@ class WebuiBridge {
 			if(this.#isTextBasedCommand(buffer8[1])) {
 				// UTF8 Text based commands
 
-				const data8 =
-					buffer8[buffer8.length - 1] === 0
-						? buffer8.slice(3, -1)
-						: buffer8.slice(3) // Null byte (0x00) can break eval()
-				const data8utf8 = new TextDecoder().decode(data8)
-
 				// Process Command
 				switch (buffer8[1]) {
 					case this.#HEADER_CALL_FUNC:
 						{
+							// Command Packet
+							// 0: [Signature]
+							// 1: [CMD]
+							// 2: [Call ID]
+							// 3: [Call Response]
+
+							const callResponse = this.#getDataStrFromPacket(buffer8, 3)
 							const callId = buffer8[2]
+
 							if (this.#log) {
-								console.log(`WebUI -> Call Response [${data8utf8}]`)
+								console.log(`WebUI -> Call Response [${callResponse}]`)
 							}
 							if (this.#fnPromiseResolve[callId]) {
 								if (this.#log) {
@@ -237,39 +237,63 @@ class WebuiBridge {
 										`WebUI -> Resolving Response #${callId}...`
 									)
 								}
-								this.#fnPromiseResolve[callId]?.(data8utf8)
+								this.#fnPromiseResolve[callId]?.(callResponse)
 								this.#fnPromiseResolve[callId] = undefined
 							}
 						}
 						break
 					case this.#HEADER_SWITCH:
-						console.log(`WebUI -> Switch [${data8utf8}]`)
-						this.#close(this.#HEADER_SWITCH, data8utf8)
+						// Command Packet
+						// 0: [Signature]
+						// 1: [CMD]
+						// 2: [URL]
+
+						const url = this.#getDataStrFromPacket(buffer8, 2)
+						console.log(`WebUI -> Switch [${url}]`)
+						this.#close(this.#HEADER_SWITCH, url)
 						break
 					case this.#HEADER_NEW_ID:
-						console.log(`WebUI -> New Bind ID [${data8utf8}]`)
-						if(!this.#bindList.includes(data8utf8))
-							this.#bindList.push(data8utf8)
+						// Command Packet
+						// 0: [Signature]
+						// 1: [CMD]
+						// 2: [New Element]
+
+						const newElement = this.#getDataStrFromPacket(buffer8, 2)
+						console.log(`WebUI -> New Bind ID [${newElement}]`)
+						if(!this.#bindList.includes(newElement))
+							this.#bindList.push(newElement)
 						break
 					case this.#HEADER_CLOSE:
+						// Command Packet
+						// 0: [Signature]
+						// 1: [CMD]
+
 						console.log(`WebUI -> Close`)
 						globalThis.close()
 						break
 					case this.#HEADER_JS_QUICK:
 					case this.#HEADER_JS:
 						{
-							const data8utf8sanitize = data8utf8.replace(
+							// Command Packet
+							// 0: [Signature]
+							// 1: [CMD]
+							// 2: [ID]
+							// 3: [Script]
+
+							const script = this.#getDataStrFromPacket(buffer8, 3)
+							const scriptSanitize = script.replace(
 								/(?:\r\n|\r|\n)/g,
 								'\n'
 							)
+
 							if (this.#log)
-								console.log(`WebUI -> JS [${data8utf8sanitize}]`)
+								console.log(`WebUI -> JS [${scriptSanitize}]`)
 
 							// Get callback result
 							let FunReturn = 'undefined'
 							let FunError = false
 							try {
-								FunReturn = await AsyncFunction(data8utf8sanitize)()
+								FunReturn = await AsyncFunction(scriptSanitize)()
 							} catch (e) {
 								FunError = true
 								FunReturn = e.message
@@ -285,7 +309,12 @@ class WebuiBridge {
 							if (this.#log && FunError)
 								console.log(`WebUI -> JS -> Error [${FunReturn}]`)
 
-							// Format ws response
+							// Response Packet
+							// 0: [Signature]
+							// 1: [CMD]
+							// 2: [ID]
+							// 3: [Error]
+							// 4: [Script Response]
 							const Return8 = Uint8Array.of(
 								this.#HEADER_SIGNATURE,
 								this.#HEADER_JS,
@@ -306,20 +335,18 @@ class WebuiBridge {
 				switch (buffer8[1]) {
 					case this.#HEADER_SEND_RAW:
 						{
+							// Command Packet
 							// 0: [Signature]
-							// 1: [Type]
-							// 2: [ID]
-							// 3: [Function]
-							// 4: [Null]
-							// 5: [Raw Data]
-
-							// [0xDD] [0xF8] [0x00] [0xFF 0xFF 0xFF 0xFF] [0x00] [0x11 0x11 0x11]
+							// 1: [CMD]
+							// 2: [Function]
+							// 3: [Null]
+							// 4: [Raw Data]
 
 							// Get function name
-							const functionName: string = this.#getString(buffer8, 3)
+							const functionName: string = this.#getDataStrFromPacket(buffer8, 2)
 							
 							// Get the raw data
-							const rawDataIndex: number = 3 + functionName.length + 1
+							const rawDataIndex: number = 2 + functionName.length + 1
 							const userRawData = buffer8.subarray(rawDataIndex);
 							
 							// Call the user function, and pass the raw data
@@ -355,18 +382,20 @@ class WebuiBridge {
 
 	#sendClick(elem: string) {
 		if (this.#wsStatus) {
+			// Response Packet
+			// 0: [Signature]
+			// 1: [CMD]
+			// 2: [Element]
 			const packet =
 				elem !== ''
 					? Uint8Array.of(
 							this.#HEADER_SIGNATURE,
 							this.#HEADER_CLICK,
-							0,
 							...new TextEncoder().encode(elem)
 					  )
 					: Uint8Array.of(
 							this.#HEADER_SIGNATURE,
 							this.#HEADER_CLICK,
-							0,
 							0
 					  )
 			this.#ws.send(packet.buffer)
@@ -377,6 +406,10 @@ class WebuiBridge {
 	#sendEventNavigation(url: string) {
 		if (this.#hasEvents && this.#wsStatus && url !== '') {
 			const packet = Uint8Array.of(
+				// Response Packet
+				// 0: [Signature]
+				// 1: [CMD]
+				// 2: [URL]
 				this.#HEADER_SIGNATURE,
 				this.#HEADER_SWITCH,
 				...new TextEncoder().encode(url)
@@ -397,6 +430,12 @@ class WebuiBridge {
 	#fnPromise(fn: string, value: any) {
 		if (this.#log) console.log(`WebUI -> Call [${fn}](${value})`)
 		const callId = this.#fnId++
+
+		// Response Packet
+		// 0: [Signature]
+        // 1: [CMD]
+        // 2: [Call ID]
+        // 3: [Element ID, Null, Len, Null, Data, Null]
 
 		const packet = Uint8Array.of(
 			this.#HEADER_SIGNATURE,
