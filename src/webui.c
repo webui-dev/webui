@@ -264,7 +264,10 @@ void webui_new_window_id(size_t window_number) {
     win->browser_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     win->profile_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     win->server_root_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
-    sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
+    if(_webui_is_empty(_webui_core.default_server_root_path))
+        sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
+    else
+        sprintf(win->server_root_path, "%s", _webui_core.default_server_root_path);
 
     // Save window ID
     if(window_number > _webui_core.last_win_number)
