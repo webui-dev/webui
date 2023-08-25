@@ -10,8 +10,6 @@ SOURCE=../../
 all: release
 
 debug:
-#	Build Lib
-	@cd "$(LIB)" && $(MAKE) debug
 #	Static with Debug info
 	@echo Build C99 Example (Static Debug)...
 	@tcc -g -m64 -o main.exe "$(SOURCE)/main.c" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static-x64 -lws2_32 -lAdvapi32 -Wall -Wl,-subsystem=console -w -luser32

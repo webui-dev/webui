@@ -10,8 +10,6 @@ SOURCE=../..
 all: release
 
 debug:
-#	Build Lib
-	@cd "$(LIB)" && $(MAKE) debug
 #	Static with Debug info
 	@echo Build C++ Example (Debug Static)...
 	@windres win.rc -O coff -o win.res

@@ -9,8 +9,6 @@ SOURCE=../..
 all: release
 
 debug:
-#	Build Lib
-	@cd "$(LIB)" && $(MAKE) debug
 #	Static with Debug info
 	@echo "Build C++ Example (Static Debug)..."
 	@g++ -std=c++17 -g -m64 -o main "$(SOURCE)/main.cpp" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static-x64 -lpthread -lm
