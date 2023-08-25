@@ -881,19 +881,17 @@ void webui_exit(void) {
 
     #ifndef WEBUI_LOG
         // Close all opened windows
-        // by sending `close` command
+        // by sending `CLOSE` command
 
         // Prepare packets
         char* packet = (char*) _webui_malloc(4);
         packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
         packet[1] = WEBUI_HEADER_CLOSE;     // CMD
-        packet[2] = 0;                      // ID
-        packet[3] = 0;                      // Data
         for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
             if(_webui_core.wins[i] != NULL) {
                 if(_webui_core.wins[i]->connected) {
                     // Send packet
-                    _webui_window_send(_webui_core.wins[i], packet, 4);
+                    _webui_window_send(_webui_core.wins[i], packet, 2);
                 }
             }
         }
@@ -3850,10 +3848,9 @@ static void _webui_window_send(_webui_window_t* win, char* packet, size_t packet
         printf("[Core]\t\t_webui_window_send() -> Packet hex : [ ");
             _webui_print_hex(packet, packets_size);
         printf("]\n");
-        printf("[Core]\t\t_webui_window_send() -> Packet str : [%.*s] \n", (int)(packets_size - 3), (const char*)&packet[3]);
     #endif
     
-    if(!win->connected || packet == NULL || packets_size < 4)
+    if(!win->connected || packet == NULL || packets_size < 2)
         return;
 
     int ret = 0;

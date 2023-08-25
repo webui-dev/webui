@@ -166,7 +166,7 @@ WEBUI_EXPORT void webui_destroy(size_t window);
 WEBUI_EXPORT void webui_exit(void);
 // Set the web-server root folder path for a specific window.
 WEBUI_EXPORT bool webui_set_root_folder(size_t window, const char* path);
-// Set the web-server root folder path for all windows.
+// Set the web-server root folder path for all windows. Should be used before webui_show().
 WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
 // Set a custom handler to serve files
 WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(const char* filename, int* length));

@@ -209,7 +209,7 @@ class WebuiBridge {
 
 		this.#ws.onmessage = async (event) => {
 			const buffer8 = new Uint8Array(event.data)
-			if (buffer8.length < 4) return
+			if (buffer8.length < 2) return
 			if (buffer8[0] !== this.#HEADER_SIGNATURE) return
 
 			if(this.#isTextBasedCommand(buffer8[1])) {
@@ -269,7 +269,7 @@ class WebuiBridge {
 						// 1: [CMD]
 
 						console.log(`WebUI -> Close`)
-						globalThis.close()
+						this.#ws.close()
 						break
 					case this.#HEADER_JS_QUICK:
 					case this.#HEADER_JS:
