@@ -592,13 +592,13 @@ typedef const char *SOCK_OPT_TYPE;
 #if !defined(SSL_LIB)
 
 #if defined(OPENSSL_API_3_0)
-#define SSL_LIB "libssl-3-x64.dll"
-#define CRYPTO_LIB "libcrypto-3-x64.dll"
+#define SSL_LIB "libssl-3.dll"
+#define CRYPTO_LIB "libcrypto-3.dll"
 #endif
 
 #if defined(OPENSSL_API_1_1)
-#define SSL_LIB "libssl-1_1-x64.dll"
-#define CRYPTO_LIB "libcrypto-1_1-x64.dll"
+#define SSL_LIB "libssl-1_1.dll"
+#define CRYPTO_LIB "libcrypto-1_1.dll"
 #endif /* OPENSSL_API_1_1 */
 
 #if defined(OPENSSL_API_1_0)

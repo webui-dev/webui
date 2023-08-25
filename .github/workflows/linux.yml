@@ -1,0 +1,62 @@
+name: Linux
+on:
+  workflow_call:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Bundle WebUI Bridge
+        run: |
+          npm i -g esbuild
+          bridge/build.sh
+      - uses: actions/cache@v3
+        with:
+          path: bridge/webui_bridge.h
+          key: ${{ runner.os }}-${{ github.sha }}-bridge
+
+  build-release:
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        compiler: [GCC, Clang]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache/restore@v3
+        with:
+          path: bridge/webui_bridge.h
+          key: ${{ runner.os }}-${{ github.sha }}-bridge
+          fail-on-cache-miss: true
+      - name: Build
+        run: |
+          if [ "${{ matrix.compiler }}" == "Clang" ]; then
+            sudo ln -s llvm-ar-13 /usr/bin/llvm-ar
+            sudo ln -s llvm-ranlib-13 /usr/bin/llvm-ranlib
+          fi
+          compiler=${{ matrix.compiler }}
+          make COMPILER=${compiler,,}
+      - name: Prepare Artifact
+        run: |
+          cp -r include dist
+          artifact=webui-${{ runner.os }}-${{ matrix.compiler }}-x64
+          # Convert to lowercase (`,,` ^= lowercase shell param)
+          artifact=${artifact,,}
+          # Add the ARTIFACT name as GitHub environment variable.
+          echo "ARTIFACT=$artifact" >> $GITHUB_ENV
+          mv dist/ $artifact
+          tar -czvf $artifact.tar.gz $artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT }}
+      - name: Release Artifact
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARTIFACT }}.tar.gz

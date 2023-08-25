@@ -19,14 +19,14 @@ WEBUI_BUILD_FLAGS := -m64 -o webui.o -I "$(MAKEFILE_DIR)/include/" -c "$(MAKEFIL
 # Output files
 # The static output is the same for all platforms
 # The dynamic output is platform dependent
-LIB_STATIC_OUT := libwebui-2-static-x64.a
+LIB_STATIC_OUT := libwebui-2-static.a
 
 # Platform defaults and dynamic library outputs
 ifeq ($(OS),Windows_NT)
 	# Windows
 	PLATFORM := windows
 	VALID_COMPILERS := gcc tcc
-	LIB_DYN_OUT := webui-2-x64.dll
+	LIB_DYN_OUT := webui-2.dll
 	LWS2_OPT := -lws2_32
 	ifeq ($(COMPILER),tcc)
 		BUILD_TARGET := --tcc
@@ -41,7 +41,7 @@ else
 		# MacOS
 		PLATFORM := macos
 		VALID_COMPILERS := clang
-		LIB_DYN_OUT := webui-2-x64.dylib
+		LIB_DYN_OUT := webui-2.dylib
 		ifeq ($(COMPILER),)
 			COMPILER = clang
 		endif
@@ -49,7 +49,7 @@ else
 		# Linux
 		PLATFORM := linux
 		VALID_COMPILERS := gcc clang
-		LIB_DYN_OUT := webui-2-x64.so
+		LIB_DYN_OUT := webui-2.so
 		ifeq ($(COMPILER),)
 			COMPILER = gcc
 		else ifeq ($(COMPILER),clang)
@@ -84,11 +84,11 @@ ifneq ($(filter $(COMPILER),$(VALID_COMPILERS)),$(COMPILER))
 endif
 # Arch target is for CI cross-compilation
 ifneq ($(ARCH_TARGET),)
-	ifneq ($(PLATFORM),macos)
-		$(error ARCH_TARGET is only available on macOS)
-	else ifeq ($(ARCH_TARGET),arm64-apple-darwin)
-		ARCH_TARGET := -target $(ARCH_TARGET)
-	endif
+ifneq ($(PLATFORM),macos)
+	$(error ARCH_TARGET is only available on macOS)
+endif
+# WARN: Wrong input is not covered yet due to difficulties with differing behavior on Mac
+# ARCH_TARGET is intented for CI use. Valid input is `ARCH_TARGET="-target arm64-apple-darwin"`.
 endif
 
 # == 2.1.1 GCC / CLANG ========================================================

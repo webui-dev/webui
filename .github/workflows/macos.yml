@@ -1,0 +1,59 @@
+name: macOS
+on:
+  workflow_call:
+
+jobs:
+  setup:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Bundle WebUI Bridge
+        run: |
+          npm i -g esbuild
+          bridge/build.sh
+      - uses: actions/cache@v3
+        with:
+          path: bridge/webui_bridge.h
+          key: ${{ runner.os }}-${{ github.sha }}-bridge
+
+  build-release:
+    needs: setup
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        compiler: [Clang]
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache/restore@v3
+        with:
+          path: bridge/webui_bridge.h
+          key: ${{ runner.os }}-${{ github.sha }}-bridge
+          fail-on-cache-miss: true
+      - name: Build
+        run: |
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
+            make ARCH_TARGET="-target arm64-apple-darwin"
+          else
+            make
+          fi
+      - name: Prepare Artifacts
+        run: |
+          cp -r include dist
+          # Add the ARTIFACT name(lowercased) as GitHub environment variable.
+          artifact=$(echo ${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
+          echo "ARTIFACT=$artifact" >> $GITHUB_ENV
+          mv dist/ $artifact
+          tar -czvf $artifact.tar.gz $artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT }}
+      - name: Release Artifact
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARTIFACT }}.tar.gz

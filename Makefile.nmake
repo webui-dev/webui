@@ -13,8 +13,8 @@ CIVETWEB_DEFINE_FLAGS = -DNDEBUG -DNO_CACHING -DNO_CGI -DNO_SSL -DUSE_WEBSOCKET
 WEBUI_BUILD_FLAGS = /Fo$(BUILD_DIR)webui.obj /c /EHsc "$(MAKEFILE_DIR)/src/webui.c" /I "$(MAKEFILE_DIR)include"
 
 # Output Commands
-LIB_STATIC_OUT = /OUT:$(BUILD_DIR)webui-2-static-x64.lib $(BUILD_DIR)webui.obj $(BUILD_DIR)civetweb.obj
-LIB_DYN_OUT = /DLL /OUT:$(BUILD_DIR)webui-2-x64.dll $(BUILD_DIR)webui.obj $(BUILD_DIR)civetweb.obj user32.lib Advapi32.lib
+LIB_STATIC_OUT = /OUT:$(BUILD_DIR)webui-2-static.lib $(BUILD_DIR)webui.obj $(BUILD_DIR)civetweb.obj
+LIB_DYN_OUT = /DLL /OUT:$(BUILD_DIR)webui-2.dll $(BUILD_DIR)webui.obj $(BUILD_DIR)civetweb.obj user32.lib Advapi32.lib
 
 # == 2.TARGETS ================================================================
 
