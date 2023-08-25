@@ -116,6 +116,7 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_wait;
     webui_mutex_t mutex_bridge;
     webui_condition_t condition_wait;
+    char* default_server_root_path;
     bool ui;
 } _webui_core_t;
 

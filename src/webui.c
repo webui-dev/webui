@@ -47,6 +47,7 @@ void webui_run(size_t window, const char* script) {
         return;
     
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -77,6 +78,7 @@ void webui_set_file_handler(size_t window, const void* (*handler)(const char *fi
         return;
     
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -93,10 +95,9 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
-
-    _webui_init();
 
     // Initializing response buffer
     if(buffer_length > 0)
@@ -201,7 +202,10 @@ size_t webui_new_window(void) {
     win->browser_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     win->profile_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     win->server_root_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
-    sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
+    if(_webui_is_empty(_webui_core.default_server_root_path))
+        sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
+    else
+        sprintf(win->server_root_path, "%s", _webui_core.default_server_root_path);
     
     #ifdef WEBUI_LOG
         printf("[User] webui_new_window() -> New window #%zu @ 0x%p\n", window_number, win);
@@ -215,6 +219,8 @@ size_t webui_get_new_window_id(void) {
     #ifdef WEBUI_LOG
         printf("[User] webui_get_new_window_id()...\n");
     #endif
+
+    _webui_init();
 
     for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
         if(_webui_core.wins[i] == NULL) {
@@ -271,6 +277,7 @@ void webui_set_kiosk(size_t window, bool status) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -284,10 +291,9 @@ void webui_close(size_t window) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
-
-    _webui_init();
 
     if(win->connected) {
 
@@ -311,10 +317,9 @@ void webui_destroy(size_t window) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
-
-    _webui_init();
 
     if(win->server_running) {
 
@@ -381,6 +386,7 @@ bool webui_is_shown(size_t window) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -394,6 +400,7 @@ void webui_set_multi_access(size_t window, bool status) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -407,6 +414,7 @@ void webui_set_icon(size_t window, const char* icon, const char* icon_type) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -440,6 +448,7 @@ bool webui_show(size_t window, const char* content) {
     _webui_core.ui = true;
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -459,6 +468,7 @@ bool webui_show_browser(size_t window, const char* content, size_t browser) {
     _webui_core.ui = true;
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -472,10 +482,9 @@ size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return 0;
     _webui_window_t* win = _webui_core.wins[window];
-
-    _webui_init();
 
     int len = 0;
     if(_webui_is_empty(element))
@@ -545,6 +554,8 @@ const char* webui_get_string(webui_event_t* e) {
         printf("[User] webui_get_string()...\n");
     #endif
 
+    _webui_init();
+
     if(e->data != NULL) {
         size_t len = _webui_strlen(e->data);
         if(len > 0 && len <= WEBUI_MAX_BUF)
@@ -559,6 +570,8 @@ long long int webui_get_int(webui_event_t* e) {
     #ifdef WEBUI_LOG
         printf("[User] webui_get_int()...\n");
     #endif
+
+    _webui_init();
 
     char* endptr;
 
@@ -577,6 +590,8 @@ bool webui_get_bool(webui_event_t* e) {
         printf("[User] webui_get_bool()...\n");
     #endif
 
+    _webui_init();
+
     const char* str = webui_get_string(e);
     if(str[0] == 't' || str[0] == 'T') // true || True
         return true;
@@ -591,6 +606,7 @@ void webui_return_int(webui_event_t* e, long long int n) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
@@ -622,6 +638,7 @@ void webui_return_string(webui_event_t* e, const char* s) {
         return;
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
@@ -650,6 +667,7 @@ void webui_return_bool(webui_event_t* e, bool b) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
@@ -678,6 +696,7 @@ void webui_set_hide(size_t window, bool status) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -694,6 +713,7 @@ void webui_send_raw(size_t window, const char* function, const void* raw, size_t
         return;
     
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -747,6 +767,8 @@ char* webui_encode(const char* str) {
         printf("[User] webui_encode()...\n");
     #endif
 
+    _webui_init();
+
     size_t len = strlen(str);
     if(len < 1)
         return NULL;
@@ -783,6 +805,8 @@ char* webui_decode(const char* str) {
     #ifdef WEBUI_LOG
         printf("[User] webui_decode()...\n");
     #endif
+
+    _webui_init();
 
     size_t len = strlen(str);
     if(len < 1)
@@ -821,6 +845,8 @@ void webui_free(void* ptr) {
         printf("[User] webui_free([0x%p])...\n", ptr);
     #endif
 
+    _webui_init();
+
     _webui_free_mem(ptr);
 }
 
@@ -830,6 +856,8 @@ void* webui_malloc(size_t size) {
         printf("[User] webui_malloc(%zu bytes)...\n", size);
     #endif
 
+    _webui_init();
+
     return _webui_malloc(size);
 }
 
@@ -838,6 +866,8 @@ void webui_exit(void) {
     #ifdef WEBUI_LOG
         printf("[User] webui_exit()...\n");
     #endif
+
+    _webui_init();
 
     #ifndef WEBUI_LOG
         // Close all opened windows
@@ -942,10 +972,9 @@ void webui_set_runtime(size_t window, size_t runtime) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
-
-    _webui_init();
 
     if(runtime != Deno && runtime != NodeJS)
         win->runtime = None;
@@ -960,6 +989,7 @@ bool webui_set_root_folder(size_t window, const char* path) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -979,6 +1009,39 @@ bool webui_set_root_folder(size_t window, const char* path) {
     return true;
 }
 
+bool webui_set_default_root_folder(const char* path) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_set_default_root_folder([%s])...\n", path);
+    #endif
+
+    _webui_init();
+
+    if(_webui_is_empty(path) || (_webui_strlen(path) > WEBUI_MAX_PATH) || !_webui_folder_exist((char*)path)) {
+
+        _webui_core.default_server_root_path[0] = '\0';
+        #ifdef WEBUI_LOG
+            printf("[User] webui_set_default_root_folder() -> Failed.\n");
+        #endif
+        return false;
+    }
+    
+    #ifdef WEBUI_LOG
+        printf("[User] webui_set_default_root_folder() -> Success.\n");
+    #endif
+    sprintf(_webui_core.default_server_root_path, "%s", path);
+
+    // Update all windows. This will works only
+    // for non-running windows.
+    for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
+        if(_webui_core.wins[i] != NULL) {
+            sprintf(_webui_core.wins[i]->server_root_path, "%s", _webui_core.default_server_root_path);
+        }
+    }
+
+    return true;
+}
+
 // -- Interface's Functions ----------------
 static void _webui_interface_bind_handler(webui_event_t* e) {
 
@@ -987,6 +1050,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
@@ -1044,6 +1108,7 @@ void webui_interface_set_response(size_t window, size_t event_number, const char
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -1106,6 +1171,7 @@ size_t webui_interface_get_window_id(size_t window) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return 0;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -1119,6 +1185,7 @@ size_t webui_interface_get_bind_id(size_t window, const char* element) {
     #endif
 
     // Dereference
+    _webui_init();
     if(_webui_core.wins[window] == NULL) return 0;
     _webui_window_t* win = _webui_core.wins[window];
 
@@ -3641,8 +3708,6 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
             printf("[Core]\t\t_webui_show_window(FILE, [%zu])...\n", browser);
     #endif
 
-    _webui_init();
-
     char* url = NULL;
     size_t port = (win->server_port == 0 ? _webui_get_free_port() : win->server_port);
     size_t ws_port = (win->ws_port == 0 ? _webui_get_free_port() : win->ws_port);
@@ -4232,7 +4297,7 @@ static size_t _webui_get_free_port(void) {
 static void _webui_init(void) {
 
     if(_webui_core.initialized)
-        return;    
+        return;
 
     #ifdef WEBUI_LOG
         printf("[Core]\t\tWebUI v%s \n", WEBUI_VERSION);
@@ -4241,9 +4306,10 @@ static void _webui_init(void) {
 
     // Initializing core
     memset(&_webui_core, 0, sizeof(_webui_core_t));
-    _webui_core.initialized     = true;
+    _webui_core.initialized = true;
     _webui_core.startup_timeout = WEBUI_DEF_TIMEOUT;
     _webui_core.executable_path = _webui_get_current_path();
+    _webui_core.default_server_root_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
 
     // Initializing server services
     mg_init_library(0);
