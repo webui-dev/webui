@@ -19,14 +19,14 @@ WEBUI_BUILD_FLAGS := -m64 -o webui.o -I "$(MAKEFILE_DIR)/include/" -c "$(MAKEFIL
 # Output files
 # The static output is the same for all platforms
 # The dynamic output is platform dependent
-LIB_STATIC_OUT := libwebui-2-static-x64.a
+LIB_STATIC_OUT := libwebui-2-static.a
 
 # Platform defaults and dynamic library outputs
 ifeq ($(OS),Windows_NT)
 	# Windows
 	PLATFORM := windows
 	VALID_COMPILERS := gcc tcc
-	LIB_DYN_OUT := webui-2-x64.dll
+	LIB_DYN_OUT := webui-2.dll
 	LWS2_OPT := -lws2_32
 	ifeq ($(COMPILER),tcc)
 		BUILD_TARGET := --tcc
@@ -41,7 +41,7 @@ else
 		# MacOS
 		PLATFORM := macos
 		VALID_COMPILERS := clang
-		LIB_DYN_OUT := webui-2-x64.dylib
+		LIB_DYN_OUT := webui-2.dylib
 		ifeq ($(COMPILER),)
 			COMPILER = clang
 		endif
@@ -49,7 +49,7 @@ else
 		# Linux
 		PLATFORM := linux
 		VALID_COMPILERS := gcc clang
-		LIB_DYN_OUT := webui-2-x64.so
+		LIB_DYN_OUT := webui-2.so
 		ifeq ($(COMPILER),)
 			COMPILER = gcc
 		else ifeq ($(COMPILER),clang)
