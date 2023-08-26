@@ -31,7 +31,7 @@ jobs:
           key: ${{ runner.os }}-${{ github.sha }}-bridge
           fail-on-cache-miss: true
       - uses: microsoft/setup-msbuild@v1.1
-      - if: ${{ matrix.compiler == 'MSVC' }}
+      - if: matrix.compiler == 'MSVC'
         uses: ilammy/msvc-dev-cmd@v1
       - name: Build
         run: |
