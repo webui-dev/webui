@@ -715,6 +715,68 @@ void webui_set_hide(size_t window, bool status) {
     win->hide = status;
 }
 
+void webui_set_size(size_t window, unsigned int width, unsigned int height) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_set_size(%zu, %u, %u)...\n", window, width, height);
+    #endif
+
+    // Dereference
+    _webui_init();
+    if(_webui_core.wins[window] == NULL) return;
+    _webui_window_t* win = _webui_core.wins[window];
+
+    if(width < WEBUI_MIN_WIDTH || width > WEBUI_MAX_WIDTH || 
+        height < WEBUI_MIN_HEIGHT || height > WEBUI_MAX_HEIGHT) {
+        
+        win->size_set = false;
+        return;
+    }
+
+    win->width = width;
+    win->height = height;
+    win->size_set = true;
+
+    if(win->connected) {
+
+        // Resize the current window
+        char script[128];
+        sprintf(script, "window.resizeTo(%u, %u);", width, height);
+        webui_run(window, script);
+    }
+}
+
+void webui_set_position(size_t window, unsigned int x, unsigned int y) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_set_position(%zu, %u, %u)...\n", window, x, y);
+    #endif
+
+    // Dereference
+    _webui_init();
+    if(_webui_core.wins[window] == NULL) return;
+    _webui_window_t* win = _webui_core.wins[window];
+
+    if(x < WEBUI_MIN_X || x > WEBUI_MAX_X || 
+        y < WEBUI_MIN_Y || y > WEBUI_MAX_Y) {
+        
+        win->position_set = false;
+        return;
+    }
+
+    win->x = x;
+    win->y = y;
+    win->position_set = true;
+
+    if(win->connected) {
+
+        // Positioning the current window
+        char script[128];
+        sprintf(script, "window.moveTo(%u, %u);", x, y);
+        webui_run(window, script);
+    }
+}
+
 void webui_send_raw(size_t window, const char* function, const void* raw, size_t size) {
 
     #ifdef WEBUI_LOG
@@ -3124,6 +3186,10 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
             c += sprintf(buffer + c, " %s", "--chrome-frame --kiosk");
         if (win->hide)
             c += sprintf(buffer + c, " %s", "--headless");
+        if (win->size_set)
+            c += sprintf(buffer + c, " --window-size=%u,%u", win->width, win->height);
+        if (win->position_set)
+            c += sprintf(buffer + c, " --window-position=%u,%u", win->x, win->y);
         c += sprintf(buffer + c, " %s", "--app=");
         return c;
     case Firefox:

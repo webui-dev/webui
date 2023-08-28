@@ -29,6 +29,14 @@
 #define WEBUI_DEFAULT_PATH      "."         // Default root path
 #define WEBUI_DEF_TIMEOUT       (30)        // Default startup timeout in seconds
 #define WEBUI_MAX_TIMEOUT       (60)        // Maximum startup timeout in seconds the user can set
+#define WEBUI_MIN_WIDTH         (100)       // Minimal window width
+#define WEBUI_MIN_HEIGHT        (100)       // Minimal window height
+#define WEBUI_MAX_WIDTH         (3840)      // Maximal window width (4K Monitor)
+#define WEBUI_MAX_HEIGHT        (2160)      // Maximal window height (4K Monitor)
+#define WEBUI_MIN_X             (0)         // Minimal window X
+#define WEBUI_MIN_Y             (0)         // Minimal window Y
+#define WEBUI_MAX_X             (3000)      // Maximal window X (4K Monitor)
+#define WEBUI_MAX_Y             (1800)      // Maximal window Y (4K Monitor)
 
 // Mutex
 #ifdef _WIN32
@@ -76,6 +84,12 @@ typedef struct _webui_window_t {
     char* server_root_path;
     bool kiosk_mode;
     bool hide;
+    unsigned int width;
+    unsigned int height;
+    bool size_set;
+    unsigned int x;
+    unsigned int y;
+    bool position_set;
     size_t process_id;
     webui_event_core_t* event_core[WEBUI_MAX_ARRAY];
     #ifdef _WIN32
@@ -213,6 +227,7 @@ static void _webui_print_ascii(const char* data, size_t len);
 static void _webui_panic(void);
 static void _webui_kill_pid(size_t pid);
 static _webui_window_t* _webui_dereference_win_ptr(void* ptr);
+static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *buffer, size_t max);
 
 static void _webui_mutex_init(webui_mutex_t *mutex);
 static void _webui_mutex_lock(webui_mutex_t *mutex);

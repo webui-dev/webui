@@ -212,6 +212,10 @@ WEBUI_EXPORT void* webui_malloc(size_t size);
 WEBUI_EXPORT void webui_send_raw(size_t window, const char* function, const void* raw, size_t size);
 // Run the window in hidden mode.
 WEBUI_EXPORT void webui_set_hide(size_t window, bool status);
+// Set the window size.
+WEBUI_EXPORT void webui_set_size(size_t window, unsigned int width, unsigned int height);
+// Set the window position.
+WEBUI_EXPORT void webui_set_position(size_t window, unsigned int x, unsigned int y);
 
 // -- Interface -----------------------
 // Bind a specific html element click event with a function. Empty element means all events. This replaces `webui_bind()`. The func is (Window, EventType, Element, Data, DataSize, EventNumber).
