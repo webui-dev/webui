@@ -207,6 +207,16 @@ namespace webui {
             webui_set_hide(webui_window, status);
         }
 
+        // Set window size
+        void set_size(unsigned int width, unsigned int height) const {
+            webui_set_size(webui_window, width, height);
+        }
+
+        // Set window position
+        void set_position(unsigned int x, unsigned int y) const {
+            webui_set_position(webui_window, x, y);
+        }
+
         // -- JavaScript ----------------------
 
         // Quickly run a JavaScript (no response waiting).
