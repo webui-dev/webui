@@ -137,7 +137,7 @@ typedef struct webui_event_t {
     size_t event_type; // Event type
     char* element; // HTML element ID
     char* data; // JavaScript data
-    long long int size; // JavaScript data len
+    size_t size; // JavaScript data len
     size_t event_number; // Internal WebUI
 } webui_event_t;
 
@@ -219,7 +219,7 @@ WEBUI_EXPORT void webui_set_position(size_t window, unsigned int x, unsigned int
 
 // -- Interface -----------------------
 // Bind a specific html element click event with a function. Empty element means all events. This replaces `webui_bind()`. The func is (Window, EventType, Element, Data, DataSize, EventNumber).
-WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, char*, long long, size_t));
+WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, char*, size_t, size_t));
 // When using `webui_interface_bind()`, you may need this function to easily set your callback response.
 WEBUI_EXPORT void webui_interface_set_response(size_t window, size_t event_number, const char* response);
 // Check if the app still running. This replaces `webui_wait()`.
