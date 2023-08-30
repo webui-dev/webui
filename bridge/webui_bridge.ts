@@ -30,8 +30,12 @@ class WebuiBridge {
 	// WebUI settings
 	#port: number
 	#winNum: number
-	#log: boolean
 	#bindList: unknown[] = []
+	#log: boolean
+	#winX: number
+	#winY: number
+	#winW: number
+	#winH: number
 
 	// Internals
 	#ws: WebSocket
@@ -59,29 +63,54 @@ class WebuiBridge {
 		winNum,
 		bindList,
 		log = false,
+		winX,
+		winY,
+		winW,
+		winH,
 	}: {
 		port: number
 		winNum: number
 		bindList: unknown[]
 		log?: boolean
+		winX: number
+		winY: number
+		winW: number
+		winH: number
 	}) {
 		// Constructor arguments are injected by webui.c
 		this.#port = port
 		this.#winNum = winNum
 		this.#bindList = bindList
 		this.#log = log
+		this.#winX = winX
+		this.#winY = winY
+		this.#winW = winW
+		this.#winH = winH
 
+		// Instance
 		if ('webui' in globalThis) {
 			throw new Error(
 				'Sorry. WebUI is already defined, only one instance is allowed.'
 			)
 		}
 
+		// Positioning the current window
+		if (this.#winX !== undefined && this.#winY !== undefined) {
+			window.moveTo(this.#winX, this.#winY)
+		}
+
+		// Resize the current window
+		if (this.#winW !== undefined && this.#winH !== undefined) {
+			window.resizeTo(this.#winW, this.#winH)
+		}
+
+		// WebSocket
 		if (!('WebSocket' in window)) {
 			alert('Sorry. WebSocket is not supported by your web browser.')
 			if (!this.#log) globalThis.close()
 		}
 
+		// Connect to the backend application
 		this.#start()
 
 		// Handle navigation server side
@@ -124,7 +153,7 @@ class WebuiBridge {
 			if (!this.#wsStatusOnce) {
 				this.#freezeUi()
 				alert(
-					'Sorry. WebUI failed to connect to the background application. Please try again.'
+					'Sorry. WebUI failed to connect to the backend application. Please try again.'
 				)
 				if (!this.#log) globalThis.close()
 			}
