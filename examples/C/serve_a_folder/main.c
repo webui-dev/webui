@@ -56,7 +56,7 @@ const void* my_files_handler(const char* filename, int* length) {
 
         // Const static file example
         // Note: The connection will drop if the content
-        // does not have `<script src="/webui.js"></script>`
+        // does not have `<script src="webui.js"></script>`
         return "This is a embedded file content example.";
     }
     else if(!strcmp(filename, "/dynamic.html")) {
@@ -73,7 +73,7 @@ const void* my_files_handler(const char* filename, int* length) {
             "<html>"
             "   This is a dynamic file content example. <br>"
             "   Count: %d <a href=\"dynamic.html\">[Refresh]</a><br>"
-            "   <script src=\"/webui.js\"></script>" // To keep connection with WebUI
+            "   <script src=\"webui.js\"></script>" // To keep connection with WebUI
             "</html>",
             ++count
         );
