@@ -48,7 +48,7 @@ jobs:
             kind="-${{ matrix.kind }}"
           fi
           # Add the ARTIFACT name(lowercased) as GitHub environment variable.
-          artifact=$(echo ${{ runner.os }}-${{ matrix.compiler }}$kind-${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
+          artifact=webui-$(echo ${{ runner.os }}-${{ matrix.compiler }}$kind-${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
           echo "ARTIFACT=$artifact" >> $GITHUB_ENV
           mv dist/ $artifact
           tar -czvf $artifact.tar.gz $artifact
