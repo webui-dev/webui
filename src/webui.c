@@ -29,9 +29,6 @@ static const char* webui_deno_not_found = "<html><head><title>Deno Not Found</ti
 static const char* webui_nodejs_not_found = "<html><head><title>Node.js Not Found</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Node.js Not Found</h2><p>Node.js is not found on this system.<br>Please download it from <a href=\"https://nodejs.org/en/download/\">https://nodejs.org/en/download/</a></p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
 static const char* webui_def_icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"64\" height=\"64\" viewBox=\"0 0 64 64\" version=\"1.1\"><path d=\"M 35.315 15.983 C 30.885 17.816, 29.305 25.835, 33.500 25.195 C 34.600 25.027, 37.177 24.802, 39.227 24.695 C 44.084 24.441, 49.054 19.899, 47.386 17.239 C 46.146 15.262, 38.884 14.507, 35.315 15.983 M 54.602 17.835 C 54.058 18.716, 60.204 22.022, 62.284 21.968 C 63.958 21.925, 58.228 17, 56.503 17 C 55.741 17, 54.886 17.376, 54.602 17.835\" stroke=\"none\" fill=\"#789dcc\" fill-rule=\"evenodd\"/><path d=\"M 3.635 19.073 C 2.098 20.282, 1 22.144, 1 23.542 C 1 26.692, 12.655 53.139, 14.754 54.750 C 15.650 55.437, 17.882 56, 19.716 56 C 23.227 56, 22.667 56.645, 30.331 43.762 L 32.163 40.684 36.109 47.830 C 40.333 55.479, 42.889 57.131, 47.815 55.394 C 49.855 54.675, 51.575 51.765, 56.620 40.500 C 60.068 32.800, 62.904 25.600, 62.921 24.500 C 62.944 23.042, 61.572 21.893, 57.862 20.262 C 55.062 19.031, 52.336 18.292, 51.806 18.620 C 51.275 18.948, 49.385 22.428, 47.604 26.353 L 44.367 33.490 42.504 30.647 C 41.121 28.536, 40.907 27.379, 41.673 26.152 C 42.567 24.721, 42.224 24.526, 39.103 24.695 C 37.121 24.802, 34.600 25.027, 33.500 25.195 C 31.780 25.457, 31.517 24.966, 31.620 21.688 L 31.739 17.876 28.799 20.688 C 27.182 22.235, 24.694 25.637, 23.270 28.250 C 21.847 30.863, 20.354 33, 19.954 33 C 19.553 33, 17.969 30.044, 16.433 26.431 C 12.452 17.064, 8.833 14.984, 3.635 19.073\" stroke=\"none\" fill=\"#294fb7\" fill-rule=\"evenodd\"/></svg>";
 static const char* webui_def_icon_type = "image/svg+xml";
-static const char* webui_js_empty = "ERR_WEBUI_NO_SCRIPT_FOUND";
-static const char* webui_js_timeout = "ERR_WEBUI_TIMEOUT";
-static const char* const webui_empty_string = "";
 
 // -- Functions -----------------------
 void webui_run(size_t window, const char* script) {
@@ -105,12 +102,8 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
 
     size_t js_len = _webui_strlen(script);
 
-    if(js_len < 1) {
-
-        if(buffer != NULL && buffer_length > 1)
-            snprintf(buffer, buffer_length, "%s", webui_js_empty);
+    if(js_len < 1)
         return false;
-    }
 
     // Initializing pipe
     unsigned char run_id = _webui_get_run_id();
@@ -574,7 +567,7 @@ const char* webui_get_string(webui_event_t* e) {
             return (const char* ) e->data;
     }
 
-    return webui_empty_string;
+    return "";
 }
 
 long long int webui_get_int(webui_event_t* e) {
@@ -1261,7 +1254,7 @@ size_t webui_interface_get_bind_id(size_t window, const char* element) {
 
     size_t len = _webui_strlen(element);
     if(len < 1)
-        element = webui_empty_string;
+        element = "";
 
     // [win num][/][element]
     char* webui_internal_id = _webui_malloc(3 + 1 + len);
@@ -1641,12 +1634,12 @@ static const char* _webui_get_extension(const char*f) {
     #endif
 
     if(f == NULL)
-        return webui_empty_string;
+        return "";
 
     const char*ext = strrchr(f, '.');
 
     if(ext == NULL || !ext || ext == f)
-        return webui_empty_string;
+        return "";
     return ext + 1;
 }
 
@@ -2427,22 +2420,22 @@ static const char* _webui_browser_get_temp_path(size_t browser) {
             char* WinUserProfile = NULL;
             size_t sz = 0;
             if(_dupenv_s(&WinUserProfile, &sz, "USERPROFILE") != 0 || WinUserProfile == NULL)
-                return webui_empty_string;
+                return "";
         #else
             char* WinUserProfile = getenv("USERPROFILE");
             if(WinUserProfile == NULL)
-                return webui_empty_string;
+                return "";
         #endif
     #elif __APPLE__
         // Resolve $HOME
         char* MacUserProfile = getenv("HOME");
         if(MacUserProfile == NULL)
-            return webui_empty_string;
+            return "";
     #else
         // Resolve $HOME
         char* LinuxUserProfile = getenv("HOME");
         if(LinuxUserProfile == NULL)
-            return webui_empty_string;
+            return "";
     #endif
 
     #ifdef _WIN32
@@ -3821,7 +3814,7 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 
         // Show a window using the embedded HTML
         win->is_embedded_html = true;
-        win->html = (content == NULL ? webui_empty_string : content);
+        win->html = (content == NULL ? "" : content);
 
         // Generate the URL
         size_t url_len = 32; // [http][domain][port]
@@ -3979,7 +3972,7 @@ static bool _webui_get_data(const char* packet, size_t packet_len, size_t pos, s
 
     if((pos + 1) > packet_len) {
 
-        *data = (char*)webui_empty_string;
+        *data = (char*)"";
         if(data_len != NULL)*data_len = 0;
         return false;
     }
@@ -3988,7 +3981,7 @@ static bool _webui_get_data(const char* packet, size_t packet_len, size_t pos, s
     size_t data_size = _webui_strlen(&packet[pos]);
     if(data_size < 1) {
 
-        *data = (char*)webui_empty_string;
+        *data = (char*)"";
         if(data_len != NULL)*data_len = 0;
         return false;
     }
@@ -4016,7 +4009,7 @@ static bool _webui_get_data(const char* packet, size_t packet_len, size_t pos, s
         if(*data_len < 1) {
 
             _webui_free_mem((void*)data);
-            *data = (char*)webui_empty_string;
+            *data = (char*)"";
             *data_len = 0;
             return false;
         }
@@ -4127,7 +4120,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
 
             // Empty Result
             _webui_core.run_error[run_id] = error;
-            _webui_core.run_responses[run_id] = webui_empty_string;
+            _webui_core.run_responses[run_id] = "";
         }
 
         // Send ready signal to webui_script()
@@ -4254,7 +4247,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
 
         // Check the response
         if(_webui_is_empty(*response))
-            *response = (char*)webui_empty_string;
+            *response = (char*)"";
 
         #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_window_receive() -> user-callback response [%s]\n", *response);
@@ -4550,6 +4543,69 @@ static int _webui_http_log(const struct mg_connection *conn, const char* message
     return 1;
 }
 
+/*
+    static char* _webui_inject_bridge(_webui_window_t* win, const char *user_html) {
+
+        #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_inject_bridge()...\n");
+        #endif
+
+        // Check if already exist
+        if(strstr(user_html, "\"webui.js\"") || 
+            strstr(user_html, "\"/webui.js\"") ||
+            strstr(user_html, "\"WEBUI.JS\"") || 
+            strstr(user_html, "\"/WEBUI.JS\"")
+            // ...
+        )
+            return (char *)user_html;
+
+        // Find <head> tag
+        char *head_pos = strstr(user_html, "<head>");
+        if(!head_pos) head_pos = strstr(user_html, "< head>");
+        if(!head_pos) head_pos = strstr(user_html, "<head >");
+        if(!head_pos) head_pos = strstr(user_html, "< head >");
+        if(!head_pos) head_pos = strstr(user_html, "< HEAD>");
+        if(!head_pos) head_pos = strstr(user_html, "<HEAD >");
+        if(!head_pos) head_pos = strstr(user_html, "< HEAD >");
+        if(!head_pos) {
+
+            // Because the <head> tag is not found, we will
+            // inject the script file instead in a `bad` way.
+            // this is a workaround for now.
+            
+            size_t len = _webui_strlen(user_html) + 128;
+            char* buffer = (char*) _webui_malloc(len);
+            sprintf(buffer,
+                "<html> <script type=\"application/javascript\" src=\"webui.js\"></script>\n %s",
+                user_html
+            );
+            return buffer;
+        }
+        
+        // We found the <head> tag. We are going to inject
+        // the script file in the <head>. Please note that
+        // the WebUI-Bridge is too long to be inlined directely
+        // so instead we will just use <script 'webui.js'>.
+
+        // Calculate the position right after <head>
+        int offset = (int)(head_pos - user_html) + 6;
+
+        // Calculate the length for the new string
+        const char* script = "<script type=\"application/javascript\" src=\"webui.js\"></script> \n";
+        size_t new_len = strlen(user_html) + strlen(script) + 1;
+
+        // Allocate memory for the new string
+        char* buffer = (char*) _webui_malloc(new_len);
+
+        // Construct the new HTML with script injected
+        strncpy(buffer, user_html, offset); // Copy up to and including <head>
+        strcpy(buffer + offset, script);    // Copy the script
+        strcpy(buffer + offset + strlen(script), user_html + offset); // Copy the rest of the user HTML
+
+        return buffer;
+    }
+*/
+
 static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
     #ifdef WEBUI_LOG
@@ -4638,36 +4694,12 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                         printf("[Core]\t\t_webui_http_handler() -> Embedded Index HTML\n");
                     #endif
 
-                    char* html = (char*) webui_empty_string;
-
-                    if(win->html != NULL) {
-
-                        // Generate the full WebUI Bridge
-                        const char* js = _webui_generate_js_bridge(win);
-
-                        // Inject WebUI Bridge into HTML
-                        size_t len = _webui_strlen(win->html) + 128;
-                        html = (char*) _webui_malloc(len);
-                        if(win->html != NULL && js != NULL) {
-                            sprintf(html,
-                                //! Construct bad html to load webui bridge before all user content
-                                //! Temp fix, need to improve this trick by inserting the script tag in html head via an XML/DOM parser
-                                "<html> <script type = \"application/javascript\" src = \" webui.js \"> \n \n </script> \n %s",
-                                win->html
-                            );
-                        }
-
-                        _webui_free_mem((void*)js);
-                    }
-
                     // Send
                     _webui_http_send(
                         conn, // 200
                         "text/html",
-                        html
+                        win->html
                     );
-
-                    _webui_free_mem((void*)html);
                 }
             }
             else {
