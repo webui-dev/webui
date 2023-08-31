@@ -14,7 +14,7 @@ jobs:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
 
-  build-release:
+  build:
     needs: setup
     runs-on: windows-latest
     permissions:
@@ -22,6 +22,7 @@ jobs:
     strategy:
       matrix:
         compiler: [GCC, MSVC]
+        kind: [release, debug]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -36,15 +37,18 @@ jobs:
       - name: Build
         run: |
           if ('${{ matrix.compiler }}' -eq 'MSVC') {
-            nmake -f ./Makefile.nmake
+            nmake -f ./Makefile.nmake ${{ matrix.kind }}
           } else {
-            mingw32-make
+            mingw32-make ${{ matrix.kind }}
           }
       - name: Prepare Artifact
         shell: bash
         run: |
           cp -r include dist
-          artifact=webui-${{ runner.os }}-${{ matrix.compiler }}-x64
+          if [ "${{ matrix.kind }}" == "debug" ]; then
+            kind="-${{ matrix.kind }}"
+          fi
+          artifact=webui-${{ runner.os }}-${{ matrix.compiler }}$kind-x64
           # Convert to lowercase (`,,` ^= lowercase shell param)
           artifact=${artifact,,}
           # Add the ARTIFACT name as GitHub environment variable.
@@ -57,7 +61,7 @@ jobs:
           name: ${{ env.ARTIFACT }}
           path: ${{ env.ARTIFACT }}
       - name: Release Artifact
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' && matrix.kind == 'release'
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.ARTIFACT }}.zip
