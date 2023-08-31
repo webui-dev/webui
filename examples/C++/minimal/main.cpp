@@ -3,7 +3,7 @@
 
 int main() {
     webui::window my_window;
-    my_window.show("<html>Hello World!</html>");
+    my_window.show("<html><head><script src=\"webui.js\"></script></head> C++ Hello World ! </html>");
     webui::wait();
     return 0;
 }

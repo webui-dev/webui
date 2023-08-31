@@ -52,40 +52,42 @@ int main() {
 
     // HTML
     const std::string my_html = R"V0G0N(
-    <html>
-      <head>
-        <title>Call JavaScript from C++ Example</title>
-        <style>
-          body {
-            background: linear-gradient(to left, #36265a, #654da9);
-            color: AliceBlue;
-            font-size: 16px sans-serif;
-            text-align: center;
-            margin-top: 30px;
-          }
-          button {
-            margin: 5px 0 10px;
-          }
-        </style>
-      </head>
-      <body>
-        <h1>WebUI - Call JavaScript from C++</h1>
-        <br>
-        <button id="MyButton1">Count <span id="count">0</span>!</button>
-        <br>
-        <button id="MyButton2">Exit</button>
-        <script>
-          let count = 0;
-          function GetCount() {
-            return count;
-          }
-          function SetCount(number) {
-            document.getElementById('count').innerHTML = number;
-            count = number;
-          }
-        </script>
-      </body>
-    </html>
+      <html>
+        <head>
+          <script src="webui.js"></script>
+          
+          <title>Call JavaScript from C++ Example</title>
+          <style>
+            body {
+              background: linear-gradient(to left, #36265a, #654da9);
+              color: AliceBlue;
+              font-size: 16px sans-serif;
+              text-align: center;
+              margin-top: 30px;
+            }
+            button {
+              margin: 5px 0 10px;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>WebUI - Call JavaScript from C++</h1>
+          <br>
+          <button id="MyButton1">Count <span id="count">0</span></button>
+          <br>
+          <button id="MyButton2">Exit</button>
+          <script>
+            let count = 0;
+            function GetCount() {
+              return count;
+            }
+            function SetCount(number) {
+              document.getElementById('count').innerHTML = number;
+              count = number;
+            }
+          </script>
+        </body>
+      </html>
     )V0G0N";
 
     // Create a window
