@@ -17,7 +17,7 @@ jobs:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
 
-  build-release:
+  build:
     needs: setup
     runs-on: macos-latest
     permissions:
@@ -25,6 +25,7 @@ jobs:
     strategy:
       matrix:
         compiler: [Clang]
+        kind: [release, debug]
         arch: [x64, arm64]
     steps:
       - uses: actions/checkout@v3
@@ -36,15 +37,18 @@ jobs:
       - name: Build
         run: |
           if [ "${{ matrix.arch }}" == "arm64" ]; then
-            make ARCH_TARGET="-target arm64-apple-darwin"
+            make ARCH_TARGET="-target arm64-apple-darwin" ${{ matrix.kind }}
           else
-            make
+            make ${{ matrix.kind }}
           fi
       - name: Prepare Artifacts
         run: |
           cp -r include dist
+          if [ "${{ matrix.kind }}" == "debug" ]; then
+            kind="-${{ matrix.kind }}"
+          fi
           # Add the ARTIFACT name(lowercased) as GitHub environment variable.
-          artifact=$(echo ${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
+          artifact=$(echo ${{ runner.os }}-${{ matrix.compiler }}$kind-${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
           echo "ARTIFACT=$artifact" >> $GITHUB_ENV
           mv dist/ $artifact
           tar -czvf $artifact.tar.gz $artifact
@@ -54,7 +58,7 @@ jobs:
           name: ${{ env.ARTIFACT }}
           path: ${{ env.ARTIFACT }}
       - name: Release Artifact
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' && matrix.kind == 'release'
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.ARTIFACT }}.tar.gz
