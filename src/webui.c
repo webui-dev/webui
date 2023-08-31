@@ -45,7 +45,7 @@ void webui_run(size_t window, const char* script) {
     
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Initializing pipe
@@ -76,7 +76,7 @@ void webui_set_file_handler(size_t window, const void* (*handler)(const char *fi
     
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     win->files_handler = handler;
@@ -93,7 +93,7 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return false;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Initializing response buffer
@@ -279,7 +279,7 @@ void webui_set_kiosk(size_t window, bool status) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     win->kiosk_mode = status;
@@ -293,7 +293,7 @@ void webui_close(size_t window) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     if(win->connected) {
@@ -320,7 +320,7 @@ void webui_destroy(size_t window) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     if(win->server_running) {
@@ -389,7 +389,7 @@ bool webui_is_shown(size_t window) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return false;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
     return win->connected;
@@ -403,7 +403,7 @@ void webui_set_multi_access(size_t window, bool status) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     win->multi_access = status;
@@ -417,7 +417,7 @@ void webui_set_icon(size_t window, const char* icon, const char* icon_type) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Some wrappers does not guarantee `icon` to
@@ -451,7 +451,7 @@ bool webui_show(size_t window, const char* content) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return false;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Find the best web browser to use
@@ -471,7 +471,7 @@ bool webui_show_browser(size_t window, const char* content, size_t browser) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return false;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
     return _webui_show(win, content, browser);
@@ -485,7 +485,7 @@ size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return 0;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
     _webui_window_t* win = _webui_core.wins[window];
 
     int len = 0;
@@ -612,7 +612,7 @@ void webui_return_int(webui_event_t* e, long long int n) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[e->window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
     // Get buffer
@@ -644,7 +644,7 @@ void webui_return_string(webui_event_t* e, const char* s) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[e->window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
     // Get buffer
@@ -673,7 +673,7 @@ void webui_return_bool(webui_event_t* e, bool b) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[e->window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
     // Get buffer
@@ -702,7 +702,7 @@ void webui_set_hide(size_t window, bool status) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     win->hide = status;
@@ -716,7 +716,7 @@ void webui_set_size(size_t window, unsigned int width, unsigned int height) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     if(width < WEBUI_MIN_WIDTH || width > WEBUI_MAX_WIDTH || 
@@ -747,7 +747,7 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     if(x < WEBUI_MIN_X || x > WEBUI_MAX_X || 
@@ -781,7 +781,7 @@ void webui_send_raw(size_t window, const char* function, const void* raw, size_t
     
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     // 0: [Signature]
@@ -1036,7 +1036,7 @@ void webui_set_runtime(size_t window, size_t runtime) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     if(runtime != Deno && runtime != NodeJS)
@@ -1053,7 +1053,7 @@ bool webui_set_root_folder(size_t window, const char* path) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return false;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
     if(win->server_running || _webui_is_empty(path) || (_webui_strlen(path) > WEBUI_MAX_PATH) || !_webui_folder_exist((char*)path)) {
@@ -1114,7 +1114,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[e->window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
     // Generate WebUI internal id
@@ -1172,7 +1172,7 @@ void webui_interface_set_response(size_t window, size_t event_number, const char
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Get internal response buffer
@@ -1235,7 +1235,7 @@ size_t webui_interface_get_window_id(size_t window) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return 0;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
     _webui_window_t* win = _webui_core.wins[window];
 
     return win->window_number;
@@ -1249,7 +1249,7 @@ size_t webui_interface_get_bind_id(size_t window, const char* element) {
 
     // Dereference
     _webui_init();
-    if(_webui_core.wins[window] == NULL) return 0;
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
     _webui_window_t* win = _webui_core.wins[window];
 
     size_t len = _webui_strlen(element);
@@ -1456,6 +1456,9 @@ static _webui_window_t* _webui_dereference_win_ptr(void* ptr) {
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_dereference_win_ptr()...\n");
     #endif
+
+    if(_webui_core.exit_now)
+        return NULL;
 
     _webui_window_t* win = (_webui_window_t*)ptr;
 
@@ -3055,7 +3058,8 @@ static void _webui_clean(void) {
 
     // Let's give other threads more time to safely exit
     // and finish their cleaning up.
-    _webui_sleep(250);
+    _webui_core.exit_now = true;
+    _webui_sleep(500);
 
     // TODO: Add option to let the user decide if
     // WebUI should delete the web browser profile
@@ -4614,7 +4618,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
     // Get the window object
     _webui_window_t* win = _webui_dereference_win_ptr(_win);
-    if(win == NULL) return 500; // Internal Server Error
+    if(_webui_core.exit_now || win == NULL) return 500; // Internal Server Error
 
     // Initializing
     _webui_core.server_handled = true; // Main app wait
@@ -4848,7 +4852,7 @@ static void _webui_ws_ready_handler(struct mg_connection *conn, void *_win) {
     #endif
 
     _webui_window_t* win = _webui_dereference_win_ptr(_win);
-    if(win == NULL) return;
+    if(_webui_core.exit_now || win == NULL) return;
 
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_ws_ready_handler() -> WebSocket Connected\n");
@@ -4908,7 +4912,7 @@ static int _webui_ws_data_handler(struct mg_connection *conn, int opcode, char* 
         printf("[Core]\t\t_webui_ws_data_handler()...\n");
     #endif
 
-    if(datasize < 1)
+    if(_webui_core.exit_now || datasize < 1)
         return 1; // OK
     
     #ifdef WEBUI_LOG
@@ -4953,7 +4957,7 @@ static void _webui_ws_close_handler(const struct mg_connection *conn, void *_win
 
     // Dereference
     _webui_window_t* win = _webui_dereference_win_ptr(_win);
-    if(win == NULL || !win->connected) return;
+    if(_webui_core.exit_now || win == NULL || !win->connected) return;
 
     win->html_handled = false;
     win->server_handled = false;
