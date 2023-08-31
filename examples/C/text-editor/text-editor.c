@@ -102,7 +102,8 @@ int main() {
     webui_bind(MainWindow, "Close", Close);
 
     // Show a new window
-    webui_show(MainWindow, "ui/MainWindow.html");
+    webui_set_root_folder(MainWindow, "ui");
+    webui_show(MainWindow, "MainWindow.html");
 
     // Wait until all windows get closed
     webui_wait();

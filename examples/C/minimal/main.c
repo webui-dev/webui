@@ -5,7 +5,7 @@
 int main() {
 
     size_t my_window = webui_new_window();
-    webui_show(my_window, "<html>Hello</html>");
+    webui_show(my_window, "<html><head><script src=\"webui.js\"></script></head> Hello World ! </html>");
     webui_wait();
     return 0;
 }

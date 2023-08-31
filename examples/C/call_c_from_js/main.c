@@ -76,6 +76,7 @@ int main() {
     const char* my_html = "<!DOCTYPE html>"
     "<html>"
     "  <head>"
+    "    <script src=\"webui.js\"></script>"
     "    <title>Call C from JavaScript Example</title>"
     "    <style>"
     "      body {"
