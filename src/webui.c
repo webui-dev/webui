@@ -2617,6 +2617,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 EdgeExist = true;
                 return true;
             }
+            else if(_webui_cmd_sync(win, "microsoft-edge-beta --version", false) == 0) {
+
+                sprintf(win->browser_path, "microsoft-edge-beta");
+                EdgeExist = true;
+                return true;
+            }
             else if(_webui_cmd_sync(win, "microsoft-edge-dev --version", false) == 0) {
 
                 sprintf(win->browser_path, "microsoft-edge-dev");
