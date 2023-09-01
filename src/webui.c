@@ -5035,12 +5035,12 @@ static WEBUI_SERVER_START
         _webui_core.startup_timeout = 30;
     
     // HTTP Port
-    char* server_port = (char*) _webui_malloc(16);
-    sprintf(server_port, "%zu", win->server_port);
+    char* server_port = (char*) _webui_malloc(32);
+    sprintf(server_port, "127.0.0.1:%zu", win->server_port);
 
     // WS Port
-    char* ws_port = (char*) _webui_malloc(16);
-    sprintf(ws_port, "%zu", win->ws_port);
+    char* ws_port = (char*) _webui_malloc(32);
+    sprintf(ws_port, "127.0.0.1:%zu", win->ws_port);
 
     // Start HTTP Server
     const char* http_options[] = {
