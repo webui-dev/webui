@@ -114,10 +114,10 @@ int main() {
     webui_set_file_handler(MyWindow, my_files_handler);
 
     // Set window size
-    webui_set_size(MyWindow, 800, 600);
+    webui_set_size(MyWindow, 800, 800);
 
     // Set window position
-    webui_set_position(MyWindow, 100, 100);
+    webui_set_position(MyWindow, 200, 200);
 
     // Show a new window
     // webui_set_root_folder(MyWindow, "_MY_PATH_HERE_");
