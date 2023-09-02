@@ -54,6 +54,7 @@ int main() {
     const std::string my_html = R"V0G0N(
       <html>
         <head>
+          <meta charset="UTF-8">
           <script src="webui.js"></script>
           
           <title>Call JavaScript from C++ Example</title>
