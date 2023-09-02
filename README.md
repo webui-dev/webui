@@ -12,6 +12,11 @@
 
 </div>
 
+## Download
+
+- [Latest Stable Release](https://github.com/webui-dev/webui/releases)
+- [Latest Beta Build](https://github.com/webui-dev/webui/actions)
+
 ## Contents
 
 - [Features](#features)
