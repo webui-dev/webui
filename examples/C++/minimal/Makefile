@@ -1,0 +1,119 @@
+# WebUI C++ Example
+
+# == 1. VARIABLES =============================================================
+
+PROJECT_DIR := $(shell git rev-parse --show-toplevel)
+LIB_DIR := $(PROJECT_DIR)/dist
+INCLUDE_DIR := $(PROJECT_DIR)/include
+
+# ARGS
+# Set a compiler when running on Linux via `make CC=g++` / `make CC=clang`
+CXX = g++
+# Build the WebUI library if running via `make BUILD_LIB=true`
+BUILD_LIB ?=
+
+# BUILD FLAGS
+STATIC_BUILD_FLAGS = -std=c++17 -lstdc++ -m64 main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
+DYN_BUILD_FLAGS = -std=c++17 -lstdc++ -m64 main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
+
+# Platform conditions
+ifeq ($(OS),Windows_NT)
+	# Windows
+	PLATFORM := windows
+	SHELL=CMD
+	STATIC_BUILD_FLAGS += -lwebui-2-static -lws2_32 -Wall -Wl,-subsystem=console -luser32 -static
+	DYN_BUILD_FLAGS += "$(LIB_DIR)/webui-2.dll" -lws2_32 -Wall -Wl,-subsystem=console -luser32
+	STATIC_OUT := main.exe
+	DYN_OUT := main-dyn.exe
+	LWS2_OPT := -lws2_32
+	STRIP_OPT := --strip-all
+else
+	STATIC_BUILD_FLAGS += -lpthread -lm -lwebui-2-static
+	DYN_BUILD_FLAGS += -lpthread -lm
+	STATIC_OUT := main
+	DYN_OUT := main-dyn
+	ifeq ($(shell uname),Darwin)
+		# MacOS
+		PLATFORM := macos
+		DYN_BUILD_FLAGS += "$(LIB_DIR)/webui-2.dylib"
+		CXX = clang
+	else
+		# Linux
+		PLATFORM := linux
+		DYN_BUILD_FLAGS += "$(LIB_DIR)/webui-2.so"
+		STRIP_OPT := --strip-all
+		ifeq ($(CXX),clang)
+			LLVM_OPT := llvm-
+		endif
+	endif
+endif
+
+# == 2.TARGETS ================================================================
+
+all: release
+
+debug: --setup
+#	Static with Debug info
+	@echo "Build C99 Example (Static Debug)..."
+	@$(CXX) -g $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
+#	Dynamic with Debug info
+	@echo "Build C99 Example (Dynamic Debug)..."
+	@$(CXX) -g $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
+#	Clean
+ifeq ($(PLATFORM),windows)
+	@- del *.o >nul 2>&1
+	@- del *.res >nul 2>&1
+else
+	@- rm -f *.o
+	@- rm -rf *.dSYM # macOS
+endif
+	@echo "Done."
+
+release: --setup
+#	Static Release
+	@echo "Build C99 Example (Static Release)..."
+	@$(CXX) -Os $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
+	@$(LLVM_OPT)strip $(STRIP_OPT) $(STATIC_OUT)
+#	Dynamic Release
+	@echo "Build C99 Example (Dynamic Release)..."
+	@$(CXX) $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
+	@$(LLVM_OPT)strip $(STRIP_OPT) $(DYN_OUT)
+#	Clean
+ifeq ($(PLATFORM),windows)
+	@- del *.o >nul 2>&1
+	@- del *.res >nul 2>&1
+else
+	@- rm -f *.o
+	@- rm -rf *.dSYM # macOS
+endif
+	@echo "Done."
+
+clean: --clean-$(PLATFORM)
+
+# INTERNAL TARGETS
+
+--setup:
+ifneq ($(filter $(CXX),g++ clang),$(CXX))
+	$(error Invalid compiler specified: `$(CXX)`)
+endif
+ifeq ($(BUILD_LIB),true)
+	@cd "$(LIB_DIR)" && cd .. && $(MAKE)
+endif
+
+--clean-linux: --clean-unix
+
+--clean-macos: --clean-unix
+
+--clean-unix:
+	- rm -f *.o
+	- rm -f *.a
+	- rm -f *.so
+	- rm -f *.dylib
+	- rm -rf *.dSYM
+
+--clean-windows:
+	- del *.o >nul 2>&1
+	- del *.dll >nul 2>&1
+	- del *.a >nul 2>&1
+	- del *.exe >nul 2>&1
+	- del *.res >nul 2>&1
