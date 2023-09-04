@@ -9,29 +9,25 @@ SOURCE=../..
 all: release
 
 debug:
-    # Build Lib
-	@cd "$(LIB)" && $(MAKE) debug
-    # Static with Debug info
+# Static with Debug info
 	@echo "Build C++ Example (Static Debug)..."
 	@clang -std=c++17 -g -m64 -o main "$(SOURCE)/main.cpp" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static -lpthread -lm
-    # Dynamic with Debug info
+# Dynamic with Debug info
 	@echo "Build C++ Example (Dynamic Debug)..."
 	@clang -std=c++17 -g -m64 -o main-dyn "$(SOURCE)/main.cpp" -I "$(INCLUDE)" -L "$(LIB)" "$(LIB)/webui-2.dyn" -lpthread -lm
-    # Clean
+# Clean
 	@- rm -f *.o
 	@- rm -rf *.dSYM
 	@echo "Done."
 
 release:
-    # Build Lib
-	@cd "$(LIB)" && $(MAKE)
-    # Static Release
+# Static Release
 	@echo "Build C++ Example (Static Release)..."
 	@clang -std=c++17 -lstdc++ -Os -m64 -o main "$(SOURCE)/main.cpp" -I "$(INCLUDE)" -L "$(LIB)" -lwebui-2-static -lpthread -lm
-    # Dynamic Release
+# Dynamic Release
 	@echo "Build C++ Example (Dynamic Release)..."
 	@clang -std=c++17 -lstdc++ -m64 -o main-dyn "$(SOURCE)/main.cpp" -I "$(INCLUDE)" -L "$(LIB)" "$(LIB)/webui-2.dyn" -lpthread -lm
-    # Clean
+# Clean
 	@- rm -f *.o
 	@- rm -rf *.dSYM
 	@echo "Done."
