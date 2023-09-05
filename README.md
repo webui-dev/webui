@@ -59,7 +59,7 @@ This [text editor example](https://github.com/webui-dev/webui/tree/main/examples
 
 <div align="center">
 
-![CPPCon](https://github.com/webui-dev/webui/assets/34311583/cf796ead-66d3-4298-ac80-b551c25f3e41)
+![CPPCon](https://github.com/webui-dev/webui/assets/34311583/4e830caa-4ca0-44ff-825f-7cd6d94083c8)
 
 </div>
 
@@ -73,7 +73,7 @@ Today's web browsers have everything a modern UI needs. Web browsers are very so
 
 <div align="center">
 
-![Diagram](https://github.com/webui-dev/webui/assets/34311583/ef56944a-d92c-44cb-935a-affc8a442eb4)
+![Diagram](https://github.com/ttytm/webui/assets/34311583/dbde3573-3161-421e-925c-392a39f45ab3)
 
 </div>
 
