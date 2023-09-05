@@ -19,13 +19,6 @@ cd webui\examples\C\serve_a_folder\Windows\GCC
 mingw32-make
 ```
 
-- **TCC**
-```sh
-git clone https://github.com/webui-dev/webui.git
-cd webui\examples\C\serve_a_folder\Windows\TCC
-mingw32-make
-```
-
 ### Linux
 
 - **GCC**
