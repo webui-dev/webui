@@ -24,30 +24,19 @@ LIB_STATIC_OUT := libwebui-2-static.a
 ifeq ($(OS),Windows_NT)
 	# Windows
 	PLATFORM := windows
-	VALID_COMPILERS := gcc tcc
 	LIB_DYN_OUT := webui-2.dll
 	LWS2_OPT := -lws2_32
-	ifeq ($(COMPILER),tcc)
-		BUILD_TARGET := --tcc
-	else
-		CIVETWEB_DEFINE_FLAGS += -DMUST_IMPLEMENT_CLOCK_GETTIME
-		BUILD_TARGET := --gcc-clang
-		COMPILER = gcc
-	endif
+	CIVETWEB_DEFINE_FLAGS += -DMUST_IMPLEMENT_CLOCK_GETTIME
+	COMPILER = gcc
 else
-	BUILD_TARGET := --gcc-clang
 	ifeq ($(shell uname),Darwin)
 		# MacOS
 		PLATFORM := macos
-		VALID_COMPILERS := clang
 		LIB_DYN_OUT := webui-2.dylib
-		ifeq ($(COMPILER),)
-			COMPILER = clang
-		endif
+		COMPILER = clang
 	else
 		# Linux
 		PLATFORM := linux
-		VALID_COMPILERS := gcc clang
 		LIB_DYN_OUT := webui-2.so
 		ifeq ($(COMPILER),)
 			COMPILER = gcc
@@ -61,9 +50,9 @@ endif
 
 all: release
 
-release: --setup $(BUILD_TARGET)-release
+release: --setup --release
 
-debug: --setup $(BUILD_TARGET)-debug
+debug: --setup --debug
 
 clean: --clean-$(PLATFORM)
 
@@ -77,11 +66,13 @@ ifeq ($(PLATFORM),windows)
 else
 	@mkdir -p "$(BUILD_DIR)"
 endif
-# If a compiler is specified check if it's valid
-ifneq ($(filter $(COMPILER),$(VALID_COMPILERS)),$(COMPILER))
+# Linux can set a COMPILER
+ifeq ($(PLATFORM),linux)
+ifneq ($(filter $(COMPILER),gcc clang),$(COMPILER))
 	$(error Invalid compiler specified: `$(COMPILER)`)
 endif
-# Arch target is for CI cross-compilation
+endif
+# macOS can set an ARCH_TARGET - for CI cross-compilation
 ifneq ($(ARCH_TARGET),)
 ifneq ($(PLATFORM),macos)
 	$(error ARCH_TARGET is only available on macOS)
@@ -90,9 +81,7 @@ endif
 # ARCH_TARGET is intented for CI use. Valid input is `ARCH_TARGET="-target arm64-apple-darwin"`.
 endif
 
-# == 2.1.1 GCC / CLANG ========================================================
-
---gcc-clang-debug:
+--debug:
 #	Static with Debug info
 	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(COMPILER) debug static)..." \
@@ -115,7 +104,7 @@ else
 endif
 	@echo "Done."
 
---gcc-clang-release:
+--release:
 #	Static Release
 	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(COMPILER) release static)..." \
@@ -139,41 +128,7 @@ else
 endif
 	@echo "Done."
 
-# == 2.1.2 TCC ================================================================
-
---tcc-debug:
-#	Static with Debug info
-	@cd "$(BUILD_DIR)" \
-	&& echo "Build WebUI library ($(COMPILER) debug static)..." \
-	&& $(COMPILER) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g \
-	&& $(COMPILER) $(WEBUI_BUILD_FLAGS) -g -w -DWEBUI_LOG \
-	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o
-ifeq ($(PLATFORM),windows)
-# Specify `powershell` to call the command to prevent an issue with switching to bash in CI
-	@cd "$(BUILD_DIR)" \
-	&& powershell -command "Remove-Item -Path *.o -Force -ErrorAction SilentlyContinue"
-else
-	@- rm -f $(BUILD_DIR)/*.o
-endif
-	@echo "Done."
-
---tcc-release:
-#	Static Release
-	@cd "$(BUILD_DIR)" \
-	&& echo "Build WebUI library ($(COMPILER) release static)..." \
-	&& $(COMPILER) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) \
-	&& $(COMPILER) $(WEBUI_BUILD_FLAGS) -w \
-	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o
-#	Clean
-ifeq ($(PLATFORM),windows)
-	@cd "$(BUILD_DIR)" \
-	&& powershell -command "Remove-Item -Path *.o -Force -ErrorAction SilentlyContinue"
-else
-	@- rm -f $(BUILD_DIR)/*.o
-endif
-	@echo "Done."
-
-# == 2.1.3 Platfrom Clean Targets =============================================
+# Platfrom Clean Targets
 
 --clean-linux: --clean-unix
 
