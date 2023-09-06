@@ -33,7 +33,7 @@
 
 - Written in Pure C
 - Fully Independent (*No need for any third-party runtimes*)
-- Lightweight (*~160 Kb using TCC*) & Small memory footprint
+- Lightweight ~200 Kb & Small memory footprint
 - Fast binary communication protocol between WebUI and the browser (*Instead of JSON*)
 - One header file
 - Multi-platform & Multi-Browser
