@@ -7,9 +7,9 @@
 BUILD_DIR = $(MAKEDIR)/dist
 
 # Build Flags
-CIVETWEB_BUILD_FLAGS = /Fo$(BUILD_DIR)/civetweb.obj /c /EHsc $(MAKEDIR)/src/civetweb/civetweb.c /I $(MAKEDIR)/src/civetweb/
+CIVETWEB_BUILD_FLAGS = /Fo$(BUILD_DIR)/civetweb.obj /c /EHsc $(MAKEDIR)/src/civetweb/civetweb.c /I$(MAKEDIR)/src/civetweb/
 CIVETWEB_DEFINE_FLAGS = -DNDEBUG -DNO_CACHING -DNO_CGI -DNO_SSL -DUSE_WEBSOCKET
-WEBUI_BUILD_FLAGS = /Fo$(BUILD_DIR)/webui.obj /c /EHsc $(MAKEDIR)/src/webui.c /I $(MAKEDIR)/include
+WEBUI_BUILD_FLAGS = /Fo$(BUILD_DIR)/webui.obj /c /EHsc $(MAKEDIR)/src/webui.c /I$(MAKEDIR)/include
 
 # Output Commands
 LIB_STATIC_OUT = /OUT:$(BUILD_DIR)/webui-2-static.lib $(BUILD_DIR)/webui.obj $(BUILD_DIR)/civetweb.obj
