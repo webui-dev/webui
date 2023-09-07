@@ -111,7 +111,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
   make
   
   # Clang
-  make COMPILER=clang
+  make CC=clang
   ```
 - **macOS**
   ```sh
