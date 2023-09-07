@@ -6,28 +6,44 @@ PROJECT_DIR := $(shell git rev-parse --show-toplevel)
 LIB_DIR := $(PROJECT_DIR)/dist
 
 # ARGS
+# Set a compiler when running on Linux via `make CC=gcc` / `make CC=clang`
+CC = gcc
 # Build the WebUI library if running via `make BUILD_LIB=true`
 BUILD_LIB ?=
 
 # BUILD FLAGS
-SHELL = CMD
-CC = gcc
-CFLAGS := -m64 text-editor.c -I"$(PROJECT_DIR)/include" -Wl,-subsystem=windows
-LDFLAGS := webui-2.dll -lcomdlg32
-OUT := text-editor.exe
-STRIP_OPT := --strip-all
+CFLAGS = -m64 text-editor.c -I"$(PROJECT_DIR)/include"
+LDFLAGS = -L"$(LIB_DIR)"
+
+# Platform conditions
+ifeq ($(OS),Windows_NT)
+	# Windows
+	SHELL=CMD
+	CFLAGS += -Wl,-subsystem=windows
+	LDFLAGS += webui-2.dll -lcomdlg32
+	OUT := text-editor.exe
+	STRIP_OPT := --strip-all
+else
+	# Linux
+	OUT := text-editor
+	LDFLAGS += -lpthread -lm -lwebui-2-static $(shell pkg-config --cflags --libs gtk+-3.0)
+	STRIP_OPT := --strip-all
+	ifeq ($(CC),clang)
+		LLVM_OPT := llvm-
+	endif
+endif
 
 # == 2.TARGETS ================================================================
 
 all: release
 
 debug: --setup
-	@echo "Build Text Editor Example ($(CC) $@)..."
+	@echo "Build Text Editor Example ($@)..."
 	@$(CC) -g -Wall $(LDFLAGS) -o $(OUT)
 	@echo "Done."
 
 release: --setup
-	@echo "Build Text Editor Example ($(CC) $@)..."
+	@echo "Build Text Editor Example ($@)..."
 	@$(CC) -Os $(CFLAGS) $(LDFLAGS) -o $(OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(OUT)
 	@echo "Done."
@@ -35,7 +51,12 @@ release: --setup
 # INTERNAL TARGETS
 
 --setup:
+ifneq ($(filter $(CC),gcc clang),$(CC))
+	$(error Invalid compiler specified: `$(CC)`)
+endif
 ifeq ($(BUILD_LIB),true)
 	@cd "$(LIB_DIR)" && cd .. && $(MAKE)
 endif
+ifeq ($(OS),Windows_NT)
 	@copy "$(LIB_DIR)\webui-2.dll" ".\webui-2.dll"
+endif
