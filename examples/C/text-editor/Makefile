@@ -24,12 +24,20 @@ ifeq ($(OS),Windows_NT)
 	OUT := text-editor.exe
 	STRIP_OPT := --strip-all
 else
-	# Linux
+	LDFLAGS += -lpthread -lm -lwebui-2-static
 	OUT := text-editor
-	LDFLAGS += -lpthread -lm -lwebui-2-static $(shell pkg-config --cflags --libs gtk+-3.0)
-	STRIP_OPT := --strip-all
-	ifeq ($(CC),clang)
-		LLVM_OPT := llvm-
+	ifeq ($(shell uname),Darwin)
+		# MacOS
+		CC = clang
+		CFLAGS += -ObjC -framework Cocoa
+		LDFLAGS += -stdlib=libc++ -lstdc++
+	else
+		# Linux
+		LDFLAGS += $(shell pkg-config --cflags --libs gtk+-3.0)
+		STRIP_OPT := --strip-all
+		ifeq ($(CC),clang)
+			LLVM_OPT := llvm-
+		endif
 	endif
 endif
 
@@ -58,5 +66,5 @@ ifeq ($(BUILD_LIB),true)
 	@cd "$(LIB_DIR)" && cd .. && $(MAKE)
 endif
 ifeq ($(OS),Windows_NT)
-	@copy "$(LIB_DIR)\webui-2.dll" ".\webui-2.dll"
+	@copy "$(LIB_DIR)\webui-2.dll" ".\webui-2.dll" >nul 2>&1
 endif
