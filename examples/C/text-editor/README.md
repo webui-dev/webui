@@ -1,12 +1,27 @@
 # WebUI C - Text Editor
 
-This [text editor example](https://github.com/webui-dev/webui/tree/main/examples/C/text-editor) is written in C using WebUI as the GUI library. The final executable is portable and has less than _1 MB_ in size (_+html and css files_).
+This [text editor example](https://github.com/webui-dev/webui/tree/main/examples/C/text-editor) is written in C using WebUI as the GUI library.
 
-![webui_c_example](https://github.com/ttytm/webui/assets/34311583/7c3e1f1f-e9a3-4ad9-988a-c0baa3df0a00)
+![webui_c_example](https://github.com/webui-dev/webui/assets/34311583/d024b22a-6330-4970-875a-e7d015d43595)
 
 - **Windows**
 
-```sh
-# MinGW
-mingw32-make
-```
+  ```sh
+  # GCC
+  mingw32-make
+  ```
+
+- **Linux**
+
+  ```sh
+  # GCC
+  make
+
+  # Clang
+  make CC=clang
+  ```
+
+- **macOS**
+  ```sh
+  make
+  ```

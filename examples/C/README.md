@@ -40,4 +40,4 @@ To build an example, cd into its directory and run the make command.
 
 ## Additional Examples
 
-- [`text-editor`](https://github.com/webui-dev/webui/tree/main/examples/C/text-editor): Windows example of a text editor written in C using WebUI as the GUI library. The final executable is portable and has less than _1 MB_ in size (_+html and css files_).
+- [`text-editor`](https://github.com/webui-dev/webui/tree/main/examples/C/text-editor): Example of a text editor written in C using WebUI as the GUI library. The final executable is portable and has less than _1 MB_ in size (_+html and css files_).
