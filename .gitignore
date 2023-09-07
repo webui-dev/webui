@@ -111,6 +111,7 @@ Thumbs.db
 # Example binaries
 examples/**/main
 examples/**/main-dyn
+examples/**/text-editor/text-editor
 
 # Compressed
 *.zip
