@@ -22,7 +22,6 @@ jobs:
     strategy:
       matrix:
         compiler: [GCC, MSVC]
-        kind: [release, debug]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -34,34 +33,40 @@ jobs:
       - uses: microsoft/setup-msbuild@v1.1
       - if: matrix.compiler == 'MSVC'
         uses: ilammy/msvc-dev-cmd@v1
-      - name: Build
+      - name: Build Debug Target
         run: |
           if ('${{ matrix.compiler }}' -eq 'MSVC') {
-            nmake -f ./Makefile.nmake ${{ matrix.kind }}
+            nmake -f ./Makefile.nmake debug
           } else {
-            mingw32-make ${{ matrix.kind }}
+            mingw32-make debug
+          }
+      - name: Build Release Target
+        run: |
+          if ('${{ matrix.compiler }}' -eq 'MSVC') {
+            nmake -f ./Makefile.nmake
+          } else {
+            mingw32-make
           }
       - name: Prepare Artifact
         shell: bash
         run: |
           cp -r include dist
-          if [ "${{ matrix.kind }}" == "debug" ]; then
-            kind="-${{ matrix.kind }}"
-          fi
-          artifact=webui-${{ runner.os }}-${{ matrix.compiler }}$kind-x64
+          artifact=webui-${{ runner.os }}-${{ matrix.compiler }}-x64
           # Convert to lowercase (`,,` ^= lowercase shell param)
           artifact=${artifact,,}
           # Add the ARTIFACT name as GitHub environment variable.
           echo "ARTIFACT=$artifact" >> $GITHUB_ENV
           mv dist/ $artifact
-          7z a -tzip $artifact.zip $artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT }}
           path: ${{ env.ARTIFACT }}
+      - name: Prepare Release Archive
+        if: github.ref_type == 'tag'
+        run: 7z a -tzip $artifact.zip ${{ env.ARTIFACT }}
       - name: Release Artifact
-        if: github.ref_type == 'tag' && matrix.kind == 'release'
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.ARTIFACT }}.zip
