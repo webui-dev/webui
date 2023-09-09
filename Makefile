@@ -24,6 +24,7 @@ LIB_STATIC_OUT := libwebui-2-static.a
 # Platform defaults and dynamic library outputs
 ifeq ($(OS),Windows_NT)
 	# Windows
+	SHELL := CMD
 	PLATFORM := windows
 	LIB_DYN_OUT := webui-2.dll
 	LWS2_OPT := -lws2_32
@@ -46,61 +47,64 @@ endif
 
 all: release
 
-release: --setup --release
+debug: --validate-args --debug
 
-debug: --setup --debug
+release: --validate-args --release
 
 clean: --clean-$(PLATFORM)
 
 # == 2.1 INTERNAL TARGETS =====================================================
 
-# Prepare build dir and evaluate input arguments
---setup:
-# Create build directory
-ifeq ($(PLATFORM),windows)
-	@mkdir "$(BUILD_DIR)" >nul 2>&1 ||:
-else
-	@mkdir -p "$(BUILD_DIR)"
-endif
+--validate-args:
 # Linux can set a COMPILER
 ifeq ($(PLATFORM),linux)
 ifneq ($(filter $(CC),gcc clang),$(CC))
 	$(error Invalid compiler specified: `$(CC)`)
 endif
 endif
-# macOS can set an ARCH_TARGET - for CI cross-compilation
+# macOS can set an ARCH_TARGET - intented for CI cross-compilation.
+# Valid input is `ARCH_TARGET="-target arm64-apple-darwin"`.
+# WARN: Wrong input is not covered yet.
 ifneq ($(ARCH_TARGET),)
 ifneq ($(PLATFORM),macos)
 	$(error ARCH_TARGET is only available on macOS)
 endif
-# WARN: Wrong input is not covered yet due to difficulties with differing behavior on Mac
-# ARCH_TARGET is intented for CI use. Valid input is `ARCH_TARGET="-target arm64-apple-darwin"`.
 endif
 
 --debug:
+# Create build directory
+ifeq ($(PLATFORM),windows)
+	@mkdir "$(BUILD_DIR)/debug" >nul 2>&1 ||:
+else
+	@mkdir -p "$(BUILD_DIR)/debug"
+endif
 #	Static with Debug info
-	@cd "$(BUILD_DIR)" \
+	@cd "$(BUILD_DIR)/debug" \
 	&& echo "Build WebUI library ($(CC) debug static)..." \
 	&& $(CC) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g \
 	&& $(CC) $(WEBUI_BUILD_FLAGS) -g -DWEBUI_LOG \
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o \
 	&& $(LLVM_OPT)ranlib $(LIB_STATIC_OUT)
 #	Dynamic with Debug info
-	@cd "$(BUILD_DIR)" \
+	@cd "$(BUILD_DIR)/debug" \
 	&& echo "Build WebUI library ($(CC) debug dynamic)..." \
 	&& $(CC) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
 	&& $(CC) $(WEBUI_BUILD_FLAGS) -g -fPIC -DWEBUI_LOG \
 	&& $(CC) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o -g $(LWS2_OPT)
 ifeq ($(PLATFORM),windows)
-	@strip --strip-unneeded "$(BUILD_DIR)/$(LIB_DYN_OUT)"
-	@cd "$(BUILD_DIR)" \
-	&& powershell -command "Remove-Item -Path *.o -Force -ErrorAction SilentlyContinue"
+	@cd "$(BUILD_DIR)/debug" && del *.o >nul 2>&1
 else
-	@- rm -f $(BUILD_DIR)/*.o
+	@rm -f $(BUILD_DIR)/debug/*.o
 endif
 	@echo "Done."
 
 --release:
+# Create build directory
+ifeq ($(PLATFORM),windows)
+	@mkdir "$(BUILD_DIR)" >nul 2>&1 ||:
+else
+	@mkdir -p "$(BUILD_DIR)"
+endif
 #	Static Release
 	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(CC) release static)..." \
@@ -117,10 +121,9 @@ endif
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@strip --strip-unneeded $(BUILD_DIR)/$(LIB_DYN_OUT)
-	@cd "$(BUILD_DIR)" \
-	&& powershell -command "Remove-Item -Path *.o -Force -ErrorAction SilentlyContinue"
+	@cd "$(BUILD_DIR)" && del *.o >nul 2>&1
 else
-	@- rm -f $(BUILD_DIR)/*.o
+	@rm -f $(BUILD_DIR)/*.o
 endif
 	@echo "Done."
 

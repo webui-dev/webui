@@ -25,7 +25,6 @@ jobs:
     strategy:
       matrix:
         compiler: [Clang]
-        kind: [release, debug]
         arch: [x64, arm64]
     steps:
       - uses: actions/checkout@v3
@@ -34,31 +33,37 @@ jobs:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
           fail-on-cache-miss: true
-      - name: Build
+      - name: Build Debug Target
         run: |
           if [ "${{ matrix.arch }}" == "arm64" ]; then
-            make ARCH_TARGET="-target arm64-apple-darwin" ${{ matrix.kind }}
+            make ARCH_TARGET="-target arm64-apple-darwin" debug
           else
-            make ${{ matrix.kind }}
+            make debug
+          fi
+      - name: Build Release Target
+        run: |
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
+            make ARCH_TARGET="-target arm64-apple-darwin"
+          else
+            make
           fi
       - name: Prepare Artifacts
         run: |
           cp -r include dist
-          if [ "${{ matrix.kind }}" == "debug" ]; then
-            kind="-${{ matrix.kind }}"
-          fi
           # Add the ARTIFACT name(lowercased) as GitHub environment variable.
-          artifact=webui-$(echo ${{ runner.os }}-${{ matrix.compiler }}$kind-${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
+          artifact=webui-$(echo ${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
           echo "ARTIFACT=$artifact" >> $GITHUB_ENV
           mv dist/ $artifact
-          tar -czvf $artifact.tar.gz $artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT }}
           path: ${{ env.ARTIFACT }}
-      - name: Release Artifact
-        if: github.ref_type == 'tag' && matrix.kind == 'release'
+      - name: Prepare Release Archive
+        if: github.ref_type == 'tag'
+        run: tar -czvf $artifact.tar.gz ${{ env.ARTIFACT }}
+      - name: Release
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ env.ARTIFACT }}.tar.gz

@@ -20,7 +20,7 @@ DYN_BUILD_FLAGS = -m64 main.c -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
 ifeq ($(OS),Windows_NT)
 	# Windows
 	PLATFORM := windows
-	SHELL=CMD
+	SHELL := CMD
 	STATIC_BUILD_FLAGS += -lwebui-2-static -lws2_32 -Wall -Wl,-subsystem=console -luser32 -static
 	DYN_BUILD_FLAGS += "$(LIB_DIR)/webui-2.dll" -lws2_32 -Wall -Wl,-subsystem=console -luser32
 	STATIC_OUT := main.exe
@@ -52,7 +52,11 @@ endif
 
 all: release
 
-debug: --setup
+debug: LIB_DIR := $(LIB_DIR)/debug
+debug: --validate-args
+ifeq ($(BUILD_LIB),true)
+	@cd "$(PROJECT_DIR)" && $(MAKE) debug
+endif
 #	Static with Debug info
 	@echo "Build C99 Example ($(CC) debug static)..."
 	@$(CC) -g $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
@@ -62,14 +66,16 @@ debug: --setup
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@- del *.o >nul 2>&1
-	@- del *.res >nul 2>&1
 else
 	@- rm -f *.o
 	@- rm -rf *.dSYM # macOS
 endif
 	@echo "Done."
 
-release: --setup
+release: --validate-args
+ifeq ($(BUILD_LIB),true)
+	@cd "$(PROJECT_DIR)" && $(MAKE)
+endif
 #	Static Release
 	@echo "Build C99 Example ($(CC) release static)..."
 	@$(CC) -Os $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
@@ -81,7 +87,6 @@ release: --setup
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@- del *.o >nul 2>&1
-	@- del *.res >nul 2>&1
 else
 	@- rm -f *.o
 	@- rm -rf *.dSYM # macOS
@@ -92,12 +97,9 @@ clean: --clean-$(PLATFORM)
 
 # INTERNAL TARGETS
 
---setup:
+--validate-args:
 ifneq ($(filter $(CC),gcc clang),$(CC))
 	$(error Invalid compiler specified: `$(CC)`)
-endif
-ifeq ($(BUILD_LIB),true)
-	@cd "$(LIB_DIR)" && cd .. && $(MAKE)
 endif
 
 --clean-linux: --clean-unix
@@ -116,4 +118,3 @@ endif
 	- del *.dll >nul 2>&1
 	- del *.a >nul 2>&1
 	- del *.exe >nul 2>&1
-	- del *.res >nul 2>&1

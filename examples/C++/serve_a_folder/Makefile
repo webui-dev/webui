@@ -20,7 +20,7 @@ DYN_BUILD_FLAGS = -std=c++17 -lstdc++ -m64 main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_
 ifeq ($(OS),Windows_NT)
 	# Windows
 	PLATFORM := windows
-	SHELL=CMD
+	SHELL := CMD
 	STATIC_BUILD_FLAGS += -lwebui-2-static -lws2_32 -Wall -Wl,-subsystem=console -luser32 -static
 	DYN_BUILD_FLAGS += "$(LIB_DIR)/webui-2.dll" -lws2_32 -Wall -Wl,-subsystem=console -luser32
 	STATIC_OUT := main.exe
@@ -52,36 +52,41 @@ endif
 
 all: release
 
-debug: --setup
+debug: LIB_DIR := $(LIB_DIR)/debug
+debug: --validate-args
+ifeq ($(BUILD_LIB),true)
+	@cd "$(PROJECT_DIR)" && $(MAKE) debug
+endif
 #	Static with Debug info
-	@echo "Build C99 Example (Static Debug)..."
+	@echo "Build C99 Example ($(CXX) debug static)..."
 	@$(CXX) -g $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
 #	Dynamic with Debug info
-	@echo "Build C99 Example (Dynamic Debug)..."
+	@echo "Build C99 Example ($(CXX) debug dynamic)..."
 	@$(CXX) -g $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@- del *.o >nul 2>&1
-	@- del *.res >nul 2>&1
 else
 	@- rm -f *.o
 	@- rm -rf *.dSYM # macOS
 endif
 	@echo "Done."
 
-release: --setup
+release: --validate-args
+ifeq ($(BUILD_LIB),true)
+	@cd "$(PROJECT_DIR)" && $(MAKE)
+endif
 #	Static Release
-	@echo "Build C99 Example (Static Release)..."
+	@echo "Build C99 Example ($(CXX) release static)..."
 	@$(CXX) -Os $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(STATIC_OUT)
 #	Dynamic Release
-	@echo "Build C99 Example (Dynamic Release)..."
+	@echo "Build C99 Example ($(CXX) release dynamic)..."
 	@$(CXX) $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(DYN_OUT)
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@- del *.o >nul 2>&1
-	@- del *.res >nul 2>&1
 else
 	@- rm -f *.o
 	@- rm -rf *.dSYM # macOS
@@ -92,12 +97,9 @@ clean: --clean-$(PLATFORM)
 
 # INTERNAL TARGETS
 
---setup:
+--validate-args:
 ifneq ($(filter $(CXX),g++ clang),$(CXX))
 	$(error Invalid compiler specified: `$(CXX)`)
-endif
-ifeq ($(BUILD_LIB),true)
-	@cd "$(LIB_DIR)" && cd .. && $(MAKE)
 endif
 
 --clean-linux: --clean-unix
@@ -116,4 +118,3 @@ endif
 	- del *.dll >nul 2>&1
 	- del *.a >nul 2>&1
 	- del *.exe >nul 2>&1
-	- del *.res >nul 2>&1
