@@ -170,8 +170,6 @@ WEBUI_EXPORT bool webui_set_root_folder(size_t window, const char* path);
 WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
 // Set a custom handler to serve files.
 WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(const char* filename, int* length));
-
-// -- Other ---------------------------
 // Check if the specified window is still running.
 WEBUI_EXPORT bool webui_is_shown(size_t window);
 // Set the maximum time in seconds to wait for the browser to start.
@@ -180,6 +178,22 @@ WEBUI_EXPORT void webui_set_timeout(size_t second);
 WEBUI_EXPORT void webui_set_icon(size_t window, const char* icon, const char* icon_type);
 // Allow the window URL to be re-used in normal web browsers.
 WEBUI_EXPORT void webui_set_multi_access(size_t window, bool status);
+// Base64 encoding. Use this to safely send text based data to the UI. If it fails it will return NULL.
+WEBUI_EXPORT char* webui_encode(const char* str);
+// Base64 decoding. Use this to safely decode received Base64 text from the UI. If it fails it will return NULL.
+WEBUI_EXPORT char* webui_decode(const char* str);
+// Safely free a buffer allocated by WebUI, for example when using `webui_encode()`.
+WEBUI_EXPORT void webui_free(void* ptr);
+// Safely allocate memory using the WebUI memory management system. It can be safely freed using `webui_free()`.
+WEBUI_EXPORT void* webui_malloc(size_t size);
+// Safely send raw data to the UI.
+WEBUI_EXPORT void webui_send_raw(size_t window, const char* function, const void* raw, size_t size);
+// Run the window in hidden mode.
+WEBUI_EXPORT void webui_set_hide(size_t window, bool status);
+// Set the window size.
+WEBUI_EXPORT void webui_set_size(size_t window, unsigned int width, unsigned int height);
+// Set the window position.
+WEBUI_EXPORT void webui_set_position(size_t window, unsigned int x, unsigned int y);
 
 // -- JavaScript ----------------------
 // Run JavaScript without waiting for the response.
@@ -200,24 +214,8 @@ WEBUI_EXPORT void webui_return_int(webui_event_t* e, long long int n);
 WEBUI_EXPORT void webui_return_string(webui_event_t* e, const char* s);
 // Return the response to JavaScript as boolean.
 WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
-// Base64 encoding. Use this to safely send text based data to the UI. If it fails it will return NULL.
-WEBUI_EXPORT char* webui_encode(const char* str);
-// Base64 decoding. Use this to safely decode received Base64 text from the UI. If it fails it will return NULL.
-WEBUI_EXPORT char* webui_decode(const char* str);
-// Safely free a buffer allocated by WebUI, for example when using `webui_encode()`.
-WEBUI_EXPORT void webui_free(void* ptr);
-// Safely allocate memory using the WebUI memory management system. It can be safely freed using `webui_free()`.
-WEBUI_EXPORT void* webui_malloc(size_t size);
-// Safely send raw data to the UI.
-WEBUI_EXPORT void webui_send_raw(size_t window, const char* function, const void* raw, size_t size);
-// Run the window in hidden mode.
-WEBUI_EXPORT void webui_set_hide(size_t window, bool status);
-// Set the window size.
-WEBUI_EXPORT void webui_set_size(size_t window, unsigned int width, unsigned int height);
-// Set the window position.
-WEBUI_EXPORT void webui_set_position(size_t window, unsigned int x, unsigned int y);
 
-// -- Interface -----------------------
+// -- Wrapper's Interface -------------
 // Bind a specific html element click event with a function. Empty element means all events. This replaces `webui_bind()`. The func is (Window, EventType, Element, Data, DataSize, EventNumber).
 WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, char*, size_t, size_t));
 // When using `webui_interface_bind()`, you may need this function to easily set your callback response.
