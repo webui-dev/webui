@@ -29,7 +29,6 @@
 #define WEBUI_HEADER_CALL_FUNC  0xF9        // Backend function call
 #define WEBUI_HEADER_SEND_RAW   0xF8        // Send raw binary data to the UI
 #define WEBUI_HEADER_NEW_ID     0xF7        // Add new bind ID
-#define WEBUI_MAX_ARRAY         (512)       // Max threads, servers, windows, pointers..
 #define WEBUI_MIN_PORT          (10000)     // Minimum socket port
 #define WEBUI_MAX_PORT          (65500)     // Should be less than 65535
 #define WEBUI_CMD_STDOUT_BUF    (10240)     // Command STDOUT output buffer size
@@ -98,7 +97,7 @@ typedef struct _webui_window_t {
     unsigned int y;
     bool position_set;
     size_t process_id;
-    webui_event_core_t* event_core[WEBUI_MAX_ARRAY];
+    webui_event_core_t* event_core[WEBUI_MAX_IDS];
     #ifdef _WIN32
         HANDLE server_thread;
     #else
@@ -111,24 +110,24 @@ typedef struct _webui_window_t {
 typedef struct _webui_core_t {
     volatile size_t servers;
     volatile size_t connections;
-    char* html_elements[WEBUI_MAX_ARRAY];
-    size_t used_ports[WEBUI_MAX_ARRAY];
+    char* html_elements[WEBUI_MAX_IDS];
+    size_t used_ports[WEBUI_MAX_IDS];
     size_t startup_timeout;
     volatile bool exit_now;
-    const char* run_responses[WEBUI_MAX_ARRAY];
-    volatile bool run_done[WEBUI_MAX_ARRAY];
-    bool run_error[WEBUI_MAX_ARRAY];
+    const char* run_responses[WEBUI_MAX_IDS];
+    volatile bool run_done[WEBUI_MAX_IDS];
+    bool run_error[WEBUI_MAX_IDS];
     unsigned char run_last_id;
     bool initialized;
-    void (*cb[WEBUI_MAX_ARRAY])(webui_event_t* e);
-    void (*cb_interface[WEBUI_MAX_ARRAY])(size_t, size_t, char*, char*, size_t, size_t);
+    void (*cb[WEBUI_MAX_IDS])(webui_event_t* e);
+    void (*cb_interface[WEBUI_MAX_IDS])(size_t, size_t, char*, char*, size_t, size_t);
     char* executable_path;
-    void *ptr_list[WEBUI_MAX_ARRAY];
+    void *ptr_list[WEBUI_MAX_IDS];
     size_t ptr_position;
-    size_t ptr_size[WEBUI_MAX_ARRAY];
+    size_t ptr_size[WEBUI_MAX_IDS];
     size_t current_browser;
-    struct mg_connection* mg_connections[WEBUI_MAX_ARRAY];
-    _webui_window_t* wins[WEBUI_MAX_ARRAY];
+    struct mg_connection* mg_connections[WEBUI_MAX_IDS];
+    _webui_window_t* wins[WEBUI_MAX_IDS];
     size_t last_win_number;
     bool server_handled;
     webui_mutex_t mutex_server_start;
@@ -452,7 +451,7 @@ size_t webui_get_new_window_id(void) {
 
     _webui_init();
 
-    for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
+    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if(_webui_core.wins[i] == NULL) {
             if(i > _webui_core.last_win_number)
                 _webui_core.last_win_number = i;
@@ -465,7 +464,7 @@ size_t webui_get_new_window_id(void) {
     return 0;
 }
 
-void webui_new_window_id(size_t window_number) {
+size_t webui_new_window_id(size_t window_number) {
 
     #ifdef WEBUI_LOG
         printf("[User] webui_new_window_id([%zu])...\n", window_number);
@@ -473,8 +472,8 @@ void webui_new_window_id(size_t window_number) {
 
     _webui_init();
 
-    if(window_number < 1 || window_number > WEBUI_MAX_ARRAY)
-        return;
+    if(window_number < 1 || window_number > WEBUI_MAX_IDS)
+        return 0;
 
     // Destroy the window if already exist
     if(_webui_core.wins[window_number] != NULL)
@@ -501,6 +500,8 @@ void webui_new_window_id(size_t window_number) {
     #ifdef WEBUI_LOG
         printf("[User] webui_new_window_id() -> New window #%zu @ 0x%p\n", window_number, win);
     #endif
+
+    return window_number;
 }
 
 void webui_set_kiosk(size_t window, bool status) {
@@ -603,7 +604,7 @@ void webui_destroy(size_t window) {
     _webui_free_mem((void*)win->server_root_path);
 
     // Free events
-    for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
+    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if(win->event_core[i] != NULL)
             _webui_free_mem((void*)win->event_core[i]);
     }
@@ -1549,8 +1550,8 @@ static void _webui_ptr_add(void* ptr, size_t size) {
         _webui_core.ptr_list[_webui_core.ptr_position] = ptr;
         _webui_core.ptr_size[_webui_core.ptr_position] = size;
         _webui_core.ptr_position++;
-        if(_webui_core.ptr_position >= WEBUI_MAX_ARRAY)
-            _webui_core.ptr_position = (WEBUI_MAX_ARRAY - 1);
+        if(_webui_core.ptr_position >= WEBUI_MAX_IDS)
+            _webui_core.ptr_position = (WEBUI_MAX_IDS - 1);
     }
 }
 
@@ -1694,7 +1695,7 @@ static _webui_window_t* _webui_dereference_win_ptr(void* ptr) {
 
     _webui_window_t* win = (_webui_window_t*)ptr;
 
-    for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
+    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if(_webui_core.wins[i] == win)
            return win;
     }
@@ -1710,7 +1711,7 @@ static size_t _webui_get_free_event_core_pos(_webui_window_t* win) {
         printf("[Core]\t\t_webui_get_free_event_core_pos()...\n");
     #endif
 
-    for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
+    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if(win->event_core[i] == NULL)
             return i;
     }
@@ -2449,14 +2450,14 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
 
     // Calculate the cb size
     size_t cb_mem_size = 64; // To hold 'const _webui_bind_list = ["elem1", "elem2",];' 
-    for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++)
+    for(size_t i = 1; i < WEBUI_MAX_IDS; i++)
         if(_webui_core.html_elements[i] != NULL && !_webui_is_empty(_webui_core.html_elements[i]))
             cb_mem_size += _webui_strlen(_webui_core.html_elements[i]) + 3;
     
     // Generate the cb array
     char* event_cb_js_array = (char*) _webui_malloc(cb_mem_size);
     strcat(event_cb_js_array, "[");
-    for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
+    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if(_webui_core.html_elements[i] != NULL && !_webui_is_empty(_webui_core.html_elements[i])) {
             strcat(event_cb_js_array, "\"");
             strcat(event_cb_js_array, _webui_core.html_elements[i]);
@@ -4181,7 +4182,7 @@ static void _webui_window_send(_webui_window_t* win, char* packet, size_t packet
 
     int ret = 0;
 
-    if(win->window_number > 0 && win->window_number < WEBUI_MAX_ARRAY) {
+    if(win->window_number > 0 && win->window_number < WEBUI_MAX_IDS) {
 
         struct mg_connection* conn = _webui_core.mg_connections[win->window_number];
 
@@ -4542,7 +4543,7 @@ static void _webui_free_port(size_t port) {
         printf("[Core]\t\t_webui_free_port([%zu])...\n", port);
     #endif
 
-    for(size_t i = 0; i < WEBUI_MAX_ARRAY; i++) {
+    for(size_t i = 0; i < WEBUI_MAX_IDS; i++) {
         if(_webui_core.used_ports[i] == port) {
             _webui_core.used_ports[i] = 0;
             break;
@@ -4602,7 +4603,7 @@ static size_t _webui_get_free_port(void) {
 
         // Search [port] in [_webui_core.used_ports]
         bool found = false;
-        for(size_t j = 0; j < WEBUI_MAX_ARRAY; j++) {
+        for(size_t j = 0; j < WEBUI_MAX_IDS; j++) {
             if(_webui_core.used_ports[j] == port) {
                 found = true;
                 break;
@@ -4623,7 +4624,7 @@ static size_t _webui_get_free_port(void) {
     }
 
     // Add
-    for(size_t i = 0; i < WEBUI_MAX_ARRAY; i++) {
+    for(size_t i = 0; i < WEBUI_MAX_IDS; i++) {
         if(_webui_core.used_ports[i] == 0) {
             _webui_core.used_ports[i] = port;
             break;
@@ -4672,7 +4673,7 @@ static size_t _webui_get_cb_index(char* webui_internal_id) {
 
     if(webui_internal_id != NULL) {
 
-        for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
+        for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
 
             if(_webui_core.html_elements[i] != NULL && !_webui_is_empty(_webui_core.html_elements[i])) {
                 if(strcmp(_webui_core.html_elements[i], webui_internal_id) == 0) {
@@ -4696,7 +4697,7 @@ static size_t _webui_set_cb_index(char* webui_internal_id) {
     #endif
 
     // Add
-    for(size_t i = 1; i < WEBUI_MAX_ARRAY; i++) {
+    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
 
         if(_webui_is_empty(_webui_core.html_elements[i])) {
 
