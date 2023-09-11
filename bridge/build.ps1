@@ -1,3 +1,11 @@
+# http://webui.me
+# https://github.com/webui-dev/webui
+# Copyright (c) 2020-2023 Hassan Draga.
+# Licensed under MIT License.
+# All rights reserved.
+#
+# Special Thanks to Turiiya (https://github.com/ttytm)
+
 $current_location = Get-Location
 $project_root = git rev-parse --show-toplevel
 Set-Location $project_root/bridge

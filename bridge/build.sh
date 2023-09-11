@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# http://webui.me
+# https://github.com/webui-dev/webui
+# Copyright (c) 2020-2023 Hassan Draga.
+# Licensed under MIT License.
+# All rights reserved.
+#
+# Special Thanks to Turiiya (https://github.com/ttytm)
+
 project_root=$(git rev-parse --show-toplevel)
 cd $project_root/bridge
 
