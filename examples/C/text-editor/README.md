@@ -1,8 +1,10 @@
 # WebUI C - Text Editor
 
-This [text editor example](https://github.com/webui-dev/webui/tree/main/examples/C/text-editor) is written in C using WebUI as the GUI library.
+This [text editor](https://github.com/webui-dev/webui/tree/main/examples/C/text-editor) is a lightweight and portable example written in C using WebUI as the GUI library.
 
-![webui_c_example](https://github.com/webui-dev/webui/assets/34311583/d024b22a-6330-4970-875a-e7d015d43595)
+<div align="center">
+  <img alt="Example" src="https://github.com/webui-dev/webui/assets/34311583/45bc85c7-b111-44b7-9aa6-80e861e7b47d">
+</div>
 
 - **Windows**
 
