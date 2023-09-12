@@ -68,11 +68,33 @@ jobs:
         with:
           name: ${{ env.ARTIFACT }}
           path: ${{ env.ARTIFACT }}
-      - name: Prepare Release Archive
-        if: github.ref_type == 'tag'
-        run: tar -czvf $artifact.tar.gz ${{ env.ARTIFACT }}
-      - name: Release
-        if: github.ref_type == 'tag'
-        uses: softprops/action-gh-release@v1
+      - name: Prepare Release
+        if: github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push')
+        run: |
+          tar -czvf ${{ env.ARTIFACT }}.tar.gz ${{ env.ARTIFACT }}
+          if [ $GITHUB_REF_TYPE == tag ]; then
+            echo "TAG=$GITHUB_REF_NAME" >> $GITHUB_ENV
+          else
+            echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+            now=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+            echo "TAG=nightly" >> $GITHUB_ENV
+            echo "BODY=Generated on <samp>$now</samp> from commit ${{ github.sha }}." >> $GITHUB_ENV
+            echo "TITLE=WebUI Development Build" >> $GITHUB_ENV
+          fi
+      - name: Update Nightly Tag
+        if: env.IS_PRERELEASE
+        uses: richardsimko/update-tag@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: ${{ env.ARTIFACT }}.tar.gz
+          tag_name: nightly
+      - name: Release
+        if: github.ref_name == 'main' && (github.ref_type == 'tag' || github.event_name == 'push')
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ${{ env.ARTIFACT }}.tar.gz
+          tag: ${{ env.TAG }}
+          body: ${{ env.BODY }}
+          name: ${{ env.TITLE }}
+          prerelease: ${{ env.IS_PRERELEASE }}
+          allowUpdates: true
