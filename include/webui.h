@@ -146,97 +146,262 @@ typedef struct webui_event_t {
 // -- Definitions ---------------------
 
 /**
- * @brief Create a new webui window object.
+ * @brief Create a new WebUI window object.
  * 
  * @return Returns the window number.
  * 
- * @note Use `webui_new_window_id()` to set your own window number.
+ * @example size_t myWindow = webui_new_window();
  */
 WEBUI_EXPORT size_t webui_new_window(void);
 
 /**
- * @brief Create a new webui window object with a specified window number.
+ * @brief Create a new webui window object using a specified window number.
  * 
- * @return Returns the window number, should be the same as specified window number, otherwise means it failed.
+ * @param window_number The window number (should be > 0, and < WEBUI_MAX_IDS)
  * 
- * @note `window_number` should be > 0, and < WEBUI_MAX_ARRAY.
+ * @return Returns the window number.
+ * 
+ * @example size_t myWindow = webui_new_window_id(123);
  */
 WEBUI_EXPORT size_t webui_new_window_id(size_t window_number);
 
 /**
  * @brief Get a free window number that can be used with `webui_new_window_id()`.
  * 
- * @return Returns the first available free window number.
+ * @return Returns the first available free window number. Starting from 1.
+ * 
+ * @example size_t myWindowNumber = webui_get_new_window_id();
  */
 WEBUI_EXPORT size_t webui_get_new_window_id(void);
 
-// Bind a specific html element click event with a function. Empty element means all events.
+/**
+ * @brief Bind a specific html element click event with a function. Empty element means all events.
+ * 
+ * @param window The window number
+ * @param element The HTML ID
+ * @param func The callback function
+ * 
+ * @return Returns a unique bind ID.
+ * 
+ * @example webui_bind(myWindow, "myID", myFunction);
+ */
 WEBUI_EXPORT size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t* e));
 
-// Show a window using embedded HTML, or a file. If the window is already open, it will be refreshed.
+/**
+ * @brief Show a window using embedded HTML, or a file. If the window is already open, it will be refreshed.
+ * 
+ * @param window The window number
+ * @param content The HTML, Or a local file
+ * 
+ * @return Returns True if showing the window is successed.
+ * 
+ * @example webui_show(myWindow, "<html>...</html>"); | webui_show(myWindow, "index.html");
+ */
 WEBUI_EXPORT bool webui_show(size_t window, const char* content);
 
-// Same as `webui_show()`. But with a specific web browser.
+/**
+ * @brief Same as `webui_show()`. But using a specific web browser.
+ * 
+ * @param window The window number
+ * @param content The HTML, Or a local file
+ * @param browser The web browser to be used
+ * 
+ * @return Returns True if showing the window is successed.
+ * 
+ * @example webui_show_browser(myWindow, "<html>...</html>", Chrome); | webui_show(myWindow, "index.html", Firefox);
+ */
 WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, size_t browser);
 
-// Set the window in Kiosk mode (Full screen)
+/**
+ * @brief Set the window in Kiosk mode (Full screen)
+ * 
+ * @param window The window number
+ * @param status True or False
+ * 
+ * @example webui_set_kiosk(myWindow, true);
+ */
 WEBUI_EXPORT void webui_set_kiosk(size_t window, bool status);
 
-// Wait until all opened windows get closed.
+/**
+ * @brief Wait until all opened windows get closed.
+ * 
+ * @example webui_wait();
+ */
 WEBUI_EXPORT void webui_wait(void);
 
-// Close a specific window only. The window object will still exist.
+/**
+ * @brief Close a specific window only. The window object will still exist.
+ * 
+ * @param window The window number
+ * 
+ * @example webui_close(myWindow);
+ */
 WEBUI_EXPORT void webui_close(size_t window);
 
-// Close a specific window and free all memory resources.
+/**
+ * @brief Close a specific window and free all memory resources.
+ * 
+ * @param window The window number
+ * 
+ * @example webui_destroy(myWindow);
+ */
 WEBUI_EXPORT void webui_destroy(size_t window);
 
-// Close all open windows. `webui_wait()` will break.
+/**
+ * @brief Close all open windows. `webui_wait()` will return (Break).
+ * 
+ * @example webui_exit();
+ */
 WEBUI_EXPORT void webui_exit(void);
 
-// Set the web-server root folder path for a specific window.
+/**
+ * @brief Set the web-server root folder path for a specific window.
+ * 
+ * @param window The window number
+ * @param path The local folder full path
+ * 
+ * @example webui_set_root_folder(myWindow, "/home/Foo/Bar/");
+ */
 WEBUI_EXPORT bool webui_set_root_folder(size_t window, const char* path);
 
-// Set the web-server root folder path for all windows. Should be used before webui_show().
+/**
+ * @brief Set the web-server root folder path for all windows. Should be used before `webui_show()`.
+ * 
+ * @param path The local folder full path
+ * 
+ * @example webui_set_default_root_folder("/home/Foo/Bar/");
+ */
 WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
 
-// Set a custom handler to serve files.
+/**
+ * @brief Set a custom handler to serve files.
+ * 
+ * @param window The window number
+ * @param handler The handler function: `void myHandler(const char* filename, int* length)`
+ * 
+ * @return Returns a unique bind ID.
+ * 
+ * @example webui_set_file_handler(myWindow, myHandlerFunction);
+ */
 WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(const char* filename, int* length));
 
-// Check if the specified window is still running.
+/**
+ * @brief Check if the specified window is still running.
+ * 
+ * @param window The window number
+ * 
+ * @example webui_is_shown(myWindow);
+ */
 WEBUI_EXPORT bool webui_is_shown(size_t window);
 
-// Set the maximum time in seconds to wait for the browser to start.
+/**
+ * @brief Set the maximum time in seconds to wait for the browser to start.
+ * 
+ * @param second The timeout in seconds
+ * 
+ * @example webui_set_timeout(30);
+ */
 WEBUI_EXPORT void webui_set_timeout(size_t second);
 
-// Set the default embedded HTML favicon.
+/**
+ * @brief Set the default embedded HTML favicon.
+ * 
+ * @param window The window number
+ * @param icon The icon as string: `<svg>...</svg>`
+ * @param icon_type The icon type: `image/svg+xml`
+ * 
+ * @example webui_set_icon(myWindow, "<svg>...</svg>", "image/svg+xml");
+ */
 WEBUI_EXPORT void webui_set_icon(size_t window, const char* icon, const char* icon_type);
 
-// Allow the window URL to be re-used in normal web browsers.
+/**
+ * @brief Allow the window URL to be re-used in normal web browsers.
+ * 
+ * @param window The window number
+ * @param status The status: True or False
+ * 
+ * @example webui_set_multi_access(myWindow, true);
+ */
 WEBUI_EXPORT void webui_set_multi_access(size_t window, bool status);
 
-// Base64 encoding. Use this to safely send text based data to the UI. If it fails it will return NULL.
+/**
+ * @brief Base64 encoding. Use this to safely send text based data to the UI. If it fails it will return NULL.
+ * 
+ * @param str The string to encode (Should be null terminated)
+ * 
+ * @example webui_encode("Hello");
+ */
 WEBUI_EXPORT char* webui_encode(const char* str);
 
-// Base64 decoding. Use this to safely decode received Base64 text from the UI. If it fails it will return NULL.
+/**
+ * @brief Base64 decoding. Use this to safely decode received Base64 text from the UI. If it fails it will return NULL.
+ * 
+ * @param str The string to decode (Should be null terminated)
+ * 
+ * @example webui_encode("SGVsbG8=");
+ */
 WEBUI_EXPORT char* webui_decode(const char* str);
 
-// Safely free a buffer allocated by WebUI, for example when using `webui_encode()`.
+/**
+ * @brief Safely free a buffer allocated by WebUI using `webui_malloc()`.
+ * 
+ * @param ptr The buffer to be freed
+ * 
+ * @example webui_free(myBuffer);
+ */
 WEBUI_EXPORT void webui_free(void* ptr);
 
-// Safely allocate memory using the WebUI memory management system. It can be safely freed using `webui_free()`.
+/**
+ * @brief Safely allocate memory using the WebUI memory management system. It can be safely freed using `webui_free()` at any time.
+ * 
+ * @param size The size of memory in bytes
+ * 
+ * @example webui_malloc(1024);
+ */
 WEBUI_EXPORT void* webui_malloc(size_t size);
 
-// Safely send raw data to the UI.
+/**
+ * @brief Safely send raw data to the UI.
+ * 
+ * @param window The window number
+ * @param function The JavaScript function to receive raw data: `function myFunc(myData){}`
+ * @param raw The raw data buffer
+ * @param size The raw data size in bytes
+ * 
+ * @example webui_send_raw(myWindow, "myJavascriptFunction", myBuffer, 64);
+ */
 WEBUI_EXPORT void webui_send_raw(size_t window, const char* function, const void* raw, size_t size);
 
-// Run the window in hidden mode.
+/**
+ * @brief Set a window in hidden mode. Should be called before `webui_show()`.
+ * 
+ * @param window The window number
+ * @param status The status: True or False
+ * 
+ * @example webui_set_hide(myWindow, True);
+ */
 WEBUI_EXPORT void webui_set_hide(size_t window, bool status);
 
-// Set the window size.
+/**
+ * @brief Set the window size.
+ * 
+ * @param window The window number
+ * @param width The window width
+ * @param height The window height
+ * 
+ * @example webui_set_size(myWindow, 800, 600);
+ */
 WEBUI_EXPORT void webui_set_size(size_t window, unsigned int width, unsigned int height);
 
-// Set the window position.
+/**
+ * @brief Set the window position.
+ * 
+ * @param window The window number
+ * @param x The window X
+ * @param y The window Y
+ * 
+ * @example webui_set_position(myWindow, 100, 100);
+ */
 WEBUI_EXPORT void webui_set_position(size_t window, unsigned int x, unsigned int y);
 
 // -- JavaScript ----------------------
@@ -276,7 +441,11 @@ WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, voi
 // When using `webui_interface_bind()`, you may need this function to easily set your callback response.
 WEBUI_EXPORT void webui_interface_set_response(size_t window, size_t event_number, const char* response);
 
-// Check if the app still running. This replaces `webui_wait()`.
+/**
+ * @brief Check if the app still running.
+ * 
+ * @example if (webui_interface_is_app_running()) ...
+ */
 WEBUI_EXPORT bool webui_interface_is_app_running(void);
 
 // Get a unique window ID.
