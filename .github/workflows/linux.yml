@@ -49,11 +49,11 @@ jobs:
       - name: Build Debug Target
         run: |
           compiler=${{ matrix.compiler }}
-          make COMPILER=${compiler,,} debug
+          make CC=${compiler,,} debug
       - name: Build Release Target
         run: |
           compiler=${{ matrix.compiler }}
-          make COMPILER=${compiler,,}
+          make CC=${compiler,,}
       - name: Prepare Artifact
         run: |
           cp -r include dist
