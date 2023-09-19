@@ -83,7 +83,9 @@ typedef struct _webui_window_t {
     const char* icon_type;
     size_t current_browser;
     char* browser_path;
+    bool custom_profile;
     char* profile_path;
+    char* profile_name;
     size_t connections;
     size_t runtime;
     bool has_events;
@@ -254,10 +256,10 @@ static WEBUI_CB;
 
 // -- Heap ----------------------------
 static _webui_core_t _webui_core;
-static const char* webui_html_served = "<html><head><title>Access Denied</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Access Denied</h2><p>You can't access this content<br>because it's already processed.<br><br>The current security policy denies<br>multiple requests.</p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
-static const char* webui_html_res_not_available = "<html><head><title>Resource Not Available</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Resource Not Available</h2><p>The requested resource is not available.</p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
-static const char* webui_deno_not_found = "<html><head><title>Deno Not Found</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Deno Not Found</h2><p>Deno is not found on this system.<br>Please download it from <a href=\"https://github.com/denoland/deno/releases\">https://github.com/denoland/deno/releases</a></p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
-static const char* webui_nodejs_not_found = "<html><head><title>Node.js Not Found</title><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Node.js Not Found</h2><p>Node.js is not found on this system.<br>Please download it from <a href=\"https://nodejs.org/en/download/\">https://nodejs.org/en/download/</a></p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
+static const char* webui_html_served = "<html><head><title>Access Denied</title><script src=\"/webui.js\"></script><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Access Denied</h2><p>You can't access this content<br>because it's already processed.<br><br>The current security policy denies<br>multiple requests.</p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
+static const char* webui_html_res_not_available = "<html><head><title>Resource Not Available</title><script src=\"/webui.js\"></script><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Resource Not Available</h2><p>The requested resource is not available.</p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
+static const char* webui_deno_not_found = "<html><head><title>Deno Not Found</title><script src=\"/webui.js\"></script><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Deno Not Found</h2><p>Deno is not found on this system.<br>Please download it from <a href=\"https://github.com/denoland/deno/releases\">https://github.com/denoland/deno/releases</a></p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
+static const char* webui_nodejs_not_found = "<html><head><title>Node.js Not Found</title><script src=\"/webui.js\"></script><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Node.js Not Found</h2><p>Node.js is not found on this system.<br>Please download it from <a href=\"https://nodejs.org/en/download/\">https://nodejs.org/en/download/</a></p><br><a href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
 static const char* webui_def_icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"64\" height=\"64\" viewBox=\"0 0 64 64\" version=\"1.1\"><path d=\"M 35.315 15.983 C 30.885 17.816, 29.305 25.835, 33.500 25.195 C 34.600 25.027, 37.177 24.802, 39.227 24.695 C 44.084 24.441, 49.054 19.899, 47.386 17.239 C 46.146 15.262, 38.884 14.507, 35.315 15.983 M 54.602 17.835 C 54.058 18.716, 60.204 22.022, 62.284 21.968 C 63.958 21.925, 58.228 17, 56.503 17 C 55.741 17, 54.886 17.376, 54.602 17.835\" stroke=\"none\" fill=\"#789dcc\" fill-rule=\"evenodd\"/><path d=\"M 3.635 19.073 C 2.098 20.282, 1 22.144, 1 23.542 C 1 26.692, 12.655 53.139, 14.754 54.750 C 15.650 55.437, 17.882 56, 19.716 56 C 23.227 56, 22.667 56.645, 30.331 43.762 L 32.163 40.684 36.109 47.830 C 40.333 55.479, 42.889 57.131, 47.815 55.394 C 49.855 54.675, 51.575 51.765, 56.620 40.500 C 60.068 32.800, 62.904 25.600, 62.921 24.500 C 62.944 23.042, 61.572 21.893, 57.862 20.262 C 55.062 19.031, 52.336 18.292, 51.806 18.620 C 51.275 18.948, 49.385 22.428, 47.604 26.353 L 44.367 33.490 42.504 30.647 C 41.121 28.536, 40.907 27.379, 41.673 26.152 C 42.567 24.721, 42.224 24.526, 39.103 24.695 C 37.121 24.802, 34.600 25.027, 33.500 25.195 C 31.780 25.457, 31.517 24.966, 31.620 21.688 L 31.739 17.876 28.799 20.688 C 27.182 22.235, 24.694 25.637, 23.270 28.250 C 21.847 30.863, 20.354 33, 19.954 33 C 19.553 33, 17.969 30.044, 16.433 26.431 C 12.452 17.064, 8.833 14.984, 3.635 19.073\" stroke=\"none\" fill=\"#294fb7\" fill-rule=\"evenodd\"/></svg>";
 static const char* webui_def_icon_type = "image/svg+xml";
 
@@ -486,7 +488,6 @@ size_t webui_new_window_id(size_t window_number) {
     // Initialisation
     win->window_number = window_number;
     win->browser_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
-    win->profile_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     win->server_root_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     if(_webui_is_empty(_webui_core.default_server_root_path))
         sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
@@ -601,6 +602,7 @@ void webui_destroy(size_t window) {
     _webui_free_mem((void*)win->icon_type);
     _webui_free_mem((void*)win->browser_path);
     _webui_free_mem((void*)win->profile_path);
+    _webui_free_mem((void*)win->profile_name);
     _webui_free_mem((void*)win->server_root_path);
 
     // Free events
@@ -653,12 +655,14 @@ void webui_set_icon(size_t window, const char* icon, const char* icon_type) {
     if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
-    // Some wrappers does not guarantee `icon` to
-    // stay valid, so, let's make our own copy.
+    // Some wrappers do not guarantee pointers stay valid,
+    // so, let's make our copy.
+
     // Icon
     size_t len = _webui_strlen(icon);
     const char* icon_cpy = (const char*)_webui_malloc(len);
     memcpy((char*)icon_cpy, icon, len);
+
     // Icon Type
     len = _webui_strlen(icon_type);
     const char* icon_type_cpy = (const char*)_webui_malloc(len);
@@ -933,15 +937,69 @@ size_t webui_get_child_process_id(size_t window) {
                 do {
                     if (pe32.th32ParentProcessID == win->process_id) {
                         childProcessId = pe32.th32ProcessID;
-                        break;
                     }
                 } while (Process32Next(hSnapshot, &pe32));
             }
             CloseHandle(hSnapshot);
         }
         return childProcessId;
+    #elif __linux__
+        DIR* dir;
+        struct dirent* entry;
+        pid_t lastChildPid = win->process_id;
+        dir = opendir("/proc");
+        if(!dir)
+            return win->process_id;
+        while((entry = readdir(dir)) != NULL) {
+            // Ensure we're looking at a process directory (directories that are just numbers)
+            if(entry->d_type == DT_DIR && strspn(entry->d_name, "0123456789") == strlen(entry->d_name)) {
+                char statFilepath[256];
+                snprintf(statFilepath, sizeof(statFilepath), "/proc/%s/stat", entry->d_name);
+                FILE* f = fopen(statFilepath, "r");
+                if(f) {
+                    pid_t pid, ppid;
+                    char comm[256];
+                    char state;
+                    // Extract data from the stat file; fields are space-delimited
+                    if(fscanf(f, "%d %s %c %d", &pid, comm, &state, &ppid) == 4) {
+                        if(ppid == parentProcessId) {
+                            // Convert directory name (string) to integer PID
+                            lastChildPid = atoi(entry->d_name);
+                        }
+                    }
+                    fclose(f);
+                }
+            }
+        }
+        closedir(dir);
+        return lastChildPid;
     #else
-        return win->process_id;
+        pid_t lastChildPid = -1;
+        // Get the size required to hold all process information
+        int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
+        size_t size;
+        if(sysctl(mib, 3, NULL, &size, NULL, 0) < 0) {
+            return win->process_id;
+        }
+        // Allocate memory and get all process information
+        struct kinfo_proc* procList = (struct kinfo_proc*)malloc(size);
+        if(!procList) {
+            return win->process_id;
+        }
+        if (sysctl(mib, 3, procList, &size, NULL, 0) < 0) {
+            free(procList);
+            return win->process_id;
+        }
+        // Calculate the number of processes from the returned data
+        int procCount = size / sizeof(struct kinfo_proc);
+        // Search for the last child process
+        for (int i = 0; i < procCount; i++) {
+            if (procList[i].kp_eproc.e_ppid == parentProcessId) {
+                lastChildPid = procList[i].kp_proc.p_pid;
+            }
+        }
+        free(procList);
+        return (size_t)lastChildPid;
     #endif
 }
 
@@ -1048,6 +1106,40 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
         sprintf(script, "window.moveTo(%u, %u);", x, y);
         webui_run(window, script);
     }
+}
+
+void webui_set_profile(size_t window, const char* name, const char* path) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_set_profile([%s], [%s])...\n", name, path);
+    #endif
+
+    // Dereference
+    _webui_init();
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    _webui_window_t* win = _webui_core.wins[window];
+
+    // Some wrappers do not guarantee pointers stay valid,
+    // so, let's make our copy.
+
+    size_t len = _webui_strlen(name);
+    char* name_cpy = (char*)_webui_malloc(len);
+    memcpy((char*)name_cpy, name, len);
+
+    len = _webui_strlen(path);
+    char* path_cpy = (char*)_webui_malloc(len);
+    memcpy((char*)path_cpy, path, len);
+
+    // Free
+    if(win->profile_name != NULL)
+        _webui_free_mem((void*)win->profile_name);
+    if(win->profile_path != NULL)
+        _webui_free_mem((void*)win->profile_path);
+    
+    // Save
+    win->profile_name = name_cpy;
+    win->profile_path = path_cpy;
+    win->custom_profile = true;
 }
 
 void webui_send_raw(size_t window, const char* function, const void* raw, size_t size) {
@@ -2545,6 +2637,14 @@ static bool _webui_browser_create_profile_folder(_webui_window_t* win, size_t br
         printf("[Core]\t\t_webui_browser_create_profile_folder(%zu)...\n", browser);
     #endif
 
+    if(win->custom_profile)
+        return true; // User defined profile
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_browser_create_profile_folder(%zu) -> Generating WebUI profile...\n", browser);
+    #endif
+    
+    win->profile_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     const char* temp = _webui_browser_get_temp_path(browser);
 
     if(browser == Chrome) {
@@ -3459,6 +3559,7 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
         "--bwsi",
         "--disable-sync",
         "--disable-sync-preferences",
+        "--disable-component-update",
     };
 
     int c = 0;
@@ -3470,10 +3571,14 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
     case Brave:
     case Yandex:
     case Chromium:
+        // Profile
+        if(!_webui_is_empty(win->profile_path))
+            c = sprintf(buffer, " --user-data-dir=\"%s\"", win->profile_path);
         // Basic
-        c = sprintf(buffer, " --user-data-dir=\"%s\"", win->profile_path);
-        for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
-            c += sprintf(buffer + c, " %s", chromium_options[i]);
+        if(!win->custom_profile) {
+            for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
+                c += sprintf(buffer + c, " %s", chromium_options[i]);
+            }
         }
         // Kiosk Mode
         if (win->kiosk_mode)
@@ -3492,8 +3597,13 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
         c += sprintf(buffer + c, " %s", "--app=");
         return c;
     case Firefox:
+        // Profile
+        if(!_webui_is_empty(win->profile_name))
+            c = sprintf(buffer, " -P %s", win->profile_name);
         // Basic
-        c = sprintf(buffer, " -P WebUI -purgecaches");
+        if(!win->custom_profile) {
+            c += sprintf(buffer + c, " -purgecaches");
+        }
         // Kiosk Mode
         if (win->kiosk_mode)
             c += sprintf(buffer + c, " %s", "-kiosk");
@@ -4047,8 +4157,9 @@ static bool _webui_show(_webui_window_t* win, const char* content, size_t browse
     if(_webui_is_empty(content))
         return false;
 
-    // Some wrappers does not guarantee `content` to
-    // stay valid, so, let's make our copy right now
+    // Some wrappers do not guarantee pointers stay valid,
+    // so, let's make our copy.
+
     size_t content_len = _webui_strlen(content);
     const char* content_cpy = (const char*)_webui_malloc(content_len);
     memcpy((char*)content_cpy, content, content_len);
