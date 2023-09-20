@@ -81,16 +81,16 @@ endif
 #	Static with Debug info
 	@cd "$(BUILD_DIR)/debug" \
 	&& echo "Build WebUI library ($(CC) debug static)..." \
-	&& $(CC) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g \
-	&& $(CC) $(WEBUI_BUILD_FLAGS) -g -DWEBUI_LOG \
+	&& $(CC) $(ARCH_TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g \
+	&& $(CC) $(ARCH_TARGET) $(WEBUI_BUILD_FLAGS) -g -DWEBUI_LOG \
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o \
 	&& $(LLVM_OPT)ranlib $(LIB_STATIC_OUT)
 #	Dynamic with Debug info
 	@cd "$(BUILD_DIR)/debug" \
 	&& echo "Build WebUI library ($(CC) debug dynamic)..." \
-	&& $(CC) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
-	&& $(CC) $(WEBUI_BUILD_FLAGS) -g -fPIC -DWEBUI_LOG \
-	&& $(CC) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o -g $(LWS2_OPT)
+	&& $(CC) $(ARCH_TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
+	&& $(CC) $(ARCH_TARGET) $(WEBUI_BUILD_FLAGS) -g -fPIC -DWEBUI_LOG \
+	&& $(CC) $(ARCH_TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o -g $(LWS2_OPT)
 ifeq ($(PLATFORM),windows)
 	@cd "$(BUILD_DIR)/debug" && del *.o >nul 2>&1
 else
