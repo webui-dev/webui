@@ -2611,7 +2611,7 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
     #else
         const char* log = "false";
     #endif
-    size_t len = 32 + cb_mem_size + _webui_strlen(webui_javascript_bridge);
+    size_t len = 32 + cb_mem_size + _webui_strlen((const char *)webui_javascript_bridge);
     char* js = (char*) _webui_malloc(len);
     int c = sprintf(js, "%s\n document.addEventListener(\"DOMContentLoaded\",function(){ globalThis.webui = new WebuiBridge({ port: %zu, winNum: %zu, bindList: %s, log: %s, ",
         webui_javascript_bridge, win->ws_port, win->window_number, event_cb_js_array, log);
