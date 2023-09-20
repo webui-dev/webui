@@ -946,7 +946,7 @@ size_t webui_get_child_process_id(size_t window) {
     #elif __linux__
         DIR* dir;
         struct dirent* entry;
-        pid_t lastChildPid = win->process_id;
+        pid_t lastChildPid = (pid_t)win->process_id;
         dir = opendir("/proc");
         if(!dir)
             return win->process_id;
@@ -962,7 +962,7 @@ size_t webui_get_child_process_id(size_t window) {
                     char state;
                     // Extract data from the stat file; fields are space-delimited
                     if(fscanf(f, "%d %s %c %d", &pid, comm, &state, &ppid) == 4) {
-                        if(ppid == parentProcessId) {
+                        if((intmax_t)ppid == (intmax_t)win->process_id) {
                             // Convert directory name (string) to integer PID
                             lastChildPid = atoi(entry->d_name);
                         }
@@ -994,7 +994,7 @@ size_t webui_get_child_process_id(size_t window) {
         int procCount = size / sizeof(struct kinfo_proc);
         // Search for the last child process
         for (int i = 0; i < procCount; i++) {
-            if (procList[i].kp_eproc.e_ppid == parentProcessId) {
+            if ((intmax_t)procList[i].kp_eproc.e_ppid == (intmax_t)win->process_id) {
                 lastChildPid = procList[i].kp_proc.p_pid;
             }
         }
