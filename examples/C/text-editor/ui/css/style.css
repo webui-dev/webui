@@ -55,6 +55,10 @@ nav {
   }
   
   nav ul li a:hover {
+
+nav ul li a i {
+    pointer-events: none;
+}
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1), inset 0 0 1px rgba(255, 255, 255, 0.6);
     background: rgba(255, 255, 255, 0.1);
   }
