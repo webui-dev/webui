@@ -31,42 +31,42 @@ nav {
     z-index: 99;
     font-family: 'Font Awesome 5 Free';
     font-size: 18px;
-  }
-  
-  nav ul {
+}
+
+nav ul {
     margin-top: 0px;
     margin-bottom: 0px;
     text-align: center;
     background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 25%, rgba(255, 255, 255, 0.2) 75%, rgba(255, 255, 255, 0) 100%);
     box-shadow: 0 0 25px rgba(0, 0, 0, 0.1), inset 0 0 1px rgba(255, 255, 255, 0.6);
     cursor: pointer;
-  }
-  
-  nav ul li {
+}
+
+nav ul li {
     display: inline-block;
-  }
-  
-  nav ul li a {
+}
+
+nav ul li a {
     padding: 18px;
     font-family: "Open Sans";
     text-transform:uppercase;
     text-decoration: none;
     display: block;
-  }
-  
-  nav ul li a:hover {
+}
 
 nav ul li a i {
     pointer-events: none;
 }
+
+nav ul li a:hover {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1), inset 0 0 1px rgba(255, 255, 255, 0.6);
     background: rgba(255, 255, 255, 0.1);
-  }
+}
 
 /* Code */
 
 .main {
-    padding: 0px;    
+    padding: 0px;
 }
 
 /* About */
@@ -81,7 +81,7 @@ nav ul li a i {
     height: 100%; 
     background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
 }
-  
+
 .about-box-content {
     background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
     position: absolute;
@@ -107,8 +107,4 @@ nav ul li a i {
     font-family: 'Courier New', Courier, monospace;
     font-size: 16px;
     text-shadow: 1px 1px 2px #000000;
-}
-
-.CodeMirror-scroll {
-
 }
