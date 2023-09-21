@@ -416,15 +416,15 @@ WEBUI_EXPORT void webui_set_position(size_t window, unsigned int x, unsigned int
 WEBUI_EXPORT void webui_set_profile(size_t window, const char* name, const char* path);
 
 /**
- * @brief Get the server URL
+ * @brief Get the full current URL
  * 
  * @param window The window number
  *
- * @return Returns the server URL
+ * @return Returns the full URL string
  * 
- * @example char* URL = webui_get_url(myWindow);
+ * @example const char* url = webui_get_url(myWindow);
  */
-WEBUI_EXPORT char* webui_get_url(size_t window);
+WEBUI_EXPORT const char* webui_get_url(size_t window);
 
 // -- JavaScript ----------------------
 
