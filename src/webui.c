@@ -1142,6 +1142,23 @@ void webui_set_profile(size_t window, const char* name, const char* path) {
     win->custom_profile = true;
 }
 
+char* webui_get_url(size_t window) {
+    #ifdef WEBUI_LOG
+        printf("[User] webui_get_url([%zu])...\n", window);
+    #endif
+
+    // Dereference
+    _webui_init();
+    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return NULL;
+    _webui_window_t* win = _webui_core.wins[window];
+    
+    // Get current URL
+    char* url = (char*) _webui_malloc(32);
+    sprintf(url, "http://127.0.0.1:%zu", win->server_port);
+    
+    return url;
+}
+
 void webui_send_raw(size_t window, const char* function, const void* raw, size_t size) {
 
     #ifdef WEBUI_LOG
