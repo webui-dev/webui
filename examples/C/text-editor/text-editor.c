@@ -11,14 +11,16 @@ void Close(webui_event_t* e) {
 
 int main() {
 
-    // Create new windows
+    // Create a new window
     int MainWindow = webui_new_window();
 
-    // Bind HTML element IDs with a C functions
+    // Set the root folder for the UI
+    webui_set_root_folder(MainWindow, "ui");
+
+    // Bind HTML elements with the specified ID to C functions
     webui_bind(MainWindow, "close-button", Close);
 
-    // Show a new window
-    webui_set_root_folder(MainWindow, "ui");
+    // Show the window, preferably in a chromium based browser
     if (!webui_show_browser(MainWindow, "MainWindow.html", ChromiumBased))
         webui_show(MainWindow, "MainWindow.html");
 
