@@ -3915,14 +3915,21 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     #endif
 
     // Non existing browser
-    if(browser > 10)
+    if(browser > 11)
         return false;
     
     // Current browser used in the last opened window
     if(browser == AnyBrowser && _webui_core.current_browser != 0)
         browser = _webui_core.current_browser;
 
-    // TODO: Convert address from [/...] to [file://...]
+    // #1 - Chrome - Works perfectly
+    // #2 - Edge - Works perfectly like Chrome
+    // #3 - Epic - Works perfectly like Chrome
+    // #4 - Vivaldi - Works perfectly like Chrome
+    // #5 - Brave - Shows a policy notification in the first run
+    // #6 - Firefox - Does not support App-Mode like Chrome (Looks not great)
+    // #7 - Yandex - Shows a big welcome window in the first run
+    // #8 - Chromium - Some Anti-Malware shows a false alert when using ungoogled-chromium-binaries
 
     if(browser != 0) {
 
@@ -3944,6 +3951,19 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
             return _webui_browser_start_yandex(win, address);
         else if(browser == Chromium)
             return _webui_browser_start_chromium(win, address);
+	else if(browser == ChromiumBased) {
+
+            // Open the window using a Chromium-based browser
+
+            if(!_webui_browser_start_chrome(win, address))
+                if(!_webui_browser_start_edge(win, address))
+                    if(!_webui_browser_start_epic(win, address))
+                        if(!_webui_browser_start_vivaldi(win, address))
+                            if(!_webui_browser_start_brave(win, address))
+                                if(!_webui_browser_start_yandex(win, address))
+                                    if(!_webui_browser_start_chromium(win, address))
+                                        return false;
+        }
         else
             return false;
     }
@@ -3973,15 +3993,6 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     else {
 
         // Open the window using the default OS browser
-
-        // #1 - Chrome - Works perfectly
-        // #2 - Edge - Works perfectly like Chrome
-        // #3 - Epic - Works perfectly like Chrome
-        // #4 - Vivaldi - Works perfectly like Chrome
-        // #5 - Brave - Shows a policy notification in the first run
-        // #6 - Firefox - Does not support App-Mode like Chrome (Looks not great)
-        // #7 - Yandex - Shows a big welcome window in the first run
-        // #8 - Chromium - Some Anti-Malware shows a false alert when using ungoogled-chromium-binaries
 
         #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
             // Windows

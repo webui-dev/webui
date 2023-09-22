@@ -115,6 +115,7 @@ enum webui_browsers {
     Vivaldi, // 8. The Vivaldi Browser
     Epic, // 9. The Epic Browser
     Yandex, // 10. The Yandex Browser
+    ChromiumBased, // 11. Any Chromium based browser
 };
 
 enum webui_runtimes {
