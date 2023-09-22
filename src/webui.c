@@ -684,8 +684,6 @@ bool webui_show(size_t window, const char* content) {
         printf("[User] webui_show([%zu])...\n", window);
     #endif
 
-    _webui_core.ui = true;
-
     // Dereference
     _webui_init();
     if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
@@ -703,8 +701,6 @@ bool webui_show_browser(size_t window, const char* content, size_t browser) {
     #ifdef WEBUI_LOG
         printf("[User] webui_show_browser([%zu], [%zu])...\n", window, browser);
     #endif
-
-    _webui_core.ui = true;
 
     // Dereference
     _webui_init();
@@ -1363,8 +1359,14 @@ void webui_wait(void) {
         // Check if there is atleast one window (UI)
         // is running. Otherwise the mutex condition
         // signal will never come
-        if(!_webui_core.ui)
+        if(!_webui_core.ui) {
+
+            printf("[Loop] webui_wait() -> No window is found. Stop.\n");
+
+            // Final cleaning
+            _webui_clean();
             return;
+        }
 
         #ifdef WEBUI_LOG
             printf("[Loop] webui_wait() -> Timeout in %zu seconds\n", _webui_core.startup_timeout);
@@ -2722,7 +2724,7 @@ static bool _webui_browser_create_profile_folder(_webui_window_t* win, size_t br
 
             char buf[2048] = {0};
 
-            sprintf(buf, "\"%s\" -CreateProfile \"WebUI %s\"", win->browser_path, firefox_profile_path);
+            sprintf(buf, "%s -CreateProfile \"WebUI %s\"", win->browser_path, firefox_profile_path);
             _webui_cmd_sync(win, buf, false);
 
             // Creating the browser profile
@@ -4285,6 +4287,8 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
             _webui_free_port(win->ws_port);
             return false;
         }
+
+        _webui_core.ui = true;
         
         // New server thread
         #ifdef _WIN32
