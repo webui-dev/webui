@@ -3,6 +3,7 @@
 // Elements
 let About = document.getElementById("About");
 let aboutBox = document.getElementById("about-box");
+let fileHandle = null;
 
 // About show
 About.onclick = function() {
@@ -53,57 +54,39 @@ function SetFileModeExtension(extension) {
     codeMirrorInstance.setOption("mode", mode);
 }
 
-// Add a line to the editor
-function addLine(text) {
-    const lastLine = codeMirrorInstance.lineCount();
-    codeMirrorInstance.replaceRange(webui.decode(text) + "\n", {line: lastLine});
-
-    const element = document.getElementById('SaveLi');
-    element.style.color = '#ddecf9';
-    element.style.pointerEvents = 'all';
-}
-
 // Add full text to the editor
 function addText(text) {
-    codeMirrorInstance.setValue(webui.decode(text));
+    codeMirrorInstance.setValue(text);
 
     const element = document.getElementById('SaveLi');
     element.style.color = '#ddecf9';
     element.style.pointerEvents = 'all';
 }
 
-// Save the file
-function SaveFile() {
+async function OpenFile() {
+    [fileHandle] = await showOpenFilePicker({ multiple: false });
+    const fileData = await fileHandle.getFile();
+
+    // Read File
+    const reader = new FileReader();
+    reader.onload = (e) => addText(e.target.result);
+    reader.readAsText(fileData);
+
+    // Set file title and language
+    document.title = fileData.name;
+    SetFileModeExtension(fileData.name.split('.').pop());
+}
+
+async function SaveFile() {
+    // Create a FileSystemWritableFileStream to write to
+    const writableStream = await fileHandle.createWritable();
     const content = codeMirrorInstance.getValue();
-    webui.call('Save', content);
+    await writableStream.write(content);
+
+    // Write to disk
+    await writableStream.close();
 }
 
 window.addEventListener("DOMContentLoaded", (event) => {
-    // Load
     codeMirrorInstance.setSize("100%", "99%");
 });
-
-function getFileExtension(path) {
-    console.log('getFileExtension: ' + path);
-    return path.split('.').pop();
-}
-
-function getFileName(path) {
-    console.log('getFileName: ' + path);
-    return path.split(/[/\\]/).pop();
-}
-
-function changeWindowTitle(newTitle) {
-    document.title = newTitle;
-}
-
-// Set file title and language
-function SetFile(path_base64) {
-    const path = webui.decode(path_base64);
-    const Extension = getFileExtension(path);
-    const FileName = getFileName(path);
-    console.log('Extension: ' + path);
-    console.log('FileName: ' + path);
-    SetFileModeExtension(Extension);
-    changeWindowTitle(FileName);
-}

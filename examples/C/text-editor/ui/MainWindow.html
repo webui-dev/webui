@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <script src="webui.js"></script>
+        <script src="/webui.js"></script>
 
         <link rel="icon" type="image/png" href="img/icon.png" />
         <title>Text Editor in C using WebUI</title>
@@ -22,7 +22,7 @@
         <nav>
             <ul>
                 <li>
-                    <a id="Open"><i class="fas fa-folder-open"></i></a>
+                    <a onclick="OpenFile();"><i class="fas fa-folder-open"></i></a>
                 </li>
                 <li id="SaveLi" style="pointer-events: none; color: #7ca0df;">
                     <a onclick="SaveFile();"><i class="fa fa-floppy-disk"></i></a>
