@@ -3571,6 +3571,7 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
         "--disable-plugins",
         "--disable-plugins-discovery",
         "--disable-translate",
+        "--disable-features=Translate",
         "--bwsi",
         "--disable-sync",
         "--disable-sync-preferences",
