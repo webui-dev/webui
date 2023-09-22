@@ -3601,7 +3601,7 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
             c += sprintf(buffer + c, " %s", "--chrome-frame --kiosk");
         // Hide Mode
         if (win->hide)
-            c += sprintf(buffer + c, " %s", "--headless");
+            c += sprintf(buffer + c, " %s", "--headless --headless=new");
         // Window Size
         if (win->size_set)
             c += sprintf(buffer + c, " --window-size=%u,%u", win->width, win->height);
@@ -5511,7 +5511,7 @@ static WEBUI_SERVER_START
         // Mutex
         _webui_mutex_unlock(&_webui_core.mutex_server_start);
 
-        if(_webui_core.startup_timeout > 0 && !win->hide) {
+        if(_webui_core.startup_timeout > 0) {
 
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Listening Success\n", win->window_number);
@@ -5646,7 +5646,7 @@ static WEBUI_SERVER_START
         // Let's check the flag again, there is a change that
         // the flag has ben changed during the first loop for
         // example when set_timeout() get called later
-        if(_webui_core.startup_timeout == 0 || win->hide) {
+        if(_webui_core.startup_timeout == 0) {
 
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Listening success\n", win->window_number);
