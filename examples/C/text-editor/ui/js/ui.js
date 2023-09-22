@@ -1,66 +1,57 @@
 // Text Editor
 
 // Elements
-let About = document.getElementById("About");
-let aboutBox = document.getElementById("about-box");
+const aboutBtn = document.getElementById('about-button');
+const aboutBox = document.getElementById('about-box');
+const saveBtn = document.getElementById('save-button');
 let fileHandle = null;
 
 // About show
-About.onclick = function() {
-    // Open ABout
-    aboutBox.style.display = "block";
-}
-
+aboutBtn.onclick = () => (aboutBox.style.display = 'block');
 // About hide
-window.onclick = function(event) {
-    if (event.target == aboutBox) {
-        // Close About
-        aboutBox.style.display = "none";
-    }
-}
+aboutBox.onclick = () => (aboutBox.style.display = 'none');
 
 // Create the editor
-const editor = document.getElementById("editor");
+const editor = document.getElementById('editor');
 const codeMirrorInstance = CodeMirror.fromTextArea(editor, {
-    mode: "text/x-csrc",
+    mode: 'text/x-csrc',
     lineNumbers: true,
     tabSize: 4,
     indentUnit: 2,
     lineWrapping: true,
-    theme: "lucario"
+    theme: 'lucario',
 });
 
 // Change editor language
 function SetFileModeExtension(extension) {
-    let mode = "";
+    let mode = '';
     switch (extension) {
-        case "js":
-            mode = "text/javascript";
+        case 'js':
+            mode = 'text/javascript';
             break;
-        case "c":
-        case "cpp":
-        case "h":
-            mode = "text/x-csrc";
+        case 'c':
+        case 'cpp':
+        case 'h':
+            mode = 'text/x-csrc';
             break;
-        case "py":
-            mode = "text/x-python";
+        case 'py':
+            mode = 'text/x-python';
             break;
-        case "html":
-            mode = "text/html";
+        case 'html':
+            mode = 'text/html';
             break;
         default:
-            mode = "text/x-csrc";
+            mode = 'text/x-csrc';
     }
-    codeMirrorInstance.setOption("mode", mode);
+    codeMirrorInstance.setOption('mode', mode);
 }
 
 // Add full text to the editor
 function addText(text) {
     codeMirrorInstance.setValue(text);
 
-    const element = document.getElementById('SaveLi');
-    element.style.color = '#ddecf9';
-    element.style.pointerEvents = 'all';
+    saveBtn.style.color = '#ddecf9';
+    saveBtn.style.pointerEvents = 'all';
 }
 
 async function OpenFile() {
@@ -87,6 +78,6 @@ async function SaveFile() {
     await writableStream.close();
 }
 
-window.addEventListener("DOMContentLoaded", (event) => {
-    codeMirrorInstance.setSize("100%", "99%");
+window.addEventListener('DOMContentLoaded', () => {
+    codeMirrorInstance.setSize('100%', '99%');
 });

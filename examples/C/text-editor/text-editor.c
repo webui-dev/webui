@@ -15,7 +15,7 @@ int main() {
     int MainWindow = webui_new_window();
 
     // Bind HTML element IDs with a C functions
-    webui_bind(MainWindow, "Close", Close);
+    webui_bind(MainWindow, "close-button", Close);
 
     // Show a new window
     webui_set_root_folder(MainWindow, "ui");
