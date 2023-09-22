@@ -4,7 +4,12 @@
 const aboutBtn = document.getElementById('about-button');
 const aboutBox = document.getElementById('about-box');
 const saveBtn = document.getElementById('save-button');
-let fileHandle = null;
+const supportsFilePicker = 'showSaveFilePicker' in window;
+let fileHandle;
+let openFile = {
+    name: '',
+    ext: '',
+};
 
 // About show
 aboutBtn.onclick = () => (aboutBox.style.display = 'block');
@@ -54,28 +59,59 @@ function addText(text) {
     saveBtn.style.pointerEvents = 'all';
 }
 
-async function OpenFile() {
-    [fileHandle] = await showOpenFilePicker({ multiple: false });
-    const fileData = await fileHandle.getFile();
-
-    // Read File
+function readFile(file) {
     const reader = new FileReader();
     reader.onload = (e) => addText(e.target.result);
-    reader.readAsText(fileData);
+    reader.readAsText(file);
+}
 
-    // Set file title and language
-    document.title = fileData.name;
-    SetFileModeExtension(fileData.name.split('.').pop());
+function setFile(file) {
+    openFile.name = file.name;
+    openFile.ext = file.name.split('.').pop();
+    // Set file title and language in editor
+    document.title = file.name;
+    SetFileModeExtension(openFile.ext);
+}
+
+async function OpenFile() {
+    if (supportsFilePicker) {
+        [fileHandle] = await showOpenFilePicker({ multiple: false });
+        fileData = await fileHandle.getFile();
+        readFile(fileData);
+        setFile(fileData);
+    } else {
+        let input = document.createElement('input');
+        input.type = 'file';
+        input.onchange = (e) => {
+            readFile(e.target.files[0]);
+            setFile(e.target.files[0]);
+        };
+        input.click();
+        input.remove();
+    }
 }
 
 async function SaveFile() {
-    // Create a FileSystemWritableFileStream to write to
-    const writableStream = await fileHandle.createWritable();
     const content = codeMirrorInstance.getValue();
-    await writableStream.write(content);
-
-    // Write to disk
-    await writableStream.close();
+    if (supportsFilePicker && fileHandle) {
+        // Create a FileSystemWritableFileStream to write to
+        const writableStream = await fileHandle.createWritable();
+        await writableStream.write(content);
+        // Write to disk
+        await writableStream.close();
+    } else {
+        // Download the file if using filePicker with a fileHandle for saving
+        // is not supported by the browser. E.g., in Firefox.
+        const blobData = new Blob([content], { type: 'text/${openFile.ext}' });
+        const urlToBlob = window.URL.createObjectURL(blobData);
+        const a = document.createElement('a');
+        a.style.setProperty('display', 'none');
+        a.href = urlToBlob;
+        a.download = document.title;
+        a.click();
+        window.URL.revokeObjectURL(urlToBlob);
+        a.remove();
+    }
 }
 
 window.addEventListener('DOMContentLoaded', () => {

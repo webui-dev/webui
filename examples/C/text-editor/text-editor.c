@@ -19,7 +19,8 @@ int main() {
 
     // Show a new window
     webui_set_root_folder(MainWindow, "ui");
-    webui_show(MainWindow, "MainWindow.html");
+    if (!webui_show_browser(MainWindow, "MainWindow.html", ChromiumBased))
+        webui_show(MainWindow, "MainWindow.html");
 
     // Wait until all windows get closed
     webui_wait();
