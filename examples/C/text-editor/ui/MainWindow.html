@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <script src="webui.js"></script>
+        <script src="/webui.js"></script>
 
         <link rel="icon" type="image/png" href="img/icon.png" />
         <title>Text Editor in C using WebUI</title>
@@ -10,28 +10,22 @@
         <link rel="stylesheet" href="css/lucario.css">
         <link rel="stylesheet" href="css/codemirror.min.css">
         <link rel="stylesheet" href="css/all.min.css">
-        <script src="js/codemirror.min.js"></script>
-        <script src="js/xml.min.js"></script>
-        <script src="js/css.min.js"></script>
-        <script src="js/javascript.min.js"></script>
-        <script src="js/clike.min.js"></script>
-        <script src="js/python.min.js"></script>
     </head>
     <body>
         <div class="topbar"></div>
         <nav>
             <ul>
                 <li>
-                    <a id="Open"><i class="fas fa-folder-open"></i></a>
+                    <a onclick="OpenFile();"><i class="fas fa-folder-open"></i></a>
                 </li>
-                <li id="SaveLi" style="pointer-events: none; color: #7ca0df;">
+                <li id="save-button" style="pointer-events: none; color: #7ca0df;">
                     <a onclick="SaveFile();"><i class="fa fa-floppy-disk"></i></a>
                 </li>
                 <li>
-                    <a id="Close"><i class="fas fa-circle-xmark"></i></a>
+                    <a id="close-button"><i class="fas fa-circle-xmark"></i></a>
                 </li>
                 <li>
-                    <a id="About"><i class="fas fa-question-circle"></i></a>
+                    <a id="about-button"><i class="fas fa-question-circle"></i></a>
                 </li>
             </ul>
         </nav>
@@ -46,6 +40,12 @@
                 <p><a href="https://webui.me" target="_blank">webui.me</a> | (C)2023 Hassan Draga</p>
             </div>
         </div>
+        <script src="js/codemirror.min.js"></script>
+        <script src="js/xml.min.js"></script>
+        <script src="js/css.min.js"></script>
+        <script src="js/javascript.min.js"></script>
+        <script src="js/clike.min.js"></script>
+        <script src="js/python.min.js"></script>
         <script src="js/ui.js"></script>
     </body>
 </html>
