@@ -1,34 +1,28 @@
 // Text Editor
 
 // Elements
-const aboutBtn = document.getElementById('about-button');
+const saveBtn = document.getElementById('save-btn');
 const aboutBox = document.getElementById('about-box');
-const saveBtn = document.getElementById('save-button');
+
+// File Handling
 const supportsFilePicker = 'showSaveFilePicker' in window;
 let fileHandle;
-let openFile = {
-    name: '',
-    ext: '',
-};
+let currentFile = { name: '', ext: '' };
 
-// About show
-aboutBtn.onclick = () => (aboutBox.style.display = 'block');
-// About hide
-aboutBox.onclick = () => (aboutBox.style.display = 'none');
+// Setup Editor
+const codeMirrorInstance = CodeMirror.fromTextArea(
+    document.getElementById('editor'),
+    {
+        mode: 'text/x-csrc',
+        lineNumbers: true,
+        tabSize: 4,
+        indentUnit: 2,
+        lineWrapping: true,
+        theme: 'lucario',
+    },
+);
 
-// Create the editor
-const editor = document.getElementById('editor');
-const codeMirrorInstance = CodeMirror.fromTextArea(editor, {
-    mode: 'text/x-csrc',
-    lineNumbers: true,
-    tabSize: 4,
-    indentUnit: 2,
-    lineWrapping: true,
-    theme: 'lucario',
-});
-
-// Change editor language
-function SetFileModeExtension(extension) {
+function setLanguage(extension) {
     let mode = '';
     switch (extension) {
         case 'js':
@@ -51,29 +45,23 @@ function SetFileModeExtension(extension) {
     codeMirrorInstance.setOption('mode', mode);
 }
 
-// Add full text to the editor
-function addText(text) {
-    codeMirrorInstance.setValue(text);
-
-    saveBtn.style.color = '#ddecf9';
-    saveBtn.style.pointerEvents = 'all';
+function setFile(file) {
+    currentFile.name = file.name;
+    currentFile.ext = file.name.split('.').pop();
+    // Set file title and language in editor
+    document.title = file.name;
+    setLanguage(currentFile.ext);
 }
 
 function readFile(file) {
     const reader = new FileReader();
-    reader.onload = (e) => addText(e.target.result);
+    // Add text to the editor
+    reader.onload = (e) => codeMirrorInstance.setValue(e.target.result);
     reader.readAsText(file);
+    saveBtn.disabled = false;
 }
 
-function setFile(file) {
-    openFile.name = file.name;
-    openFile.ext = file.name.split('.').pop();
-    // Set file title and language in editor
-    document.title = file.name;
-    SetFileModeExtension(openFile.ext);
-}
-
-async function OpenFile() {
+async function openFile() {
     if (supportsFilePicker) {
         [fileHandle] = await showOpenFilePicker({ multiple: false });
         fileData = await fileHandle.getFile();
@@ -91,7 +79,7 @@ async function OpenFile() {
     }
 }
 
-async function SaveFile() {
+async function saveFile() {
     const content = codeMirrorInstance.getValue();
     if (supportsFilePicker && fileHandle) {
         // Create a FileSystemWritableFileStream to write to
@@ -102,7 +90,7 @@ async function SaveFile() {
     } else {
         // Download the file if using filePicker with a fileHandle for saving
         // is not supported by the browser. E.g., in Firefox.
-        const blobData = new Blob([content], { type: 'text/${openFile.ext}' });
+        const blobData = new Blob([content], { type: 'text/${currentFile.ext}' });
         const urlToBlob = window.URL.createObjectURL(blobData);
         const a = document.createElement('a');
         a.style.setProperty('display', 'none');
@@ -114,6 +102,17 @@ async function SaveFile() {
     }
 }
 
+// Navigation Events
+// open
+document.getElementById('open-btn').onclick = openFile;
+// save
+saveBtn.onclick = saveFile;
+// about
+document.getElementById('about-btn').onclick = () =>
+    (aboutBox.style.display = 'block'); // show
+aboutBox.onclick = () => (aboutBox.style.display = 'none'); // hide
+
+// Editor events
 window.addEventListener('DOMContentLoaded', () => {
     codeMirrorInstance.setSize('100%', '99%');
 });

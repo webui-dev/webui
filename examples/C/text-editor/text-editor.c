@@ -18,11 +18,11 @@ int main() {
     webui_set_root_folder(MainWindow, "ui");
 
     // Bind HTML elements with the specified ID to C functions
-    webui_bind(MainWindow, "close-button", Close);
+    webui_bind(MainWindow, "__close-btn", Close);
 
     // Show the window, preferably in a chromium based browser
-    if (!webui_show_browser(MainWindow, "MainWindow.html", ChromiumBased))
-        webui_show(MainWindow, "MainWindow.html");
+    if (!webui_show_browser(MainWindow, "index.html", ChromiumBased))
+        webui_show(MainWindow, "index.html");
 
     // Wait until all windows get closed
     webui_wait();
