@@ -1319,24 +1319,22 @@ void webui_exit(void) {
 
     _webui_init();
 
-    // #ifndef WEBUI_LOG
-    //     // Close all opened windows
-    //     // by sending `CLOSE` command
-    //     // Prepare packets
-    //     char* packet = (char*) _webui_malloc(4);
-    //     packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
-    //     packet[1] = WEBUI_HEADER_CLOSE;     // CMD
-    //     for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
-    //         if(_webui_core.wins[i] != NULL) {
-    //             if(_webui_core.wins[i]->connected) {
-    //                 // Send packet
-    //                 _webui_window_send(_webui_core.wins[i], packet, 2);
-    //             }
-    //         }
-    //     }
-    //     _webui_free_mem((void*)packet);
-    // #endif
-    
+    // Close all opened windows
+    // by sending `CLOSE` command
+    // Prepare packets
+    char* packet = (char*) _webui_malloc(4);
+    packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
+    packet[1] = WEBUI_HEADER_CLOSE;     // CMD
+    for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
+        if(_webui_core.wins[i] != NULL) {
+            if(_webui_core.wins[i]->connected) {
+                // Send packet
+                _webui_window_send(_webui_core.wins[i], packet, 2);
+            }
+        }
+    }
+    _webui_free_mem((void*)packet);
+
     // Stop all threads
     _webui_core.exit_now = true;
 
@@ -1344,7 +1342,7 @@ void webui_exit(void) {
     // safely exit and finish cleaning up.
     _webui_sleep(250);
 
-    // Fire the mutex condition wait
+    // Fire the mutex condition for wait()
     _webui_condition_signal(&_webui_core.condition_wait);
 }
 
@@ -1521,7 +1519,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
 
         // Call cb
         #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user callback...\n\n");
+            printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user callback...\n[Call]\n");
         #endif
         _webui_core.cb_interface[cb_index](e->window, e->event_type, e->element, e->data, e->size, e->event_number);
     }
@@ -4680,7 +4678,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
 
             // Call user cb
             #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_window_receive() -> Calling user callback...\n\n");
+                printf("[Core]\t\t_webui_window_receive() -> Calling user callback...\n[Call]\n");
             #endif
             _webui_core.cb[cb_index](&e);
         }
@@ -5714,7 +5712,7 @@ static WEBUI_CB
 
             // Call user all events cb
             #ifdef WEBUI_LOG
-                printf("[Core]\t\t[Thread] _webui_cb() -> Calling user callback...\n\n");
+                printf("[Core]\t\t[Thread] _webui_cb() -> Calling user callback...\n[Call]\n");
             #endif
             _webui_core.cb[events_cb_index](&e);
         }
@@ -5728,7 +5726,7 @@ static WEBUI_CB
 
             // Call user cb
             #ifdef WEBUI_LOG
-                printf("[Core]\t\t[Thread] _webui_cb() -> Calling user callback...\n\n");
+                printf("[Core]\t\t[Thread] _webui_cb() -> Calling user callback...\n[Call]\n");
             #endif
             _webui_core.cb[cb_index](&e);
         }

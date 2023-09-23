@@ -292,14 +292,6 @@ class WebuiBridge {
 						if(!this.#bindList.includes(newElement))
 							this.#bindList.push(newElement)
 						break
-					case this.#HEADER_CLOSE:
-						// Command Packet
-						// 0: [Signature]
-						// 1: [CMD]
-
-						console.log(`WebUI -> Close`)
-						this.#ws.close()
-						break
 					case this.#HEADER_JS_QUICK:
 					case this.#HEADER_JS:
 						{
@@ -353,6 +345,18 @@ class WebuiBridge {
 							)
 
 							if (this.#wsStatus) this.#ws.send(Return8.buffer)
+						}
+						break
+					case this.#HEADER_CLOSE:
+						// Command Packet
+						// 0: [Signature]
+						// 1: [CMD]
+
+						if (!this.#log)
+							globalThis.close()
+						else {
+							console.log(`WebUI -> Close`)
+							this.#ws.close()
 						}
 						break
 				}
