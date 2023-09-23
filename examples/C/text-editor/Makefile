@@ -47,7 +47,7 @@ all: release
 
 debug: --setup
 	@echo "Build Text Editor Example ($@)..."
-	@$(CC) -g -Wall $(LDFLAGS) -o $(OUT)
+	@$(CC) -g -Wall $(CFLAGS) $(LDFLAGS) -o $(OUT)
 	@echo "Done."
 
 release: --setup
