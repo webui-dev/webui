@@ -58,7 +58,6 @@ function readFile(file) {
     // Add text to the editor
     reader.onload = (e) => codeMirrorInstance.setValue(e.target.result);
     reader.readAsText(file);
-    saveBtn.disabled = false;
 }
 
 async function openFile() {
@@ -100,6 +99,7 @@ async function saveFile() {
         window.URL.revokeObjectURL(urlToBlob);
         a.remove();
     }
+    saveBtn.disabled = true;
 }
 
 // Navigation Events
@@ -112,7 +112,11 @@ document.getElementById('about-btn').onclick = () =>
     (aboutBox.style.display = 'block'); // show
 aboutBox.onclick = () => (aboutBox.style.display = 'none'); // hide
 
-// Editor events
+// Editor Events
+// enable save on change
+codeMirrorInstance.on('change', () => {
+    saveBtn.disabled = false;
+});
 window.addEventListener('DOMContentLoaded', () => {
     codeMirrorInstance.setSize('100%', '99%');
 });
