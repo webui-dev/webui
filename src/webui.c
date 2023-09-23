@@ -3962,7 +3962,7 @@ static bool _webui_browser_start_epiphany(_webui_window_t* win, const char* addr
         printf("[Core]\t\t_webui_browser_start_epiphany([%s])...\n", address);
     #endif
     
-    // -- The Chromium Projects -------------------
+    // -- Epiphany Browser -------------------
 
     if (win->current_browser != 0 && win->current_browser != Epiphany)
         return false;
@@ -3974,7 +3974,7 @@ static bool _webui_browser_start_epiphany(_webui_window_t* win, const char* addr
         return false;
     
     char arg[1024] = {0};
-    _webui_get_browser_args(win, Epiphany, arg, sizeof(arg)); /////?
+    _webui_get_browser_args(win, Epiphany, arg, sizeof(arg));
 
     char full[1024] = {0};
     sprintf(full, "%s%s %s", win->browser_path, arg, address);
