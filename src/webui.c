@@ -186,7 +186,6 @@ static bool _webui_show(_webui_window_t* win, const char* content, size_t browse
 static size_t _webui_get_cb_index(char* webui_internal_id);
 static size_t _webui_set_cb_index(char* webui_internal_id);
 static size_t _webui_get_free_port(void);
-static void _webui_wait_for_startup(void);
 static void _webui_free_port(size_t port);
 static char* _webui_get_current_path(void);
 static void _webui_window_receive(_webui_window_t* win, const char* packet, size_t len);
@@ -369,22 +368,22 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
 
         // Wait forever
         for(;;) {
-
+            _webui_sleep(10);            
             if(_webui_core.run_done[run_id])
                 break;
-            
-            _webui_sleep(1);
         }
     }
     else {
 
         // Using timeout
-        for(size_t n = 0; n <= (timeout_second * 1000); n++) {
-
+        _webui_timer_t timer;
+        _webui_timer_start(&timer);
+        for(;;) {
+            _webui_sleep(10);
             if(_webui_core.run_done[run_id])
                 break;
-            
-            _webui_sleep(1);
+            if(_webui_timer_is_end(&timer, (timeout_second * 1000)))
+                break;
         }
     }
 
@@ -755,11 +754,15 @@ size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t
                 // ID to to the UI.
 
                 if(!win->connected) {
-                    for(size_t n = 0; n <= 12; n++) { // 3000ms
+                    _webui_timer_t timer;
+                    _webui_timer_start(&timer);
+                    for(;;) {
+                        _webui_sleep(10);
                         if(win->connected)
                             break;
-                        _webui_sleep(250);
-                    }
+                        if(_webui_timer_is_end(&timer, 3000))
+                            break;
+                    }                    
                 }
 
                 // 0: [Signature]
@@ -1316,31 +1319,30 @@ void webui_exit(void) {
 
     _webui_init();
 
-    #ifndef WEBUI_LOG
-        // Close all opened windows
-        // by sending `CLOSE` command
-
-        // Prepare packets
-        char* packet = (char*) _webui_malloc(4);
-        packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
-        packet[1] = WEBUI_HEADER_CLOSE;     // CMD
-        for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
-            if(_webui_core.wins[i] != NULL) {
-                if(_webui_core.wins[i]->connected) {
-                    // Send packet
-                    _webui_window_send(_webui_core.wins[i], packet, 2);
-                }
-            }
-        }
-        _webui_free_mem((void*)packet);
-    #endif
+    // #ifndef WEBUI_LOG
+    //     // Close all opened windows
+    //     // by sending `CLOSE` command
+    //     // Prepare packets
+    //     char* packet = (char*) _webui_malloc(4);
+    //     packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
+    //     packet[1] = WEBUI_HEADER_CLOSE;     // CMD
+    //     for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
+    //         if(_webui_core.wins[i] != NULL) {
+    //             if(_webui_core.wins[i]->connected) {
+    //                 // Send packet
+    //                 _webui_window_send(_webui_core.wins[i], packet, 2);
+    //             }
+    //         }
+    //     }
+    //     _webui_free_mem((void*)packet);
+    // #endif
     
     // Stop all threads
     _webui_core.exit_now = true;
 
     // Let's give other threads more time to 
-    // safely exit and finish their cleaning up.
-    _webui_sleep(120);
+    // safely exit and finish cleaning up.
+    _webui_sleep(250);
 
     // Fire the mutex condition wait
     _webui_condition_signal(&_webui_core.condition_wait);
@@ -1362,8 +1364,6 @@ void webui_wait(void) {
         if(!_webui_core.ui) {
 
             printf("[Loop] webui_wait() -> No window is found. Stop.\n");
-
-            // Final cleaning
             _webui_clean();
             return;
         }
@@ -2728,11 +2728,14 @@ static bool _webui_browser_create_profile_folder(_webui_window_t* win, size_t br
             _webui_cmd_sync(win, buf, false);
 
             // Creating the browser profile
-            for(size_t n = 0; n <= 24; n++) {
-                // 6000ms
+            _webui_timer_t timer;
+            _webui_timer_start(&timer);
+            for(;;) {
+                _webui_sleep(500);
                 if(_webui_folder_exist(firefox_profile_path))
                     break;
-                _webui_sleep(250);
+                if(_webui_timer_is_end(&timer, 10000))
+                    break;
             }
 
             if(!_webui_folder_exist(firefox_profile_path))
@@ -3464,7 +3467,7 @@ static void _webui_clean(void) {
     cleaned = true;
 
     // Let's give other threads more time to safely exit
-    // and finish their cleaning up.
+    // and finish cleaning up.
     _webui_core.exit_now = true;
     _webui_sleep(500);
 
@@ -3486,7 +3489,7 @@ static void _webui_clean(void) {
     _webui_condition_destroy(&_webui_core.condition_wait);
 
     #ifdef WEBUI_LOG
-        printf("[Core]\t\tDone.\n");
+        printf("[Core]\t\tWebUI exit successfully.\n");
     #endif
 }
 
@@ -4743,40 +4746,6 @@ static void _webui_free_port(size_t port) {
             break;
         }
     }
-}
-
-static void _webui_wait_for_startup(void) {
-
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_wait_for_startup()...\n");
-    #endif
-
-    if(_webui_core.connections > 0)
-        return;
-
-    // Wait for the first http request
-    // while the web browser is starting up
-    for(size_t n = 0; n < (_webui_core.startup_timeout * 20); n++) {
-        // User/Default timeout
-        if(_webui_core.server_handled)
-            break;
-        _webui_sleep(50);
-    }
-
-    // Wait for the first connection
-    // while the WS is connecting
-    if(_webui_core.wins[1] != NULL) {
-        // 1500ms
-        for(size_t n = 0; n < 30; n++) {
-            if(_webui_core.connections > 0)
-                break;
-            _webui_sleep(50);
-        }
-    }
-
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_wait_for_startup() -> Finish.\n");
-    #endif
 }
 
 static size_t _webui_get_free_port(void) {
