@@ -80,12 +80,18 @@ async function openFile() {
 
 async function saveFile() {
     const content = codeMirrorInstance.getValue();
-    if (supportsFilePicker && fileHandle) {
-        // Create a FileSystemWritableFileStream to write to
-        const writableStream = await fileHandle.createWritable();
-        await writableStream.write(content);
-        // Write to disk
-        await writableStream.close();
+    if (supportsFilePicker) {
+        if (fileHandle) {
+            // Create a FileSystemWritableFileStream to write to
+            const writableStream = await fileHandle.createWritable();
+            await writableStream.write(content);
+            // Write to disk
+            await writableStream.close();
+        } else {
+            fileHandle = await showSaveFilePicker();
+            saveFile();
+            setFile(await fileHandle.getFile());
+        }
     } else {
         // Download the file if using filePicker with a fileHandle for saving
         // is not supported by the browser. E.g., in Firefox.
