@@ -207,6 +207,7 @@ static bool _webui_browser_start_brave(_webui_window_t* win, const char* address
 static bool _webui_browser_start_firefox(_webui_window_t* win, const char* address);
 static bool _webui_browser_start_yandex(_webui_window_t* win, const char* address);
 static bool _webui_browser_start_chromium(_webui_window_t* win, const char* address);
+static bool _webui_browser_start_epiphany(_webui_window_t* win, const char* address);
 static bool _webui_browser_start(_webui_window_t* win, const char* address, size_t browser);
 static long _webui_timer_diff(struct timespec *start, struct timespec *end);
 static void _webui_timer_start(_webui_timer_t* t);
@@ -2779,6 +2780,22 @@ static bool _webui_browser_create_profile_folder(_webui_window_t* win, size_t br
 
         return true;
     }
+    else if(browser == Epiphany) {
+
+        // Epiphany
+        sprintf(win->profile_path, "%s%s.WebUI%sorg.gnome.Epiphany.WebApp_ffffffffffffffffffffffffffffffffffffffff", temp, webui_sep, webui_sep);
+        
+        if(!_webui_folder_exist(win->profile_path)){
+            char buf[2048] = {0};
+            sprintf(buf, "mkdir \"%s%s\" && touch \"%s%s.app\"", win->profile_path, webui_sep, win->profile_path, webui_sep);
+            _webui_cmd_sync(win, buf, false); // Create directory
+        }
+
+        if(!_webui_folder_exist(win->profile_path))
+            return false;
+        
+        return true;
+    }
 
     return false;
 }
@@ -3450,6 +3467,26 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 return false;
         #endif
     }
+    else if(browser == Epiphany){
+
+        static bool EpiphanyExist = false;
+        if(EpiphanyExist && !_webui_is_empty(win->browser_path)) return true;
+
+        #ifdef _WIN32
+            return false;
+        #elif __APPLE__
+            return false;
+        #else
+            if(_webui_cmd_sync(win, "epiphany --version", false) == 0) {
+
+                sprintf(win->browser_path, "epiphany");
+                EpiphanyExist = true;
+                return true;
+            }
+            else
+                return false;
+        #endif
+    }
 
     return false;
 }
@@ -3641,6 +3678,10 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
         
         // URL (END)
         c += sprintf(buffer + c, " -new-window ");
+        return c;
+    case Epiphany:
+        if(!_webui_is_empty(win->profile_path))
+            c = sprintf(buffer, " -a --profile=\"%s\"", win->profile_path);
         return c;
     }
 
@@ -3915,6 +3956,39 @@ static bool _webui_browser_start_chromium(_webui_window_t* win, const char* addr
         return false;
 }
 
+static bool _webui_browser_start_epiphany(_webui_window_t* win, const char* address) {
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_browser_start_epiphany([%s])...\n", address);
+    #endif
+    
+    // -- The Chromium Projects -------------------
+
+    if (win->current_browser != 0 && win->current_browser != Epiphany)
+        return false;
+
+    if (!_webui_browser_exist(win, Epiphany))
+        return false;
+    
+    if (!_webui_browser_create_profile_folder(win, Epiphany))
+        return false;
+    
+    char arg[1024] = {0};
+    _webui_get_browser_args(win, Epiphany, arg, sizeof(arg)); /////?
+
+    char full[1024] = {0};
+    sprintf(full, "%s%s %s", win->browser_path, arg, address);
+
+    if (_webui_run_browser(win, full) == 0) {
+
+        win->current_browser = Epiphany;
+        _webui_core.current_browser = Epiphany;
+        return true;
+    }
+    else
+        return false;
+}
+
 static bool _webui_browser_start(_webui_window_t* win, const char* address, size_t browser) {
 
     #ifdef WEBUI_LOG
@@ -3922,8 +3996,12 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     #endif
 
     // Non existing browser
-    if(browser > 11)
+    if(browser > 12){
+        #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_browser_start([%s], [%zu]) -> Browser not exist\n", address, browser);
+        #endif
         return false;
+    }
     
     // Current browser used in the last opened window
     if(browser == AnyBrowser && _webui_core.current_browser != 0)
@@ -3937,7 +4015,7 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     // #6 - Firefox - Does not support App-Mode like Chrome (Looks not great)
     // #7 - Yandex - Shows a big welcome window in the first run
     // #8 - Chromium - Some Anti-Malware shows a false alert when using ungoogled-chromium-binaries
-
+    
     if(browser != 0) {
 
         // Open the window using the user specified browser
@@ -3958,6 +4036,8 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
             return _webui_browser_start_yandex(win, address);
         else if(browser == Chromium)
             return _webui_browser_start_chromium(win, address);
+        else if(browser == Epiphany)
+            return _webui_browser_start_epiphany(win, address);
 	else if(browser == ChromiumBased) {
 
             // Open the window using a Chromium-based browser
@@ -3994,6 +4074,8 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
             return _webui_browser_start_yandex(win, address);
         else if(browser == Chromium)
             return _webui_browser_start_chromium(win, address);
+        else if(browser == Epiphany)
+            return _webui_browser_start_epiphany(win, address);
         else
             return false;
     }
@@ -4033,7 +4115,8 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
                                 if(!_webui_browser_start_firefox(win, address))
                                     if(!_webui_browser_start_yandex(win, address))
                                         if(!_webui_browser_start_chromium(win, address))
-                                            return false;
+                                            if(!_webui_browser_start_epiphany(win, address))
+                                                return false;
         #endif
     }
 
@@ -4168,6 +4251,7 @@ static size_t _webui_find_the_best_browser(_webui_window_t* win) {
         // Chromium check is never reached if Google Chrome is installed
         // due to duplicate process name `chrome`
         else if(_webui_is_process_running("chrome") && _webui_browser_exist(win, Chromium)) return Chromium;
+        else if(_webui_is_process_running("epiphany") && _webui_browser_exist(win, Epiphany)) return Epiphany;
     #else
         // macOS
         if(_webui_is_process_running("Google Chrome") && _webui_browser_exist(win, Chrome)) return Chrome;

@@ -116,6 +116,7 @@ enum webui_browsers {
     Epic, // 9. The Epic Browser
     Yandex, // 10. The Yandex Browser
     ChromiumBased, // 11. Any Chromium based browser
+    Epiphany // 12. The Epiphany Web Browser (aka Gnome Web)
 };
 
 enum webui_runtimes {

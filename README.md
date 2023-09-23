@@ -150,6 +150,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | Epic | ✔️ | ✔️ | *not available* |
 | Apple Safari | *not available* | *coming soon* | *not available* |
 | Opera | *coming soon* | *coming soon* | *coming soon* |
+| Epiphany (Gnome Web) | *not available* | *not available* | ✔️ |
 
 ### License
 
