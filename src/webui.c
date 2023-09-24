@@ -2783,12 +2783,43 @@ static bool _webui_browser_create_profile_folder(_webui_window_t* win, size_t br
     else if(browser == Epiphany) {
 
         // Epiphany
-        sprintf(win->profile_path, "%s%s.WebUI%sorg.gnome.Epiphany.WebApp_ffffffffffffffffffffffffffffffffffffffff", temp, webui_sep, webui_sep);
+        sprintf(win->profile_path, "%s%s.WebUI%sorg.gnome.Epiphany.WebApp_ffffffffffffffffffffffffffffffffffff0000", temp, webui_sep, webui_sep);
         
         if(!_webui_folder_exist(win->profile_path)){
             char buf[2048] = {0};
             sprintf(buf, "mkdir \"%s%s\" && touch \"%s%s.app\"", win->profile_path, webui_sep, win->profile_path, webui_sep);
             _webui_cmd_sync(win, buf, false); // Create directory
+        }
+
+        // Add desktop file to display "WebUI" instead of WMClass
+        char buf[200];
+        FILE *desktop_file;
+
+        char* LinuxUserProfile = getenv("HOME");
+        if(LinuxUserProfile != NULL){
+            sprintf(buf, "%s/.local/share/applications/org.gnome.Epiphany.WebApp_ffffffffffffffffffffffffffffffffffff0000.desktop", LinuxUserProfile);
+            desktop_file = fopen(buf, "w");
+            if(desktop_file != NULL) {
+                fprintf(desktop_file, "[Desktop Entry]\n");
+                fprintf(desktop_file, "StartupNotify=true\n");
+                fprintf(desktop_file, "Type=Application\n");
+                fprintf(desktop_file, "StartupWMClass=WebUI\n");
+                fprintf(desktop_file, "X-Purism-FormFactor=Workstation;Mobile;\n");
+                fprintf(desktop_file, "Name=WebUI\n");
+                fprintf(desktop_file, "Icon=epiphany\n");
+                fprintf(desktop_file, "NoDisplay=true");
+                fclose(desktop_file);
+            }
+
+            // Add another desktop file to change window title
+            sprintf(buf, "%s/.local/share/xdg-desktop-portal/applications/org.gnome.Epiphany.WebApp_ffffffffffffffffffffffffffffffffffff0000.desktop", LinuxUserProfile);
+            desktop_file = fopen(buf, "w");
+            if(desktop_file != NULL) {
+                fprintf(desktop_file, "[Desktop Entry]\n");
+                fprintf(desktop_file, "Name=WebUI\n");
+                fprintf(desktop_file, "NoDisplay=true");
+                fclose(desktop_file);
+            }
         }
 
         if(!_webui_folder_exist(win->profile_path))
@@ -3680,8 +3711,15 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
         c += sprintf(buffer + c, " -new-window ");
         return c;
     case Epiphany:
-        if(!_webui_is_empty(win->profile_path))
-            c = sprintf(buffer, " -a --profile=\"%s\"", win->profile_path);
+        char* LinuxUserProfile = getenv("HOME");
+        
+        if (!_webui_is_empty(win->profile_path))            
+            if(win->kiosk_mode && LinuxUserProfile != NULL) {
+                c = sprintf(buffer, " --profile=\"%s\"", win->profile_path);
+                c += sprintf(buffer + c, " --load-session=\"%s%s.WebUI/org.gnome.Epiphany.WebApp_ffffffffffffffffffffffffffffffffffff0000/kiosk.xml\"", LinuxUserProfile, webui_sep);
+            } else {
+                c = sprintf(buffer, " -a --profile=\"%s\"", win->profile_path);
+            }
         return c;
     }
 
@@ -3977,7 +4015,27 @@ static bool _webui_browser_start_epiphany(_webui_window_t* win, const char* addr
     _webui_get_browser_args(win, Epiphany, arg, sizeof(arg));
 
     char full[1024] = {0};
-    sprintf(full, "%s%s %s", win->browser_path, arg, address);
+    if(!win->kiosk_mode)
+        sprintf(full, "%s%s \"%s\"", win->browser_path, arg, address);
+    else {
+        char* LinuxUserProfile = getenv("HOME");
+        if(LinuxUserProfile == NULL) return false;
+        
+        char session_file_location[200];
+        FILE* kiosk_session_file;
+
+        sprintf(session_file_location, "%s%s.WebUI/org.gnome.Epiphany.WebApp_ffffffffffffffffffffffffffffffffffff0000/kiosk.xml", LinuxUserProfile, webui_sep);
+
+        kiosk_session_file = fopen(session_file_location, "w");
+        fprintf(kiosk_session_file, "<?xml version=\"1.0\"?>\n");
+        fprintf(kiosk_session_file, "<session>\n");
+        fprintf(kiosk_session_file, "	 <window x=\"0\" y=\"0\" width=\"8000\" height=\"8000\" is-maximized=\"1\" is-fullscreen=\"1\" active-tab=\"0\">\n");
+        fprintf(kiosk_session_file, "	 	 <embed url=\"%s\" title=\"WebUI\" history=\"\"/>\n", address);
+        fprintf(kiosk_session_file, "	 </window>\n");
+        fprintf(kiosk_session_file, "</session>");
+        fclose(kiosk_session_file);
+        sprintf(full, "%s%s", win->browser_path, arg);
+    }
 
     if (_webui_run_browser(win, full) == 0) {
 
