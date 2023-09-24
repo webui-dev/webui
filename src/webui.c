@@ -3710,18 +3710,19 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
         // URL (END)
         c += sprintf(buffer + c, " -new-window ");
         return c;
-    case Epiphany:
+    case Epiphany: {
         char* LinuxUserProfile = getenv("HOME");
         
-        if (!_webui_is_empty(win->profile_path))            
+        if (!_webui_is_empty(win->profile_path)){
             if(win->kiosk_mode && LinuxUserProfile != NULL) {
                 c = sprintf(buffer, " --profile=\"%s\"", win->profile_path);
                 c += sprintf(buffer + c, " --load-session=\"%s%s.WebUI/org.gnome.Epiphany.WebApp_ffffffffffffffffffffffffffffffffffff0000/kiosk.xml\"", LinuxUserProfile, webui_sep);
             } else {
                 c = sprintf(buffer, " -a --profile=\"%s\"", win->profile_path);
             }
+        }
         return c;
-    }
+    }}
 
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_get_browser_args() -> Unknown Browser (%zu)\n", browser);
