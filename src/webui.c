@@ -3572,8 +3572,8 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
     const char *chromium_options[] = {
         "--no-first-run",
         "--no-proxy-server",
-        "--safe-mode",
-        "--disable-extensions",
+        // "--safe-mode",
+        // "--disable-extensions",
         "--disable-background-mode",
         "--disable-plugins",
         "--disable-plugins-discovery",
