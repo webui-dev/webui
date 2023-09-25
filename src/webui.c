@@ -3513,8 +3513,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 sprintf(win->browser_path, "epiphany");
                 EpiphanyExist = true;
                 return true;
-            }
-            else
+            } else if(_webui_cmd_sync(win, "epiphany-browser --version", false) == 0) {
+
+                sprintf(win->browser_path, "epiphany-browser");
+                EpiphanyExist = true;
+                return true;
+            } else
                 return false;
         #endif
     }
