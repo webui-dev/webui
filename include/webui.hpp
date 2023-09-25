@@ -233,6 +233,35 @@ namespace webui {
         void set_runtime(unsigned int runtime) const {
             webui_set_runtime(webui_window, runtime);
         }
+
+        // Set the web-server root folder path for this specific window.
+        bool set_root_folder(const std::string_view path) const {
+            return webui_set_root_folder(webui_window, path.data());
+        }
+
+        // Set a custom handler to serve files.
+        void set_file_handler(const void* (*handler)(const char* filename, int* length)) const {
+            webui_set_file_handler(webui_window, handler);
+        }
+
+        // Set the web browser profile to use. An empty `name` and `path` means the default user profile. Need to be called before `webui_show()`.
+        void set_profile(const std::string_view name = {""}, const std::string_view path = {""}) const {
+            webui_set_profile(webui_window, name.data(), path.data());
+        }
+
+        // Get the full current URL
+        std::string_view get_url() const {
+            return std::string_view{webui_get_url(webui_window)};
+        }
+
+        // Get process id (The web browser may create another process for the window)
+        size_t get_child_process_id() const {
+            return webui_get_child_process_id(webui_window);
+        }
+
+        size_t get_parent_process_id() const {
+            return webui_get_parent_process_id(webui_window);
+        }
     };
 
     // Wait until all opened windows get closed.
@@ -263,6 +292,11 @@ namespace webui {
     // Safely free a buffer allocated by WebUI, for example when using webui_encode().
     inline void free(void* ptr) {
         webui_free(ptr);
+    }
+
+    // Set the web-server root folder path for all windows.
+    inline bool set_default_root_folder(const std::string_view path){
+        return webui_set_default_root_folder(path.data());
     }
 }
 
