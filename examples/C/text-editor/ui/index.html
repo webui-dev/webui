@@ -1,33 +1,23 @@
 <!doctype html>
 <html>
     <head>
-        <meta charset="UTF-8">
+        <meta charset="UTF-8" />
         <script src="/webui.js"></script>
 
         <link rel="icon" type="image/png" href="img/icon.png" />
         <title>Text Editor in C using WebUI</title>
-        <link rel="stylesheet" href="css/style.css">
-        <link rel="stylesheet" href="css/lucario.css">
-        <link rel="stylesheet" href="css/codemirror.min.css">
-        <link rel="stylesheet" href="css/all.min.css">
+        <link rel="stylesheet" href="css/style.css" />
+        <link rel="stylesheet" href="css/lucario.css" />
+        <link rel="stylesheet" href="css/codemirror.min.css" />
+        <link rel="stylesheet" href="css/all.min.css" />
     </head>
     <body>
         <div class="topbar"></div>
         <nav>
-            <ul>
-                <li>
-                    <a onclick="OpenFile();"><i class="fas fa-folder-open"></i></a>
-                </li>
-                <li id="save-button" style="pointer-events: none; color: #7ca0df;">
-                    <a onclick="SaveFile();"><i class="fa fa-floppy-disk"></i></a>
-                </li>
-                <li>
-                    <a id="close-button"><i class="fas fa-circle-xmark"></i></a>
-                </li>
-                <li>
-                    <a id="about-button"><i class="fas fa-question-circle"></i></a>
-                </li>
-            </ul>
+            <button id="open-btn" title="Open file" type="button"><i class="fas fa-folder-open"></i></button>
+            <button id="save-btn" title="Save file" type="button" disabled><i class="fa fa-floppy-disk"></i></button>
+            <button id="__close-btn" title="Close file" type="button"><i class="fas fa-circle-xmark"></i></button>
+            <button id="about-btn" title="About Info" type="button"><i class="fas fa-question-circle"></i></button>
         </nav>
         <div class="main" id="main">
             <textarea id="editor"></textarea>

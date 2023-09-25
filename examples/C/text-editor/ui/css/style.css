@@ -24,43 +24,36 @@ header {
 /* Nav */
 
 nav {
-    margin: 0 auto;
-    padding: 0px;
-    text-shadow: 1px 1px 2px #000000;
-    position: relative;
-    z-index: 99;
-    font-family: 'Font Awesome 5 Free';
-    font-size: 18px;
-}
-
-nav ul {
-    margin-top: 0px;
-    margin-bottom: 0px;
-    text-align: center;
     background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 25%, rgba(255, 255, 255, 0.2) 75%, rgba(255, 255, 255, 0) 100%);
     box-shadow: 0 0 25px rgba(0, 0, 0, 0.1), inset 0 0 1px rgba(255, 255, 255, 0.6);
+    text-align: center;
+}
+
+nav button {
+    background: none;
+    border: none;
+    text-shadow: 1px 1px 2px #000000;
+    font-family: 'Font Awesome 5 Free';
+    font-size: 18px;
+    color: #ddecf9;
     cursor: pointer;
-}
-
-nav ul li {
-    display: inline-block;
-}
-
-nav ul li a {
+    margin: 0 auto;
     padding: 18px;
-    font-family: "Open Sans";
-    text-transform:uppercase;
-    text-decoration: none;
-    display: block;
 }
 
-nav ul li a i {
-    pointer-events: none;
-}
-
-nav ul li a:hover {
+nav button:hover {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1), inset 0 0 1px rgba(255, 255, 255, 0.6);
     background: rgba(255, 255, 255, 0.1);
+}
+
+nav #save-btn:disabled {
+    pointer-events: none;
+    color: #7ca0df;
+}
+
+nav button i {
+    /* Click through the icon in the button */
+    pointer-events: none;
 }
 
 /* Code */
