@@ -172,14 +172,19 @@ namespace webui {
             return webui_show_browser(webui_window, content.data(), browser);
         }
 
-        // Close a specific window.
+        // Set the window in Kiosk mode (Full screen)
+        void set_kiosk(bool status) const {
+            webui_set_kiosk(webui_window, status);
+        }
+
+        // Close a specific window only. The window object will still exist.
         void close() const {
             webui_close(webui_window);
         }
 
-        // Set the window in Kiosk mode (Full screen)
-        void set_kiosk(bool status) const {
-            webui_set_kiosk(webui_window, status);
+        // Close a specific window and free all memory resources.
+        void destroy() const {
+            webui_destroy(webui_window);
         }
 
         // Check a specific window if it's still running
@@ -215,6 +220,21 @@ namespace webui {
         // Set window position
         void set_position(unsigned int x, unsigned int y) const {
             webui_set_position(webui_window, x, y);
+        }
+
+        // Delete a specific window web-browser local folder profile.
+        void webui_delete_profile(size_t window) const {
+            webui_delete_profile(webui_window);
+        }
+
+        // Get the ID of the parent process (The web browser may create another process for the window).
+        size_t get_parent_process_id() const {
+            return webui_get_parent_process_id(webui_window);
+        }
+
+        // Get the ID of the last child process spawned by the browser.
+        size_t get_child_process_id() const {
+            return webui_get_child_process_id(webui_window);
         }
 
         // -- JavaScript ----------------------
@@ -253,15 +273,6 @@ namespace webui {
         std::string_view get_url() const {
             return std::string_view{webui_get_url(webui_window)};
         }
-
-        // Get process id (The web browser may create another process for the window)
-        size_t get_child_process_id() const {
-            return webui_get_child_process_id(webui_window);
-        }
-
-        size_t get_parent_process_id() const {
-            return webui_get_parent_process_id(webui_window);
-        }
     };
 
     // Wait until all opened windows get closed.
@@ -272,6 +283,11 @@ namespace webui {
     // Close all opened windows. wait() will break.
     inline void exit() {
         webui_exit();
+    }
+
+    // Set the web-server root folder path for all windows.
+    inline bool set_default_root_folder(const std::string_view path){
+        return webui_set_default_root_folder(path.data());
     }
 
     // Set the maximum time in seconds to wait for browser to start
@@ -294,9 +310,19 @@ namespace webui {
         webui_free(ptr);
     }
 
-    // Set the web-server root folder path for all windows.
-    inline bool set_default_root_folder(const std::string_view path){
-        return webui_set_default_root_folder(path.data());
+    // Safely free a buffer allocated by WebUI, for example when using webui_encode().
+    inline void* malloc(size_t size) {
+        return webui_malloc(size);
+    }
+
+    // Free all memory resources. Should be called only at the end.
+    inline void clean() {
+        webui_clean();
+    }
+
+    // Delete all local web-browser profiles folder. It should called at the end.
+    inline void delete_all_profiles() {
+        webui_delete_all_profiles();
     }
 }
 
