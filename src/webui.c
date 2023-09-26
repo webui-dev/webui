@@ -3722,7 +3722,7 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
                 c = sprintf(buffer, " --profile=\"%s\"", win->profile_path);
                 c += sprintf(buffer + c, " --load-session=\"%s%s.WebUI/org.gnome.Epiphany.WebApp_ffffffffffffffffffffffffffffffffffff0000/kiosk.xml\"", LinuxUserProfile, webui_sep);
             } else {
-                c = sprintf(buffer, " -a --profile=\"%s\"", win->profile_path);
+                c = sprintf(buffer, " -a --profile=\"%s\" --new-window", win->profile_path);
             }
         }
         return c;
