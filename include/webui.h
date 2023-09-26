@@ -427,6 +427,16 @@ WEBUI_EXPORT void webui_set_profile(size_t window, const char* name, const char*
  */
 WEBUI_EXPORT const char* webui_get_url(size_t window);
 
+/**
+ * @brief Navigate to a specific URL
+ * 
+ * @param window The window number
+ * @param url Full HTTP URL
+ * 
+ * @example webui_navigate(myWindow, "http://domain.com");
+ */
+WEBUI_EXPORT void webui_navigate(size_t window, const char* url);
+
 // -- JavaScript ----------------------
 
 // Run JavaScript without waiting for the response.
