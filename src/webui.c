@@ -1463,8 +1463,10 @@ void webui_wait(void) {
         // is running. Otherwise the mutex condition
         // signal will never come
         if(!_webui_core.ui) {
-
-            printf("[Loop] webui_wait() -> No window is found. Stop.\n");
+            #ifdef WEBUI_LOG
+                printf("[Loop] webui_wait() -> No window is found. Stop.\n");
+            #endif
+            
             _webui_clean();
             return;
         }
