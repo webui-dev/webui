@@ -33,6 +33,12 @@ jobs:
     strategy:
       matrix:
         compiler: [GCC, Clang]
+        arch: [x64]
+        include:
+          - compiler: GCC
+            arch: aarch64
+          - compiler: GCC
+            arch: arm
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
@@ -41,23 +47,40 @@ jobs:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
           fail-on-cache-miss: true
-      - name: Link Libraries
-        if: matrix.compiler == 'clang'
+      - name: Setup Libraries
         run: |
-          sudo ln -s llvm-ar-13 /usr/bin/llvm-ar
-          sudo ln -s llvm-ranlib-13 /usr/bin/llvm-ranlib
+          if [ "${{ matrix.compiler }}" == "Clang" ]; then
+            sudo ln -s llvm-ar-14 /usr/bin/llvm-ar
+            sudo ln -s llvm-ranlib-14 /usr/bin/llvm-ranlib
+          elif [ "${{ matrix.arch }}" == "aarch64" ]; then
+            sudo apt install gcc-aarch64-linux-gnu
+          elif [ "${{ matrix.arch }}" == "arm" ]; then
+            sudo apt install gcc-arm-linux-gnueabihf
+          fi
       - name: Build Debug Target
         run: |
-          compiler=${{ matrix.compiler }}
-          make CC=${compiler,,} debug
+          if [ "${{ matrix.arch }}" == "aarch64" ]; then
+            make CC=aarch64-linux-gnu-gcc debug
+          elif [ "${{ matrix.arch }}" == "arm" ]; then
+            make CC=arm-linux-gnueabihf-gcc debug
+          else
+            compiler=${{ matrix.compiler }}
+            make CC=${compiler,,} debug
+          fi
       - name: Build Release Target
         run: |
-          compiler=${{ matrix.compiler }}
-          make CC=${compiler,,}
+          if [ "${{ matrix.arch }}" == "aarch64" ]; then
+            make CC=aarch64-linux-gnu-gcc
+          elif [ "${{ matrix.arch }}" == "arm" ]; then
+            make CC=arm-linux-gnueabihf-gcc
+          else
+            compiler=${{ matrix.compiler }}
+            make CC=${compiler,,}
+          fi
       - name: Prepare Artifact
         run: |
           cp -r include dist
-          artifact=webui-${{ runner.os }}-${{ matrix.compiler }}-x64
+          artifact=webui-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }}
           # Convert to lowercase (`,,` ^= lowercase shell param)
           artifact=${artifact,,}
           # Add the ARTIFACT name as GitHub environment variable.

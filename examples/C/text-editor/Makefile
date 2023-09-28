@@ -12,7 +12,7 @@ CC = gcc
 BUILD_LIB ?=
 
 # BUILD FLAGS
-CFLAGS = -m64 text-editor.c -I"$(PROJECT_DIR)/include"
+CFLAGS = text-editor.c -I"$(PROJECT_DIR)/include"
 LDFLAGS = -L"$(LIB_DIR)"
 
 # Platform conditions
