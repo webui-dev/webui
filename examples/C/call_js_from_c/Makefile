@@ -13,8 +13,8 @@ CC = gcc
 BUILD_LIB ?=
 
 # BUILD FLAGS
-STATIC_BUILD_FLAGS = -m64 main.c -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
-DYN_BUILD_FLAGS = -m64 main.c -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
+STATIC_BUILD_FLAGS = main.c -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
+DYN_BUILD_FLAGS = main.c -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
 
 # Platform conditions
 ifeq ($(OS),Windows_NT)

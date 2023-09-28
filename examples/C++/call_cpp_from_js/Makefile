@@ -13,8 +13,8 @@ CXX = g++
 BUILD_LIB ?=
 
 # BUILD FLAGS
-STATIC_BUILD_FLAGS = -std=c++17 -lstdc++ -m64 main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
-DYN_BUILD_FLAGS = -std=c++17 -lstdc++ -m64 main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
+STATIC_BUILD_FLAGS = -std=c++17 -lstdc++ main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
+DYN_BUILD_FLAGS = -std=c++17 -lstdc++ main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
 
 # Platform conditions
 ifeq ($(OS),Windows_NT)

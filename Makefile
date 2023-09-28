@@ -12,9 +12,9 @@ CC = gcc
 ARCH_TARGET ?=
 
 # BUILD FLAGS
-CIVETWEB_BUILD_FLAGS := -m64 -o civetweb.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/civetweb/civetweb.c"
+CIVETWEB_BUILD_FLAGS := -o civetweb.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/civetweb/civetweb.c"
 CIVETWEB_DEFINE_FLAGS = -DNDEBUG -DNO_CACHING -DNO_CGI -DNO_SSL -DUSE_WEBSOCKET
-WEBUI_BUILD_FLAGS := -m64 -o webui.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webui.c"
+WEBUI_BUILD_FLAGS := -o webui.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webui.c"
 
 # OUTPUT FILES
 # The static output is the same for all platforms
@@ -38,8 +38,18 @@ else
 	# Linux
 	PLATFORM := linux
 	LIB_DYN_OUT := webui-2.so
-	ifeq ($(CC),clang)
+	ifneq ($(filter $(CC),gcc clang aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc),$(CC))
+		$(error Invalid compiler specified: `$(CC)`)
+	else ifeq ($(CC),clang)
 		LLVM_OPT := llvm-
+	endif
+endif
+# macOS can set `ARCH_TARGET=arm64` - intented for CI cross-compilation.
+ifneq ($(ARCH_TARGET),)
+	ifneq ($(PLATFORM),macos)
+		$(error ARCH_TARGET is only available on macOS)
+	else ifeq ($(ARCH_TARGET),arm64)
+		TARGET := -target arm64-apple-darwin 
 	endif
 endif
 
@@ -47,29 +57,13 @@ endif
 
 all: release
 
-debug: --validate-args --debug
+debug: --debug
 
-release: --validate-args --release
+release: --release
 
 clean: --clean-$(PLATFORM)
 
 # == 2.1 INTERNAL TARGETS =====================================================
-
---validate-args:
-# Linux can set a COMPILER
-ifeq ($(PLATFORM),linux)
-ifneq ($(filter $(CC),gcc clang),$(CC))
-	$(error Invalid compiler specified: `$(CC)`)
-endif
-endif
-# macOS can set an ARCH_TARGET - intented for CI cross-compilation.
-# Valid input is `ARCH_TARGET="-target arm64-apple-darwin"`.
-# WARN: Wrong input is not covered yet.
-ifneq ($(ARCH_TARGET),)
-ifneq ($(PLATFORM),macos)
-	$(error ARCH_TARGET is only available on macOS)
-endif
-endif
 
 --debug:
 # Create build directory
@@ -80,17 +74,17 @@ else
 endif
 #	Static with Debug info
 	@cd "$(BUILD_DIR)/debug" \
-	&& echo "Build WebUI library ($(CC) debug static)..." \
-	&& $(CC) $(ARCH_TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g \
-	&& $(CC) $(ARCH_TARGET) $(WEBUI_BUILD_FLAGS) -g -DWEBUI_LOG \
+	&& echo "Build WebUI library ($(CC) $(TARGET)debug static)..." \
+	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g \
+	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) -g -DWEBUI_LOG \
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o \
 	&& $(LLVM_OPT)ranlib $(LIB_STATIC_OUT)
 #	Dynamic with Debug info
 	@cd "$(BUILD_DIR)/debug" \
-	&& echo "Build WebUI library ($(CC) debug dynamic)..." \
-	&& $(CC) $(ARCH_TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
-	&& $(CC) $(ARCH_TARGET) $(WEBUI_BUILD_FLAGS) -g -fPIC -DWEBUI_LOG \
-	&& $(CC) $(ARCH_TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o -g $(LWS2_OPT)
+	&& echo "Build WebUI library ($(CC) $(TARGET)debug dynamic)..." \
+	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
+	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) -g -fPIC -DWEBUI_LOG \
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o -g $(LWS2_OPT)
 ifeq ($(PLATFORM),windows)
 	@cd "$(BUILD_DIR)/debug" && del *.o >nul 2>&1
 else
@@ -107,17 +101,17 @@ else
 endif
 #	Static Release
 	@cd "$(BUILD_DIR)" \
-	&& echo "Build WebUI library ($(CC) release static)..." \
-	&& $(CC) $(ARCH_TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os \
-	&& $(CC) $(ARCH_TARGET) $(WEBUI_BUILD_FLAGS) -Os \
+	&& echo "Build WebUI library ($(CC) $(TARGET)release static)..." \
+	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os \
+	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) -Os \
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o \
 	&& $(LLVM_OPT)ranlib $(LIB_STATIC_OUT)
 #	Dynamic Release
 	@cd "$(BUILD_DIR)" \
-	&& echo "Build WebUI library ($(CC) release dynamic)..." \
-	&& $(CC) $(ARCH_TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os -fPIC \
-	&& $(CC) $(ARCH_TARGET) $(WEBUI_BUILD_FLAGS) -O3 -fPIC \
-	&& $(CC) $(ARCH_TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(LWS2_OPT)
+	&& echo "Build WebUI library ($(CC) $(TARGET)release dynamic)..." \
+	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os -fPIC \
+	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) -O3 -fPIC \
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(LWS2_OPT)
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@strip --strip-unneeded $(BUILD_DIR)/$(LIB_DYN_OUT)
