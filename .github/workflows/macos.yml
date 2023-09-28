@@ -42,19 +42,9 @@ jobs:
           key: ${{ runner.os }}-${{ github.sha }}-bridge
           fail-on-cache-miss: true
       - name: Build Debug Target
-        run: |
-          if [ "${{ matrix.arch }}" == "arm64" ]; then
-            make ARCH_TARGET="-target arm64-apple-darwin" debug
-          else
-            make debug
-          fi
+        run: make ARCH_TARGET=${{ matrix.arch }} debug
       - name: Build Release Target
-        run: |
-          if [ "${{ matrix.arch }}" == "arm64" ]; then
-            make ARCH_TARGET="-target arm64-apple-darwin"
-          else
-            make
-          fi
+        run: make ARCH_TARGET=${{ matrix.arch }}
       - name: Prepare Artifacts
         run: |
           cp -r include dist
