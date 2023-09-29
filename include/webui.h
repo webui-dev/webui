@@ -437,6 +437,13 @@ WEBUI_EXPORT const char* webui_get_url(size_t window);
  */
 WEBUI_EXPORT void webui_navigate(size_t window, const char* url);
 
+/**
+ * @brief Delete all local web browser profile's folder
+ * 
+ * @example webui_clean();
+ */
+WEBUI_EXPORT void webui_clean();
+
 // -- JavaScript ----------------------
 
 // Run JavaScript without waiting for the response.

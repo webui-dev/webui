@@ -202,6 +202,7 @@ static void _webui_clean(void);
 static bool _webui_browser_exist(_webui_window_t* win, size_t browser);
 static const char* _webui_get_temp_path();
 static bool _webui_folder_exist(char* folder);
+static void _webui_delete_folder(char* folder);
 static bool _webui_browser_create_profile_folder(_webui_window_t* win, size_t browser);
 static bool _webui_browser_start_chrome(_webui_window_t* win, const char* address);
 static bool _webui_browser_start_edge(_webui_window_t* win, const char* address);
@@ -736,6 +737,53 @@ void webui_navigate(size_t window, const char* url) {
     // Send the packet
     _webui_window_send(win, packet, packet_len);
     _webui_free_mem((void*)packet);
+}
+
+void webui_clean() {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_clean()...\n");
+    #endif
+
+    // Loop trough windows
+    for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
+        if(_webui_core.wins[i] != NULL) {
+
+            _webui_window_t* win = _webui_core.wins[i];
+            if(_webui_folder_exist(win->profile_path)) {
+                if(win->current_browser == Firefox) {
+                    
+                    // Delete Firefox profile
+
+                    // TODO:
+
+                    #ifdef _WIN32
+                        // Windows
+
+                        // 1. Read "%APPDATA%\Mozilla\Firefox\profiles.ini"
+                        // 2. Delete the section that contain { "Path=" + win->profile_path }
+                        // 3. _webui_delete_folder(win->profile_path);
+
+                        // win->profile_path: Full path to profile
+                        // win->browser_path: Full path to firefox browser
+                    #elif __linux__
+                        // Linux
+
+                        // TODO: ...
+                    #else
+                        // macOS
+
+                        // TODO: ...
+                    #endif
+                }
+                else {
+
+                    // Delete Chromium based profile
+                    _webui_delete_folder(win->profile_path);
+                }
+            }
+        }
+    }
 }
 
 bool webui_show(size_t window, const char* content) {
@@ -2924,6 +2972,21 @@ static bool _webui_folder_exist(char* folder) {
     return false;
 }
 
+static void _webui_delete_folder(char* folder) {
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_delete_folder([%s])...\n", folder);
+    #endif
+
+    char command[1024];
+    #if defined(_WIN32)
+        snprintf(command, sizeof(command), "rmdir /s /q \"%s\"", folder);
+    #else
+        snprintf(command, sizeof(command), "rm -rf \"%s\"", folder);
+    #endif
+    system(command);
+}
+
 static char* _webui_generate_internal_id(_webui_window_t* win, const char* element) {
 
     #ifdef WEBUI_LOG
@@ -4583,11 +4646,16 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         printf("[Core]\t\t_webui_window_receive()...\n");
     #endif
 
-    if((unsigned char) packet[0] != WEBUI_HEADER_SIGNATURE || len < 4)
+    if((unsigned char) packet[0] != WEBUI_HEADER_SIGNATURE || len < 4 || _webui_core.exit_now)
         return;
     
     // Mutex
+    // wait for previous event to finish
     _webui_mutex_lock(&_webui_core.mutex_receive);
+
+    // Check if the previous event calls exit()
+    if(_webui_core.exit_now)
+        return;
 
     #ifdef WEBUI_LOG
         ReceiveNum++;
