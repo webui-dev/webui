@@ -159,6 +159,10 @@ typedef struct _webui_cmd_async_t {
     char* cmd;
 } _webui_cmd_async_t;
 
+#ifdef WEBUI_LOG
+    static size_t ReceiveNum = 0;
+#endif
+
 // -- Definitions ---------------------
 #ifdef _WIN32
     static const char* webui_sep = "\\";
@@ -2061,7 +2065,7 @@ static bool _webui_timer_is_end(_webui_timer_t* t, size_t ms) {
 static bool _webui_is_empty(const char* s) {
 
     #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_is_empty()...\n");
+        // printf("[Core]\t\t_webui_is_empty()...\n");
     #endif
 
     if((s != NULL) && (s[0] != '\0'))
@@ -2072,7 +2076,7 @@ static bool _webui_is_empty(const char* s) {
 static size_t _webui_strlen(const char* s) {
 
     #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_strlen()...\n");
+        // printf("[Core]\t\t_webui_strlen()...\n");
     #endif
 
     if(_webui_is_empty(s))
@@ -4585,6 +4589,11 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
     // Mutex
     _webui_mutex_lock(&_webui_core.mutex_receive);
 
+    #ifdef WEBUI_LOG
+        ReceiveNum++;
+        printf("[Core]\t\t_webui_window_receive() -> #%zu -> Start\n", ReceiveNum);
+    #endif
+
     if((unsigned char) packet[1] == WEBUI_HEADER_CLICK) {
 
         // Click Event
@@ -4602,9 +4611,9 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         _webui_get_data(packet, len, 2, &element_len, &element);
         
         #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_CLICK \n");
-            printf("[Core]\t\t_webui_window_receive() -> Element size: %zu bytes \n", element_len);
-            printf("[Core]\t\t_webui_window_receive() -> Element : [%s] \n", element);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> WEBUI_HEADER_CLICK \n", ReceiveNum);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> Element size: %zu bytes \n", ReceiveNum, element_len);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> Element : [%s] \n", ReceiveNum, element);
         #endif
 
         // Generate WebUI internal id
@@ -4654,11 +4663,11 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             error = false;
 
         #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_JS \n");
-            printf("[Core]\t\t_webui_window_receive() -> run_id = 0x%02x \n", run_id);
-            printf("[Core]\t\t_webui_window_receive() -> error = 0x%02x \n", error);
-            printf("[Core]\t\t_webui_window_receive() -> %zu bytes of data\n", data_len);
-            printf("[Core]\t\t_webui_window_receive() -> data = [%s] @ 0x%p\n", data, data);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> WEBUI_HEADER_JS \n", ReceiveNum);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> run_id = 0x%02x \n", ReceiveNum, run_id);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> error = 0x%02x \n", ReceiveNum, error);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> %zu bytes of data\n", ReceiveNum, data_len);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> data = [%s] @ 0x%p\n", ReceiveNum, data, data);
         #endif
 
         // Initialize pipe
@@ -4705,9 +4714,9 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             }
 
             #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_NAVIGATION \n");
-                printf("[Core]\t\t_webui_window_receive() -> URL size: %zu bytes \n", url_len);
-                printf("[Core]\t\t_webui_window_receive() -> URL: [%s] \n", url);
+                printf("[Core]\t\t_webui_window_receive() -> #%zu -> WEBUI_HEADER_NAVIGATION \n", ReceiveNum);
+                printf("[Core]\t\t_webui_window_receive() -> #%zu -> URL size: %zu bytes \n", ReceiveNum, url_len);
+                printf("[Core]\t\t_webui_window_receive() -> #%zu -> URL: [%s] \n", ReceiveNum, url);
             #endif
 
             // Generate WebUI internal id
@@ -4759,14 +4768,14 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         char* data = (char*)&packet[3 + element_strlen + 1 + len_s_strlen + 1];
 
         #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_window_receive() -> WEBUI_HEADER_CALL_FUNC \n");
-            printf("[Core]\t\t_webui_window_receive() -> Call ID: [0x%02x] \n", packet[2]);
-            printf("[Core]\t\t_webui_window_receive() -> Element: [%s] \n", element);
-            printf("[Core]\t\t_webui_window_receive() -> Data size: %lld Bytes \n", len);
-            printf("[Core]\t\t_webui_window_receive() -> Data: Hex [ ");
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> WEBUI_HEADER_CALL_FUNC \n", ReceiveNum);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> Call ID: [0x%02x] \n", ReceiveNum, packet[2]);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> Element: [%s] \n", ReceiveNum, element);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> Data size: %lld Bytes \n", ReceiveNum, len);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> Data: Hex [ ", ReceiveNum);
                 _webui_print_hex(data, len);
             printf("]\n");
-            printf("[Core]\t\t_webui_window_receive() -> Data: ASCII [ ");
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> Data: ASCII [ ", ReceiveNum);
                 _webui_print_ascii(data, len);
             printf("]\n");
         #endif
@@ -4795,7 +4804,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
 
             // Call user cb
             #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_window_receive() -> Calling user callback...\n[Call]\n");
+                printf("[Core]\t\t_webui_window_receive() -> #%zu -> Calling user callback...\n[Call]\n", ReceiveNum);
             #endif
             _webui_core.cb[cb_index](&e);
         }
@@ -4805,7 +4814,7 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
             *response = (char*)"";
 
         #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_window_receive() -> user-callback response [%s]\n", *response);
+            printf("[Core]\t\t_webui_window_receive() -> #%zu -> user-callback response [%s]\n", ReceiveNum, *response);
         #endif
 
         // 0: [Signature]
@@ -4832,6 +4841,10 @@ static void _webui_window_receive(_webui_window_t* win, const char* packet, size
         _webui_free_mem((void*)*response);
         _webui_free_mem((void*)event_core);
     }
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_window_receive() -> #%zu -> End\n", ReceiveNum);
+    #endif
 
     _webui_mutex_unlock(&_webui_core.mutex_receive);
 }
