@@ -104,18 +104,19 @@
 
 // -- Enums ---------------------------
 enum webui_browsers {
-    AnyBrowser = 0, // 0. Default recommended web browser
-    Chrome, // 1. Google Chrome
-    Firefox, // 2. Mozilla Firefox
-    Edge, // 3. Microsoft Edge
-    Safari, // 4. Apple Safari
-    Chromium, // 5. The Chromium Project
-    Opera, // 6. Opera Browser
-    Brave, // 7. The Brave Browser
-    Vivaldi, // 8. The Vivaldi Browser
-    Epic, // 9. The Epic Browser
-    Yandex, // 10. The Yandex Browser
-    ChromiumBased, // 11. Any Chromium based browser
+    NoBrowser = 0, // 0. No web browser
+    AnyBrowser = 1, // 1. Default recommended web browser
+    Chrome, // 2. Google Chrome
+    Firefox, // 3. Mozilla Firefox
+    Edge, // 4. Microsoft Edge
+    Safari, // 5. Apple Safari
+    Chromium, // 6. The Chromium Project
+    Opera, // 7. Opera Browser
+    Brave, // 8. The Brave Browser
+    Vivaldi, // 9. The Vivaldi Browser
+    Epic, // 10. The Epic Browser
+    Yandex, // 11. The Yandex Browser
+    ChromiumBased, // 12. Any Chromium based browser
 };
 
 enum webui_runtimes {
