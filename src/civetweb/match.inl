@@ -47,8 +47,8 @@ mg_match_impl(const char *pat,
 				/* Advance as long as there are ? */
 				i_pat++;
 				i_str++;
-			} while ((pat[i_pat] == '?') && (str[i_str] != '\0')
-			         && (str[i_str] != '/') && (i_pat < pat_len));
+			} while ((i_pat < pat_len) && (pat[i_pat] == '?')
+			         && (str[i_str] != '\0') && (str[i_str] != '/'));
 
 			/* If we have a match context, add the substring we just found */
 			if (mcx) {
@@ -72,7 +72,7 @@ mg_match_impl(const char *pat,
 			ptrdiff_t ret;
 
 			i_pat++;
-			if ((pat[i_pat] == '*') && (i_pat < pat_len)) {
+			if ((i_pat < pat_len) && (pat[i_pat] == '*')) {
 				/* Pattern ** matches all */
 				i_pat++;
 				len = strlen(str + i_str);

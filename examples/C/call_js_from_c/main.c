@@ -89,6 +89,11 @@ int main() {
 
     // Wait until all windows get closed
     webui_wait();
+    webui_show(my_window, my_html);
+    webui_wait();
+
+    // Free all memory resources (Optional)
+    webui_clean();
 
     return 0;
 }

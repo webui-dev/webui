@@ -745,43 +745,74 @@ void webui_clean() {
         printf("[User] webui_clean()...\n");
     #endif
 
+    // Initialization
+    _webui_init();
+
+    // Final memory cleaning
+    _webui_clean();
+}
+
+void webui_delete_all_profiles() {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_delete_all_profiles()...\n");
+    #endif
+
+    // Initialization
+    _webui_init();
+
     // Loop trough windows
     for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
         if(_webui_core.wins[i] != NULL) {
+            webui_delete_profile(i);
+        }
+    }
+}
 
-            _webui_window_t* win = _webui_core.wins[i];
-            if(_webui_folder_exist(win->profile_path)) {
-                if(win->current_browser == Firefox) {
-                    
-                    // Delete Firefox profile
+void webui_delete_profile(size_t window) {
 
-                    // TODO:
+    #ifdef WEBUI_LOG
+        printf("[User] webui_delete_profile([%zu])...\n", window);
+    #endif
 
-                    #ifdef _WIN32
-                        // Windows
+    // Initialization
+    _webui_init();
+    
+    // Dereference
+    if(_webui_core.wins[window] == NULL) return;
+    _webui_window_t* win = _webui_core.wins[window];
 
-                        // 1. Read "%APPDATA%\Mozilla\Firefox\profiles.ini"
-                        // 2. Delete the section that contain { "Path=" + win->profile_path }
-                        // 3. _webui_delete_folder(win->profile_path);
+    if(_webui_folder_exist(win->profile_path)) {
 
-                        // win->profile_path: Full path to profile
-                        // win->browser_path: Full path to firefox browser
-                    #elif __linux__
-                        // Linux
+        if(win->current_browser == Firefox) {
+            
+            // Delete Firefox profile
 
-                        // TODO: ...
-                    #else
-                        // macOS
+            // TODO:
 
-                        // TODO: ...
-                    #endif
-                }
-                else {
+            #ifdef _WIN32
+                // Windows
 
-                    // Delete Chromium based profile
-                    _webui_delete_folder(win->profile_path);
-                }
-            }
+                // 1. Read "%APPDATA%\Mozilla\Firefox\profiles.ini"
+                // 2. Delete the section that contain { "Path=" + win->profile_path }
+                // 3. _webui_delete_folder(win->profile_path);
+
+                // win->profile_path: Full path to profile
+                // win->browser_path: Full path to firefox browser
+            #elif __linux__
+                // Linux
+
+                // TODO: ...
+            #else
+                // macOS
+
+                // TODO: ...
+            #endif
+        }
+        else {
+
+            // Delete Chromium-based profile
+            _webui_delete_folder(win->profile_path);
         }
     }
 }
@@ -1515,11 +1546,10 @@ void webui_wait(void) {
         // is running. Otherwise the mutex condition
         // signal will never come
         if(!_webui_core.ui) {
+
             #ifdef WEBUI_LOG
                 printf("[Loop] webui_wait() -> No window is found. Stop.\n");
             #endif
-            
-            _webui_clean();
             return;
         }
 
@@ -1552,9 +1582,6 @@ void webui_wait(void) {
     #endif
 
     _webui_mutex_unlock(&_webui_core.mutex_wait);
-
-    // Final cleaning
-    _webui_clean();
 }
 
 void webui_set_timeout(size_t second) {
@@ -1767,13 +1794,10 @@ bool webui_interface_is_app_running(void) {
             app_is_running = false;
     }
 
-    // Final cleaning
-    if(!app_is_running) {
-        #ifdef WEBUI_LOG
+    #ifdef WEBUI_LOG
+        if(!app_is_running)
             printf("[User] webui_is_app_running() -> App Stopped.\n");
-        #endif
-        _webui_clean();
-    }
+    #endif
 
     return app_is_running;
 }
@@ -2980,9 +3004,13 @@ static void _webui_delete_folder(char* folder) {
 
     char command[1024];
     #if defined(_WIN32)
-        snprintf(command, sizeof(command), "rmdir /s /q \"%s\"", folder);
+        snprintf(command, sizeof(command), "rmdir /s /q \"%s\" > nul 2>&1", folder);
     #else
-        snprintf(command, sizeof(command), "rm -rf \"%s\"", folder);
+        snprintf(command, sizeof(command), "rm -rf \"%s\" >>/dev/null 2>>/dev/null", folder);
+    #endif
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_delete_folder() -> Running [%s] \n", command);
     #endif
     system(command);
 }
@@ -5877,8 +5905,11 @@ static WEBUI_SERVER_START
     mg_stop(http_ctx);
 
     // Fire the mutex condition wait
-    if(_webui_core.startup_timeout > 0 && _webui_core.servers < 1)
-	    _webui_condition_signal(&_webui_core.condition_wait);
+    if(_webui_core.startup_timeout > 0 && _webui_core.servers < 1) {
+
+        _webui_core.ui = false;
+        _webui_condition_signal(&_webui_core.condition_wait);
+    }
 
     THREAD_RETURN
 }
