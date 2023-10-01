@@ -471,10 +471,26 @@ WEBUI_EXPORT void webui_delete_all_profiles();
  */
 WEBUI_EXPORT void webui_delete_profile(size_t window);
 
-// Get the ID of the parent process (The web browser may create another process for the window)
+/**
+ * @brief Get the ID of the parent process (The web browser may re-create another new process).
+ * 
+ * @param window The window number
+ *
+ * @return Returns the the parent process id as integer
+ * 
+ * @example size_t id = webui_get_parent_process_id(myWindow);
+ */
 WEBUI_EXPORT size_t webui_get_parent_process_id(size_t window);
 
-// Get the ID of the child process (The web browser may create another process for the window)
+/**
+ * @brief Get the ID of the last child process.
+ * 
+ * @param window The window number
+ *
+ * @return Returns the the child process id as integer
+ * 
+ * @example size_t id = webui_get_child_process_id(myWindow);
+ */
 WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
 
 // -- JavaScript ----------------------
