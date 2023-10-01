@@ -44,8 +44,8 @@ class WebuiBridge {
 	#closeReason = 0
 	#closeValue: string
 	#hasEvents = false
-	#fnId = 1
-	#fnPromiseResolve: (((data: string) => unknown) | undefined)[] = []
+	#callPromiseID = new Uint8Array(1)
+	#callPromiseResolve: (((data: string) => unknown) | undefined)[] = []
 	#allowNavigation = false
 
 	// WebUI const
@@ -224,7 +224,7 @@ class WebuiBridge {
 		this.#ws.onopen = () => {
 			this.#wsStatus = true
 			this.#wsStatusOnce = true
-			this.#fnId = 1
+			this.#callPromiseID[0] = 0
 			if (this.#log) console.log('WebUI -> Connected')
 			this.#clicksListener()
 		}
@@ -278,14 +278,14 @@ class WebuiBridge {
 							if (this.#log) {
 								console.log(`WebUI -> CMD -> Call Response [${callResponse}]`)
 							}
-							if (this.#fnPromiseResolve[callId]) {
+							if (this.#callPromiseResolve[callId]) {
 								if (this.#log) {
 									console.log(
 										`WebUI -> CMD -> Resolving Response #${callId}...`
 									)
 								}
-								this.#fnPromiseResolve[callId]?.(callResponse)
-								this.#fnPromiseResolve[callId] = undefined
+								this.#callPromiseResolve[callId]?.(callResponse)
+								this.#callPromiseResolve[callId] = undefined
 							}
 						}
 						break
@@ -490,9 +490,9 @@ class WebuiBridge {
 			globalThis.close()
 		}, 1000)
 	}
-	#fnPromise(fn: string, value: any) {
-		if (this.#log) console.log(`WebUI -> Call [${fn}](${value})`)
-		const callId = this.#fnId++
+	#callPromise(fn: string, value: any) {
+		const callId = --this.#callPromiseID[0]
+		if (this.#log) console.log(`WebUI -> Call [${fn}](${value}) (ID:${this.#callPromiseID[0]})`)
 
 		// Response Packet
 		// 0: [Signature]
@@ -513,7 +513,7 @@ class WebuiBridge {
 		)
 
 		return new Promise((resolve) => {
-			this.#fnPromiseResolve[callId] = resolve
+			this.#callPromiseResolve[callId] = resolve
 			this.#ws.send(packet.buffer)
 		})
 	}
@@ -588,7 +588,7 @@ class WebuiBridge {
 			)
 
 		// Get the binding response
-		const response = (await this.#fnPromise(
+		const response = (await this.#callPromise(
 			bindingName,
 			payload === undefined
 				? ''

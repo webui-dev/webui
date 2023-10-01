@@ -448,7 +448,7 @@ WEBUI_EXPORT void webui_navigate(size_t window, const char* url);
 WEBUI_EXPORT void webui_clean();
 
 /**
- * @brief Delete all local web-browser profile's folder. Should be called at the end.
+ * @brief Delete all local web-browser profiles folder. It should called at the end.
  * 
  * @example
  * webui_wait();
