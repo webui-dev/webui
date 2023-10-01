@@ -1062,7 +1062,7 @@ void webui_return_string(webui_event_t* e, const char* s) {
 size_t webui_get_parent_process_id(size_t window) {
 
     #ifdef WEBUI_LOG
-        printf("[User] webui_get_child_process_id([%zu])...\n", window);
+        printf("[User] webui_get_parent_process_id([%zu])...\n", window);
     #endif
 
     // Initialization
