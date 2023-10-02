@@ -185,6 +185,22 @@ class WebuiBridge {
 		this.#closeReason = reason
 		this.#closeValue = value
 		this.#ws.close()
+		if (reason === this.#HEADER_NAVIGATION) {
+			if (this.#log) {
+				console.log(
+					`WebUI -> Close -> Navigation to [${value}]`
+				)
+			}
+			this.#allowNavigation = true
+			globalThis.location.replace(this.#closeValue)
+		}
+		else {
+			if (this.#log) {
+				console.log(
+					`WebUI -> Close.`
+				)
+			}
+		}
 	}
 
 	#freezeUi() {
@@ -212,6 +228,8 @@ class WebuiBridge {
 	}
 
 	#start() {
+		this.#callPromiseID[0] = 0
+
 		if (this.#bindList.includes(this.#winNum + '/')) {
 			this.#hasEvents = true
 		}
@@ -224,7 +242,6 @@ class WebuiBridge {
 		this.#ws.onopen = () => {
 			this.#wsStatus = true
 			this.#wsStatusOnce = true
-			this.#callPromiseID[0] = 0
 			if (this.#log) console.log('WebUI -> Connected')
 			this.#clicksListener()
 		}
@@ -239,11 +256,9 @@ class WebuiBridge {
 			if (this.#closeReason === this.#HEADER_NAVIGATION) {
 				if (this.#log) {
 					console.log(
-						`WebUI -> Connection closed -> Navigation to [${this.#closeValue}]`
+						`WebUI -> Connection closed du to Navigation to [${this.#closeValue}]`
 					)
 				}
-				this.#allowNavigation = true
-				globalThis.location.replace(this.#closeValue)
 			} else {
 				if (this.#log) {
 					console.log(`WebUI -> Connection lost (${event.code})`)
@@ -485,13 +500,20 @@ class WebuiBridge {
 	#isExternalLink(url: string) {
 		return new URL(url).host === globalThis.location.host
 	}
+
 	#closeWindowTimer() {
 		setTimeout(function () {
 			globalThis.close()
 		}, 1000)
 	}
+
+	#toUint8(value: number): number {
+		return value & 0xFF;
+	}
+
 	#callPromise(fn: string, value: any) {
-		const callId = --this.#callPromiseID[0]
+		--this.#callPromiseID[0]
+		const callId = this.#toUint8(this.#callPromiseID[0])
 		if (this.#log) console.log(`WebUI -> Call [${fn}](${value}) (ID:${this.#callPromiseID[0]})`)
 
 		// Response Packet

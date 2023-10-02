@@ -29,6 +29,10 @@
 #define WEBUI_HEADER_CALL_FUNC  0xF9        // Backend function call
 #define WEBUI_HEADER_SEND_RAW   0xF8        // Send raw binary data to the UI
 #define WEBUI_HEADER_NEW_ID     0xF7        // Add new bind ID
+#define WEBUI_MIN_HEADER_LEN    (3)         // Minimal header len
+#define WEBUI_WS_DATA           (1)         // Internal WS Event (Data received)
+#define WEBUI_WS_OPEN           (2)         // Internal WS Event (New connection)
+#define WEBUI_WS_CLOSE          (3)         // Internal WS Event (Connection close)
 #define WEBUI_MIN_PORT          (10000)     // Minimum socket port
 #define WEBUI_MAX_PORT          (65500)     // Should be less than 65535
 #define WEBUI_CMD_STDOUT_BUF    (10240)     // Command STDOUT output buffer size
@@ -135,7 +139,7 @@ typedef struct _webui_core_t {
     bool server_handled;
     webui_mutex_t mutex_server_start;
     webui_mutex_t mutex_send;
-    // webui_mutex_t mutex_receive;
+    webui_mutex_t mutex_receive;
     webui_mutex_t mutex_wait;
     webui_mutex_t mutex_bridge;
     webui_condition_t condition_wait;
@@ -156,9 +160,10 @@ typedef struct _webui_cb_arg_t {
 
 typedef struct _webui_recv_arg_t {
     _webui_window_t* win;
-    const char* packet;
+    void* ptr;
     size_t len;
     size_t recvNum;
+    int event_type;
 } _webui_recv_arg_t;
 
 typedef struct _webui_cmd_async_t {
@@ -169,23 +174,19 @@ typedef struct _webui_cmd_async_t {
 // -- Definitions ---------------------
 #ifdef _WIN32
     static const char* webui_sep = "\\";
-    static DWORD WINAPI _webui_cb(LPVOID _arg);
     static DWORD WINAPI _webui_run_browser_task(LPVOID _arg);
     static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show);
     static int _webui_system_win32_out(const char *cmd, char **output, bool show);
     static bool _webui_socket_test_listen_win32(size_t port_num);
     static bool _webui_get_windows_reg_value(HKEY key, LPCWSTR reg, LPCWSTR value_name, char value[WEBUI_MAX_PATH]);
 
-    // #define WEBUI_THREAD_CB DWORD WINAPI _webui_cb(LPVOID _arg)
     #define WEBUI_THREAD_SERVER_START DWORD WINAPI _webui_server_start(LPVOID arg)
     #define WEBUI_THREAD_RECEIVE DWORD WINAPI _webui_receive_thread(LPVOID _arg)
     #define WEBUI_THREAD_RETURN return 0;
 #else
     static const char* webui_sep = "/";
-    static void* _webui_cb(void* _arg);
     static void* _webui_run_browser_task(void* _arg);
 
-    // #define WEBUI_THREAD_CB void* _webui_cb(void* _arg)
     #define WEBUI_THREAD_SERVER_START void* _webui_server_start(void* arg)
     #define WEBUI_THREAD_RECEIVE void* _webui_receive_thread(void* _arg)
     #define WEBUI_THREAD_RETURN pthread_exit(NULL);
@@ -197,7 +198,6 @@ static size_t _webui_set_cb_index(char* webui_internal_id);
 static size_t _webui_get_free_port(void);
 static void _webui_free_port(size_t port);
 static char* _webui_get_current_path(void);
-static void _webui_window_receive(_webui_window_t* win, const char* packet, size_t len, size_t recvNum);
 static void _webui_window_send(_webui_window_t* win, char* packet, size_t packets_size);
 static void _webui_window_event(_webui_window_t* win, int event_type, char* element, char* data, size_t event_number, char* webui_internal_id);
 static int _webui_cmd_sync(_webui_window_t* win, char* cmd, bool show);
@@ -261,8 +261,8 @@ static int _webui_ws_connect_handler(const struct mg_connection *conn, void *_wi
 static void _webui_ws_ready_handler(struct mg_connection *conn, void *_win);
 static int _webui_ws_data_handler(struct mg_connection *conn, int opcode, char* data, size_t datasize, void *_win);
 static void _webui_ws_close_handler(const struct mg_connection *conn, void *_win);
+static void _webui_receive(_webui_window_t* win, int event_type, void* data, size_t len);
 static WEBUI_THREAD_SERVER_START;
-// static WEBUI_THREAD_CB;
 static WEBUI_THREAD_RECEIVE;
 
 // -- Heap ----------------------------
@@ -3696,7 +3696,7 @@ static void _webui_clean(void) {
     // Destroy all mutex
     _webui_mutex_destroy(&_webui_core.mutex_server_start);
     _webui_mutex_destroy(&_webui_core.mutex_send);
-    // _webui_mutex_destroy(&_webui_core.mutex_receive);
+    _webui_mutex_destroy(&_webui_core.mutex_receive);
     _webui_mutex_destroy(&_webui_core.mutex_wait);
     _webui_condition_destroy(&_webui_core.condition_wait);
 
@@ -4599,35 +4599,6 @@ static void _webui_window_event(_webui_window_t* win, int event_type, char* elem
 
     // Free event
     _webui_free_mem((void*)webui_internal_id);
-
-    /*
-        // Create a thread, and call the used cb function
-        // no need to wait for the response. This is fire
-        // and forget.
-
-        // Create a new CB args struct
-        _webui_cb_arg_t* arg = (_webui_cb_arg_t*) _webui_malloc(sizeof(_webui_cb_arg_t));
-        
-        // Event
-        arg->window = win;
-        arg->event_type = event_type;
-        arg->element = element;
-        arg->data = data;
-        arg->event_number = event_number;
-        // Extras
-        arg->webui_internal_id = webui_internal_id;
-
-        // fire and forget.
-        #ifdef _WIN32
-            HANDLE thread = CreateThread(NULL, 0, _webui_cb, (void*)arg, 0, NULL);
-            if(thread != NULL)
-                CloseHandle(thread); 
-        #else
-            pthread_t thread;
-            pthread_create(&thread, NULL, &_webui_cb, (void*)arg);
-            pthread_detach(thread);
-        #endif
-    */
 }
 
 static void _webui_window_send(_webui_window_t* win, char* packet, size_t packets_size) {
@@ -4668,318 +4639,6 @@ static void _webui_window_send(_webui_window_t* win, char* packet, size_t packet
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_window_send() -> %d bytes sent.\n", ret);
     #endif
-}
-
-/*
-static bool _webui_get_data(const char* packet, size_t packet_len, size_t pos, size_t* data_len, char** data) {
-
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_get_data()...\n");
-    #endif
-
-    if((pos + 1) > packet_len) {
-
-        *data = (char*)"";
-        if(data_len != NULL)*data_len = 0;
-        return false;
-    }
-
-    // Calculate the data part size
-    size_t data_size = _webui_strlen(&packet[pos]);
-    if(data_size < 1) {
-
-        *data = (char*)"";
-        if(data_len != NULL)*data_len = 0;
-        return false;
-    }
-
-    // Check the max packet size
-    if(data_size > (packet_len - pos))
-        data_size = (packet_len - pos);
-
-    // Allocat mem
-    *data = (char*) _webui_malloc(data_size);
-
-    // Copy data part
-    char* p = *data;
-    size_t j = pos;
-    for(size_t i = 0; i < data_size; i++) {
-
-        memcpy(p, &packet[j], 1);
-        p++;
-        j++;
-    }
-
-    // Check data size
-    if(data_len != NULL){
-        *data_len = _webui_strlen(*data);
-        if(*data_len < 1) {
-
-            _webui_free_mem((void*)data);
-            *data = (char*)"";
-            *data_len = 0;
-            return false;
-        }
-    }
-
-    return true;
-}
-*/
-
-static void _webui_window_receive(_webui_window_t* win, const char* packet, size_t len, size_t recvNum) {
-
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t[Thread %zu] _webui_window_receive()...\n", recvNum);
-    #endif
-
-    if((unsigned char) packet[0] != WEBUI_HEADER_SIGNATURE || len < 4 || _webui_core.exit_now)
-        return;
-
-    // Mutex
-    // wait for previous event to finish
-    // _webui_mutex_lock(&_webui_core.mutex_receive);
-
-    // Check if the previous event calls exit()
-    if(_webui_core.exit_now)
-        return;
-
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> Start\n", recvNum);
-    #endif
-
-    if((unsigned char) packet[1] == WEBUI_HEADER_CLICK) {
-
-        // Click Event
-
-        // 0: [Signature]
-        // 1: [CMD]
-        // 2: [Element]
-
-        // Get html element id
-        char* element = (char*)&packet[2];
-        size_t element_len = _webui_strlen(element);
-        
-        #ifdef WEBUI_LOG
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> WEBUI_HEADER_CLICK \n", recvNum);
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> Element size: %zu bytes \n", recvNum, element_len);
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> Element : [%s] \n", recvNum, element);
-        #endif
-
-        // Generate WebUI internal id
-        char* webui_internal_id = _webui_generate_internal_id(win, element);
-
-        _webui_window_event(
-            win,                        // Event -> Window
-            WEBUI_EVENT_MOUSE_CLICK,    // Event -> Type of this event
-            element,                    // Event -> HTML Element
-            NULL,                       // Event -> User Custom Data
-            0,                          // Event -> Event Number
-            webui_internal_id           // Extras -> WebUI Internal ID
-        );
-    }
-    else if((unsigned char) packet[1] == WEBUI_HEADER_JS) {
-
-        // JS Result
-
-        // 0: [Signature]
-        // 1: [CMD]
-        // 2: [ID]
-        // 3: [Error]
-        // 4: [Script Response]
-
-        // Get pipe id
-        unsigned char run_id = packet[2];
-        if(run_id < 0x01) {
-
-            // Fatal.
-            // The pipe ID is not valid
-            // we can't send the ready signal to webui_script()
-            // _webui_mutex_unlock(&_webui_core.mutex_receive);
-            return;
-        }
-        _webui_core.run_done[run_id] = false;
-
-        // Get data part
-        char* data = (char*)&packet[4];
-        size_t data_len = _webui_strlen(data);
-
-        // Get js-error
-        bool error = true;
-        if((unsigned char) packet[3] == 0x00)
-            error = false;
-
-        #ifdef WEBUI_LOG
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> WEBUI_HEADER_JS \n", recvNum);
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> run_id = 0x%02x \n", recvNum, run_id);
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> error = 0x%02x \n", recvNum, error);
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> %zu bytes of data\n", recvNum, data_len);
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> data = [%s] @ 0x%p\n", recvNum, data, data);
-        #endif
-
-        // Set pipe
-        _webui_core.run_error[run_id] = error;
-        if(data_len > 0) {
-
-            // Copy response to the user's response buffer directly
-            size_t response_len = data_len + 1;
-            size_t bytes_to_cpy = (response_len <= _webui_core.run_userBufferLen[run_id] ? response_len : _webui_core.run_userBufferLen[run_id]);
-            memcpy(_webui_core.run_userBuffer[run_id], data, bytes_to_cpy);
-        }
-        else {
-
-            // Empty Result
-            memcpy(_webui_core.run_userBuffer[run_id], 0x00, 1);
-        }
-
-        // Send ready signal to webui_script()
-        _webui_core.run_done[run_id] = true;
-    }
-    else if((unsigned char) packet[1] == WEBUI_HEADER_NAVIGATION) {
-
-        // Navigation Event
-
-        // 0: [Signature]
-        // 1: [CMD]
-        // 2: [URL]
-
-        // Events
-        if(win->has_events) {
-
-            // Get URL
-            char* url = (char*)&packet[2];
-            size_t url_len = _webui_strlen(url);
-
-            #ifdef WEBUI_LOG
-                printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> WEBUI_HEADER_NAVIGATION \n", recvNum);
-                printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> URL size: %zu bytes \n", recvNum, url_len);
-                printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> URL: [%s] \n", recvNum, url);
-            #endif
-
-            // Generate WebUI internal id
-            char* webui_internal_id = _webui_generate_internal_id(win, "");
-
-            _webui_window_event(
-                win,                    // Event -> Window
-                WEBUI_EVENT_NAVIGATION, // Event -> Type of this event
-                "",                     // Event -> HTML Element
-                url,                    // Event -> User Custom Data
-                0,                      // Event -> Event Number
-                webui_internal_id       // Extras -> WebUI Internal ID
-            );
-        }
-    }
-    else if((unsigned char) packet[1] == WEBUI_HEADER_CALL_FUNC) {
-
-        // Function Call
-
-        // 0: [Signature]
-        // 1: [CMD]
-        // 2: [Call ID]
-        // 3: [Element ID, Null, Len, Null, Data, Null]
-        
-        // Get html element id
-        char* element = (char*)&packet[3];
-        size_t element_strlen = _webui_strlen(element);
-
-        // Get data len (As str)
-        char* len_s = (char*)&packet[3 + element_strlen + 1];
-        size_t len_s_strlen = _webui_strlen(len_s);
-
-        // Get data len
-        long long int len = 0;
-        char* endptr;
-        if(len_s_strlen > 0 && len_s_strlen <= 20) { // 64-bit max is -9,223,372,036,854,775,808 (20 character)
-            len = strtoll((const char*)len_s, &endptr, 10);
-
-            if(len < 0) {
-                // _webui_mutex_unlock(&_webui_core.mutex_receive);
-                return;
-            }
-        }
-
-        // Get data
-        char* data = (char*)&packet[3 + element_strlen + 1 + len_s_strlen + 1];
-
-        #ifdef WEBUI_LOG
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> WEBUI_HEADER_CALL_FUNC \n", recvNum);
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> Call ID: [0x%02x] \n", recvNum, packet[2]);
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> Element: [%s] \n", recvNum, element);
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> Data size: %lld Bytes \n", recvNum, len);
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> Data: Hex [ ", recvNum);
-                _webui_print_hex(data, len);
-            printf("]\n");
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> Data: ASCII [ ", recvNum);
-                _webui_print_ascii(data, len);
-            printf("]\n");
-        #endif
-
-        // Generate WebUI internal id
-        char* webui_internal_id = _webui_generate_internal_id(win, element);
-
-        // Create new event core to hold the response
-        webui_event_core_t* event_core = (webui_event_core_t*) _webui_malloc(sizeof(webui_event_core_t));
-        size_t event_core_pos = _webui_get_free_event_core_pos(win);
-        win->event_core[event_core_pos] = event_core;
-        char** response = &win->event_core[event_core_pos]->response;
-
-        // Create new event
-        webui_event_t e;
-        e.window = win->window_number;
-        e.event_type = WEBUI_EVENT_CALLBACK;
-        e.element = element;
-        e.data = data;
-        e.size = (size_t)len;
-        e.event_number = event_core_pos;
-
-        // Call user function
-        size_t cb_index = _webui_get_cb_index(webui_internal_id);
-        if(cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
-
-            // Call user cb
-            #ifdef WEBUI_LOG
-                printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> Calling user callback...\n[Call]\n", recvNum);
-            #endif
-            _webui_core.cb[cb_index](&e);
-        }
-
-        // Check the response
-        if(_webui_is_empty(*response))
-            *response = (char*)"";
-
-        #ifdef WEBUI_LOG
-            printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> user-callback response [%s]\n", recvNum, *response);
-        #endif
-
-        // 0: [Signature]
-        // 1: [CMD]
-        // 2: [Call ID]
-        // 3: [Call Response]
-
-        // Prepare response packet
-        size_t response_len = _webui_strlen(*response);
-        size_t response_packet_len = 3 + response_len + 1;
-        char* response_packet = (char*) _webui_malloc(response_packet_len);
-        response_packet[0] = WEBUI_HEADER_SIGNATURE;    // Signature
-        response_packet[1] = WEBUI_HEADER_CALL_FUNC;    // CMD
-        response_packet[2] = packet[2];                 // Call ID
-        for(size_t i = 0; i < response_len; i++)        // Data
-            response_packet[3 + i] = (*response)[i];
-
-        // Send response packet
-        _webui_window_send(win, response_packet, response_packet_len);
-        _webui_free_mem((void*)response_packet);
-
-        // Free
-        _webui_free_mem((void*)webui_internal_id);
-        _webui_free_mem((void*)*response);
-        _webui_free_mem((void*)event_core);
-    }
-
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t[Thread %zu] _webui_window_receive() -> End\n", recvNum);
-    #endif
-
-    // _webui_mutex_unlock(&_webui_core.mutex_receive);
 }
 
 static char* _webui_get_current_path(void) {
@@ -5081,7 +4740,7 @@ static void _webui_init(void) {
     // Initializing mutex
     _webui_mutex_init(&_webui_core.mutex_server_start);
     _webui_mutex_init(&_webui_core.mutex_send);
-    // _webui_mutex_init(&_webui_core.mutex_receive);
+    _webui_mutex_init(&_webui_core.mutex_receive);
     _webui_mutex_init(&_webui_core.mutex_wait);
     _webui_mutex_init(&_webui_core.mutex_bridge);
     _webui_condition_init(&_webui_core.condition_wait);
@@ -5144,7 +4803,7 @@ static size_t _webui_set_cb_index(char* webui_internal_id) {
     }
     static void _webui_print_ascii(const char* data, size_t len) {
         for(size_t i = 0; i < len; i++) {
-            printf("%c ", (unsigned char) *data);
+            printf("%c", (unsigned char) *data);
             data++;
         }
     }
@@ -5494,8 +5153,6 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
     return http_status_code;
 }
 
-// WS Server
-
 static int _webui_ws_connect_handler(const struct mg_connection *conn, void *_win) {
 
     #ifdef WEBUI_LOG
@@ -5518,59 +5175,7 @@ static void _webui_ws_ready_handler(struct mg_connection *conn, void *_win) {
     _webui_window_t* win = _webui_dereference_win_ptr(_win);
     if(_webui_core.exit_now || win == NULL) return;
 
-    // Ini
-    win->connections++;
-    int event_type = WEBUI_EVENT_CONNECTED;
-
-    if(win->connections < 2) {
-
-        // First connection
-        #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_ws_ready_handler() -> WebSocket %zu Connected\n", win->connections);
-        #endif
-
-        _webui_core.mg_connections[win->window_number] = conn; // websocket send func
-        win->connected = true; // server thread
-    }
-    else {
-
-        // Multi connections
-
-        if(win->multi_access) {
-
-            #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_ws_ready_handler() -> MULTI_CONNECTION -> WebSocket %zu Connected\n", win->connections);
-            #endif
-
-            event_type = WEBUI_EVENT_MULTI_CONNECTION;
-        }
-        else {
-
-            // UNWANTED Multi connections
-            #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_ws_ready_handler() -> UNWANTED_CONNECTION -> WebSocket %zu Connected\n", win->connections);
-            #endif
-
-            mg_close_connection(conn);
-            event_type = WEBUI_EVENT_UNWANTED_CONNECTION;
-        }
-    }
-
-    // New Event
-    if(win->has_events) {
-
-        // Generate WebUI internal id
-        char* webui_internal_id = _webui_generate_internal_id(win, "");
-
-        _webui_window_event(
-            win,                // Event -> Window
-            event_type,         // Event -> Type of this event
-            "",                 // Event -> HTML Element
-            NULL,               // Event -> User Custom Data
-            0,                  // Event -> Event Number
-            webui_internal_id   // Extras -> WebUI Internal ID
-        );
-    }
+    _webui_receive(win, WEBUI_WS_OPEN, (void*)conn, 0);
 }
 
 static int _webui_ws_data_handler(struct mg_connection *conn, int opcode, char* data, size_t datasize, void *_win) {
@@ -5579,45 +5184,15 @@ static int _webui_ws_data_handler(struct mg_connection *conn, int opcode, char* 
         printf("[Core]\t\t_webui_ws_data_handler()...\n");
     #endif
 
-    static size_t recvNum = 0;
     if(_webui_core.exit_now || datasize < 1)
         return 1; // OK
-    
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_ws_data_handler() -> Size : %zu bytes\n", datasize);
-        printf("[Core]\t\t_webui_ws_data_handler() -> Hex  : [ ");
-            _webui_print_hex(data, datasize);
-        printf("]\n");
-        printf("[Core]\t\t_webui_ws_data_handler() -> ASCII: [ ");
-            _webui_print_ascii(data, datasize);
-        printf("]\n");
-    #endif
 
     switch (opcode & 0xf) {
 
         case MG_WEBSOCKET_OPCODE_BINARY: {
             _webui_window_t* win = _webui_dereference_win_ptr(_win);
-            if(win != NULL) {
-                // Copy packet
-                const char* data_cpy = (const char*)_webui_malloc(datasize);
-                memcpy((char*)data_cpy, data, datasize);
-                // Create args
-                _webui_recv_arg_t* arg = (_webui_recv_arg_t*) _webui_malloc(sizeof(_webui_recv_arg_t));
-                arg->win = win;
-                arg->packet = data_cpy;
-                arg->len = datasize;
-                arg->recvNum = ++recvNum;
-                // Process the packet in a new thread
-                #ifdef _WIN32
-                    HANDLE thread = CreateThread(NULL, 0, _webui_receive_thread, (void*)arg, 0, NULL);
-                    if(thread != NULL)
-                        CloseHandle(thread);
-                #else
-                    pthread_t thread;
-                    pthread_create(&thread, NULL, &_webui_receive_thread, (void*)arg);
-                    pthread_detach(thread);
-                #endif
-            }
+            if(win != NULL)
+                _webui_receive(win, WEBUI_WS_DATA, data, datasize);
             break;
         }
         case MG_WEBSOCKET_OPCODE_TEXT: {
@@ -5630,6 +5205,10 @@ static int _webui_ws_data_handler(struct mg_connection *conn, int opcode, char* 
             break;
         }
 	}
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_ws_data_handler() -> Finished.\n");
+    #endif
 
     // OK
     return 1;
@@ -5645,58 +5224,7 @@ static void _webui_ws_close_handler(const struct mg_connection *conn, void *_win
     _webui_window_t* win = _webui_dereference_win_ptr(_win);
     if(_webui_core.exit_now || win == NULL || !win->connected) return;
 
-    if(win->connections < 2) {
-
-        // Main connection close
-        #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_ws_close_handler() -> WebSocket %zu Closed\n", win->connections);
-        #endif
-
-        win->html_handled = false;
-        win->server_handled = false;
-        win->bridge_handled = false;
-        win->connected = false; // server thread
-    }
-    else {
-
-        // Multi connections close
-
-        if(win->multi_access) {
-
-            #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_ws_close_handler() -> MULTI_CONNECTION -> WebSocket %zu Closed\n", win->connections);
-            #endif
-
-            win->html_handled = false;
-            win->server_handled = false;
-            win->bridge_handled = false;
-        }
-        else {
-
-            // UNWANTED Multi connections close
-            #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_ws_close_handler() -> UNWANTED_CONNECTION -> WebSocket %zu Closed\n", win->connections);
-            #endif
-        }
-    }
-
-    win->connections--;
-
-    // Events
-    if(win->has_events) {
-
-        // Generate WebUI internal id
-        char* webui_internal_id = _webui_generate_internal_id(win, "");
-
-        _webui_window_event(
-            win,                        // Event -> Window
-            WEBUI_EVENT_DISCONNECTED,   // Event -> Type of this event
-            "",                         // Event -> HTML Element
-            NULL,                       // Event -> User Custom Data
-            0,                          // Event -> Event Number
-            webui_internal_id           // Extras -> WebUI Internal ID
-        );
-    }
+    _webui_receive(win, WEBUI_WS_CLOSE, (void*)conn, 0);
 }
 
 static WEBUI_THREAD_SERVER_START
@@ -5988,71 +5516,50 @@ static WEBUI_THREAD_SERVER_START
     WEBUI_THREAD_RETURN
 }
 
-/*
-static WEBUI_THREAD_CB
-{
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t[Thread] _webui_cb()...\n");
-    #endif
-
-    _webui_cb_arg_t* arg = (_webui_cb_arg_t*) _arg;
-
-    // Event
-    webui_event_t e;
-    e.window = arg->window->window_number;
-    e.event_type = arg->event_type;
-    e.element = arg->element;
-    e.data = arg->data;
-    e.event_number = arg->event_number;
-
-    // Check for all events-bind functions
-    if(!_webui_core.exit_now && arg->window->has_events) {
-
-        char* events_id = _webui_generate_internal_id(arg->window, "");
-        size_t events_cb_index = _webui_get_cb_index(events_id);
-        _webui_free_mem((void*)events_id);
-
-        if(events_cb_index > 0 && _webui_core.cb[events_cb_index] != NULL) {
-
-            // Call user all events cb
-            #ifdef WEBUI_LOG
-                printf("[Core]\t\t[Thread] _webui_cb() -> Calling user callback...\n[Call]\n");
-            #endif
-            _webui_core.cb[events_cb_index](&e);
-        }
-    }
-
-    if(!_webui_core.exit_now) {
-        
-        // Check for the regular bind functions
-        if(arg->element != NULL && !_webui_is_empty(arg->element)) {
-
-            size_t cb_index = _webui_get_cb_index(arg->webui_internal_id);
-            if(cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
-
-                // Call user cb
-                #ifdef WEBUI_LOG
-                    printf("[Core]\t\t[Thread] _webui_cb() -> Calling user callback...\n[Call]\n");
-                #endif
-                _webui_core.cb[cb_index](&e);
-            }
-        }
-    }
+static void _webui_receive(_webui_window_t* win, int event_type, void* data, size_t len) {
 
     #ifdef WEBUI_LOG
-        printf("[Core]\t\t[Thread] _webui_cb() -> Finished.\n");
+        printf("[Core]\t\t[Thread] _webui_receive()...\n");
     #endif
 
-    // Free event
-    _webui_free_mem((void*)arg->element);
-    _webui_free_mem((void*)arg->data);
-    // Free event extras
-    _webui_free_mem((void*)arg->webui_internal_id);
-    _webui_free_mem((void*)arg);
+    static size_t recvNum = 0;
 
-    WEBUI_THREAD_RETURN
+    // This function get called when WS Connect, close, and receives data
+    // we should copy the data once. Process the event in a new thread and
+    // return as soon as possible so the WS protocol handeled fatser.
+
+    // Create thread args
+    _webui_recv_arg_t* arg = (_webui_recv_arg_t*) _webui_malloc(sizeof(_webui_recv_arg_t));
+    arg->win = win;
+    arg->len = len;
+    arg->recvNum = ++recvNum;
+    arg->event_type = event_type;
+
+    if(len > 0) {
+
+        // This is data event. We should copy it once
+        void* data_cpy = (void*)_webui_malloc(len);
+        memcpy((char*)data_cpy, data, len);
+        arg->ptr = data_cpy;
+    }
+    else {
+
+        // This is a WS event
+        // `ptr` is `mg_connection`
+        arg->ptr = data;
+    }
+
+    // Process the packet in a new thread
+    #ifdef _WIN32
+        HANDLE thread = CreateThread(NULL, 0, _webui_receive_thread, (void*)arg, 0, NULL);
+        if(thread != NULL)
+            CloseHandle(thread);
+    #else
+        pthread_t thread;
+        pthread_create(&thread, NULL, &_webui_receive_thread, (void*)arg);
+        pthread_detach(thread);
+    #endif
 }
-*/
 
 static WEBUI_THREAD_RECEIVE
 {
@@ -6060,27 +5567,407 @@ static WEBUI_THREAD_RECEIVE
         printf("[Core]\t\t[Thread] _webui_receive_thread()...\n");
     #endif
 
-    // Arguments
+    // Get arguments
     _webui_recv_arg_t* arg = (_webui_recv_arg_t*) _arg;
     _webui_window_t* win = arg->win;
-    const char* packet = arg->packet;
     size_t len = arg->len;
     size_t recvNum = arg->recvNum;
+    size_t event_type = arg->event_type;
+    void* ptr = arg->ptr;
 
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Start...\n", recvNum);
-    #endif
+    if(!_webui_core.exit_now) {
 
-    // Process the packet in this current thread
-    _webui_window_receive(win, packet, len, recvNum);
+        #ifdef WEBUI_LOG
+            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Start...\n", recvNum);
+        #endif
 
-    #ifdef WEBUI_LOG
-        printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Finished.\n", recvNum);
-    #endif
+        if(event_type == WEBUI_WS_DATA) {
+
+            const char* packet = (const char*)ptr;
+
+            #ifdef WEBUI_LOG
+                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Data received...\n", recvNum);
+                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Size : %zu bytes\n", recvNum, len);
+                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Hex  : [ ", recvNum);
+                    _webui_print_hex(packet, len);
+                printf("]\n");
+                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> ASCII: [ ", recvNum);
+                    _webui_print_ascii(packet, len);
+                printf("]\n");
+            #endif
+
+            // Mutex
+            // wait for previous event to finish
+            if((unsigned char) packet[1] != WEBUI_HEADER_JS)
+                _webui_mutex_lock(&_webui_core.mutex_receive);            
+
+            if(!_webui_core.exit_now && (unsigned char) packet[0] == WEBUI_HEADER_SIGNATURE && len >= WEBUI_MIN_HEADER_LEN) {
+
+                if((unsigned char) packet[1] == WEBUI_HEADER_CLICK) {
+
+                    // Click Event
+
+                    // 0: [Signature]
+                    // 1: [CMD]
+                    // 2: [Element]
+
+                    // Get html element id
+                    char* element = (char*)&packet[2];
+                    size_t element_len = _webui_strlen(element);
+                    
+                    #ifdef WEBUI_LOG
+                        printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> WEBUI_HEADER_CLICK \n", recvNum);
+                        printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Element size: %zu bytes \n", recvNum, element_len);
+                        printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Element : [%s] \n", recvNum, element);
+                    #endif
+
+                    // Generate WebUI internal id
+                    char* webui_internal_id = _webui_generate_internal_id(win, element);
+
+                    _webui_window_event(
+                        win,                        // Event -> Window
+                        WEBUI_EVENT_MOUSE_CLICK,    // Event -> Type of this event
+                        element,                    // Event -> HTML Element
+                        NULL,                       // Event -> User Custom Data
+                        0,                          // Event -> Event Number
+                        webui_internal_id           // Extras -> WebUI Internal ID
+                    );
+                }
+                else if((unsigned char) packet[1] == WEBUI_HEADER_JS) {
+
+                    // JS Result
+
+                    // 0: [Signature]
+                    // 1: [CMD]
+                    // 2: [ID]
+                    // 3: [Error]
+                    // 4: [Script Response]
+
+                    // Get pipe id
+                    unsigned char run_id = packet[2];
+                    if(_webui_core.run_userBuffer[run_id] != NULL) {
+
+                        _webui_core.run_done[run_id] = false;
+
+                        // Get data part
+                        char* data = (char*)&packet[4];
+                        size_t data_len = _webui_strlen(data);
+
+                        // Get js-error
+                        bool error = true;
+                        if((unsigned char) packet[3] == 0x00)
+                            error = false;
+
+                        #ifdef WEBUI_LOG
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> WEBUI_HEADER_JS \n", recvNum);
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> run_id = 0x%02x \n", recvNum, run_id);
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> error = %s \n", recvNum, error ? "true" : "false");
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> %zu bytes of data\n", recvNum, data_len);
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> data = [%s] @ 0x%p\n", recvNum, data, data);
+                        #endif
+
+                        // Set pipe
+                        _webui_core.run_error[run_id] = error;
+                        if(data_len > 0) {
+
+                            // Copy response to the user's response buffer directly
+                            size_t response_len = data_len + 1;
+                            size_t bytes_to_cpy = (response_len <= _webui_core.run_userBufferLen[run_id] ? response_len : _webui_core.run_userBufferLen[run_id]);
+                            memcpy(_webui_core.run_userBuffer[run_id], data, bytes_to_cpy);
+                        }
+                        else {
+
+                            // Empty Result
+                            memcpy(_webui_core.run_userBuffer[run_id], 0x00, 1);
+                        }
+
+                        // Send ready signal to webui_script()
+                        _webui_core.run_done[run_id] = true;                        
+                    }
+                }
+                else if((unsigned char) packet[1] == WEBUI_HEADER_NAVIGATION) {
+
+                    // Navigation Event
+
+                    // 0: [Signature]
+                    // 1: [CMD]
+                    // 2: [URL]
+
+                    // Events
+                    if(win->has_events) {
+
+                        // Get URL
+                        char* url = (char*)&packet[2];
+                        size_t url_len = _webui_strlen(url);
+
+                        #ifdef WEBUI_LOG
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> WEBUI_HEADER_NAVIGATION \n", recvNum);
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> URL size: %zu bytes \n", recvNum, url_len);
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> URL: [%s] \n", recvNum, url);
+                        #endif
+
+                        // Generate WebUI internal id
+                        char* webui_internal_id = _webui_generate_internal_id(win, "");
+
+                        _webui_window_event(
+                            win,                    // Event -> Window
+                            WEBUI_EVENT_NAVIGATION, // Event -> Type of this event
+                            "",                     // Event -> HTML Element
+                            url,                    // Event -> User Custom Data
+                            0,                      // Event -> Event Number
+                            webui_internal_id       // Extras -> WebUI Internal ID
+                        );
+                    }
+                }
+                else if((unsigned char) packet[1] == WEBUI_HEADER_CALL_FUNC) {
+
+                    // Function Call
+
+                    // 0: [Signature]
+                    // 1: [CMD]
+                    // 2: [Call ID]
+                    // 3: [Element ID, Null, Len, Null, Data, Null]
+                    
+                    // Get html element id
+                    char* element = (char*)&packet[3];
+                    size_t element_strlen = _webui_strlen(element);
+
+                    // Get data len (As str)
+                    char* len_s = (char*)&packet[3 + element_strlen + 1];
+                    size_t len_s_strlen = _webui_strlen(len_s);
+
+                    // Get data len
+                    long long int len = 0;
+                    char* endptr;
+                    if(len_s_strlen > 0 && len_s_strlen <= 20) { // 64-bit max is -9,223,372,036,854,775,808 (20 character)
+
+                        char* data = NULL;
+                        len = strtoll((const char*)len_s, &endptr, 10);
+                        if(len > 0)
+                            // Get data
+                            data = (char*)&packet[3 + element_strlen + 1 + len_s_strlen + 1];
+
+                        #ifdef WEBUI_LOG
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> WEBUI_HEADER_CALL_FUNC \n", recvNum);
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Call ID: [0x%02x] \n", recvNum, (unsigned char)packet[2]);
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Element: [%s] \n", recvNum, element);
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Data size: %lld Bytes \n", recvNum, len);
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Data: Hex [ ", recvNum);
+                                _webui_print_hex(data, len);
+                            printf("]\n");
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Data: ASCII [ ", recvNum);
+                                _webui_print_ascii(data, len);
+                            printf("]\n");
+                        #endif
+
+                        // Generate WebUI internal id
+                        char* webui_internal_id = _webui_generate_internal_id(win, element);
+
+                        // Create new event core to hold the response
+                        webui_event_core_t* event_core = (webui_event_core_t*) _webui_malloc(sizeof(webui_event_core_t));
+                        size_t event_core_pos = _webui_get_free_event_core_pos(win);
+                        win->event_core[event_core_pos] = event_core;
+                        char** response = &win->event_core[event_core_pos]->response;
+
+                        // Create new event
+                        webui_event_t e;
+                        e.window = win->window_number;
+                        e.event_type = WEBUI_EVENT_CALLBACK;
+                        e.element = element;
+                        e.data = data;
+                        e.size = (size_t)len;
+                        e.event_number = event_core_pos;
+
+                        // Call user function
+                        size_t cb_index = _webui_get_cb_index(webui_internal_id);
+                        if(cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
+
+                            // Call user cb
+                            #ifdef WEBUI_LOG
+                                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Calling user callback...\n[Call]\n", recvNum);
+                            #endif
+                            _webui_core.cb[cb_index](&e);
+                        }
+
+                        // Check the response
+                        if(_webui_is_empty(*response))
+                            *response = (char*)"";
+
+                        #ifdef WEBUI_LOG
+                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> user-callback response [%s]\n", recvNum, *response);
+                        #endif
+
+                        // 0: [Signature]
+                        // 1: [CMD]
+                        // 2: [Call ID]
+                        // 3: [Call Response]
+
+                        // Prepare response packet
+                        size_t response_len = _webui_strlen(*response);
+                        size_t response_packet_len = 3 + response_len + 1;
+                        char* response_packet = (char*) _webui_malloc(response_packet_len);
+                        response_packet[0] = WEBUI_HEADER_SIGNATURE;    // Signature
+                        response_packet[1] = WEBUI_HEADER_CALL_FUNC;    // CMD
+                        response_packet[2] = packet[2];                 // Call ID
+                        for(size_t i = 0; i < response_len; i++)        // Data
+                            response_packet[3 + i] = (*response)[i];
+
+                        // Send response packet
+                        _webui_window_send(win, response_packet, response_packet_len);
+                        _webui_free_mem((void*)response_packet);
+
+                        // Free
+                        _webui_free_mem((void*)webui_internal_id);
+                        _webui_free_mem((void*)*response);
+                        _webui_free_mem((void*)event_core);
+                    }
+                }
+                #ifdef WEBUI_LOG
+                    else {
+                        printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Invalid header command [0x%02x]\n", recvNum, (unsigned char)packet[1]);
+                    }
+                #endif
+            }
+            #ifdef WEBUI_LOG
+                else {
+                    printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Invalid header or signature.\n", recvNum);
+                }
+            #endif
+
+            if((unsigned char) packet[0] != WEBUI_HEADER_JS)
+                _webui_mutex_unlock(&_webui_core.mutex_receive);
+        }
+        else if (event_type == WEBUI_WS_OPEN) {
+
+            // Ini
+            win->connections++;
+            int event_type = WEBUI_EVENT_CONNECTED;
+            struct mg_connection* conn = (struct mg_connection*)ptr;
+
+            if(win->connections < 2) {
+
+                // First connection
+                #ifdef WEBUI_LOG
+                    printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> WebSocket %zu Connected\n", recvNum, win->connections);
+                #endif
+
+                _webui_core.mg_connections[win->window_number] = conn; // websocket send func
+                win->connected = true; // server thread
+            }
+            else {
+
+                // Multi connections
+
+                if(win->multi_access) {
+
+                    #ifdef WEBUI_LOG
+                        printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> MULTI_CONNECTION -> WebSocket %zu Connected\n", recvNum, win->connections);
+                    #endif
+
+                    event_type = WEBUI_EVENT_MULTI_CONNECTION;
+                }
+                else {
+
+                    // UNWANTED Multi connections
+                    #ifdef WEBUI_LOG
+                        printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> UNWANTED_CONNECTION -> WebSocket %zu Connected\n", recvNum, win->connections);
+                    #endif
+
+                    mg_close_connection(conn);
+                    event_type = WEBUI_EVENT_UNWANTED_CONNECTION;
+                }
+            }
+
+            // New Event
+            // if(win->has_events) {
+
+            //     // Generate WebUI internal id
+            //     char* webui_internal_id = _webui_generate_internal_id(win, "");
+
+            //     _webui_window_event(
+            //         win,                // Event -> Window
+            //         event_type,         // Event -> Type of this event
+            //         "",                 // Event -> HTML Element
+            //         NULL,               // Event -> User Custom Data
+            //         0,                  // Event -> Event Number
+            //         webui_internal_id   // Extras -> WebUI Internal ID
+            //     );
+            // }
+        }
+        else if (event_type == WEBUI_WS_CLOSE) {
+
+            // Ini
+            // struct mg_connection* conn = (struct mg_connection*)ptr;
+
+            if(win->connections < 2) {
+
+                // Main connection close
+                #ifdef WEBUI_LOG
+                    printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> WebSocket %zu Closed\n", recvNum, win->connections);
+                #endif
+
+                win->html_handled = false;
+                win->server_handled = false;
+                win->bridge_handled = false;
+                win->connected = false; // server thread
+            }
+            else {
+
+                // Multi connections close
+
+                if(win->multi_access) {
+
+                    #ifdef WEBUI_LOG
+                        printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> MULTI_CONNECTION -> WebSocket %zu Closed\n", recvNum, win->connections);
+                    #endif
+
+                    win->html_handled = false;
+                    win->server_handled = false;
+                    win->bridge_handled = false;
+                }
+                else {
+
+                    // UNWANTED Multi connections close
+                    #ifdef WEBUI_LOG
+                        printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> UNWANTED_CONNECTION -> WebSocket %zu Closed\n", recvNum, win->connections);
+                    #endif
+                }
+            }
+
+            win->connections--;
+
+            // Events
+            if(win->has_events) {
+
+                // Generate WebUI internal id
+                char* webui_internal_id = _webui_generate_internal_id(win, "");
+
+                _webui_window_event(
+                    win,                        // Event -> Window
+                    WEBUI_EVENT_DISCONNECTED,   // Event -> Type of this event
+                    "",                         // Event -> HTML Element
+                    NULL,                       // Event -> User Custom Data
+                    0,                          // Event -> Event Number
+                    webui_internal_id           // Extras -> WebUI Internal ID
+                );
+            }
+        }
+        #ifdef WEBUI_LOG
+            else {
+                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> UNKNOWN EVENT TYPE %zu\n", recvNum, event_type);
+            }
+        #endif
+
+        #ifdef WEBUI_LOG
+            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Finished.\n", recvNum);
+        #endif
+    }
 
     // Free
-    _webui_free_mem((void*)arg->packet);
+    _webui_free_mem((void*)arg->ptr);
     _webui_free_mem((void*)arg);
+
+    
 
     WEBUI_THREAD_RETURN
 }
