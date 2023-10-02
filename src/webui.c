@@ -4156,7 +4156,7 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     // #7 - Yandex - Shows a big welcome window in the first run
     // #8 - Chromium - Some Anti-Malware shows a false alert when using ungoogled-chromium-binaries
 
-    if(browser != 0) {
+    if(browser != AnyBrowser) {
 
         // Open the window using the user specified browser
 
@@ -4176,7 +4176,7 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
             return _webui_browser_start_yandex(win, address);
         else if(browser == Chromium)
             return _webui_browser_start_chromium(win, address);
-	else if(browser == ChromiumBased) {
+        else if(browser == ChromiumBased) {
 
             // Open the window using a Chromium-based browser
 
