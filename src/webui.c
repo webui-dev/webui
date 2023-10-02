@@ -48,6 +48,7 @@
 #define WEBUI_MAX_X             (3000)      // Maximal window X (4K Monitor)
 #define WEBUI_MAX_Y             (1800)      // Maximal window Y (4K Monitor)
 #define WEBUI_HOSTNAME          "localhost" // Host name to use `localhost` / `127.0.0.1`
+#define WEBUI_PROFILE_NAME      "WebUI"     // Default browser profile name (Used only for Firefox)
 
 // Mutex
 #ifdef _WIN32
@@ -208,7 +209,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser);
 static const char* _webui_get_temp_path();
 static bool _webui_folder_exist(char* folder);
 static void _webui_delete_folder(char* folder);
-static bool _webui_browser_create_profile_folder(_webui_window_t* win, size_t browser);
+static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t browser);
 static bool _webui_browser_start_chrome(_webui_window_t* win, const char* address);
 static bool _webui_browser_start_edge(_webui_window_t* win, const char* address);
 static bool _webui_browser_start_epic(_webui_window_t* win, const char* address);
@@ -262,6 +263,8 @@ static void _webui_ws_ready_handler(struct mg_connection *conn, void *_win);
 static int _webui_ws_data_handler(struct mg_connection *conn, int opcode, char* data, size_t datasize, void *_win);
 static void _webui_ws_close_handler(const struct mg_connection *conn, void *_win);
 static void _webui_receive(_webui_window_t* win, int event_type, void* data, size_t len);
+static void _webui_remove_firefox_ini_profile(const char* path, const char* profile_name);
+static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* profile_name);
 static WEBUI_THREAD_SERVER_START;
 static WEBUI_THREAD_RECEIVE;
 
@@ -284,14 +287,14 @@ void webui_run(size_t window, const char* script) {
 
     size_t js_len = _webui_strlen(script);
     
-    if(js_len < 1)
+    if (js_len < 1)
         return;
     
     // Initialization
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Initializing pipe
@@ -307,7 +310,7 @@ void webui_run(size_t window, const char* script) {
     packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
     packet[1] = WEBUI_HEADER_JS_QUICK;  // CMD
     packet[2] = run_id;                 // ID
-    for(size_t i = 0; i < js_len; i++)  // Data
+    for (size_t i = 0; i < js_len; i++)  // Data
         packet[i + 3] = script[i];
     
     // Send packets
@@ -317,14 +320,14 @@ void webui_run(size_t window, const char* script) {
 
 void webui_set_file_handler(size_t window, const void* (*handler)(const char *filename, int *length)) {
 
-    if(handler == NULL)
+    if (handler == NULL)
         return;
     
     // Initialization
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     win->files_handler = handler;
@@ -343,16 +346,16 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Initializing response buffer
-    if(buffer_length > 0)
+    if (buffer_length > 0)
         memset(buffer, 0, buffer_length);
 
     size_t js_len = _webui_strlen(script);
 
-    if(js_len < 1)
+    if (js_len < 1)
         return false;
 
     // Initializing pipe
@@ -373,7 +376,7 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
     packet[0] = WEBUI_HEADER_SIGNATURE;         // Signature
     packet[1] = WEBUI_HEADER_JS;                // CMD
     packet[2] = run_id;                         // ID
-    for(size_t i = 0; i < js_len; i++)          // Script
+    for (size_t i = 0; i < js_len; i++)          // Script
         packet[i + 3] = script[i];
     
     // Send packets
@@ -381,12 +384,12 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
     _webui_free_mem((void*)packet);
 
     // Wait for UI response
-    if(timeout_second < 1 || timeout_second > 86400) {
+    if (timeout_second < 1 || timeout_second > 86400) {
 
         // Wait forever
-        for(;;) {
+        for (;;) {
             _webui_sleep(1);
-            if(_webui_core.run_done[run_id])
+            if (_webui_core.run_done[run_id])
                 break;
         }
     }
@@ -395,16 +398,16 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
         // Using timeout
         _webui_timer_t timer;
         _webui_timer_start(&timer);
-        for(;;) {
+        for (;;) {
             _webui_sleep(1);
-            if(_webui_core.run_done[run_id])
+            if (_webui_core.run_done[run_id])
                 break;
-            if(_webui_timer_is_end(&timer, (timeout_second * 1000)))
+            if (_webui_timer_is_end(&timer, (timeout_second * 1000)))
                 break;
         }
     }
 
-    if(_webui_core.run_done[run_id]) {
+    if (_webui_core.run_done[run_id]) {
 
         #ifdef WEBUI_LOG
             printf("[User] webui_script -> Response found. User buffer len: %zu bytes \n", _webui_core.run_userBufferLen[run_id]);
@@ -431,12 +434,12 @@ size_t webui_new_window(void) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return 0;
+    if (_webui_core.exit_now) return 0;
 
     // Get a new window number
     // starting from 1.
     size_t window_number = webui_get_new_window_id();
-    if(_webui_core.wins[window_number] != NULL)
+    if (_webui_core.wins[window_number] != NULL)
         _webui_panic();
 
     // Create a new window
@@ -447,7 +450,7 @@ size_t webui_new_window(void) {
     win->window_number = window_number;
     win->browser_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     win->server_root_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
-    if(_webui_is_empty(_webui_core.default_server_root_path))
+    if (_webui_is_empty(_webui_core.default_server_root_path))
         sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
     else
         sprintf(win->server_root_path, "%s", _webui_core.default_server_root_path);
@@ -467,13 +470,13 @@ size_t webui_new_window_id(size_t window_number) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return 0;
+    if (_webui_core.exit_now) return 0;
 
-    if(window_number < 1 || window_number > WEBUI_MAX_IDS)
+    if (window_number < 1 || window_number > WEBUI_MAX_IDS)
         return 0;
 
     // Destroy the window if already exist
-    if(_webui_core.wins[window_number] != NULL)
+    if (_webui_core.wins[window_number] != NULL)
         webui_destroy(window_number);
 
     // Create a new window
@@ -484,13 +487,13 @@ size_t webui_new_window_id(size_t window_number) {
     win->window_number = window_number;
     win->browser_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
     win->server_root_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
-    if(_webui_is_empty(_webui_core.default_server_root_path))
+    if (_webui_is_empty(_webui_core.default_server_root_path))
         sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
     else
         sprintf(win->server_root_path, "%s", _webui_core.default_server_root_path);
 
     // Save window ID
-    if(window_number > _webui_core.last_win_number)
+    if (window_number > _webui_core.last_win_number)
         _webui_core.last_win_number = window_number;
     
     #ifdef WEBUI_LOG
@@ -508,11 +511,11 @@ size_t webui_get_new_window_id(void) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return 0;
+    if (_webui_core.exit_now) return 0;
 
-    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
-        if(_webui_core.wins[i] == NULL) {
-            if(i > _webui_core.last_win_number)
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
+        if (_webui_core.wins[i] == NULL) {
+            if (i > _webui_core.last_win_number)
                 _webui_core.last_win_number = i;
             return i;
         }
@@ -533,7 +536,7 @@ void webui_set_kiosk(size_t window, bool status) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     win->kiosk_mode = status;
@@ -549,10 +552,10 @@ void webui_close(size_t window) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
-    if(win->connected) {
+    if (win->connected) {
 
         // 0: [Signature]
         // 1: [CMD]
@@ -578,10 +581,10 @@ void webui_destroy(size_t window) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
-    if(win->server_running) {
+    if (win->server_running) {
 
         // Freindly close
         webui_close(window);
@@ -589,15 +592,15 @@ void webui_destroy(size_t window) {
         // Wait for server threads to stop
         _webui_timer_t timer_1;
         _webui_timer_start(&timer_1);
-        for(;;) {
+        for (;;) {
             _webui_sleep(10);
-            if(!win->server_running)
+            if (!win->server_running)
                 break;
-            if(_webui_timer_is_end(&timer_1, 2500))
+            if (_webui_timer_is_end(&timer_1, 2500))
                 break;
         }
 
-        if(win->server_running) {
+        if (win->server_running) {
 
             #ifdef WEBUI_LOG
                 printf("[User] webui_destroy([%zu]) -> Forced close...\n", window);
@@ -609,11 +612,11 @@ void webui_destroy(size_t window) {
             // Wait for server threads to stop
             _webui_timer_t timer_2;
             _webui_timer_start(&timer_2);
-            for(;;) {
+            for (;;) {
                 _webui_sleep(10);
-                if(!win->server_running)
+                if (!win->server_running)
                     break;
-                if(_webui_timer_is_end(&timer_2, 1500))
+                if (_webui_timer_is_end(&timer_2, 1500))
                     break;
             }
         }
@@ -630,8 +633,8 @@ void webui_destroy(size_t window) {
     _webui_free_mem((void*)win->server_root_path);
 
     // Free events
-    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
-        if(win->event_core[i] != NULL)
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
+        if (win->event_core[i] != NULL)
             _webui_free_mem((void*)win->event_core[i]);
     }
 
@@ -650,7 +653,7 @@ bool webui_is_shown(size_t window) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
     return win->connected;
@@ -666,7 +669,7 @@ void webui_set_multi_access(size_t window, bool status) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     win->multi_access = status;
@@ -682,7 +685,7 @@ void webui_set_icon(size_t window, const char* icon, const char* icon_type) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Some wrappers do not guarantee pointers stay valid,
@@ -699,9 +702,9 @@ void webui_set_icon(size_t window, const char* icon, const char* icon_type) {
     memcpy((char*)icon_type_cpy, icon_type, len);
 
     // Clean old sets if any
-    if(win->icon != NULL)
+    if (win->icon != NULL)
         _webui_free_mem((void*)win->icon);
-    if(win->icon_type != NULL)
+    if (win->icon_type != NULL)
         _webui_free_mem((void*)win->icon_type);
 
     win->icon = icon_cpy;
@@ -718,10 +721,10 @@ void webui_navigate(size_t window, const char* url) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
-    if(!win->connected)
+    if (!win->connected)
         return;
 
     // 0: [Signature]
@@ -733,7 +736,7 @@ void webui_navigate(size_t window, const char* url) {
     char* packet = (char*) _webui_malloc(packet_len);
     packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
     packet[1] = WEBUI_HEADER_NAVIGATION; // CMD
-    for(size_t i = 0; i < _webui_strlen(url); i++) // URL
+    for (size_t i = 0; i < _webui_strlen(url); i++) // URL
         packet[i + 2] = url[i];
 
     // Send the packet
@@ -764,11 +767,150 @@ void webui_delete_all_profiles() {
     _webui_init();
 
     // Loop trough windows
-    for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
-        if(_webui_core.wins[i] != NULL) {
+    for (size_t i = 1; i <= _webui_core.last_win_number; i++) {
+        if (_webui_core.wins[i] != NULL) {
             webui_delete_profile(i);
         }
     }
+}
+
+static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* profile_name) {
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_is_firefox_ini_profile_exist([%s], [%s])...\n", path, profile_name);
+    #endif
+
+    // Parse home environments in the path
+    #ifdef _WIN32
+        // Windows
+        char full_path[WEBUI_MAX_PATH];
+        ExpandEnvironmentStringsA(path, full_path, sizeof(full_path));
+    #else
+        // Linux & macOS
+        char full_path[WEBUI_MAX_PATH];
+        if (path[0] == '~') {
+            const char *home = getenv("HOME");
+            if (home) {
+                snprintf(full_path, sizeof(full_path), "%s/%s", home, &path[1]);
+            }
+            else {
+                // If for some reason HOME isn't set
+                // fall back to the original path.
+                strncpy(full_path, path, sizeof(full_path));
+            }
+        }
+        else {
+            strncpy(full_path, path, sizeof(full_path));
+        }
+    #endif
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_is_firefox_ini_profile_exist() -> Opening [%s]\n", full_path);
+    #endif
+    
+    // Open
+    FILE *file = fopen(full_path, "r");
+    if (!file)
+        return false;
+
+    char target[128] = { 0x00 };
+    sprintf(target, "Name=%s", profile_name);
+    
+    char line[1024];
+    while (fgets(line, sizeof(line), file)) {
+        if (strstr(line, target) != NULL) {
+            #ifdef WEBUI_LOG
+                printf("[Core]\t\t_webui_is_firefox_ini_profile_exist() -> Target found.\n");
+            #endif
+            fclose(file);
+            return true;
+        }
+    }
+
+    fclose(file);
+    return false;
+}
+
+static void _webui_remove_firefox_ini_profile(const char* path, const char* profile_name) {
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_remove_firefox_profile_ini([%s], [%s])...\n", path, profile_name);
+    #endif
+
+    // Parse home environments in the path
+    #ifdef _WIN32
+        // Windows
+        char full_path[WEBUI_MAX_PATH];
+        ExpandEnvironmentStringsA(path, full_path, sizeof(full_path));
+    #else
+        // Linux & macOS
+        char full_path[WEBUI_MAX_PATH];
+        if (path[0] == '~') {
+            const char *home = getenv("HOME");
+            if (home) {
+                snprintf(full_path, sizeof(full_path), "%s/%s", home, &path[1]);
+            }
+            else {
+                // If for some reason HOME isn't set
+                // fall back to the original path.
+                strncpy(full_path, path, sizeof(full_path));
+            }
+        }
+        else {
+            strncpy(full_path, path, sizeof(full_path));
+        }
+    #endif
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_remove_firefox_profile_ini() -> Opening [%s]\n", full_path);
+    #endif
+    
+    // Open
+    FILE *file = fopen(full_path, "r");
+    if (!file)
+        return;
+
+    char buffer[4096] = { 0x00 };
+    char output[4096] = { 0x00 };
+
+    char target[128] = { 0x00 };
+    sprintf(target, "Name=%s", profile_name);
+
+    bool skip = false;
+    while (fgets(buffer, sizeof(buffer), file)) {
+
+        if (strncmp(buffer, "[Profile", 8) == 0) {
+            if (skip)
+                skip = false;
+        }
+
+        if (!skip) {
+
+            if (strstr(buffer, target) != NULL) {
+
+                #ifdef WEBUI_LOG
+                    printf("[Core]\t\t_webui_remove_firefox_profile_ini() -> Target found.\n");
+                #endif
+                skip = true;
+                continue;
+            }
+            else 
+                strcat(output, buffer);
+        }
+    }
+
+    fclose(file);
+
+    #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_remove_firefox_profile_ini() -> Saving...\n");
+    #endif
+
+    // Save
+    file = fopen(full_path, "w");
+    if (!file)
+        return;
+    fputs(output, file);
+    fclose(file);
 }
 
 void webui_delete_profile(size_t window) {
@@ -779,36 +921,29 @@ void webui_delete_profile(size_t window) {
 
     // Initialization
     _webui_init();
-    
+
     // Dereference
-    if(_webui_core.wins[window] == NULL) return;
+    if (_webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
-    if(_webui_folder_exist(win->profile_path)) {
+    if (_webui_folder_exist(win->profile_path)) {
 
-        if(win->current_browser == Firefox) {
-            
+        if (win->current_browser == Firefox) {
+
             // Delete Firefox profile
-
-            // TODO:
 
             #ifdef _WIN32
                 // Windows
-
-                // 1. Read "%APPDATA%\Mozilla\Firefox\profiles.ini"
-                // 2. Delete the section that contain { "Path=" + win->profile_path }
-                // 3. _webui_delete_folder(win->profile_path);
-
-                // win->profile_path: Full path to profile
-                // win->browser_path: Full path to firefox browser
+                _webui_remove_firefox_ini_profile("%APPDATA%\\Mozilla\\Firefox\\profiles.ini", win->profile_name);
+                _webui_delete_folder(win->profile_path);
             #elif __linux__
                 // Linux
-
-                // TODO: ...
+                _webui_remove_firefox_ini_profile("~/.mozilla/firefox/profiles.ini", win->profile_name);
+                _webui_delete_folder(win->profile_path);
             #else
                 // macOS
-
-                // TODO: ...
+                _webui_remove_firefox_ini_profile("~/Library/Application Support/Firefox/profiles.ini", win->profile_name);
+                _webui_delete_folder(win->profile_path);
             #endif
         }
         else {
@@ -829,7 +964,7 @@ bool webui_show(size_t window, const char* content) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Find the best web browser to use
@@ -849,7 +984,7 @@ bool webui_show_browser(size_t window, const char* content, size_t browser) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
     return _webui_show(win, content, browser);
@@ -865,11 +1000,11 @@ size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
     _webui_window_t* win = _webui_core.wins[window];
 
     int len = 0;
-    if(_webui_is_empty(element))
+    if (_webui_is_empty(element))
         win->has_events = true;
     else
         len = _webui_strlen(element);
@@ -880,7 +1015,7 @@ size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t
 
     size_t cb_index = _webui_get_cb_index(webui_internal_id);
 
-    if(cb_index > 0) {
+    if (cb_index > 0) {
 
         // Replace a reference
         _webui_core.cb[cb_index] = func;
@@ -891,24 +1026,24 @@ size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t
         // New reference
         cb_index = _webui_set_cb_index(webui_internal_id);
 
-        if(cb_index > 0) {
+        if (cb_index > 0) {
 
             _webui_core.cb[cb_index] = func;
 
-            if(win->bridge_handled) {
+            if (win->bridge_handled) {
 
                 // The bridge is already generated and handled
                 // to this UI. We need to send this new binding
                 // ID to to the UI.
 
-                if(!win->connected) {
+                if (!win->connected) {
                     _webui_timer_t timer;
                     _webui_timer_start(&timer);
-                    for(;;) {
+                    for (;;) {
                         _webui_sleep(10);
-                        if(win->connected)
+                        if (win->connected)
                             break;
-                        if(_webui_timer_is_end(&timer, 3000))
+                        if (_webui_timer_is_end(&timer, 3000))
                             break;
                     }                    
                 }
@@ -923,7 +1058,7 @@ size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t
                 char* packet = (char*) _webui_malloc(packet_len);
                 packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
                 packet[1] = WEBUI_HEADER_NEW_ID;    // CMD
-                for(size_t i = 0; i < id_len; i++)  // New Element
+                for (size_t i = 0; i < id_len; i++)  // New Element
                     packet[i + 2] = webui_internal_id[i];
                 
                 // Send packets
@@ -945,11 +1080,11 @@ const char* webui_get_string(webui_event_t* e) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return NULL;
+    if (_webui_core.exit_now) return NULL;
 
-    if(e->data != NULL) {
+    if (e->data != NULL) {
         size_t len = _webui_strlen(e->data);
-        if(len > 0 && len <= WEBUI_MAX_BUF)
+        if (len > 0 && len <= WEBUI_MAX_BUF)
             return (const char* ) e->data;
     }
 
@@ -964,13 +1099,13 @@ long long int webui_get_int(webui_event_t* e) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return 0;
+    if (_webui_core.exit_now) return 0;
 
     char* endptr;
 
-    if(e->data != NULL) {
+    if (e->data != NULL) {
         size_t len = _webui_strlen(e->data);
-        if(len > 0 && len <= 20) // 64-bit max is -9,223,372,036,854,775,808 (20 character)
+        if (len > 0 && len <= 20) // 64-bit max is -9,223,372,036,854,775,808 (20 character)
             return strtoll((const char* ) e->data, &endptr, 10);
     }
     
@@ -985,10 +1120,10 @@ bool webui_get_bool(webui_event_t* e) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return false;
+    if (_webui_core.exit_now) return false;
 
     const char* str = webui_get_string(e);
-    if(str[0] == 't' || str[0] == 'T') // true || True
+    if (str[0] == 't' || str[0] == 'T') // true || True
         return true;
 
     return false;
@@ -1004,16 +1139,16 @@ void webui_return_int(webui_event_t* e, long long int n) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
     // Get buffer
-    if(win->event_core[e->event_number] == NULL)
+    if (win->event_core[e->event_number] == NULL)
         return;
     char** response = &win->event_core[e->event_number]->response;
 
     // Free
-    if(*response != NULL)
+    if (*response != NULL)
         _webui_free_mem((void*)*response);
 
     // Int to Str
@@ -1031,23 +1166,23 @@ void webui_return_string(webui_event_t* e, const char* s) {
         printf("[User] webui_return_string([%s])...\n", s);
     #endif
 
-    if(_webui_is_empty(s))
+    if (_webui_is_empty(s))
         return;
 
     // Initialization
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
     // Get buffer
-    if(win->event_core[e->event_number] == NULL)
+    if (win->event_core[e->event_number] == NULL)
         return;
     char** response = &win->event_core[e->event_number]->response;
     
     // Free
-    if(*response != NULL)
+    if (*response != NULL)
         _webui_free_mem((void*)*response);
 
     // Copy Str
@@ -1069,7 +1204,7 @@ size_t webui_get_parent_process_id(size_t window) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
     _webui_window_t* win = _webui_core.wins[window];
 
     return win->process_id;
@@ -1085,7 +1220,7 @@ size_t webui_get_child_process_id(size_t window) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
     _webui_window_t* win = _webui_core.wins[window];
 
     #ifdef _WIN32
@@ -1109,21 +1244,21 @@ size_t webui_get_child_process_id(size_t window) {
         struct dirent* entry;
         pid_t lastChildPid = (pid_t)win->process_id;
         dir = opendir("/proc");
-        if(!dir)
+        if (!dir)
             return win->process_id;
         while((entry = readdir(dir)) != NULL) {
             // Ensure we're looking at a process directory (directories that are just numbers)
-            if(entry->d_type == DT_DIR && strspn(entry->d_name, "0123456789") == strlen(entry->d_name)) {
+            if (entry->d_type == DT_DIR && strspn(entry->d_name, "0123456789") == strlen(entry->d_name)) {
                 char statFilepath[256];
                 snprintf(statFilepath, sizeof(statFilepath), "/proc/%s/stat", entry->d_name);
                 FILE* f = fopen(statFilepath, "r");
-                if(f) {
+                if (f) {
                     pid_t pid, ppid;
                     char comm[256];
                     char state;
                     // Extract data from the stat file; fields are space-delimited
-                    if(fscanf(f, "%d %s %c %d", &pid, comm, &state, &ppid) == 4) {
-                        if((intmax_t)ppid == (intmax_t)win->process_id) {
+                    if (fscanf(f, "%d %s %c %d", &pid, comm, &state, &ppid) == 4) {
+                        if ((intmax_t)ppid == (intmax_t)win->process_id) {
                             // Convert directory name (string) to integer PID
                             lastChildPid = atoi(entry->d_name);
                         }
@@ -1139,12 +1274,12 @@ size_t webui_get_child_process_id(size_t window) {
         // Get the size required to hold all process information
         int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
         size_t size;
-        if(sysctl(mib, 3, NULL, &size, NULL, 0) < 0) {
+        if (sysctl(mib, 3, NULL, &size, NULL, 0) < 0) {
             return win->process_id;
         }
         // Allocate memory and get all process information
         struct kinfo_proc* procList = (struct kinfo_proc*)malloc(size);
-        if(!procList) {
+        if (!procList) {
             return win->process_id;
         }
         if (sysctl(mib, 3, procList, &size, NULL, 0) < 0) {
@@ -1174,16 +1309,16 @@ void webui_return_bool(webui_event_t* e, bool b) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
     // Get buffer
-    if(win->event_core[e->event_number] == NULL)
+    if (win->event_core[e->event_number] == NULL)
         return;
     char** response = &win->event_core[e->event_number]->response;
 
     // Free
-    if(*response != NULL)
+    if (*response != NULL)
         _webui_free_mem((void*)*response);
 
     // Bool to Str
@@ -1205,7 +1340,7 @@ void webui_set_hide(size_t window, bool status) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     win->hide = status;
@@ -1221,10 +1356,10 @@ void webui_set_size(size_t window, unsigned int width, unsigned int height) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
-    if(width < WEBUI_MIN_WIDTH || width > WEBUI_MAX_WIDTH || 
+    if (width < WEBUI_MIN_WIDTH || width > WEBUI_MAX_WIDTH || 
         height < WEBUI_MIN_HEIGHT || height > WEBUI_MAX_HEIGHT) {
         
         win->size_set = false;
@@ -1235,7 +1370,7 @@ void webui_set_size(size_t window, unsigned int width, unsigned int height) {
     win->height = height;
     win->size_set = true;
 
-    if(win->connected) {
+    if (win->connected) {
 
         // Resize the current window
         char script[128];
@@ -1254,10 +1389,10 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
-    if(x < WEBUI_MIN_X || x > WEBUI_MAX_X || 
+    if (x < WEBUI_MIN_X || x > WEBUI_MAX_X || 
         y < WEBUI_MIN_Y || y > WEBUI_MAX_Y) {
         
         win->position_set = false;
@@ -1268,7 +1403,7 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
     win->y = y;
     win->position_set = true;
 
-    if(win->connected) {
+    if (win->connected) {
 
         // Positioning the current window
         char script[128];
@@ -1287,24 +1422,30 @@ void webui_set_profile(size_t window, const char* name, const char* path) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Some wrappers do not guarantee pointers stay valid,
     // so, let's make our copy.
 
+    char* name_cpy = NULL;
     size_t len = _webui_strlen(name);
-    char* name_cpy = (char*)_webui_malloc(len);
-    memcpy((char*)name_cpy, name, len);
+    if(len > 0) {
+        name_cpy = (char*)_webui_malloc(len);
+        memcpy((char*)name_cpy, name, len);
+    }
 
+    char* path_cpy = NULL;
     len = _webui_strlen(path);
-    char* path_cpy = (char*)_webui_malloc(len);
-    memcpy((char*)path_cpy, path, len);
+    if(len > 0) {
+        path_cpy = (char*)_webui_malloc(len);
+        memcpy((char*)path_cpy, path, len);
+    }
 
     // Free
-    if(win->profile_name != NULL)
+    if (win->profile_name != NULL)
         _webui_free_mem((void*)win->profile_name);
-    if(win->profile_path != NULL)
+    if (win->profile_path != NULL)
         _webui_free_mem((void*)win->profile_path);
     
     // Save
@@ -1323,7 +1464,7 @@ const char* webui_get_url(size_t window) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return NULL;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return NULL;
     _webui_window_t* win = _webui_core.wins[window];
     
     return (const char*)win->url;
@@ -1335,14 +1476,14 @@ void webui_send_raw(size_t window, const char* function, const void* raw, size_t
         printf("[User] webui_send_raw(%zu bytes)...\n", size);
     #endif
 
-    if(size < 1 || _webui_strlen(function) < 1 || raw == NULL)
+    if (size < 1 || _webui_strlen(function) < 1 || raw == NULL)
         return;
     
     // Initialization
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     // 0: [Signature]
@@ -1363,7 +1504,7 @@ void webui_send_raw(size_t window, const char* function, const void* raw, size_t
     
     // Function
     size_t p = 2;
-    for(size_t i = 0; i < _webui_strlen(function); i++) { 
+    for (size_t i = 0; i < _webui_strlen(function); i++) { 
         packet[p] = function[i];
         p++;
     }
@@ -1374,7 +1515,7 @@ void webui_send_raw(size_t window, const char* function, const void* raw, size_t
 
     // Data
     char* ptr = (char*)raw;
-    for(size_t i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
         packet[p] = *ptr;
         p++;
         ptr++;
@@ -1395,10 +1536,10 @@ char* webui_encode(const char* str) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return NULL;
+    if (_webui_core.exit_now) return NULL;
 
     size_t len = strlen(str);
-    if(len < 1)
+    if (len < 1)
         return NULL;
     
     #ifdef WEBUI_LOG
@@ -1410,7 +1551,7 @@ char* webui_encode(const char* str) {
 
     int ret = mg_base64_encode((const unsigned char*)str, len, buf, &buf_len);
 
-    if(ret > (-1)) {
+    if (ret > (-1)) {
         
         // Failed
         #ifdef WEBUI_LOG
@@ -1436,10 +1577,10 @@ char* webui_decode(const char* str) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return NULL;
+    if (_webui_core.exit_now) return NULL;
 
     size_t len = strlen(str);
-    if(len < 1)
+    if (len < 1)
         return NULL;
     
     #ifdef WEBUI_LOG
@@ -1451,7 +1592,7 @@ char* webui_decode(const char* str) {
 
     int ret = mg_base64_decode(str, len, buf, &buf_len);
 
-    if(ret > (-1)) {
+    if (ret > (-1)) {
         
         // Failed
         #ifdef WEBUI_LOG
@@ -1477,7 +1618,7 @@ void webui_free(void* ptr) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return;
+    if (_webui_core.exit_now) return;
 
     _webui_free_mem(ptr);
 }
@@ -1490,7 +1631,7 @@ void* webui_malloc(size_t size) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return NULL;
+    if (_webui_core.exit_now) return NULL;
 
     return _webui_malloc(size);
 }
@@ -1503,7 +1644,7 @@ void webui_exit(void) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return;
+    if (_webui_core.exit_now) return;
 
     // Close all opened windows
     // by sending `CLOSE` command
@@ -1511,9 +1652,9 @@ void webui_exit(void) {
     char* packet = (char*) _webui_malloc(4);
     packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
     packet[1] = WEBUI_HEADER_CLOSE;     // CMD
-    for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
-        if(_webui_core.wins[i] != NULL) {
-            if(_webui_core.wins[i]->connected) {
+    for (size_t i = 1; i <= _webui_core.last_win_number; i++) {
+        if (_webui_core.wins[i] != NULL) {
+            if (_webui_core.wins[i]->connected) {
                 // Send packet
                 _webui_window_send(_webui_core.wins[i], packet, 2);
             }
@@ -1540,14 +1681,14 @@ void webui_wait(void) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return;
+    if (_webui_core.exit_now) return;
 
-    if(_webui_core.startup_timeout > 0) {
+    if (_webui_core.startup_timeout > 0) {
 
         // Check if there is atleast one window (UI)
         // is running. Otherwise the mutex condition
         // signal will never come
-        if(!_webui_core.ui) {
+        if (!_webui_core.ui) {
 
             #ifdef WEBUI_LOG
                 printf("[Loop] webui_wait() -> No window is found. Stop.\n");
@@ -1594,9 +1735,9 @@ void webui_set_timeout(size_t second) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return;
+    if (_webui_core.exit_now) return;
 
-    if(second > WEBUI_MAX_TIMEOUT)
+    if (second > WEBUI_MAX_TIMEOUT)
         second = WEBUI_MAX_TIMEOUT;
 
     _webui_core.startup_timeout = second;
@@ -1612,10 +1753,10 @@ void webui_set_runtime(size_t window, size_t runtime) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
-    if(runtime != Deno && runtime != NodeJS)
+    if (runtime != Deno && runtime != NodeJS)
         win->runtime = None;
     else
         win->runtime = runtime;
@@ -1631,10 +1772,10 @@ bool webui_set_root_folder(size_t window, const char* path) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return false;
     _webui_window_t* win = _webui_core.wins[window];
 
-    if(win->server_running || _webui_is_empty(path) || (_webui_strlen(path) > WEBUI_MAX_PATH) || !_webui_folder_exist((char*)path)) {
+    if (win->server_running || _webui_is_empty(path) || (_webui_strlen(path) > WEBUI_MAX_PATH) || !_webui_folder_exist((char*)path)) {
 
         sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
         #ifdef WEBUI_LOG
@@ -1658,9 +1799,9 @@ bool webui_set_default_root_folder(const char* path) {
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return false;
+    if (_webui_core.exit_now) return false;
 
-    if(_webui_is_empty(path) || (_webui_strlen(path) > WEBUI_MAX_PATH) || !_webui_folder_exist((char*)path)) {
+    if (_webui_is_empty(path) || (_webui_strlen(path) > WEBUI_MAX_PATH) || !_webui_folder_exist((char*)path)) {
 
         _webui_core.default_server_root_path[0] = '\0';
         #ifdef WEBUI_LOG
@@ -1676,8 +1817,8 @@ bool webui_set_default_root_folder(const char* path) {
 
     // Update all windows. This will works only
     // for non-running windows.
-    for(size_t i = 1; i <= _webui_core.last_win_number; i++) {
-        if(_webui_core.wins[i] != NULL) {
+    for (size_t i = 1; i <= _webui_core.last_win_number; i++) {
+        if (_webui_core.wins[i] != NULL) {
             sprintf(_webui_core.wins[i]->server_root_path, "%s", _webui_core.default_server_root_path);
         }
     }
@@ -1696,14 +1837,14 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[e->window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[e->window];
 
     // Generate WebUI internal id
     char* webui_internal_id = _webui_generate_internal_id(win, e->element);
     size_t cb_index = _webui_get_cb_index(webui_internal_id);
 
-    if(cb_index > 0 && _webui_core.cb_interface[cb_index] != NULL) {
+    if (cb_index > 0 && _webui_core.cb_interface[cb_index] != NULL) {
 
         #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_interface_bind_handler() -> User callback @ 0x%p\n", _webui_core.cb_interface[cb_index]);
@@ -1726,7 +1867,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
     #ifdef WEBUI_LOG
         // Print cb response
         char* response = NULL;
-        if(win->event_core[e->event_number] != NULL)
+        if (win->event_core[e->event_number] != NULL)
             response = *(&win->event_core[e->event_number]->response);
         printf("[Core]\t\t_webui_interface_bind_handler() -> user-callback response [%s]\n", response);
     #endif
@@ -1756,11 +1897,11 @@ void webui_interface_set_response(size_t window, size_t event_number, const char
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return;
     _webui_window_t* win = _webui_core.wins[window];
 
     // Get internal response buffer
-    if(win->event_core[event_number] != NULL) {
+    if (win->event_core[event_number] != NULL) {
 
         char** buffer = NULL;
         buffer = &win->event_core[event_number]->response;
@@ -1784,20 +1925,20 @@ bool webui_interface_is_app_running(void) {
 
     // Stop if already flagged
     static bool app_is_running = true;
-    if(!app_is_running) return false;
+    if (!app_is_running) return false;
 
     // Initialization
     _webui_init();
-    if(_webui_core.exit_now) return false;
+    if (_webui_core.exit_now) return false;
     
     // Get app status
-    if(_webui_core.startup_timeout > 0) {
-        if(_webui_core.servers < 1)
+    if (_webui_core.startup_timeout > 0) {
+        if (_webui_core.servers < 1)
             app_is_running = false;
     }
 
     #ifdef WEBUI_LOG
-        if(!app_is_running)
+        if (!app_is_running)
             printf("[User] webui_is_app_running() -> App Stopped.\n");
     #endif
 
@@ -1814,7 +1955,7 @@ size_t webui_interface_get_window_id(size_t window) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
     _webui_window_t* win = _webui_core.wins[window];
 
     return win->window_number;
@@ -1830,11 +1971,11 @@ size_t webui_interface_get_bind_id(size_t window, const char* element) {
     _webui_init();
     
     // Dereference
-    if(_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
+    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
     _webui_window_t* win = _webui_core.wins[window];
 
     size_t len = _webui_strlen(element);
-    if(len < 1)
+    if (len < 1)
         element = "";
 
     // [win num][/][element]
@@ -1854,12 +1995,12 @@ static bool _webui_ptr_exist(void* ptr) {
         // printf("[Core]\t\t_webui_ptr_exist()...\n");
     #endif
 
-    if(ptr == NULL)
+    if (ptr == NULL)
         return false;
     
-    for(size_t i = 0; i < _webui_core.ptr_position; i++) {
+    for (size_t i = 0; i < _webui_core.ptr_position; i++) {
 
-        if(_webui_core.ptr_list[i] == ptr)
+        if (_webui_core.ptr_list[i] == ptr)
             return true;
     }
 
@@ -1872,14 +2013,14 @@ static void _webui_ptr_add(void* ptr, size_t size) {
         // printf("[Core]\t\t_webui_ptr_add(0x%p)...\n", ptr);
     #endif
 
-    if(ptr == NULL)
+    if (ptr == NULL)
         return;
 
-    if(!_webui_ptr_exist(ptr)) {
+    if (!_webui_ptr_exist(ptr)) {
 
-        for(size_t i = 0; i < _webui_core.ptr_position; i++) {
+        for (size_t i = 0; i < _webui_core.ptr_position; i++) {
 
-            if(_webui_core.ptr_list[i] == NULL) {
+            if (_webui_core.ptr_list[i] == NULL) {
 
                 #ifdef WEBUI_LOG
                     // printf("[Core]\t\t_webui_ptr_add(0x%p) -> Allocate %zu bytes\n", ptr, size);
@@ -1898,7 +2039,7 @@ static void _webui_ptr_add(void* ptr, size_t size) {
         _webui_core.ptr_list[_webui_core.ptr_position] = ptr;
         _webui_core.ptr_size[_webui_core.ptr_position] = size;
         _webui_core.ptr_position++;
-        if(_webui_core.ptr_position >= WEBUI_MAX_IDS)
+        if (_webui_core.ptr_position >= WEBUI_MAX_IDS)
             _webui_core.ptr_position = (WEBUI_MAX_IDS - 1);
     }
 }
@@ -1909,12 +2050,12 @@ static void _webui_free_mem(void* ptr) {
         printf("[Core]\t\t_webui_free_mem(0x%p)...\n", ptr);
     #endif
 
-    if(ptr == NULL)
+    if (ptr == NULL)
         return;
 
-    for(size_t i = 0; i < _webui_core.ptr_position; i++) {
+    for (size_t i = 0; i < _webui_core.ptr_position; i++) {
 
-        if(_webui_core.ptr_list[i] == ptr) {
+        if (_webui_core.ptr_list[i] == ptr) {
 
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t_webui_free_mem(0x%p) -> Free %zu bytes\n", ptr, _webui_core.ptr_size[i]);
@@ -1928,9 +2069,9 @@ static void _webui_free_mem(void* ptr) {
         }
     }
 
-    for(int i = _webui_core.ptr_position; i >= 0; i--) {
+    for (int i = _webui_core.ptr_position; i >= 0; i--) {
 
-        if(_webui_core.ptr_list[i] == NULL) {
+        if (_webui_core.ptr_list[i] == NULL) {
 
             _webui_core.ptr_position = i;
             break;
@@ -1946,15 +2087,15 @@ static void _webui_free_all_mem(void) {
 
     // Makes sure we run this once
     static bool freed = false;
-    if(freed) return;
+    if (freed) return;
     freed = true;
 
     void* ptr = NULL;
-    for(size_t i = 0; i < _webui_core.ptr_position; i++) {
+    for (size_t i = 0; i < _webui_core.ptr_position; i++) {
 
         ptr = _webui_core.ptr_list[i];
 
-        if(ptr != NULL) {
+        if (ptr != NULL) {
 
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t_webui_free_all_mem() -> Free %zu bytes @ 0x%p\n", _webui_core.ptr_size[i], ptr);
@@ -1979,7 +2120,7 @@ static void _webui_panic(void) {
 static size_t _webui_round_to_memory_block(size_t size) {
 
     // If size is negative
-    if(size < 4)
+    if (size < 4)
         size = 4;
 
     // If size is already a full block
@@ -2006,20 +2147,20 @@ static void* _webui_malloc(size_t size) {
     size = _webui_round_to_memory_block(size);
 
     void* block = NULL;
-    for(size_t i = 0; i < 8; i++) {
+    for (size_t i = 0; i < 8; i++) {
 
-        if(size > WEBUI_MAX_BUF)
+        if (size > WEBUI_MAX_BUF)
             size = WEBUI_MAX_BUF;
 
         block = malloc(size);
 
-        if(block == NULL)
+        if (block == NULL)
             size++;
         else
             break;
     }
 
-    if(block == NULL) {
+    if (block == NULL) {
 
         _webui_panic();
         return NULL;
@@ -2038,13 +2179,13 @@ static _webui_window_t* _webui_dereference_win_ptr(void* ptr) {
         printf("[Core]\t\t_webui_dereference_win_ptr()...\n");
     #endif
 
-    if(_webui_core.exit_now)
+    if (_webui_core.exit_now)
         return NULL;
 
     _webui_window_t* win = (_webui_window_t*)ptr;
 
-    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
-        if(_webui_core.wins[i] == win)
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
+        if (_webui_core.wins[i] == win)
            return win;
     }
 
@@ -2059,8 +2200,8 @@ static size_t _webui_get_free_event_core_pos(_webui_window_t* win) {
         printf("[Core]\t\t_webui_get_free_event_core_pos()...\n");
     #endif
 
-    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
-        if(win->event_core[i] == NULL)
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
+        if (win->event_core[i] == NULL)
             return i;
     }
 
@@ -2131,7 +2272,7 @@ static bool _webui_timer_is_end(_webui_timer_t* t, size_t ms) {
     _webui_timer_clock_gettime(&t->now);
 
     size_t def = (size_t) _webui_timer_diff(&t->start, &t->now);
-    if(def > ms)
+    if (def > ms)
         return true;
     return false;
 }
@@ -2142,7 +2283,7 @@ static bool _webui_is_empty(const char* s) {
         // printf("[Core]\t\t_webui_is_empty()...\n");
     #endif
 
-    if((s != NULL) && (s[0] != '\0'))
+    if ((s != NULL) && (s[0] != '\0'))
         return false;
     return true;
 }
@@ -2153,7 +2294,7 @@ static size_t _webui_strlen(const char* s) {
         // printf("[Core]\t\t_webui_strlen()...\n");
     #endif
 
-    if(_webui_is_empty(s))
+    if (_webui_is_empty(s))
         return 0;
 
     size_t length = 0;
@@ -2203,10 +2344,10 @@ static bool _webui_file_exist(char* file) {
         printf("[Core]\t\t_webui_file_exist([%s])...\n", file);
     #endif
 
-    if(_webui_is_empty(file))
+    if (_webui_is_empty(file))
         return false;
 
-    if(WEBUI_FILE_EXIST(file, 0) == 0)
+    if (WEBUI_FILE_EXIST(file, 0) == 0)
         return true;
     return false;
 }
@@ -2217,12 +2358,12 @@ static const char* _webui_get_extension(const char*f) {
         printf("[Core]\t\t_webui_get_extension()...\n");
     #endif
 
-    if(f == NULL)
+    if (f == NULL)
         return "";
 
     const char*ext = strrchr(f, '.');
 
-    if(ext == NULL || !ext || ext == f)
+    if (ext == NULL || !ext || ext == f)
         return "";
     return ext + 1;
 }
@@ -2256,7 +2397,7 @@ static bool _webui_socket_test_listen_mg(size_t port_num) {
     memset(&http_callbacks, 0, sizeof(http_callbacks));
     http_ctx = mg_start(&http_callbacks, 0, http_options);
 
-    if(http_ctx == NULL) {
+    if (http_ctx == NULL) {
 
         // Cannot listen
         mg_stop(http_ctx);
@@ -2277,12 +2418,12 @@ static bool _webui_port_is_used(size_t port_num) {
 
     #ifdef _WIN32
         // Listener test
-        if(!_webui_socket_test_listen_win32(port_num))
+        if (!_webui_socket_test_listen_win32(port_num))
             return true; // Port is already used
         return false; // Port is not in use
     #else
         // Listener test MG
-        if(!_webui_socket_test_listen_mg(port_num))
+        if (!_webui_socket_test_listen_mg(port_num))
             return true; // Port is already used
         return false; // Port is not in use
     #endif
@@ -2294,7 +2435,7 @@ static char* _webui_get_file_name_from_url(const char* url) {
         printf("[Core]\t\t_webui_get_file_name_from_url([%s])...\n", url);
     #endif
 
-    if(_webui_is_empty(url))
+    if (_webui_is_empty(url))
         return NULL;
 
     // Find the position of "://"
@@ -2344,7 +2485,7 @@ static char* _webui_get_full_path_from_url(_webui_window_t* win, const char* url
     // Get file name
     char* file = _webui_get_file_name_from_url(url);
 
-    if(file == NULL)
+    if (file == NULL)
         return NULL;
 
     size_t url_len = _webui_strlen(url);
@@ -2386,18 +2527,18 @@ static int _webui_serve_file(_webui_window_t* win, struct mg_connection *conn) {
     const struct mg_request_info *ri = mg_get_request_info(conn);
     const char* url = ri->local_uri;
 
-    if(win->files_handler != NULL) {
+    if (win->files_handler != NULL) {
 
         // Get file content from the external end-user files handler
 
         int length = 0;
         const void* data = win->files_handler(url, &length);
 
-        if(data != NULL) {
+        if (data != NULL) {
 
             // File content found (200)
 
-            if(length == 0)
+            if (length == 0)
                 length = strlen(data);
 
             // Send header
@@ -2426,14 +2567,14 @@ static int _webui_serve_file(_webui_window_t* win, struct mg_connection *conn) {
         // looking for the file locally.
     }
 
-    if(http_status_code != 200) {
+    if (http_status_code != 200) {
 
         // Using internal files handler
 
         // Get full path
         char* full_path = _webui_get_full_path_from_url(win, url);
 
-        if(_webui_file_exist(full_path)) {
+        if (_webui_file_exist(full_path)) {
 
             // 200 - File exist
             mg_send_file(conn, full_path);
@@ -2465,10 +2606,10 @@ static bool _webui_deno_exist(_webui_window_t* win) {
 
     static bool found = false;
 
-    if(found)
+    if (found)
         return true;
 
-    if(_webui_cmd_sync(win, "deno --version", false) == 0) {
+    if (_webui_cmd_sync(win, "deno --version", false) == 0) {
 
         found = true;
         return true;
@@ -2485,10 +2626,10 @@ static bool _webui_nodejs_exist(_webui_window_t* win) {
 
     static bool found = false;
 
-    if(found)
+    if (found)
         return true;
 
-    if(_webui_cmd_sync(win, "node -v", false) == 0) {
+    if (_webui_cmd_sync(win, "node -v", false) == 0) {
 
         found = true;
         return true;
@@ -2521,7 +2662,7 @@ static const char* _webui_interpret_command(const char* cmd) {
 
         FILE *pipe = WEBUI_POPEN(cmd_with_redirection, "r");
 
-        if(pipe == NULL)
+        if (pipe == NULL)
             return NULL;
         
         // Read STDOUT
@@ -2629,7 +2770,7 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
     size_t url_len = _webui_strlen(url);
 
     // Get file full path
-    if(index != NULL && !_webui_is_empty(index)) {
+    if (index != NULL && !_webui_is_empty(index)) {
 
         // Parse as index file
 
@@ -2650,11 +2791,11 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
     // Get file extension
     const char* extension = _webui_get_extension(file);
 
-    if(strcmp(extension, "ts") == 0 || strcmp(extension, "js") == 0) {
+    if (strcmp(extension, "ts") == 0 || strcmp(extension, "js") == 0) {
 
         // TypeScript / JavaScript
 
-        if(!_webui_file_exist(full_path)) {
+        if (!_webui_file_exist(full_path)) {
 
             // File not exist - 404
             _webui_http_send_error_page(
@@ -2671,10 +2812,10 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
         // Get query
         query = ri->query_string;        
 
-        if(win->runtime == Deno) {
+        if (win->runtime == Deno) {
 
             // Use Deno
-            if(_webui_deno_exist(win)) {
+            if (_webui_deno_exist(win)) {
 
                 // Set command
                 // [disable coloring][file]
@@ -2688,7 +2829,7 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
                 // Run command
                 const char* out = _webui_interpret_command(cmd);
 
-                if(out != NULL) {
+                if (out != NULL) {
 
                     // Send Deno output
                     _webui_http_send(
@@ -2720,11 +2861,11 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
                 interpret_http_stat = 500;
             }
         }
-        else if(win->runtime == NodeJS) {
+        else if (win->runtime == NodeJS) {
 
             // Use Nodejs
 
-            if(_webui_nodejs_exist(win)) {
+            if (_webui_nodejs_exist(win)) {
 
                 // Set command
                 // [node][file]
@@ -2734,7 +2875,7 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection *con
                 // Run command
                 const char* out = _webui_interpret_command(cmd);
 
-                if(out != NULL) {
+                if (out != NULL) {
 
                     // Send Node.js output
                     _webui_http_send(
@@ -2798,15 +2939,15 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
 
     // Calculate the cb size
     size_t cb_mem_size = 64; // To hold 'const _webui_bind_list = ["elem1", "elem2",];' 
-    for(size_t i = 1; i < WEBUI_MAX_IDS; i++)
-        if(_webui_core.html_elements[i] != NULL && !_webui_is_empty(_webui_core.html_elements[i]))
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++)
+        if (_webui_core.html_elements[i] != NULL && !_webui_is_empty(_webui_core.html_elements[i]))
             cb_mem_size += _webui_strlen(_webui_core.html_elements[i]) + 3;
     
     // Generate the cb array
     char* event_cb_js_array = (char*) _webui_malloc(cb_mem_size);
     strcat(event_cb_js_array, "[");
-    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
-        if(_webui_core.html_elements[i] != NULL && !_webui_is_empty(_webui_core.html_elements[i])) {
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
+        if (_webui_core.html_elements[i] != NULL && !_webui_is_empty(_webui_core.html_elements[i])) {
             strcat(event_cb_js_array, "\"");
             strcat(event_cb_js_array, _webui_core.html_elements[i]);
             strcat(event_cb_js_array, "\",");
@@ -2840,105 +2981,138 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
     return js;
 }
 
-static bool _webui_browser_create_profile_folder(_webui_window_t* win, size_t browser) {
+static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t browser) {
 
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_browser_create_profile_folder(%zu)...\n", browser);
     #endif
 
-    if(win->custom_profile)
-        return true; // User defined profile
+    if (!win->custom_profile) {
+
+        // Default profile settings
+        if (win->profile_name != NULL)
+            _webui_free_mem((void*)win->profile_name);
+        if (win->profile_path != NULL)
+            _webui_free_mem((void*)win->profile_path);
+        win->profile_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
+        win->profile_name = (char*) _webui_malloc(WEBUI_MAX_PATH);
+        strcpy(win->profile_name, WEBUI_PROFILE_NAME);
+    }
+    else {
+
+        // Custom profile settings
+        if (_webui_is_empty(win->profile_path) || _webui_is_empty(win->profile_name))
+            return false;
+    }
 
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_browser_create_profile_folder(%zu) -> Generating WebUI profile...\n", browser);
     #endif
-    
-    // Buffers
-    if(win->profile_name != NULL)
-        _webui_free_mem((void*)win->profile_name);
-    if(win->profile_path != NULL)
-        _webui_free_mem((void*)win->profile_path);
-    win->profile_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
-    win->profile_name = (char*) _webui_malloc(WEBUI_MAX_PATH);
 
     // Temp folder
     const char* temp = _webui_get_temp_path();
 
-    if(browser == Chrome) {
+    if (browser == Chrome) {
 
         // Google Chrome
-        sprintf(win->profile_path, "%s%s.WebUI%sWebUIChromeProfile", temp, webui_sep, webui_sep);
+        if (!win->custom_profile)
+            sprintf(win->profile_path, "%s%s.WebUI%sWebUIChromeProfile", temp, webui_sep, webui_sep);
         return true;
     }
-    else if(browser == Edge) {
+    else if (browser == Edge) {
 
         // Edge
-        sprintf(win->profile_path, "%s%s.WebUI%sWebUIEdgeProfile", temp, webui_sep, webui_sep);
+        if (!win->custom_profile)
+            sprintf(win->profile_path, "%s%s.WebUI%sWebUIEdgeProfile", temp, webui_sep, webui_sep);
         return true;
     }
-    else if(browser == Epic) {
+    else if (browser == Epic) {
 
         // Epic
-        sprintf(win->profile_path, "%s%s.WebUI%sWebUIEpicProfile", temp, webui_sep, webui_sep);
+        if (!win->custom_profile)
+            sprintf(win->profile_path, "%s%s.WebUI%sWebUIEpicProfile", temp, webui_sep, webui_sep);
         return true;
     }
-    else if(browser == Vivaldi) {
+    else if (browser == Vivaldi) {
 
         // Vivaldi
-        sprintf(win->profile_path, "%s%s.WebUI%sWebUIVivaldiProfile", temp, webui_sep, webui_sep);
+        if (!win->custom_profile)
+            sprintf(win->profile_path, "%s%s.WebUI%sWebUIVivaldiProfile", temp, webui_sep, webui_sep);
         return true;
     }
-    else if(browser == Brave) {
+    else if (browser == Brave) {
 
         // Brave
-        sprintf(win->profile_path, "%s%s.WebUI%sWebUIBraveProfile", temp, webui_sep, webui_sep);
+        if (!win->custom_profile)
+            sprintf(win->profile_path, "%s%s.WebUI%sWebUIBraveProfile", temp, webui_sep, webui_sep);
         return true;
     }
-    else if(browser == Yandex) {
+    else if (browser == Yandex) {
 
         // Yandex
-        sprintf(win->profile_path, "%s%s.WebUI%sWebUIYandexProfile", temp, webui_sep, webui_sep);
+        if (!win->custom_profile)
+            sprintf(win->profile_path, "%s%s.WebUI%sWebUIYandexProfile", temp, webui_sep, webui_sep);
         return true;
     }
-    else if(browser == Chromium) {
+    else if (browser == Chromium) {
 
         // Chromium
-        sprintf(win->profile_path, "%s%s.WebUI%sWebUIChromiumProfile", temp, webui_sep, webui_sep);
+        if (!win->custom_profile)
+            sprintf(win->profile_path, "%s%s.WebUI%sWebUIChromiumProfile", temp, webui_sep, webui_sep);
         return true;
     }
-    else if(browser == Firefox) {
+    else if (browser == Firefox) {
 
         // Firefox (We need to create a folder)
 
-        char firefox_profile_path[1024] = {0};
-        sprintf(firefox_profile_path, "%s%s.WebUI%sWebUIFirefoxProfile", temp, webui_sep, webui_sep);
-        
-        if(!_webui_folder_exist(firefox_profile_path)) {
+        #ifdef _WIN32
+            // Windows
+           const char* path_ini = "%APPDATA%\\Mozilla\\Firefox\\profiles.ini";
+        #elif __linux__
+            // Linux
+            const char* path_ini = "~/.mozilla/firefox/profiles.ini";
+        #else
+            // macOS
+            const char* path_ini = "~/Library/Application Support/Firefox/profiles.ini";
+        #endif
+
+        if (!win->custom_profile)
+            sprintf(win->profile_path, "%s%s.WebUI%sWebUIFirefoxProfile", temp, webui_sep, webui_sep);
+
+        if (!_webui_folder_exist(win->profile_path) || !_webui_is_firefox_ini_profile_exist(path_ini, win->profile_name)) {
 
             char buf[2048] = {0};
 
-            sprintf(buf, "%s -CreateProfile \"WebUI %s\"", win->browser_path, firefox_profile_path);
+            // There is a possibility that the profile name
+            // does not exist in the INI file. or folder does not exist.
+            // let's delete the profile name from the ini file, and folder.
+            _webui_remove_firefox_ini_profile(path_ini, win->profile_name);
+            _webui_delete_folder(win->profile_path);
+
+            // Creating the Firefox profile
+            sprintf(buf, "%s -CreateProfile \"%s %s\"", win->browser_path, win->profile_name, win->profile_path);
             _webui_cmd_sync(win, buf, false);
 
-            // Creating the browser profile
+            // Wait for Firefox profile to be created
             _webui_timer_t timer;
             _webui_timer_start(&timer);
-            for(;;) {
-                _webui_sleep(500);
-                if(_webui_folder_exist(firefox_profile_path))
+            for (;;) {
+                _webui_sleep(1000);
+                if (_webui_folder_exist(win->profile_path))
                     break;
-                if(_webui_timer_is_end(&timer, 10000))
+                if (_webui_timer_is_end(&timer, 10000))
                     break;
             }
 
-            if(!_webui_folder_exist(firefox_profile_path))
+            // Check if Firefox profile is created
+            if (!_webui_folder_exist(win->profile_path) || !_webui_is_firefox_ini_profile_exist(path_ini, win->profile_name))
                 return false;
 
             // prefs.js
             FILE *file;
-            sprintf(buf, "%s%sprefs.js", firefox_profile_path, webui_sep);
+            sprintf(buf, "%s%sprefs.js", win->profile_path, webui_sep);
             file = fopen(buf, "a");
-            if(file == NULL)
+            if (file == NULL)
                 return false;
             fputs("user_pref(\"toolkit.legacyUserProfileCustomizations.stylesheets\", true); ", file);
             fputs("user_pref(\"browser.shell.checkDefaultBrowser\", false); ", file);
@@ -2946,15 +3120,15 @@ static bool _webui_browser_create_profile_folder(_webui_window_t* win, size_t br
             fclose(file);
 
             // userChrome.css
-            sprintf(buf, "\"%s%schrome%s\"", firefox_profile_path, webui_sep, webui_sep);
-            if(!_webui_folder_exist(buf)) {
+            sprintf(buf, "\"%s%schrome%s\"", win->profile_path, webui_sep, webui_sep);
+            if (!_webui_folder_exist(buf)) {
 
-                sprintf(buf, "mkdir \"%s%schrome%s\"", firefox_profile_path, webui_sep, webui_sep);
+                sprintf(buf, "mkdir \"%s%schrome%s\"", win->profile_path, webui_sep, webui_sep);
                 _webui_cmd_sync(win, buf, false); // Create directory
             }
-            sprintf(buf, "%s%schrome%suserChrome.css", firefox_profile_path, webui_sep, webui_sep);
+            sprintf(buf, "%s%schrome%suserChrome.css", win->profile_path, webui_sep, webui_sep);
             file = fopen(buf, "a");
-            if(file == NULL)
+            if (file == NULL)
                 return false;
             #ifdef _WIN32
                 fputs(":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) {--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-right:30px solid transparent;border-image:linear-gradient(to left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / 30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > #menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,0px)}#nav-bar{visibility:collapse}@-moz-document url(chrome://browser/content/browser.xhtml) {:root:not([sizemode=\"fullscreen\"]) > head{display: block;position: fixed;width: calc(200vw - 440px);text-align: left;z-index: 9;pointer-events: none;}head > *{ display: none }head > title{display: -moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: hidden;text-overflow: ellipsis;}}", file);
@@ -2965,12 +3139,6 @@ static bool _webui_browser_create_profile_folder(_webui_window_t* win, size_t br
             #endif
             fclose(file);
         }
-
-        // Save Firefox profile name (CLI: -P {profile_name})
-        strcpy(win->profile_name, "WebUI");
-
-        // Save Firefox profile full path
-        strcpy(win->profile_path, firefox_profile_path);
 
         return true;
     }
@@ -2985,11 +3153,11 @@ static bool _webui_folder_exist(char* folder) {
     #endif
 
     #if defined(_MSC_VER)
-        if(GetFileAttributesA(folder) != INVALID_FILE_ATTRIBUTES)
+        if (GetFileAttributesA(folder) != INVALID_FILE_ATTRIBUTES)
             return true;
     #else
         DIR* dir = opendir(folder);
-        if(dir) {
+        if (dir) {
             closedir(dir);
             return true;
         }
@@ -3043,24 +3211,24 @@ static const char* _webui_get_temp_path() {
         #ifdef _MSC_VER
             char* WinUserProfile = NULL;
             size_t sz = 0;
-            if(_dupenv_s(&WinUserProfile, &sz, "USERPROFILE") != 0 || WinUserProfile == NULL)
+            if (_dupenv_s(&WinUserProfile, &sz, "USERPROFILE") != 0 || WinUserProfile == NULL)
                 return "";
         #else
             char* WinUserProfile = getenv("USERPROFILE");
-            if(WinUserProfile == NULL)
+            if (WinUserProfile == NULL)
                 return "";
         #endif
         return WinUserProfile;
     #elif __APPLE__
         // Resolve $HOME
         char* MacUserProfile = getenv("HOME");
-        if(MacUserProfile == NULL)
+        if (MacUserProfile == NULL)
             return "";
         return MacUserProfile;
     #else
         // Resolve $HOME
         char* LinuxUserProfile = getenv("HOME");
-        if(LinuxUserProfile == NULL)
+        if (LinuxUserProfile == NULL)
             return "";
         return LinuxUserProfile;
     #endif
@@ -3079,16 +3247,16 @@ static bool _webui_is_google_chrome_folder(const char* folder) {
     // Ref: https://support.google.com/chrome/a/answer/187948?hl=en
 
     sprintf(browser_full_path, "%s\\master_preferences", folder);
-    if(!_webui_file_exist(browser_full_path)) {
+    if (!_webui_file_exist(browser_full_path)) {
 
         sprintf(browser_full_path, "%s\\initial_preferences", folder);
-        if(!_webui_file_exist(browser_full_path))
+        if (!_webui_file_exist(browser_full_path))
             return false; // This is Chromium or something else
     }
 
     // Make sure the browser executable file exist
     sprintf(browser_full_path, "%s\\chrome.exe", folder);
-    if(!_webui_file_exist(browser_full_path))
+    if (!_webui_file_exist(browser_full_path))
         return false;
     
     return true;
@@ -3102,12 +3270,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
     // Check if a web browser is installed on this machine
 
-    if(browser == Chrome) {
+    if (browser == Chrome) {
 
         // Google Chrome
 
         static bool ChromeExist = false;
-        if(ChromeExist && !_webui_is_empty(win->browser_path)) return true;
+        if (ChromeExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -3116,10 +3284,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             char browser_folder[WEBUI_MAX_PATH];
 
             // Search in `HKEY_LOCAL_MACHINE` (If Google Chrome installed for multi-user)
-            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", L"Path", browser_folder)) {
+            if (_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", L"Path", browser_folder)) {
 
                 // Make sure its Google Chrome and not Chromium
-                if(_webui_is_google_chrome_folder(browser_folder)) {
+                if (_webui_is_google_chrome_folder(browser_folder)) {
 
                     // Google Chrome Found (multi-user)
                     sprintf(win->browser_path, "\"%s\\chrome.exe\"", browser_folder);
@@ -3129,10 +3297,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             }
 
             // Search in `HKEY_CURRENT_USER` (If Google Chrome installed for one user)
-            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", L"Path", browser_folder)) {
+            if (_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", L"Path", browser_folder)) {
 
                 // Make sure its Google Chrome and not Chromium
-                if(_webui_is_google_chrome_folder(browser_folder)) {
+                if (_webui_is_google_chrome_folder(browser_folder)) {
 
                     // Google Chrome Found (one user)
                     sprintf(win->browser_path, "\"%s\\chrome.exe\"", browser_folder);
@@ -3146,7 +3314,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #elif __APPLE__
 
             // Google Chrome on macOS
-            if(_webui_cmd_sync(win, "open -R -a \"Google Chrome\"", false) == 0) {
+            if (_webui_cmd_sync(win, "open -R -a \"Google Chrome\"", false) == 0) {
 
                 sprintf(win->browser_path, "open --new -a \"Google Chrome.app\" --args");
                 ChromeExist = true;
@@ -3157,13 +3325,13 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #else
 
             // Google Chrome on Linux
-            if(_webui_cmd_sync(win, "google-chrome --version", false) == 0) {
+            if (_webui_cmd_sync(win, "google-chrome --version", false) == 0) {
 
                 sprintf(win->browser_path, "google-chrome");
                 ChromeExist = true;
                 return true;
             }
-            else if(_webui_cmd_sync(win, "google-chrome-stable --version", false) == 0) {
+            else if (_webui_cmd_sync(win, "google-chrome-stable --version", false) == 0) {
 
                 sprintf(win->browser_path, "google-chrome-stable");
                 ChromeExist = true;
@@ -3174,12 +3342,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
         #endif
     }
-    else if(browser == Edge) {
+    else if (browser == Edge) {
 
         // Edge
 
         static bool EdgeExist = false;
-        if(EdgeExist && !_webui_is_empty(win->browser_path)) return true;
+        if (EdgeExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -3188,10 +3356,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             char browser_fullpath[WEBUI_MAX_PATH];
 
             // Search in `HKEY_LOCAL_MACHINE` (If Edge installed for multi-user)
-            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Edge Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3201,10 +3369,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             }
 
             // Search in `HKEY_CURRENT_USER` (If Edge installed for one user)
-            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Edge Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3218,7 +3386,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #elif __APPLE__
 
             // Edge on macOS
-            if(_webui_cmd_sync(win, "open -R -a \"Microsoft Edge\"", false) == 0) {
+            if (_webui_cmd_sync(win, "open -R -a \"Microsoft Edge\"", false) == 0) {
 
                 sprintf(win->browser_path, "open --new -a \"Microsoft Edge.app\" --args");
                 EdgeExist = true;
@@ -3230,19 +3398,19 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #else
 
             // Edge on Linux
-            if(_webui_cmd_sync(win, "microsoft-edge-stable --version", false) == 0) {
+            if (_webui_cmd_sync(win, "microsoft-edge-stable --version", false) == 0) {
 
                 sprintf(win->browser_path, "microsoft-edge-stable");
                 EdgeExist = true;
                 return true;
             }
-            else if(_webui_cmd_sync(win, "microsoft-edge-beta --version", false) == 0) {
+            else if (_webui_cmd_sync(win, "microsoft-edge-beta --version", false) == 0) {
 
                 sprintf(win->browser_path, "microsoft-edge-beta");
                 EdgeExist = true;
                 return true;
             }
-            else if(_webui_cmd_sync(win, "microsoft-edge-dev --version", false) == 0) {
+            else if (_webui_cmd_sync(win, "microsoft-edge-dev --version", false) == 0) {
 
                 sprintf(win->browser_path, "microsoft-edge-dev");
                 EdgeExist = true;
@@ -3253,12 +3421,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
         #endif
     }
-    else if(browser == Epic) {
+    else if (browser == Epic) {
 
         // Epic Privacy Browser
 
         static bool EpicExist = false;
-        if(EpicExist && !_webui_is_empty(win->browser_path)) return true;
+        if (EpicExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -3267,10 +3435,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             char browser_fullpath[WEBUI_MAX_PATH];
 
             // Search in `HKEY_CURRENT_USER` (If Epic installed for one user)
-            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\epic.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\epic.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Epic Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3280,10 +3448,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             }
 
             // Search in `HKEY_LOCAL_MACHINE` (If Epic installed for multi-user)
-            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\epic.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\epic.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Epic Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3297,7 +3465,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #elif __APPLE__
 
             // Epic on macOS
-            if(_webui_cmd_sync(win, "open -R -a \"Epic\"", false) == 0) {
+            if (_webui_cmd_sync(win, "open -R -a \"Epic\"", false) == 0) {
 
                 sprintf(win->browser_path, "open --new -a \"Epic.app\" --args");
                 EpicExist = true;
@@ -3308,7 +3476,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #else
 
             // Epic on Linux
-            if(_webui_cmd_sync(win, "epic --version", false) == 0) {
+            if (_webui_cmd_sync(win, "epic --version", false) == 0) {
 
                 sprintf(win->browser_path, "epic");
                 EpicExist = true;
@@ -3318,12 +3486,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 return false;
         #endif
     }
-    else if(browser == Vivaldi) {
+    else if (browser == Vivaldi) {
 
         // Vivaldi Browser
 
         static bool VivaldiExist = false;
-        if(VivaldiExist && !_webui_is_empty(win->browser_path)) return true;
+        if (VivaldiExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -3332,10 +3500,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             char browser_fullpath[WEBUI_MAX_PATH];
 
             // Search in `HKEY_LOCAL_MACHINE` (If Vivaldi installed for multi-user)
-            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\vivaldi.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\vivaldi.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Vivaldi Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3345,10 +3513,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             }
 
             // Search in `HKEY_CURRENT_USER` (If Vivaldi installed for one user)
-            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\vivaldi.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\vivaldi.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Vivaldi Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3362,7 +3530,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #elif __APPLE__
 
             // Vivaldi on macOS
-            if(_webui_cmd_sync(win, "open -R -a \"Vivaldi\"", false) == 0) {
+            if (_webui_cmd_sync(win, "open -R -a \"Vivaldi\"", false) == 0) {
 
                 sprintf(win->browser_path, "open --new -a \"Vivaldi.app\" --args");
                 VivaldiExist = true;
@@ -3373,19 +3541,19 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #else
 
             // Vivaldi on Linux
-            if(_webui_cmd_sync(win, "vivaldi --version", false) == 0) {
+            if (_webui_cmd_sync(win, "vivaldi --version", false) == 0) {
 
                 sprintf(win->browser_path, "vivaldi");
                 VivaldiExist = true;
                 return true;
             }
-            else if(_webui_cmd_sync(win, "vivaldi-stable --version", false) == 0) {
+            else if (_webui_cmd_sync(win, "vivaldi-stable --version", false) == 0) {
 
                 sprintf(win->browser_path, "vivaldi-stable");
                 VivaldiExist = true;
                 return true;
             }
-            else if(_webui_cmd_sync(win, "vivaldi-snapshot --version", false) == 0) {
+            else if (_webui_cmd_sync(win, "vivaldi-snapshot --version", false) == 0) {
 
                 sprintf(win->browser_path, "vivaldi-snapshot");
                 VivaldiExist = true;
@@ -3395,12 +3563,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 return false;
         #endif
     }
-    else if(browser == Brave) {
+    else if (browser == Brave) {
 
         // Brave Browser
 
         static bool BraveExist = false;
-        if(BraveExist && !_webui_is_empty(win->browser_path)) return true;
+        if (BraveExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -3409,10 +3577,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             char browser_fullpath[WEBUI_MAX_PATH];
 
             // Search in `HKEY_LOCAL_MACHINE` (If Brave installed for multi-user)
-            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\brave.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\brave.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Brave Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3422,10 +3590,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             }
 
             // Search in `HKEY_CURRENT_USER` (If Brave installed for one user)
-            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\brave.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\brave.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Brave Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3439,7 +3607,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #elif __APPLE__
 
             // Brave on macOS
-            if(_webui_cmd_sync(win, "open -R -a \"Brave Browser\"", false) == 0) {
+            if (_webui_cmd_sync(win, "open -R -a \"Brave Browser\"", false) == 0) {
 
                 sprintf(win->browser_path, "open --new -a \"Brave Browser.app\" --args");
                 BraveExist = true;
@@ -3450,7 +3618,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #else
 
             // Brave on Linux
-            if(_webui_cmd_sync(win, "brave --version", false) == 0) {
+            if (_webui_cmd_sync(win, "brave --version", false) == 0) {
 
                 sprintf(win->browser_path, "brave");
                 BraveExist = true;
@@ -3460,12 +3628,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 return false;
         #endif
     }
-    else if(browser == Firefox) {
+    else if (browser == Firefox) {
 
         // Firefox
 
         static bool FirefoxExist = false;
-        if(FirefoxExist && !_webui_is_empty(win->browser_path)) return true;
+        if (FirefoxExist && !_webui_is_empty(win->browser_path)) return true;
         
         #ifdef _WIN32
         
@@ -3474,10 +3642,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             char browser_fullpath[WEBUI_MAX_PATH];
 
             // Search in `HKEY_LOCAL_MACHINE` (If Firefox installed for multi-user)
-            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\firefox.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\firefox.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Firefox Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3487,10 +3655,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             }
 
             // Search in `HKEY_CURRENT_USER` (If Firefox installed for one user)
-            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\firefox.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\firefox.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Firefox Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3504,7 +3672,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #elif __APPLE__
             
             // Firefox on macOS
-            if(_webui_cmd_sync(win, "open -R -a \"Firefox\"", false) == 0) {
+            if (_webui_cmd_sync(win, "open -R -a \"Firefox\"", false) == 0) {
 
                 sprintf(win->browser_path, "open --new -a \"Firefox.app\" --args");
                 FirefoxExist = true;
@@ -3516,7 +3684,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
             // Firefox on Linux
 
-            if(_webui_cmd_sync(win, "firefox -v", false) == 0) {
+            if (_webui_cmd_sync(win, "firefox -v", false) == 0) {
 
                 sprintf(win->browser_path, "firefox");
                 FirefoxExist = true;
@@ -3528,12 +3696,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #endif
 
     }
-    else if(browser == Yandex) {
+    else if (browser == Yandex) {
 
         // Yandex Browser
 
         static bool YandexExist = false;
-        if(YandexExist && !_webui_is_empty(win->browser_path)) return true;
+        if (YandexExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -3542,10 +3710,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             char browser_fullpath[WEBUI_MAX_PATH];
 
             // Search in `HKEY_CURRENT_USER` (If Yandex installed for one user)
-            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\browser.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\browser.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Yandex Found (one user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3555,10 +3723,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             }
 
             // Search in `HKEY_LOCAL_MACHINE` (If Yandex installed for multi-user)
-            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\browser.exe", L"", browser_fullpath)) {
+            if (_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\browser.exe", L"", browser_fullpath)) {
 
                 // Make sure the browser executable file exist
-                if(_webui_file_exist(browser_fullpath)) {
+                if (_webui_file_exist(browser_fullpath)) {
 
                     // Yandex Found (multi-user)
                     sprintf(win->browser_path, "\"%s\"", browser_fullpath);
@@ -3572,7 +3740,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #elif __APPLE__
 
             // Yandex on macOS
-            if(_webui_cmd_sync(win, "open -R -a \"Yandex\"", false) == 0) {
+            if (_webui_cmd_sync(win, "open -R -a \"Yandex\"", false) == 0) {
 
                 sprintf(win->browser_path, "open --new -a \"Yandex.app\" --args");
                 YandexExist = true;
@@ -3583,7 +3751,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #else
 
             // Yandex on Linux
-            if(_webui_cmd_sync(win, "yandex-browser --version", false) == 0) {
+            if (_webui_cmd_sync(win, "yandex-browser --version", false) == 0) {
 
                 sprintf(win->browser_path, "yandex-browser");
                 YandexExist = true;
@@ -3593,12 +3761,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 return false;
         #endif
     }
-    else if(browser == Chromium) {
+    else if (browser == Chromium) {
 
         // The Chromium Projects
 
         static bool ChromiumExist = false;
-        if(ChromiumExist && !_webui_is_empty(win->browser_path)) return true;
+        if (ChromiumExist && !_webui_is_empty(win->browser_path)) return true;
 
         #ifdef _WIN32
 
@@ -3607,10 +3775,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             char browser_folder[WEBUI_MAX_PATH];
 
             // Search in `HKEY_CURRENT_USER` (If Chromium installed for one user)
-            if(_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", L"Path", browser_folder)) {
+            if (_webui_get_windows_reg_value(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", L"Path", browser_folder)) {
 
                 // Make sure its Chromium and not Google Chrome
-                if(!_webui_is_google_chrome_folder(browser_folder)) {
+                if (!_webui_is_google_chrome_folder(browser_folder)) {
 
                     // Chromium Found (one user)
                     sprintf(win->browser_path, "\"%s\\chrome.exe\"", browser_folder);
@@ -3620,10 +3788,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
             }
 
             // Search in `HKEY_LOCAL_MACHINE` (If Chromium installed for multi-user)
-            if(_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", L"Path", browser_folder)) {
+            if (_webui_get_windows_reg_value(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", L"Path", browser_folder)) {
 
                 // Make sure its Chromium and not Google Chrome
-                if(!_webui_is_google_chrome_folder(browser_folder)) {
+                if (!_webui_is_google_chrome_folder(browser_folder)) {
 
                     // Chromium Found (multi-user)
                     sprintf(win->browser_path, "\"%s\\chrome.exe\"", browser_folder);
@@ -3637,7 +3805,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #elif __APPLE__
 
             // Chromium on macOS
-            if(_webui_cmd_sync(win, "open -R -a \"Chromium\"", false) == 0) {
+            if (_webui_cmd_sync(win, "open -R -a \"Chromium\"", false) == 0) {
 
                 sprintf(win->browser_path, "open --new -a \"Chromium.app\" --args");
                 ChromiumExist = true;
@@ -3648,13 +3816,13 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         #else
 
             // Chromium on Linux
-            if(_webui_cmd_sync(win, "chromium-browser --version", false) == 0) {
+            if (_webui_cmd_sync(win, "chromium-browser --version", false) == 0) {
 
                 sprintf(win->browser_path, "chromium-browser");
                 ChromiumExist = true;
                 return true;
             }
-            else if(_webui_cmd_sync(win, "chromium --version", false) == 0) {
+            else if (_webui_cmd_sync(win, "chromium --version", false) == 0) {
 
                 sprintf(win->browser_path, "chromium");
                 ChromiumExist = true;
@@ -3675,17 +3843,13 @@ static void _webui_clean(void) {
     #endif
 
     static bool cleaned = false;
-    if(cleaned) return;
+    if (cleaned) return;
     cleaned = true;
 
     // Let's give other threads more time to safely exit
     // and finish cleaning up.
     _webui_core.exit_now = true;
     _webui_sleep(500);
-
-    // TODO: Add option to let the user decide if
-    // WebUI should delete the web browser profile
-    // folder or not.
 
     // Clean all servers services
     mg_exit_library();
@@ -3809,10 +3973,10 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
     case Yandex:
     case Chromium:
         // Profile
-        if(!_webui_is_empty(win->profile_path))
+        if (!_webui_is_empty(win->profile_path))
             c = sprintf(buffer, " --user-data-dir=\"%s\"", win->profile_path);
         // Basic
-        if(!win->custom_profile) {
+        if (!win->custom_profile) {
             for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
                 c += sprintf(buffer + c, " %s", chromium_options[i]);
             }
@@ -3835,10 +3999,10 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
         return c;
     case Firefox:
         // Profile
-        if(!_webui_is_empty(win->profile_name))
+        if (!_webui_is_empty(win->profile_name))
             c = sprintf(buffer, " -P %s", win->profile_name);
         // Basic
-        if(!win->custom_profile) {
+        if (!win->custom_profile) {
             c += sprintf(buffer + c, " -purgecaches");
         }
         // Kiosk Mode
@@ -3873,13 +4037,13 @@ static bool _webui_browser_start_chrome(_webui_window_t* win, const char* addres
     
     // -- Google Chrome ----------------------
 
-    if(win->current_browser != 0 && win->current_browser != Chrome)
+    if (win->current_browser != 0 && win->current_browser != Chrome)
         return false;
 
-    if(!_webui_browser_exist(win, Chrome))
+    if (!_webui_browser_exist(win, Chrome))
         return false;
     
-    if(!_webui_browser_create_profile_folder(win, Chrome))
+    if (!_webui_browser_create_new_profile(win, Chrome))
         return false;
     
     char arg[1024] = {0};
@@ -3888,7 +4052,7 @@ static bool _webui_browser_start_chrome(_webui_window_t* win, const char* addres
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
 
-    if(_webui_run_browser(win, full) == 0) {
+    if (_webui_run_browser(win, full) == 0) {
 
         win->current_browser = Chrome;
         _webui_core.current_browser = Chrome;
@@ -3906,13 +4070,13 @@ static bool _webui_browser_start_edge(_webui_window_t* win, const char* address)
 
     // -- Microsoft Edge ----------------------
 
-    if(win->current_browser != 0 && win->current_browser != Edge)
+    if (win->current_browser != 0 && win->current_browser != Edge)
         return false;
 
-    if(!_webui_browser_exist(win, Edge))
+    if (!_webui_browser_exist(win, Edge))
         return false;
     
-    if(!_webui_browser_create_profile_folder(win, Edge))
+    if (!_webui_browser_create_new_profile(win, Edge))
         return false;
 
     char arg[1024] = {0};
@@ -3921,7 +4085,7 @@ static bool _webui_browser_start_edge(_webui_window_t* win, const char* address)
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
 
-    if(_webui_run_browser(win, full) == 0) {
+    if (_webui_run_browser(win, full) == 0) {
 
         win->current_browser = Edge;
         _webui_core.current_browser = Edge;
@@ -3939,13 +4103,13 @@ static bool _webui_browser_start_epic(_webui_window_t* win, const char* address)
 
     // -- Epic Privacy Browser ----------------------
 
-    if(win->current_browser != 0 && win->current_browser != Epic)
+    if (win->current_browser != 0 && win->current_browser != Epic)
         return false;
 
-    if(!_webui_browser_exist(win, Epic))
+    if (!_webui_browser_exist(win, Epic))
         return false;
     
-    if(!_webui_browser_create_profile_folder(win, Epic))
+    if (!_webui_browser_create_new_profile(win, Epic))
         return false;
 
     char arg[1024] = {0};
@@ -3954,7 +4118,7 @@ static bool _webui_browser_start_epic(_webui_window_t* win, const char* address)
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
 
-    if(_webui_run_browser(win, full) == 0) {
+    if (_webui_run_browser(win, full) == 0) {
 
         win->current_browser = Epic;
         _webui_core.current_browser = Epic;
@@ -3972,13 +4136,13 @@ static bool _webui_browser_start_vivaldi(_webui_window_t* win, const char* addre
 
     // -- Vivaldi Browser ----------------------
 
-    if(win->current_browser != 0 && win->current_browser != Vivaldi)
+    if (win->current_browser != 0 && win->current_browser != Vivaldi)
         return false;
 
-    if(!_webui_browser_exist(win, Vivaldi))
+    if (!_webui_browser_exist(win, Vivaldi))
         return false;
     
-    if(!_webui_browser_create_profile_folder(win, Vivaldi))
+    if (!_webui_browser_create_new_profile(win, Vivaldi))
         return false;
 
     char arg[1024] = {0};
@@ -3987,7 +4151,7 @@ static bool _webui_browser_start_vivaldi(_webui_window_t* win, const char* addre
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
 
-    if(_webui_run_browser(win, full) == 0) {
+    if (_webui_run_browser(win, full) == 0) {
 
         win->current_browser = Vivaldi;
         _webui_core.current_browser = Vivaldi;
@@ -4005,13 +4169,13 @@ static bool _webui_browser_start_brave(_webui_window_t* win, const char* address
 
     // -- Brave Browser ----------------------
 
-    if(win->current_browser != 0 && win->current_browser != Brave)
+    if (win->current_browser != 0 && win->current_browser != Brave)
         return false;
 
-    if(!_webui_browser_exist(win, Brave))
+    if (!_webui_browser_exist(win, Brave))
         return false;
     
-    if(!_webui_browser_create_profile_folder(win, Brave))
+    if (!_webui_browser_create_new_profile(win, Brave))
         return false;
 
     char arg[1024] = {0};
@@ -4020,7 +4184,7 @@ static bool _webui_browser_start_brave(_webui_window_t* win, const char* address
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
 
-    if(_webui_run_browser(win, full) == 0) {
+    if (_webui_run_browser(win, full) == 0) {
 
         win->current_browser = Brave;
         _webui_core.current_browser = Brave;
@@ -4038,13 +4202,13 @@ static bool _webui_browser_start_firefox(_webui_window_t* win, const char* addre
 
     // -- Mozilla Firefox ----------------------
 
-    if(win->current_browser != 0 && win->current_browser != Firefox)
+    if (win->current_browser != 0 && win->current_browser != Firefox)
         return false;
 
-    if(!_webui_browser_exist(win, Firefox))
+    if (!_webui_browser_exist(win, Firefox))
         return false;
 
-    if(!_webui_browser_create_profile_folder(win, Firefox))
+    if (!_webui_browser_create_new_profile(win, Firefox))
         return false;
 
     char arg[1024] = {0};
@@ -4053,7 +4217,7 @@ static bool _webui_browser_start_firefox(_webui_window_t* win, const char* addre
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
 
-    if(_webui_run_browser(win, full) == 0) {
+    if (_webui_run_browser(win, full) == 0) {
 
         win->current_browser = Firefox;
         _webui_core.current_browser = Firefox;
@@ -4071,13 +4235,13 @@ static bool _webui_browser_start_yandex(_webui_window_t* win, const char* addres
 
     // -- Yandex Browser ----------------------
 
-    if(win->current_browser != 0 && win->current_browser != Yandex)
+    if (win->current_browser != 0 && win->current_browser != Yandex)
         return false;
 
-    if(!_webui_browser_exist(win, Yandex))
+    if (!_webui_browser_exist(win, Yandex))
         return false;
     
-    if(!_webui_browser_create_profile_folder(win, Yandex))
+    if (!_webui_browser_create_new_profile(win, Yandex))
         return false;
 
     char arg[1024] = {0};
@@ -4086,7 +4250,7 @@ static bool _webui_browser_start_yandex(_webui_window_t* win, const char* addres
     char full[1024] = {0};
     sprintf(full, "%s%s%s", win->browser_path, arg, address);
 
-    if(_webui_run_browser(win, full) == 0) {
+    if (_webui_run_browser(win, full) == 0) {
 
         win->current_browser = Yandex;
         _webui_core.current_browser = Yandex;
@@ -4110,7 +4274,7 @@ static bool _webui_browser_start_chromium(_webui_window_t* win, const char* addr
     if (!_webui_browser_exist(win, Chromium))
         return false;
     
-    if (!_webui_browser_create_profile_folder(win, Chromium))
+    if (!_webui_browser_create_new_profile(win, Chromium))
         return false;
     
     char arg[1024] = {0};
@@ -4136,15 +4300,15 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     #endif
 
     // Non existing browser
-    if(browser > 12)
+    if (browser > 12)
         return false;
     
     // No browser mode
-    if(browser == NoBrowser)
+    if (browser == NoBrowser)
         return true;
 
     // Current browser used in the last opened window
-    if(browser == AnyBrowser && _webui_core.current_browser != 0)
+    if (browser == AnyBrowser && _webui_core.current_browser != 0)
         browser = _webui_core.current_browser;
 
     // #1 - Chrome - Works perfectly
@@ -4156,61 +4320,61 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     // #7 - Yandex - Shows a big welcome window in the first run
     // #8 - Chromium - Some Anti-Malware shows a false alert when using ungoogled-chromium-binaries
 
-    if(browser != AnyBrowser) {
+    if (browser != AnyBrowser) {
 
         // Open the window using the user specified browser
 
-        if(browser == Chrome)
+        if (browser == Chrome)
             return _webui_browser_start_chrome(win, address);
-        else if(browser == Edge)
+        else if (browser == Edge)
             return _webui_browser_start_edge(win, address);
-        else if(browser == Epic)
+        else if (browser == Epic)
             return _webui_browser_start_epic(win, address);
-        else if(browser == Vivaldi)
+        else if (browser == Vivaldi)
             return _webui_browser_start_vivaldi(win, address);
-        else if(browser == Brave)
+        else if (browser == Brave)
             return _webui_browser_start_brave(win, address);
-        else if(browser == Firefox)
+        else if (browser == Firefox)
             return _webui_browser_start_firefox(win, address);
-        else if(browser == Yandex)
+        else if (browser == Yandex)
             return _webui_browser_start_yandex(win, address);
-        else if(browser == Chromium)
+        else if (browser == Chromium)
             return _webui_browser_start_chromium(win, address);
-        else if(browser == ChromiumBased) {
+        else if (browser == ChromiumBased) {
 
             // Open the window using a Chromium-based browser
 
-            if(!_webui_browser_start_chrome(win, address))
-                if(!_webui_browser_start_edge(win, address))
-                    if(!_webui_browser_start_epic(win, address))
-                        if(!_webui_browser_start_vivaldi(win, address))
-                            if(!_webui_browser_start_brave(win, address))
-                                if(!_webui_browser_start_yandex(win, address))
-                                    if(!_webui_browser_start_chromium(win, address))
+            if (!_webui_browser_start_chrome(win, address))
+                if (!_webui_browser_start_edge(win, address))
+                    if (!_webui_browser_start_epic(win, address))
+                        if (!_webui_browser_start_vivaldi(win, address))
+                            if (!_webui_browser_start_brave(win, address))
+                                if (!_webui_browser_start_yandex(win, address))
+                                    if (!_webui_browser_start_chromium(win, address))
                                         return false;
         }
         else
             return false;
     }
-    else if(win->current_browser != 0) {
+    else if (win->current_browser != 0) {
 
         // Open the window using the same web browser used for this current window
 
-        if(win->current_browser == Chrome)
+        if (win->current_browser == Chrome)
             return _webui_browser_start_chrome(win, address);
-        else if(win->current_browser == Edge)
+        else if (win->current_browser == Edge)
             return _webui_browser_start_edge(win, address);
-        else if(win->current_browser == Epic)
+        else if (win->current_browser == Epic)
             return _webui_browser_start_epic(win, address);
-        else if(win->current_browser == Vivaldi)
+        else if (win->current_browser == Vivaldi)
             return _webui_browser_start_vivaldi(win, address);
-        else if(win->current_browser == Brave)
+        else if (win->current_browser == Brave)
             return _webui_browser_start_brave(win, address);
-        else if(win->current_browser == Firefox)
+        else if (win->current_browser == Firefox)
             return _webui_browser_start_firefox(win, address);
-        else if(win->current_browser == Yandex)
+        else if (win->current_browser == Yandex)
             return _webui_browser_start_yandex(win, address);
-        else if(browser == Chromium)
+        else if (browser == Chromium)
             return _webui_browser_start_chromium(win, address);
         else
             return false;
@@ -4221,36 +4385,36 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
 
         #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
             // Windows
-            if(!_webui_browser_start_chrome(win, address))
-                if(!_webui_browser_start_edge(win, address))
-                    if(!_webui_browser_start_epic(win, address))
-                        if(!_webui_browser_start_vivaldi(win, address))
-                            if(!_webui_browser_start_brave(win, address))
-                                if(!_webui_browser_start_firefox(win, address))
-                                    if(!_webui_browser_start_yandex(win, address))
-                                        if(!_webui_browser_start_chromium(win, address))
+            if (!_webui_browser_start_chrome(win, address))
+                if (!_webui_browser_start_edge(win, address))
+                    if (!_webui_browser_start_epic(win, address))
+                        if (!_webui_browser_start_vivaldi(win, address))
+                            if (!_webui_browser_start_brave(win, address))
+                                if (!_webui_browser_start_firefox(win, address))
+                                    if (!_webui_browser_start_yandex(win, address))
+                                        if (!_webui_browser_start_chromium(win, address))
                                             return false;
         #elif __APPLE__
             // macOS
-            if(!_webui_browser_start_chrome(win, address))
-                if(!_webui_browser_start_edge(win, address))
-                    if(!_webui_browser_start_epic(win, address))
-                        if(!_webui_browser_start_vivaldi(win, address))
-                            if(!_webui_browser_start_brave(win, address))
-                                if(!_webui_browser_start_firefox(win, address))
-                                    if(!_webui_browser_start_yandex(win, address))
-                                        if(!_webui_browser_start_chromium(win, address))
+            if (!_webui_browser_start_chrome(win, address))
+                if (!_webui_browser_start_edge(win, address))
+                    if (!_webui_browser_start_epic(win, address))
+                        if (!_webui_browser_start_vivaldi(win, address))
+                            if (!_webui_browser_start_brave(win, address))
+                                if (!_webui_browser_start_firefox(win, address))
+                                    if (!_webui_browser_start_yandex(win, address))
+                                        if (!_webui_browser_start_chromium(win, address))
                                             return false;
         #else
             // Linux
-            if(!_webui_browser_start_chrome(win, address))
-                if(!_webui_browser_start_edge(win, address))
-                    if(!_webui_browser_start_epic(win, address))
-                        if(!_webui_browser_start_vivaldi(win, address))
-                            if(!_webui_browser_start_brave(win, address))
-                                if(!_webui_browser_start_firefox(win, address))
-                                    if(!_webui_browser_start_yandex(win, address))
-                                        if(!_webui_browser_start_chromium(win, address))
+            if (!_webui_browser_start_chrome(win, address))
+                if (!_webui_browser_start_edge(win, address))
+                    if (!_webui_browser_start_epic(win, address))
+                        if (!_webui_browser_start_vivaldi(win, address))
+                            if (!_webui_browser_start_brave(win, address))
+                                if (!_webui_browser_start_firefox(win, address))
+                                    if (!_webui_browser_start_yandex(win, address))
+                                        if (!_webui_browser_start_chromium(win, address))
                                             return false;
         #endif
     }
@@ -4271,10 +4435,10 @@ static bool _webui_is_process_running(const char* process_name) {
         HANDLE hSnapshot;
         PROCESSENTRY32 pe32;
         hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-        if(hSnapshot == INVALID_HANDLE_VALUE)
+        if (hSnapshot == INVALID_HANDLE_VALUE)
             return false;
         pe32.dwSize = sizeof(PROCESSENTRY32);
-        if(!Process32First(hSnapshot, &pe32)) {
+        if (!Process32First(hSnapshot, &pe32)) {
             CloseHandle(hSnapshot);
             return false;
         }
@@ -4364,37 +4528,37 @@ static size_t _webui_find_the_best_browser(_webui_window_t* win) {
 
     #ifdef _WIN32
         // Microsoft Windows
-        if(_webui_is_process_running("chrome.exe") && _webui_browser_exist(win, Chrome)) return Chrome;
-        else if(_webui_is_process_running("msedge.exe") && _webui_browser_exist(win, Edge)) return Edge;
-        else if(_webui_is_process_running("epic.exe") && _webui_browser_exist(win, Epic)) return Epic;
-        else if(_webui_is_process_running("vivaldi.exe") && _webui_browser_exist(win, Vivaldi)) return Vivaldi;
-        else if(_webui_is_process_running("brave.exe") && _webui_browser_exist(win, Brave)) return Brave;
-        else if(_webui_is_process_running("firefox.exe") && _webui_browser_exist(win, Firefox)) return Firefox;
-        else if(_webui_is_process_running("browser.exe") && _webui_browser_exist(win, Yandex)) return Yandex;
+        if (_webui_is_process_running("chrome.exe") && _webui_browser_exist(win, Chrome)) return Chrome;
+        else if (_webui_is_process_running("msedge.exe") && _webui_browser_exist(win, Edge)) return Edge;
+        else if (_webui_is_process_running("epic.exe") && _webui_browser_exist(win, Epic)) return Epic;
+        else if (_webui_is_process_running("vivaldi.exe") && _webui_browser_exist(win, Vivaldi)) return Vivaldi;
+        else if (_webui_is_process_running("brave.exe") && _webui_browser_exist(win, Brave)) return Brave;
+        else if (_webui_is_process_running("firefox.exe") && _webui_browser_exist(win, Firefox)) return Firefox;
+        else if (_webui_is_process_running("browser.exe") && _webui_browser_exist(win, Yandex)) return Yandex;
         // Chromium check is never reached if Google Chrome is installed
         // due to duplicate process name `chrome.exe`
-        else if(_webui_is_process_running("chrome.exe") && _webui_browser_exist(win, Chromium)) return Chromium;
+        else if (_webui_is_process_running("chrome.exe") && _webui_browser_exist(win, Chromium)) return Chromium;
     #elif __linux__
         // Linux
-        if(_webui_is_process_running("chrome") && _webui_browser_exist(win, Chrome)) return Chrome;
-        else if(_webui_is_process_running("msedge") && _webui_browser_exist(win, Edge)) return Edge;
+        if (_webui_is_process_running("chrome") && _webui_browser_exist(win, Chrome)) return Chrome;
+        else if (_webui_is_process_running("msedge") && _webui_browser_exist(win, Edge)) return Edge;
         // Epic...
-        else if(_webui_is_process_running("vivaldi-bin") && _webui_browser_exist(win, Vivaldi)) return Vivaldi;
-        else if(_webui_is_process_running("brave") && _webui_browser_exist(win, Brave)) return Brave;
-        else if(_webui_is_process_running("firefox") && _webui_browser_exist(win, Firefox)) return Firefox;
-        else if(_webui_is_process_running("yandex_browser") && _webui_browser_exist(win, Yandex)) return Yandex;
+        else if (_webui_is_process_running("vivaldi-bin") && _webui_browser_exist(win, Vivaldi)) return Vivaldi;
+        else if (_webui_is_process_running("brave") && _webui_browser_exist(win, Brave)) return Brave;
+        else if (_webui_is_process_running("firefox") && _webui_browser_exist(win, Firefox)) return Firefox;
+        else if (_webui_is_process_running("yandex_browser") && _webui_browser_exist(win, Yandex)) return Yandex;
         // Chromium check is never reached if Google Chrome is installed
         // due to duplicate process name `chrome`
-        else if(_webui_is_process_running("chrome") && _webui_browser_exist(win, Chromium)) return Chromium;
+        else if (_webui_is_process_running("chrome") && _webui_browser_exist(win, Chromium)) return Chromium;
     #else
         // macOS
-        if(_webui_is_process_running("Google Chrome") && _webui_browser_exist(win, Chrome)) return Chrome;
-        else if(_webui_is_process_running("Epic") && _webui_browser_exist(win, Epic)) return Epic;
-        else if(_webui_is_process_running("Vivaldi") && _webui_browser_exist(win, Vivaldi)) return Vivaldi;
-        else if(_webui_is_process_running("Brave") && _webui_browser_exist(win, Brave)) return Brave;
-        else if(_webui_is_process_running("Firefox") && _webui_browser_exist(win, Firefox)) return Firefox;
-        else if(_webui_is_process_running("Yandex") && _webui_browser_exist(win, Yandex)) return Yandex;
-        else if(_webui_is_process_running("Chromium") && _webui_browser_exist(win, Chromium)) return Chromium;
+        if (_webui_is_process_running("Google Chrome") && _webui_browser_exist(win, Chrome)) return Chrome;
+        else if (_webui_is_process_running("Epic") && _webui_browser_exist(win, Epic)) return Epic;
+        else if (_webui_is_process_running("Vivaldi") && _webui_browser_exist(win, Vivaldi)) return Vivaldi;
+        else if (_webui_is_process_running("Brave") && _webui_browser_exist(win, Brave)) return Brave;
+        else if (_webui_is_process_running("Firefox") && _webui_browser_exist(win, Firefox)) return Firefox;
+        else if (_webui_is_process_running("Yandex") && _webui_browser_exist(win, Yandex)) return Yandex;
+        else if (_webui_is_process_running("Chromium") && _webui_browser_exist(win, Chromium)) return Chromium;
     #endif
 
     return AnyBrowser;
@@ -4406,7 +4570,7 @@ static bool _webui_show(_webui_window_t* win, const char* content, size_t browse
         printf("[Core]\t\t_webui_show([%zu])...\n", browser);
     #endif
 
-    if(_webui_is_empty(content))
+    if (_webui_is_empty(content))
         return false;
 
     // Some wrappers do not guarantee pointers stay valid,
@@ -4415,7 +4579,7 @@ static bool _webui_show(_webui_window_t* win, const char* content, size_t browse
     const char* content_cpy = (const char*)_webui_malloc(content_len);
     memcpy((char*)content_cpy, content, content_len);
 
-    if(
+    if (
       strstr(content_cpy, "<html") ||
       strstr(content_cpy, "<!DOCTYPE") ||
       strstr(content_cpy, "<!doctype") ||
@@ -4437,7 +4601,7 @@ static bool _webui_show(_webui_window_t* win, const char* content, size_t browse
             printf("[User] webui_show() -> File: [%s]\n", content_cpy);
         #endif
 
-        if(content_len > WEBUI_MAX_PATH || strstr(content_cpy, "<"))
+        if (content_len > WEBUI_MAX_PATH || strstr(content_cpy, "<"))
             return false;
         
         return _webui_show_window(win, content_cpy, false, browser);
@@ -4447,7 +4611,7 @@ static bool _webui_show(_webui_window_t* win, const char* content, size_t browse
 static bool _webui_show_window(_webui_window_t* win, const char* content, bool is_embedded_html, size_t browser) {
 
     #ifdef WEBUI_LOG
-        if(is_embedded_html)
+        if (is_embedded_html)
             printf("[Core]\t\t_webui_show_window(HTML, [%zu])...\n", browser);
         else
             printf("[Core]\t\t_webui_show_window(FILE, [%zu])...\n", browser);
@@ -4458,12 +4622,12 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
     size_t ws_port = (win->ws_port == 0 ? _webui_get_free_port() : win->ws_port);
 
     // Initialization
-    if(win->html != NULL)
+    if (win->html != NULL)
         _webui_free_mem((void*)win->html);
-    if(win->url != NULL)
+    if (win->url != NULL)
         _webui_free_mem((void*)win->url);
 
-    if(is_embedded_html) {
+    if (is_embedded_html) {
 
         // Show a window using the embedded HTML
         win->is_embedded_html = true;
@@ -4491,12 +4655,12 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
     win->server_port = port;
     win->ws_port = ws_port;
     
-    if(!webui_is_shown(win->window_number)) {
+    if (!webui_is_shown(win->window_number)) {
 
         // Start a new window
 
         // Run browser
-        if(!_webui_browser_start(win, win->url, browser)) {
+        if (!_webui_browser_start(win, win->url, browser)) {
 
             // Browser not available
             _webui_free_mem((void*)win->html);
@@ -4512,7 +4676,7 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
         #ifdef _WIN32
             HANDLE thread = CreateThread(NULL, 0, _webui_server_start, (void*)win, 0, NULL);
             win->server_thread = thread;
-            if(thread != NULL)
+            if (thread != NULL)
                 CloseHandle(thread);
         #else
             pthread_t thread;
@@ -4534,7 +4698,7 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
         char* packet = (char*) _webui_malloc(packet_len);
         packet[0] = WEBUI_HEADER_SIGNATURE; // Signature
         packet[1] = WEBUI_HEADER_NAVIGATION; // CMD
-        for(size_t i = 0; i < _webui_strlen(win->url); i++) // URL
+        for (size_t i = 0; i < _webui_strlen(win->url); i++) // URL
             packet[i + 2] = win->url[i];
 
         // Send the packet
@@ -4560,13 +4724,13 @@ static void _webui_window_event(_webui_window_t* win, int event_type, char* elem
     e.event_number = event_number;
 
     // Check for all events-bind functions
-    if(!_webui_core.exit_now && win->has_events) {
+    if (!_webui_core.exit_now && win->has_events) {
 
         char* events_id = _webui_generate_internal_id(win, "");
         size_t events_cb_index = _webui_get_cb_index(events_id);
         _webui_free_mem((void*)events_id);
 
-        if(events_cb_index > 0 && _webui_core.cb[events_cb_index] != NULL) {
+        if (events_cb_index > 0 && _webui_core.cb[events_cb_index] != NULL) {
 
             // Call user all events cb
             #ifdef WEBUI_LOG
@@ -4576,13 +4740,13 @@ static void _webui_window_event(_webui_window_t* win, int event_type, char* elem
         }
     }
 
-    if(!_webui_core.exit_now) {
+    if (!_webui_core.exit_now) {
         
         // Check for the regular bind functions
-        if(!_webui_is_empty(element)) {
+        if (!_webui_is_empty(element)) {
 
             size_t cb_index = _webui_get_cb_index(webui_internal_id);
-            if(cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
+            if (cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
 
                 // Call user cb
                 #ifdef WEBUI_LOG
@@ -4611,16 +4775,16 @@ static void _webui_window_send(_webui_window_t* win, char* packet, size_t packet
         printf("]\n");
     #endif
     
-    if(!win->connected || packet == NULL || packets_size < 2)
+    if (!win->connected || packet == NULL || packets_size < 2)
         return;
 
     int ret = 0;
 
-    if(win->window_number > 0 && win->window_number < WEBUI_MAX_IDS) {
+    if (win->window_number > 0 && win->window_number < WEBUI_MAX_IDS) {
 
         struct mg_connection* conn = _webui_core.mg_connections[win->window_number];
 
-        if(conn != NULL) {
+        if (conn != NULL) {
 
             // Mutex
             _webui_mutex_lock(&_webui_core.mutex_send);
@@ -4648,7 +4812,7 @@ static char* _webui_get_current_path(void) {
     #endif
 
     char* path = (char*) _webui_malloc(WEBUI_MAX_PATH);
-    if(WEBUI_GET_CURRENT_DIR (path, WEBUI_MAX_PATH) == NULL)
+    if (WEBUI_GET_CURRENT_DIR (path, WEBUI_MAX_PATH) == NULL)
         path[0] = 0x00;
 
     return path;
@@ -4660,8 +4824,8 @@ static void _webui_free_port(size_t port) {
         printf("[Core]\t\t_webui_free_port([%zu])...\n", port);
     #endif
 
-    for(size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-        if(_webui_core.used_ports[i] == port) {
+    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+        if (_webui_core.used_ports[i] == port) {
             _webui_core.used_ports[i] = 0;
             break;
         }
@@ -4682,22 +4846,22 @@ static size_t _webui_get_free_port(void) {
 
     size_t port = (rand() % (WEBUI_MAX_PORT + 1 - WEBUI_MIN_PORT)) + WEBUI_MIN_PORT;
 
-    for(size_t i = WEBUI_MIN_PORT; i <= WEBUI_MAX_PORT; i++) {
+    for (size_t i = WEBUI_MIN_PORT; i <= WEBUI_MAX_PORT; i++) {
 
         // Search [port] in [_webui_core.used_ports]
         bool found = false;
-        for(size_t j = 0; j < WEBUI_MAX_IDS; j++) {
-            if(_webui_core.used_ports[j] == port) {
+        for (size_t j = 0; j < WEBUI_MAX_IDS; j++) {
+            if (_webui_core.used_ports[j] == port) {
                 found = true;
                 break;
             }
         }
 
-        if(found)
+        if (found)
             // Port used by local window
             port = (rand() % (WEBUI_MAX_PORT + 1 - WEBUI_MIN_PORT)) + WEBUI_MIN_PORT;
         else {
-            if(_webui_port_is_used(port))
+            if (_webui_port_is_used(port))
                 // Port used by an external app
                 port = (rand() % (WEBUI_MAX_PORT + 1 - WEBUI_MIN_PORT)) + WEBUI_MIN_PORT;
             else
@@ -4707,8 +4871,8 @@ static size_t _webui_get_free_port(void) {
     }
 
     // Add
-    for(size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-        if(_webui_core.used_ports[i] == 0) {
+    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+        if (_webui_core.used_ports[i] == 0) {
             _webui_core.used_ports[i] = port;
             break;
         }
@@ -4719,7 +4883,7 @@ static size_t _webui_get_free_port(void) {
 
 static void _webui_init(void) {
 
-    if(_webui_core.initialized)
+    if (_webui_core.initialized)
         return;
 
     #ifdef WEBUI_LOG
@@ -4754,12 +4918,12 @@ static size_t _webui_get_cb_index(char* webui_internal_id) {
         printf("[Core]\t\t_webui_get_cb_index([%s])...\n", webui_internal_id);
     #endif
 
-    if(webui_internal_id != NULL) {
+    if (webui_internal_id != NULL) {
 
-        for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
+        for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
 
-            if(_webui_core.html_elements[i] != NULL && !_webui_is_empty(_webui_core.html_elements[i])) {
-                if(strcmp(_webui_core.html_elements[i], webui_internal_id) == 0) {
+            if (_webui_core.html_elements[i] != NULL && !_webui_is_empty(_webui_core.html_elements[i])) {
+                if (strcmp(_webui_core.html_elements[i], webui_internal_id) == 0) {
                     _webui_mutex_unlock(&_webui_core.mutex_bridge);
                     return i;
                 }
@@ -4780,9 +4944,9 @@ static size_t _webui_set_cb_index(char* webui_internal_id) {
     #endif
 
     // Add
-    for(size_t i = 1; i < WEBUI_MAX_IDS; i++) {
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
 
-        if(_webui_is_empty(_webui_core.html_elements[i])) {
+        if (_webui_is_empty(_webui_core.html_elements[i])) {
 
             _webui_core.html_elements[i] = webui_internal_id;
             _webui_mutex_unlock(&_webui_core.mutex_bridge);
@@ -4796,13 +4960,13 @@ static size_t _webui_set_cb_index(char* webui_internal_id) {
 
 #ifdef WEBUI_LOG
     static void _webui_print_hex(const char* data, size_t len) {
-        for(size_t i = 0; i < len; i++) {
+        for (size_t i = 0; i < len; i++) {
             printf("0x%02X ", (unsigned char) *data);
             data++;
         }
     }
     static void _webui_print_ascii(const char* data, size_t len) {
-        for(size_t i = 0; i < len; i++) {
+        for (size_t i = 0; i < len; i++) {
             printf("%c", (unsigned char) *data);
             data++;
         }
@@ -4819,7 +4983,7 @@ static void _webui_http_send(struct mg_connection *conn, const char* mime_type, 
 
     size_t len = _webui_strlen(body);
 
-    if(len < 1)
+    if (len < 1)
         return;
 
     // Send header
@@ -4877,7 +5041,7 @@ static int _webui_http_log(const struct mg_connection *conn, const char* message
         #endif
 
         // Check if already exist
-        if(strstr(user_html, "\"webui.js\"") || 
+        if (strstr(user_html, "\"webui.js\"") || 
             strstr(user_html, "\"/webui.js\"") ||
             strstr(user_html, "\"WEBUI.JS\"") || 
             strstr(user_html, "\"/WEBUI.JS\"")
@@ -4887,13 +5051,13 @@ static int _webui_http_log(const struct mg_connection *conn, const char* message
 
         // Find <head> tag
         char *head_pos = strstr(user_html, "<head>");
-        if(!head_pos) head_pos = strstr(user_html, "< head>");
-        if(!head_pos) head_pos = strstr(user_html, "<head >");
-        if(!head_pos) head_pos = strstr(user_html, "< head >");
-        if(!head_pos) head_pos = strstr(user_html, "< HEAD>");
-        if(!head_pos) head_pos = strstr(user_html, "<HEAD >");
-        if(!head_pos) head_pos = strstr(user_html, "< HEAD >");
-        if(!head_pos) {
+        if (!head_pos) head_pos = strstr(user_html, "< head>");
+        if (!head_pos) head_pos = strstr(user_html, "<head >");
+        if (!head_pos) head_pos = strstr(user_html, "< head >");
+        if (!head_pos) head_pos = strstr(user_html, "< HEAD>");
+        if (!head_pos) head_pos = strstr(user_html, "<HEAD >");
+        if (!head_pos) head_pos = strstr(user_html, "< HEAD >");
+        if (!head_pos) {
 
             // Because the <head> tag is not found, we will
             // inject the script file instead in a `bad` way.
@@ -4940,7 +5104,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
     // Get the window object
     _webui_window_t* win = _webui_dereference_win_ptr(_win);
-    if(_webui_core.exit_now || win == NULL) return 500; // Internal Server Error
+    if (_webui_core.exit_now || win == NULL) return 500; // Internal Server Error
 
     // Initializing
     _webui_core.server_handled = true; // Main app wait
@@ -4950,7 +5114,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
     const struct mg_request_info *ri = mg_get_request_info(conn);
     const char* url = ri->local_uri;
 
-    if(strcmp(ri->request_method, "GET") == 0) {
+    if (strcmp(ri->request_method, "GET") == 0) {
 
         // GET
 
@@ -4965,7 +5129,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
             printf("[Core]\t\t_webui_http_handler() -> GET [%s]\n", url);
         #endif
 
-        if(strcmp(url, "/webui.js") == 0) {
+        if (strcmp(url, "/webui.js") == 0) {
 
             // WebUI Bridge
 
@@ -4985,15 +5149,15 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
             _webui_free_mem((void*)js);
         }
-        else if(strcmp(url, "/") == 0) {
+        else if (strcmp(url, "/") == 0) {
 
             // [/]
 
-            if(win->is_embedded_html) {
+            if (win->is_embedded_html) {
 
                 // Main HTML
 
-                if(!win->multi_access && win->html_handled) {
+                if (!win->multi_access && win->html_handled) {
 
                     // Main HTML already handled.
                     // Forbidden 403
@@ -5044,10 +5208,10 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
                 // Index.ts
                 sprintf(index, "%s%sindex.ts", win->server_root_path, webui_sep);
-                if(_webui_file_exist(index)) {
+                if (_webui_file_exist(index)) {
 
                     // TypeScript Index
-                    if(win->runtime != None)
+                    if (win->runtime != None)
                         http_status_code = _webui_interpret_file(win, conn, index);
                     else
                         http_status_code = _webui_serve_file(win, conn);
@@ -5058,10 +5222,10 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
                 // Index.js
                 sprintf(index, "%s%sindex.js", win->server_root_path, webui_sep);
-                if(_webui_file_exist(index)) {
+                if (_webui_file_exist(index)) {
 
                     // JavaScript Index
-                    if(win->runtime != None)
+                    if (win->runtime != None)
                         http_status_code = _webui_interpret_file(win, conn, index);
                     else
                         http_status_code = _webui_serve_file(win, conn);
@@ -5077,11 +5241,11 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                 http_status_code = _webui_serve_file(win, conn);
             }
         }
-        else if(strcmp(url, "/favicon.ico") == 0 || strcmp(url, "/favicon.svg") == 0) {
+        else if (strcmp(url, "/favicon.ico") == 0 || strcmp(url, "/favicon.svg") == 0) {
 
             // Favicon
 
-            if(win->icon != NULL && win->icon_type != NULL) {
+            if (win->icon != NULL && win->icon_type != NULL) {
 
                 // Custom user icon
 
@@ -5092,7 +5256,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
                     win->icon
                 );
             }
-            else if(_webui_file_exist_mg(win, conn)) {
+            else if (_webui_file_exist_mg(win, conn)) {
 
                 // Local icon file
                 http_status_code = _webui_serve_file(win, conn);
@@ -5101,7 +5265,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
                 // Default embedded icon
 
-                if(strcmp(url, "/favicon.ico") == 0) {
+                if (strcmp(url, "/favicon.ico") == 0) {
 
                     mg_send_http_redirect(conn, "favicon.svg", 302);
                     http_status_code = 302;
@@ -5121,7 +5285,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
             // [/file]
 
-            if(win->runtime != None) {
+            if (win->runtime != None) {
 
                 #ifdef WEBUI_LOG
                     printf("[Core]\t\t_webui_http_handler() -> Trying to interpret local file\n");
@@ -5173,7 +5337,7 @@ static void _webui_ws_ready_handler(struct mg_connection *conn, void *_win) {
 
     // Dereference
     _webui_window_t* win = _webui_dereference_win_ptr(_win);
-    if(_webui_core.exit_now || win == NULL) return;
+    if (_webui_core.exit_now || win == NULL) return;
 
     _webui_receive(win, WEBUI_WS_OPEN, (void*)conn, 0);
 }
@@ -5184,14 +5348,14 @@ static int _webui_ws_data_handler(struct mg_connection *conn, int opcode, char* 
         printf("[Core]\t\t_webui_ws_data_handler()...\n");
     #endif
 
-    if(_webui_core.exit_now || datasize < 1)
+    if (_webui_core.exit_now || datasize < 1)
         return 1; // OK
 
     switch (opcode & 0xf) {
 
         case MG_WEBSOCKET_OPCODE_BINARY: {
             _webui_window_t* win = _webui_dereference_win_ptr(_win);
-            if(win != NULL)
+            if (win != NULL)
                 _webui_receive(win, WEBUI_WS_DATA, data, datasize);
             break;
         }
@@ -5222,7 +5386,7 @@ static void _webui_ws_close_handler(const struct mg_connection *conn, void *_win
 
     // Dereference
     _webui_window_t* win = _webui_dereference_win_ptr(_win);
-    if(_webui_core.exit_now || win == NULL || !win->connected) return;
+    if (_webui_core.exit_now || win == NULL || !win->connected) return;
 
     _webui_receive(win, WEBUI_WS_CLOSE, (void*)conn, 0);
 }
@@ -5237,7 +5401,7 @@ static WEBUI_THREAD_SERVER_START
     _webui_mutex_lock(&_webui_core.mutex_server_start);
 
     _webui_window_t* win = _webui_dereference_win_ptr(arg);
-    if(win == NULL) {
+    if (win == NULL) {
         WEBUI_THREAD_RETURN
     }
 
@@ -5251,9 +5415,9 @@ static WEBUI_THREAD_SERVER_START
     win->html_handled = false;
     win->server_handled = false;
     win->bridge_handled = false;
-    if(_webui_core.startup_timeout < 1)
+    if (_webui_core.startup_timeout < 1)
         _webui_core.startup_timeout = 0;
-    if(_webui_core.startup_timeout > 30)
+    if (_webui_core.startup_timeout > 30)
         _webui_core.startup_timeout = 30;
     
     // HTTP Port
@@ -5299,7 +5463,7 @@ static WEBUI_THREAD_SERVER_START
 	ws_mg_start_error_data.text_buffer_size = sizeof(ws_errtxtbuf);
     struct mg_context *ws_ctx = mg_start2(&ws_mg_start_init_data, &ws_mg_start_error_data);
 
-    if(http_ctx && ws_ctx) {
+    if (http_ctx && ws_ctx) {
 
         mg_set_websocket_handler(
             ws_ctx,
@@ -5314,7 +5478,7 @@ static WEBUI_THREAD_SERVER_START
         // Mutex
         _webui_mutex_unlock(&_webui_core.mutex_server_start);
 
-        if(_webui_core.startup_timeout > 0) {
+        if (_webui_core.startup_timeout > 0) {
 
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Listening Success\n", win->window_number);
@@ -5328,7 +5492,7 @@ static WEBUI_THREAD_SERVER_START
 
             while(!stop) {
 
-                if(!win->connected) {
+                if (!win->connected) {
 
                     #ifdef WEBUI_LOG
                         printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Waiting for first HTTP request...\n", win->window_number);
@@ -5337,20 +5501,20 @@ static WEBUI_THREAD_SERVER_START
                     // Wait for first connection
                     _webui_timer_t timer_1;
                     _webui_timer_start(&timer_1);
-                    for(;;) {
+                    for (;;) {
 
                         // Stop if window is connected
                         _webui_sleep(1);
-                        if(win->connected || win->server_handled)
+                        if (win->connected || win->server_handled)
                             break;
 
                         // Stop if timer is finished
                         // default is WEBUI_DEF_TIMEOUT (30 seconds)
-                        if(_webui_timer_is_end(&timer_1, (_webui_core.startup_timeout * 1000)))
+                        if (_webui_timer_is_end(&timer_1, (_webui_core.startup_timeout * 1000)))
                             break;
                     }
 
-                    if(!win->connected && win->server_handled) {
+                    if (!win->connected && win->server_handled) {
 
                         // At this moment the browser is already started and HTML
                         // is already handled, so, let's wait more time to give
@@ -5365,22 +5529,22 @@ static WEBUI_THREAD_SERVER_START
 
                             _webui_timer_t timer_2;
                             _webui_timer_start(&timer_2);
-                            for(;;) {
+                            for (;;) {
 
                                 // Stop if window is connected
                                 _webui_sleep(1);
-                                if(win->connected)
+                                if (win->connected)
                                     break;
 
                                 // Stop if timer is finished
-                                if(_webui_timer_is_end(&timer_2, 3000))
+                                if (_webui_timer_is_end(&timer_2, 3000))
                                     break;
                             }
                         }
                         while (win->file_handled && !win->connected);
                     }
                     
-                    if(!win->connected)
+                    if (!win->connected)
                         stop = true; // First run failed
                 }
                 else {
@@ -5398,12 +5562,12 @@ static WEBUI_THREAD_SERVER_START
                         _webui_sleep(1);
 
                         // Exit signal
-                        if(_webui_core.exit_now) {
+                        if (_webui_core.exit_now) {
                             stop = true;
                             break;
                         }
 
-                        if(!win->connected && !_webui_core.exit_now) {
+                        if (!win->connected && !_webui_core.exit_now) {
 
                             // The UI is just get disconnected
                             // probably the user did a refresh
@@ -5422,21 +5586,21 @@ static WEBUI_THREAD_SERVER_START
 
                                 _webui_timer_t timer_3;
                                 _webui_timer_start(&timer_3);
-                                for(;;) {
+                                for (;;) {
 
                                     // Stop if window is re-connected
                                     _webui_sleep(1);
-                                    if(win->connected)
+                                    if (win->connected)
                                         break;
 
                                     // Stop if timer is finished
-                                    if(_webui_timer_is_end(&timer_3, 1000))
+                                    if (_webui_timer_is_end(&timer_3, 1000))
                                         break;
                                 }
                             }
                             while (win->file_handled && !win->connected);
                             
-                            if(!win->connected) {
+                            if (!win->connected) {
                                 stop = true;
                                 break;
                             }
@@ -5449,7 +5613,7 @@ static WEBUI_THREAD_SERVER_START
         // Let's check the flag again, there is a change that
         // the flag has ben changed during the first loop for
         // example when set_timeout() get called later
-        if(_webui_core.startup_timeout == 0) {
+        if (_webui_core.startup_timeout == 0) {
 
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t[Thread] _webui_server_start([%zu]) -> Listening success\n", win->window_number);
@@ -5457,10 +5621,10 @@ static WEBUI_THREAD_SERVER_START
             #endif
 
             // Wait forever
-            for(;;) {
+            for (;;) {
 
                 _webui_sleep(1);
-                if(_webui_core.exit_now)
+                if (_webui_core.exit_now)
                     break;
             }
         }
@@ -5507,7 +5671,7 @@ static WEBUI_THREAD_SERVER_START
     mg_stop(http_ctx);
 
     // Fire the mutex condition wait
-    if(_webui_core.startup_timeout > 0 && _webui_core.servers < 1) {
+    if (_webui_core.startup_timeout > 0 && _webui_core.servers < 1) {
 
         _webui_core.ui = false;
         _webui_condition_signal(&_webui_core.condition_wait);
@@ -5535,7 +5699,7 @@ static void _webui_receive(_webui_window_t* win, int event_type, void* data, siz
     arg->recvNum = ++recvNum;
     arg->event_type = event_type;
 
-    if(len > 0) {
+    if (len > 0) {
 
         // This is data event. We should copy it once
         void* data_cpy = (void*)_webui_malloc(len);
@@ -5552,7 +5716,7 @@ static void _webui_receive(_webui_window_t* win, int event_type, void* data, siz
     // Process the packet in a new thread
     #ifdef _WIN32
         HANDLE thread = CreateThread(NULL, 0, _webui_receive_thread, (void*)arg, 0, NULL);
-        if(thread != NULL)
+        if (thread != NULL)
             CloseHandle(thread);
     #else
         pthread_t thread;
@@ -5575,13 +5739,13 @@ static WEBUI_THREAD_RECEIVE
     size_t event_type = arg->event_type;
     void* ptr = arg->ptr;
 
-    if(!_webui_core.exit_now) {
+    if (!_webui_core.exit_now) {
 
         #ifdef WEBUI_LOG
             printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Start...\n", recvNum);
         #endif
 
-        if(event_type == WEBUI_WS_DATA) {
+        if (event_type == WEBUI_WS_DATA) {
 
             const char* packet = (const char*)ptr;
 
@@ -5598,12 +5762,12 @@ static WEBUI_THREAD_RECEIVE
 
             // Mutex
             // wait for previous event to finish
-            if((unsigned char) packet[1] != WEBUI_HEADER_JS)
+            if ((unsigned char) packet[1] != WEBUI_HEADER_JS)
                 _webui_mutex_lock(&_webui_core.mutex_receive);            
 
-            if(!_webui_core.exit_now && (unsigned char) packet[0] == WEBUI_HEADER_SIGNATURE && len >= WEBUI_MIN_HEADER_LEN) {
+            if (!_webui_core.exit_now && (unsigned char) packet[0] == WEBUI_HEADER_SIGNATURE && len >= WEBUI_MIN_HEADER_LEN) {
 
-                if((unsigned char) packet[1] == WEBUI_HEADER_CLICK) {
+                if ((unsigned char) packet[1] == WEBUI_HEADER_CLICK) {
 
                     // Click Event
 
@@ -5633,7 +5797,7 @@ static WEBUI_THREAD_RECEIVE
                         webui_internal_id           // Extras -> WebUI Internal ID
                     );
                 }
-                else if((unsigned char) packet[1] == WEBUI_HEADER_JS) {
+                else if ((unsigned char) packet[1] == WEBUI_HEADER_JS) {
 
                     // JS Result
 
@@ -5645,7 +5809,7 @@ static WEBUI_THREAD_RECEIVE
 
                     // Get pipe id
                     unsigned char run_id = packet[2];
-                    if(_webui_core.run_userBuffer[run_id] != NULL) {
+                    if (_webui_core.run_userBuffer[run_id] != NULL) {
 
                         _webui_core.run_done[run_id] = false;
 
@@ -5655,7 +5819,7 @@ static WEBUI_THREAD_RECEIVE
 
                         // Get js-error
                         bool error = true;
-                        if((unsigned char) packet[3] == 0x00)
+                        if ((unsigned char) packet[3] == 0x00)
                             error = false;
 
                         #ifdef WEBUI_LOG
@@ -5668,7 +5832,7 @@ static WEBUI_THREAD_RECEIVE
 
                         // Set pipe
                         _webui_core.run_error[run_id] = error;
-                        if(data_len > 0) {
+                        if (data_len > 0) {
 
                             // Copy response to the user's response buffer directly
                             size_t response_len = data_len + 1;
@@ -5685,7 +5849,7 @@ static WEBUI_THREAD_RECEIVE
                         _webui_core.run_done[run_id] = true;                        
                     }
                 }
-                else if((unsigned char) packet[1] == WEBUI_HEADER_NAVIGATION) {
+                else if ((unsigned char) packet[1] == WEBUI_HEADER_NAVIGATION) {
 
                     // Navigation Event
 
@@ -5694,7 +5858,7 @@ static WEBUI_THREAD_RECEIVE
                     // 2: [URL]
 
                     // Events
-                    if(win->has_events) {
+                    if (win->has_events) {
 
                         // Get URL
                         char* url = (char*)&packet[2];
@@ -5719,7 +5883,7 @@ static WEBUI_THREAD_RECEIVE
                         );
                     }
                 }
-                else if((unsigned char) packet[1] == WEBUI_HEADER_CALL_FUNC) {
+                else if ((unsigned char) packet[1] == WEBUI_HEADER_CALL_FUNC) {
 
                     // Function Call
 
@@ -5739,11 +5903,11 @@ static WEBUI_THREAD_RECEIVE
                     // Get data len
                     long long int len = 0;
                     char* endptr;
-                    if(len_s_strlen > 0 && len_s_strlen <= 20) { // 64-bit max is -9,223,372,036,854,775,808 (20 character)
+                    if (len_s_strlen > 0 && len_s_strlen <= 20) { // 64-bit max is -9,223,372,036,854,775,808 (20 character)
 
                         char* data = NULL;
                         len = strtoll((const char*)len_s, &endptr, 10);
-                        if(len > 0)
+                        if (len > 0)
                             // Get data
                             data = (char*)&packet[3 + element_strlen + 1 + len_s_strlen + 1];
 
@@ -5780,7 +5944,7 @@ static WEBUI_THREAD_RECEIVE
 
                         // Call user function
                         size_t cb_index = _webui_get_cb_index(webui_internal_id);
-                        if(cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
+                        if (cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
 
                             // Call user cb
                             #ifdef WEBUI_LOG
@@ -5790,7 +5954,7 @@ static WEBUI_THREAD_RECEIVE
                         }
 
                         // Check the response
-                        if(_webui_is_empty(*response))
+                        if (_webui_is_empty(*response))
                             *response = (char*)"";
 
                         #ifdef WEBUI_LOG
@@ -5809,7 +5973,7 @@ static WEBUI_THREAD_RECEIVE
                         response_packet[0] = WEBUI_HEADER_SIGNATURE;    // Signature
                         response_packet[1] = WEBUI_HEADER_CALL_FUNC;    // CMD
                         response_packet[2] = packet[2];                 // Call ID
-                        for(size_t i = 0; i < response_len; i++)        // Data
+                        for (size_t i = 0; i < response_len; i++)        // Data
                             response_packet[3 + i] = (*response)[i];
 
                         // Send response packet
@@ -5834,7 +5998,7 @@ static WEBUI_THREAD_RECEIVE
                 }
             #endif
 
-            if((unsigned char) packet[0] != WEBUI_HEADER_JS)
+            if ((unsigned char) packet[0] != WEBUI_HEADER_JS)
                 _webui_mutex_unlock(&_webui_core.mutex_receive);
         }
         else if (event_type == WEBUI_WS_OPEN) {
@@ -5844,7 +6008,7 @@ static WEBUI_THREAD_RECEIVE
             int event_type = WEBUI_EVENT_CONNECTED;
             struct mg_connection* conn = (struct mg_connection*)ptr;
 
-            if(win->connections < 2) {
+            if (win->connections < 2) {
 
                 // First connection
                 #ifdef WEBUI_LOG
@@ -5858,7 +6022,7 @@ static WEBUI_THREAD_RECEIVE
 
                 // Multi connections
 
-                if(win->multi_access) {
+                if (win->multi_access) {
 
                     #ifdef WEBUI_LOG
                         printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> MULTI_CONNECTION -> WebSocket %zu Connected\n", recvNum, win->connections);
@@ -5879,7 +6043,7 @@ static WEBUI_THREAD_RECEIVE
             }
 
             // New Event
-            // if(win->has_events) {
+            // if (win->has_events) {
 
             //     // Generate WebUI internal id
             //     char* webui_internal_id = _webui_generate_internal_id(win, "");
@@ -5899,7 +6063,7 @@ static WEBUI_THREAD_RECEIVE
             // Ini
             // struct mg_connection* conn = (struct mg_connection*)ptr;
 
-            if(win->connections < 2) {
+            if (win->connections < 2) {
 
                 // Main connection close
                 #ifdef WEBUI_LOG
@@ -5915,7 +6079,7 @@ static WEBUI_THREAD_RECEIVE
 
                 // Multi connections close
 
-                if(win->multi_access) {
+                if (win->multi_access) {
 
                     #ifdef WEBUI_LOG
                         printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> MULTI_CONNECTION -> WebSocket %zu Closed\n", recvNum, win->connections);
@@ -5937,7 +6101,7 @@ static WEBUI_THREAD_RECEIVE
             win->connections--;
 
             // Events
-            if(win->has_events) {
+            if (win->has_events) {
 
                 // Generate WebUI internal id
                 char* webui_internal_id = _webui_generate_internal_id(win, "");
@@ -5979,7 +6143,7 @@ static WEBUI_THREAD_RECEIVE
             printf("[Core]\t\t_webui_kill_pid(%zu)...\n", pid);
         #endif
 
-        if(pid < 1)
+        if (pid < 1)
             return;
         HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, (DWORD)pid);
         if (hProcess != NULL) {
@@ -5994,7 +6158,7 @@ static WEBUI_THREAD_RECEIVE
             printf("[Core]\t\t_webui_kill_pid(%zu)...\n", pid);
         #endif
 
-        if(pid < 1)
+        if (pid < 1)
             return;
         kill((pid_t)pid, SIGTERM);
     }
@@ -6016,7 +6180,7 @@ static WEBUI_THREAD_RECEIVE
 
         // Initialize Winsock
         iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
-        if(iResult != 0) {
+        if (iResult != 0) {
             // WSAStartup failed
             return false;
         }
@@ -6030,14 +6194,14 @@ static WEBUI_THREAD_RECEIVE
         char the_port[16] = {0};
         sprintf(&the_port[0], "%zu", port_num);
         iResult = getaddrinfo("127.0.0.1", &the_port[0], &hints, &result);
-        if(iResult != 0) {
+        if (iResult != 0) {
             // WSACleanup();
             return false;
         }
 
         // Create a SOCKET for the server to listen for client connections.
         ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-        if(ListenSocket == INVALID_SOCKET) {
+        if (ListenSocket == INVALID_SOCKET) {
             freeaddrinfo(result);
             // WSACleanup();
             return false;
@@ -6045,7 +6209,7 @@ static WEBUI_THREAD_RECEIVE
 
         // Setup the TCP listening socket
         iResult = bind(ListenSocket, result->ai_addr, (size_t)result->ai_addrlen);
-        if(iResult == SOCKET_ERROR) {
+        if (iResult == SOCKET_ERROR) {
             freeaddrinfo(result);
             closesocket(ListenSocket);
             shutdown(ListenSocket, SD_BOTH);
@@ -6071,7 +6235,7 @@ static WEBUI_THREAD_RECEIVE
 
         // Ini
         *output = NULL;
-        if(cmd == NULL)
+        if (cmd == NULL)
             return -1;
 
         // Return
@@ -6079,7 +6243,7 @@ static WEBUI_THREAD_RECEIVE
         
         // Flags
         DWORD CreationFlags = CREATE_NO_WINDOW;
-        if(show)
+        if (show)
             CreationFlags = SW_SHOW;
 
         SECURITY_ATTRIBUTES sa;
@@ -6156,7 +6320,7 @@ static WEBUI_THREAD_RECEIVE
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
 
-        if(Return == 0)
+        if (Return == 0)
             return 0;
         else
             return -1;
@@ -6172,7 +6336,7 @@ static WEBUI_THREAD_RECEIVE
         DWORD windowProcessId;
         GetWindowThreadProcessId(hwnd, &windowProcessId);
 
-        if(windowProcessId == targetProcessId) {
+        if (windowProcessId == targetProcessId) {
 
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t_webui_enum_windows_proc_win32() -> Bring the process (%lu) to the front\n", windowProcessId);
@@ -6211,7 +6375,7 @@ static WEBUI_THREAD_RECEIVE
         SetInformationJobObject(JobObject, JobObjectExtendedLimitInformation, &ExtendedInfo, sizeof(ExtendedInfo));
         */
 
-        if(show)
+        if (show)
             CreationFlags = SW_SHOW;
 
         STARTUPINFOA si;
@@ -6219,7 +6383,7 @@ static WEBUI_THREAD_RECEIVE
         ZeroMemory(&si, sizeof(si));
         si.cb = sizeof(si);
         ZeroMemory(&pi, sizeof(pi));
-        if(!CreateProcessA(
+        if (!CreateProcessA(
             NULL,               // No module name (use command line)
             cmd,                // Command line
             NULL,               // Process handle not inheritable
@@ -6244,7 +6408,7 @@ static WEBUI_THREAD_RECEIVE
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
 
-        if(Return == 0)
+        if (Return == 0)
             return 0;
         else
             return -1;
@@ -6258,18 +6422,18 @@ static WEBUI_THREAD_RECEIVE
 
         HKEY hKey;
 
-        if(RegOpenKeyExW(key, reg, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        if (RegOpenKeyExW(key, reg, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
 
             DWORD VALUE_TYPE;
             BYTE VALUE_DATA[WEBUI_MAX_PATH];
             DWORD VALUE_SIZE = sizeof(VALUE_DATA);
 
             // If `value_name` is empty then it will read the "(default)" reg-key
-            if(RegQueryValueExW(hKey, value_name, NULL, &VALUE_TYPE, VALUE_DATA, &VALUE_SIZE) == ERROR_SUCCESS) {
+            if (RegQueryValueExW(hKey, value_name, NULL, &VALUE_TYPE, VALUE_DATA, &VALUE_SIZE) == ERROR_SUCCESS) {
 
-                if(VALUE_TYPE == REG_SZ)
+                if (VALUE_TYPE == REG_SZ)
                     sprintf(value, "%S", (LPCWSTR)VALUE_DATA);
-                else if(VALUE_TYPE == REG_DWORD)
+                else if (VALUE_TYPE == REG_DWORD)
                     sprintf(value, "%lu", *((DWORD *)VALUE_DATA));
                 
                 RegCloseKey(hKey);
