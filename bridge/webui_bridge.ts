@@ -359,9 +359,9 @@ class WebuiBridge {
 
 							// Logging
 							if (this.#log && !FunError)
-								console.log(`WebUI -> CMD -> JS -> Return [${FunReturn}]`)
+								console.log(`WebUI -> CMD -> JS -> Return Success [${FunReturn}]`)
 							if (this.#log && FunError)
-								console.log(`WebUI -> CMD -> JS -> Error [${FunReturn}]`)
+								console.log(`WebUI -> CMD -> JS -> Return Error [${FunReturn}]`)
 
 							// Response Packet
 							// 0: [Signature]
@@ -369,11 +369,12 @@ class WebuiBridge {
 							// 2: [ID]
 							// 3: [Error]
 							// 4: [Script Response]
+							
 							const Return8 = Uint8Array.of(
 								this.#HEADER_SIGNATURE,
 								this.#HEADER_JS,
 								buffer8[2],
-								FunError ? 0 : 1,
+								FunError ? 1 : 0,
 								...new TextEncoder().encode(FunReturn)
 							)
 

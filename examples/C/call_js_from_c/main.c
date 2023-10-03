@@ -18,7 +18,10 @@ void my_function_count(webui_event_t* e) {
     // Run JavaScript
     if(!webui_script(e->window, "return GetCount();", 0, response, 64)) {
 
-        printf("JavaScript Error: %s\n", response);
+        if(!webui_is_shown(e->window))
+            printf("Window closed.\n");
+        else
+            printf("JavaScript Error: %s\n", response);
         return;
     }
 
