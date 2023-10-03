@@ -1746,7 +1746,7 @@ void webui_set_timeout(size_t second) {
 void webui_set_runtime(size_t window, size_t runtime) {
 
     #ifdef WEBUI_LOG
-        printf("[User] webui_script_runtime([%zu], [%zu])...\n", window, runtime);
+        printf("[User] webui_set_runtime([%zu], [%zu])...\n", window, runtime);
     #endif
 
     // Initialization
@@ -2352,7 +2352,7 @@ static bool _webui_file_exist(char* file) {
     return false;
 }
 
-static const char* _webui_get_extension(const char*f) {
+static const char* _webui_get_extension(const char* f) {
 
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_get_extension()...\n");
@@ -2499,7 +2499,7 @@ static char* _webui_get_full_path_from_url(_webui_window_t* win, const char* url
         // Replace `/` by `\`
         for (int i = 0; full_path[i] != '\0'; i++) {
             if (full_path[i] == '/') {
-                full_path[i] = '\\';
+                full_path[i] = *webui_sep;
             }
         }
     #endif
@@ -5122,7 +5122,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
         // more time for WS connection
         // as it may the UI have many
         // files to handel before first
-        // ws connection established
+        // WS connection get established
         win->file_handled = true;
 
         #ifdef WEBUI_LOG
@@ -5134,7 +5134,7 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
             // WebUI Bridge
 
             #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_http_handler() -> HTML WebUI JS\n");
+                printf("[Core]\t\t_webui_http_handler() -> WebUI-Bridge\n");
             #endif
 
             // Generate JavaScript bridge
@@ -5196,49 +5196,69 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
                 // Serve as index local file
 
-                win->html_handled = true;
+                if (!win->multi_access && win->html_handled) {
 
-                #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_http_handler() -> Local Index File\n");
-                #endif
+                    // index local file already handled.
+                    // Forbidden 403
 
-                // Set full path
-                // [Path][Sep][File Name]
-                char* index = (char*) _webui_malloc(_webui_strlen(win->server_root_path) + 1 + 8); 
+                    #ifdef WEBUI_LOG
+                        printf("[Core]\t\t_webui_http_handler() -> Index local file Already Handled (403)\n");
+                    #endif
 
-                // Index.ts
-                sprintf(index, "%s%sindex.ts", win->server_root_path, webui_sep);
-                if (_webui_file_exist(index)) {
-
-                    // TypeScript Index
-                    if (win->runtime != None)
-                        http_status_code = _webui_interpret_file(win, conn, index);
-                    else
-                        http_status_code = _webui_serve_file(win, conn);
-
-                   _webui_free_mem((void*)index);
-                    return 0;
+                    _webui_http_send_error_page(
+                        conn,
+                        webui_html_served,
+                        403
+                    );
+                    
+                    http_status_code = 403;
                 }
+                else {
 
-                // Index.js
-                sprintf(index, "%s%sindex.js", win->server_root_path, webui_sep);
-                if (_webui_file_exist(index)) {
+                    win->html_handled = true;
 
-                    // JavaScript Index
-                    if (win->runtime != None)
-                        http_status_code = _webui_interpret_file(win, conn, index);
-                    else
-                        http_status_code = _webui_serve_file(win, conn);
+                    #ifdef WEBUI_LOG
+                        printf("[Core]\t\t_webui_http_handler() -> Local Index File\n");
+                    #endif
+
+                    // Set full path
+                    // [Path][Sep][File Name]
+                    char* index = (char*) _webui_malloc(_webui_strlen(win->server_root_path) + 1 + 8); 
+
+                    // Index.ts
+                    sprintf(index, "%s%sindex.ts", win->server_root_path, webui_sep);
+                    if (_webui_file_exist(index)) {
+
+                        // TypeScript Index
+                        if (win->runtime != None)
+                            http_status_code = _webui_interpret_file(win, conn, index);
+                        else
+                            http_status_code = _webui_serve_file(win, conn);
 
                     _webui_free_mem((void*)index);
-                    return 0;
-                }
+                        return 0;
+                    }
 
-                _webui_free_mem((void*)index);
-                
-                // Index.html
-                // Serve as a normal HTML text-based file
-                http_status_code = _webui_serve_file(win, conn);
+                    // Index.js
+                    sprintf(index, "%s%sindex.js", win->server_root_path, webui_sep);
+                    if (_webui_file_exist(index)) {
+
+                        // JavaScript Index
+                        if (win->runtime != None)
+                            http_status_code = _webui_interpret_file(win, conn, index);
+                        else
+                            http_status_code = _webui_serve_file(win, conn);
+
+                        _webui_free_mem((void*)index);
+                        return 0;
+                    }
+
+                    _webui_free_mem((void*)index);
+                    
+                    // Index.html
+                    // Serve as a normal HTML text-based file
+                    http_status_code = _webui_serve_file(win, conn);
+                }
             }
         }
         else if (strcmp(url, "/favicon.ico") == 0 || strcmp(url, "/favicon.svg") == 0) {
@@ -5285,23 +5305,51 @@ static int _webui_http_handler(struct mg_connection *conn, void *_win) {
 
             // [/file]
 
-            if (win->runtime != None) {
+            bool html = false;
+            const char* extension = _webui_get_extension(url);
+            if(strcmp(extension, "html") == 0 || strcmp(extension, "htm") == 0)
+                html = true;
+            
+            // if (html && !win->multi_access && win->html_handled) {
 
-                #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_http_handler() -> Trying to interpret local file\n");
-                #endif
-                
-                http_status_code = _webui_interpret_file(win, conn, NULL);
-            }
-            else {
+            //     // index local file already handled.
+            //     // Forbidden 403
 
-                #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_http_handler() -> Text based local file\n");
-                #endif
+            //     #ifdef WEBUI_LOG
+            //         printf("[Core]\t\t_webui_http_handler() -> Local file .HTML Already Handled (403)\n");
+            //     #endif
+
+            //     _webui_http_send_error_page(
+            //         conn,
+            //         webui_html_served,
+            //         403
+            //     );
                 
-                // Serve as a normal text-based file
-                http_status_code = _webui_serve_file(win, conn);
-            }
+            //     http_status_code = 403;
+            // }
+            // else {
+
+                if(html)
+                    win->html_handled = true;
+
+                if (win->runtime != None) {
+
+                    #ifdef WEBUI_LOG
+                        printf("[Core]\t\t_webui_http_handler() -> Trying to interpret local file (Runtime = %zu)\n", win->runtime);
+                    #endif
+                    
+                    http_status_code = _webui_interpret_file(win, conn, NULL);
+                }
+                else {
+
+                    #ifdef WEBUI_LOG
+                        printf("[Core]\t\t_webui_http_handler() -> Text based local file\n");
+                    #endif
+                    
+                    // Serve as a normal text-based file
+                    http_status_code = _webui_serve_file(win, conn);
+                }
+            // }
         }
     }
     else {
