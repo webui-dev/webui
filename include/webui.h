@@ -128,11 +128,9 @@ enum webui_runtimes {
 enum webui_events {
     WEBUI_EVENT_DISCONNECTED = 0, // 0. Window disconnection event
     WEBUI_EVENT_CONNECTED, // 1. Window connection event
-    WEBUI_EVENT_MULTI_CONNECTION, // 2. New window connection event
-    WEBUI_EVENT_UNWANTED_CONNECTION, // 3. New unwanted window connection event
-    WEBUI_EVENT_MOUSE_CLICK, // 4. Mouse click event
-    WEBUI_EVENT_NAVIGATION, // 5. Window navigation event
-    WEBUI_EVENT_CALLBACK, // 6. Function call event
+    WEBUI_EVENT_MOUSE_CLICK, // 2. Mouse click event
+    WEBUI_EVENT_NAVIGATION, // 3. Window navigation event
+    WEBUI_EVENT_CALLBACK, // 4. Function call event
 };
 
 // -- Structs -------------------------
@@ -315,16 +313,6 @@ WEBUI_EXPORT void webui_set_timeout(size_t second);
  * @example webui_set_icon(myWindow, "<svg>...</svg>", "image/svg+xml");
  */
 WEBUI_EXPORT void webui_set_icon(size_t window, const char* icon, const char* icon_type);
-
-/**
- * @brief Allow the window URL to be re-used in normal web browsers.
- * 
- * @param window The window number
- * @param status The status: True or False
- * 
- * @example webui_set_multi_access(myWindow, true);
- */
-WEBUI_EXPORT void webui_set_multi_access(size_t window, bool status);
 
 /**
  * @brief Base64 encoding. Use this to safely send text based data to the UI. If it fails it will return NULL.
