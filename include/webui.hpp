@@ -25,11 +25,9 @@ namespace webui {
 
     static constexpr int DISCONNECTED = 0; // 0. Window disconnection event
     static constexpr int CONNECTED = 1; // 1. Window connection event
-    static constexpr int MULTI_CONNECTION = 2; // 2. New window connection event
-    static constexpr int UNWANTED_CONNECTION = 3; // 3. New unwanted window connection event
-    static constexpr int MOUSE_CLICK = 4; // 4. Mouse click event
-    static constexpr int NAVIGATION = 5; // 5. Window navigation event
-    static constexpr int CALLBACKS = 6; // 6. Function call event
+    static constexpr int MOUSE_CLICK = 2; // 2. Mouse click event
+    static constexpr int NAVIGATION = 3; // 3. Window navigation event
+    static constexpr int CALLBACKS = 4; // 4. Function call event
 
     class window {
     private:
@@ -69,28 +67,22 @@ namespace webui {
                 ~handler() = delete;
 
                 static void add(size_t id, webui::window* win, callback_t func) {
-
+                    // Save window object
                     window_list[id] = win;
-
                     // Save callback
                     callback_list[id] = func;
                 }
 
                 static void handle(webui_event_t* c_e) {
-
-                    // Get a unique ID. Same ID as `webui_bind()`. Return > 0 if bind exist.
-                    const size_t id = webui_interface_get_bind_id(c_e->window, c_e->element);
-
-                    if(id < 1){
-                        return;
+                    // Get the binded unique ID
+                    const size_t id = c_e->bind_id;
+                    if(id > 0) {
+                        // Create a new event struct
+                        event e(*window_list[id], *c_e);
+                        // Call the user callback
+                        if(callback_list[id] != nullptr)
+                            callback_list[id](&e);
                     }
-
-                    // Create a new event struct
-                    event e(*window_list[id], *c_e);
-
-                    // Call the user callback
-                    if(callback_list[id] != nullptr)
-                        callback_list[id](&e);
                 }
 
                 static webui::window& get_window(const size_t index){
@@ -98,23 +90,29 @@ namespace webui {
                 }
             };
 
-            // Parse argument as integer.
-            long long int get_int() {
-                return webui_get_int(this);
+            // Get an argument as integer at a specific index.
+            long long int get_int(size_t index = 0) {
+                return webui_get_int_at(this, index);
             }
 
-            // Parse argument as string.
-            std::string get_string()  {
-                return std::string{webui_get_string(this)};
+            // Get the size in bytes of an argument at a specific index.
+            size_t get_size(size_t index = 0) {
+                return webui_get_size_at(this, index);
             }
 
-            std::string_view get_string_view()  {
-                return std::string_view{webui_get_string(this)};
+            // Get an argument as string at a specific index.
+            std::string get_string(size_t index = 0)  {
+                return std::string{webui_get_string_at(this, index)};
             }
 
-            // Parse argument as boolean.
-            bool get_bool()  {
-                return webui_get_bool(this);
+            // Get an argument as string_view at a specific index.
+            std::string_view get_string_view(size_t index = 0)  {
+                return std::string_view{webui_get_string_at(this, index)};
+            }
+
+            // Get an argument as boolean at a specific index.
+            bool get_bool(size_t index = 0)  {
+                return webui_get_bool_at(this, index);
             }
 
             // Return the response to JavaScript as integer.
@@ -144,10 +142,6 @@ namespace webui {
                 return std::string_view{element};
             }
 
-            std::string_view get_data() const {
-                return std::string_view{data};
-            }
-
             size_t number() const {
                 return event_number;
             }
@@ -155,10 +149,8 @@ namespace webui {
 
         // Bind a specific html element click event with a function. Empty element means all events.
         void bind(const std::string_view element, event::handler::callback_t func) {
-
             // Get unique ID
             const size_t id = webui_bind(webui_window, element.data(), event::handler::handle);
-
             event::handler::add(id, this, func);
         }
 
@@ -197,11 +189,6 @@ namespace webui {
             webui_set_icon(webui_window, icon.data(), icon_type.data());
         }
 
-        // Allow the window URL to be re-used in normal web browsers
-        void set_multi_access(bool status) const {
-            webui_set_multi_access(webui_window, status);
-        }
-
         // Safely send raw data to the UI
         void send_raw(const std::string_view function, const void* raw, size_t size) const {
             webui_send_raw(webui_window, function.data(), raw, size);
@@ -237,23 +224,6 @@ namespace webui {
             return webui_get_child_process_id(webui_window);
         }
 
-        // -- JavaScript ----------------------
-
-        // Quickly run a JavaScript (no response waiting).
-        void run(const std::string_view script) const {
-            webui_run(webui_window, script.data());
-        }
-
-        // Run a JavaScript, and get the response back (Make sure your local buffer can hold the response).
-        bool script(const std::string_view script, unsigned int timeout, char* buffer, size_t buffer_length) const {
-            return webui_script(webui_window, script.data(), timeout, buffer, buffer_length);
-        }
-
-        // Chose between Deno and Nodejs runtime for .js and .ts files.
-        void set_runtime(unsigned int runtime) const {
-            webui_set_runtime(webui_window, runtime);
-        }
-
         // Set the web-server root folder path for this specific window.
         bool set_root_folder(const std::string_view path) const {
             return webui_set_root_folder(webui_window, path.data());
@@ -272,6 +242,28 @@ namespace webui {
         // Get the full current URL
         std::string_view get_url() const {
             return std::string_view{webui_get_url(webui_window)};
+        }
+
+        // Navigate to a specific URL.
+        void navigate(const std::string_view url) const {
+            webui_navigate(webui_window, url.data());
+        }       
+
+        // -- JavaScript ----------------------
+
+        // Quickly run a JavaScript (no response waiting).
+        void run(const std::string_view script) const {
+            webui_run(webui_window, script.data());
+        }
+
+        // Run a JavaScript, and get the response back (Make sure your local buffer can hold the response).
+        bool script(const std::string_view script, unsigned int timeout, char* buffer, size_t buffer_length) const {
+            return webui_script(webui_window, script.data(), timeout, buffer, buffer_length);
+        }
+
+        // Chose between Deno and Nodejs runtime for .js and .ts files.
+        void set_runtime(unsigned int runtime) const {
+            webui_set_runtime(webui_window, runtime);
         }
     };
 

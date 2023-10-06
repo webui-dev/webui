@@ -30,7 +30,10 @@ void my_function_count(webui::window::event* e) {
     // Run JavaScript
     if(!e->get_window().script("return GetCount();", 0, response, 64)) {
 
-        std::cout << "JavaScript Error: " << response << std::endl;
+        if(!e->get_window().is_shown())
+          std::cout << "Window closed." << std::endl;
+        else
+          std::cout << "JavaScript Error: " << response << std::endl;
         return;
     }
 
@@ -56,13 +59,12 @@ int main() {
         <head>
           <meta charset="UTF-8">
           <script src="webui.js"></script>
-          
           <title>Call JavaScript from C++ Example</title>
           <style>
             body {
               background: linear-gradient(to left, #36265a, #654da9);
               color: AliceBlue;
-              font-size: 16px sans-serif;
+              font: 16px sans-serif;
               text-align: center;
               margin-top: 30px;
             }
@@ -74,7 +76,11 @@ int main() {
         <body>
           <h1>WebUI - Call JavaScript from C++</h1>
           <br>
-          <button id="MyButton1">Count <span id="count">0</span></button>
+          <h1 id="count">0</h1>
+          <br>
+          <button id="MyButton1">Manual Count</button>
+          <br>
+          <button id="MyTest" onclick="AutoTest();">Auto Count (Every 10ms)</button>
           <br>
           <button id="MyButton2">Exit</button>
           <script>
@@ -85,6 +91,11 @@ int main() {
             function SetCount(number) {
               document.getElementById('count').innerHTML = number;
               count = number;
+            }
+            function AutoTest(number) {
+              setInterval(function() {
+                webui.call('MyButton1');
+              }, 10);
             }
           </script>
         </body>

@@ -9,54 +9,55 @@
 void my_function_string(webui::window::event* e) {
 
     // JavaScript:
-    // webui.call('MyID_One', 'Hello');
+    // webui.call('MyID_One', 'Hello', 'World`);
 
-    std::string str = e->get_string();
-    std::cout << "my_function_string: " << str << std::endl; // Hello
+    std::string str_1 = e->get_string(); // Or e->get_string(0);
+    std::string str_2 = e->get_string(1);
 
-    // Need Multiple Arguments?
-    //
-    // WebUI support only one argument. To get multiple arguments
-    // you can send a JSON string from JavaScript then decode it.
-    // Example:
-    //
-    // my_json = my_json_decoder(str);
-    // foo = my_json[0];
-    // bar = my_json[1];
+    std::cout << "my_function_string 1: " << str_1 << std::endl; // Hello
+    std::cout << "my_function_string 2: " << str_2 << std::endl; // World
 }
 
 void my_function_integer(webui::window::event* e) {
 
     // JavaScript:
-    // webui.call('MyID_Two', 123456789);
+    // webui.call('MyID_Two', 123, 456, 789);
 
-    long long number = e->get_int();
-    std::cout << "my_function_integer: " << number << std::endl; // 123456789
+    long long number_1 = e->get_int(); // Or e->get_int(0);
+    long long number_2 = e->get_int(1);
+    long long number_3 = e->get_int(2);
+
+    std::cout << "my_function_integer 1: " << number_1 << std::endl; // 123
+    std::cout << "my_function_integer 2: " << number_2 << std::endl; // 456
+    std::cout << "my_function_integer 3: " << number_3 << std::endl; // 789
 }
 
 void my_function_boolean(webui::window::event* e) {
 
     // JavaScript:
-    // webui.call('MyID_Three', true);
+    // webui.call('MyID_Three', true, false);
 
-    bool status = e->get_bool(); // True
-    if(status)
-        std::cout << "my_function_boolean: True" << std::endl;
-    else
-        std::cout << "my_function_boolean: False" << std::endl;
+    bool status_1 = e->get_bool(); // Or e->get_bool(0);
+    bool status_2 = e->get_bool(1);
+
+    std::cout << "my_function_boolean 1: " << (status_1 ? "True" : "False") << std::endl;
+    std::cout << "my_function_boolean 2: " << (status_2 ? "True" : "False") << std::endl;
 }
 
 void my_function_with_response(webui::window::event* e) {
 
     // JavaScript:
-    // const result = webui.call('MyID_Four', number);
+    // webui.call('MyID_Four', number, 2).then(...)
 
-    long long number = e->get_int();
-    number = number * 2;
-    std::cout << "my_function_with_response: " << number << std::endl;
+    long long number = e->get_int(0);
+    long long times = e->get_int(1);
+
+    long long res = number * times;
+
+    std::cout << "my_function_with_response: " << number << " * " << times << " = " << res << std::endl;
 
     // Send back the response to JavaScript
-    e->return_int(number);
+    e->return_int(res);
 }
 
 int main() {
@@ -85,11 +86,11 @@ int main() {
         <body>
           <h1>WebUI - Call C++ from JavaScript</h1>
           <p>Call C++ functions with arguments (<em>See the logs in your terminal</em>)</p>
-          <button onclick="webui.call('MyID_One', 'Hello');">Call my_function_string()</button>
+          <button onclick="webui.call('MyID_One', 'Hello', 'World');">Call my_function_string()</button>
           <br>
-          <button onclick="webui.call('MyID_Two', 123456789);">Call my_function_integer()</button>
+          <button onclick="webui.call('MyID_Two', 123, 456, 789);">Call my_function_integer()</button>
           <br>
-          <button onclick="webui.call('MyID_Three', true);">Call my_function_boolean()</button>
+          <button onclick="webui.call('MyID_Three', true, false);">Call my_function_boolean()</button>
           <br>
           <p>Call a C++ function that returns a response</p>
           <button onclick="MyJS();">Call my_function_with_response()</button>
@@ -98,7 +99,7 @@ int main() {
             function MyJS() {
               const MyInput = document.getElementById('MyInputID');
               const number = MyInput.value;
-              webui.call('MyID_Four', number).then((response) => {
+              webui.call('MyID_Four', number, 2).then((response) => {
                 MyInput.value = response;
               });
             }
