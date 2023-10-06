@@ -5,69 +5,78 @@
 void my_function_string(webui_event_t* e) {
 
     // JavaScript:
-    // webui.call('MyID_One', 'Hello');
+    // webui.call('MyID_One', 'Hello', 'World`);
 
-    const char* str = webui_get_string(e);
-    printf("my_function_string: %s\n", str); // Hello
+    const char* str_1 = webui_get_string(e); // Or webui_get_string_at(e, 0);
+    const char* str_2 = webui_get_string_at(e, 1);
 
-    // Need Multiple Arguments?
-    //
-    // WebUI support only one argument. To get multiple arguments
-    // you can send a JSON string from JavaScript then decode it.
-    // Example:
-    //
-    // my_json = my_json_decoder(str);
-    // foo = my_json[0];
-    // bar = my_json[1];
+    printf("my_function_string 1: %s\n", str_1); // Hello
+    printf("my_function_string 2: %s\n", str_2); // World
 }
 
 void my_function_integer(webui_event_t* e) {
 
     // JavaScript:
-    // webui.call('MyID_Two', 123456789);
+    // webui.call('MyID_Two', 123, 456, 789);
 
-    long long number = webui_get_int(e);
-    printf("my_function_integer: %lld\n", number); // 123456789
+    long long number_1 = webui_get_int(e); // Or webui_get_int_at(e, 0);
+    long long number_2 = webui_get_int_at(e, 1);
+    long long number_3 = webui_get_int_at(e, 2);
+
+    printf("my_function_integer 1: %lld\n", number_1); // 123
+    printf("my_function_integer 2: %lld\n", number_2); // 456
+    printf("my_function_integer 3: %lld\n", number_3); // 789
 }
 
 void my_function_boolean(webui_event_t* e) {
 
     // JavaScript:
-    // webui.call('MyID_Three', true);
+    // webui.call('MyID_Three', true, false);
 
-    bool status = webui_get_bool(e); // True
-    if(status)
-        printf("my_function_boolean: True\n");
-    else
-        printf("my_function_boolean: False\n");
+    bool status_1 = webui_get_bool(e); // Or webui_get_bool_at(e, 0);
+    bool status_2 = webui_get_bool_at(e, 1);
+
+    printf("my_function_boolean 1: %s\n", (status_1 ? "True" : "False")); // True
+    printf("my_function_boolean 2: %s\n", (status_2 ? "True" : "False")); // False
 }
 
 void my_function_raw_binary(webui_event_t* e) {
 
     // JavaScript:
-    // webui.call('MyID_RawBinary', new Uint8Array([0x42, 0x43, 0x44]));
+    // webui.call('MyID_RawBinary', new Uint8Array([0x41]), new Uint8Array([0x42, 0x43]));
 
-    const unsigned char* raw = (const unsigned char*)e->data;
-    long long len = e->size;
+    const unsigned char* raw_1 = (const unsigned char*)webui_get_string(e); // Or webui_get_string_at(e, 0);
+    const unsigned char* raw_2 = (const unsigned char*)webui_get_string_at(e, 1);
 
-    printf("my_function_raw_binary: %lld bytes\n", len);
-    printf("my_function_raw_binary: ");
-    for (size_t i = 0; i < len; i++)
-        printf("0x%02x ", raw[i]);
+    size_t len_1 = webui_get_size(e); // Or webui_get_size_at(e, 0);
+    size_t len_2 = webui_get_size_at(e, 1);
+
+    // Print raw_1
+    printf("my_function_raw_binary 1 (%zu bytes): ", len_1);
+    for (size_t i = 0; i < len_1; i++)
+        printf("0x%02x ", raw_1[i]);
+    printf("\n");
+
+    // Print raw_2
+    printf("my_function_raw_binary 2 (%zu bytes): ", len_2);
+    for (size_t i = 0; i < len_2; i++)
+        printf("0x%02x ", raw_2[i]);
     printf("\n");
 }
 
 void my_function_with_response(webui_event_t* e) {
 
     // JavaScript:
-    // const result = webui.call('MyID_Four', number);
+    // webui.call('MyID_Four', number, 2).then(...)
 
-    long long number = webui_get_int(e);
-    number = number * 2;
-    printf("my_function_with_response: %lld\n", number);
+    long long number = webui_get_int(e); // Or webui_get_int_at(e, 0);
+    long long times = webui_get_int_at(e, 1);
+
+    int res = number * times;
+    printf("my_function_with_response: %lld * %lld = %lld\n", number, times, res);
 
     // Send back the response to JavaScript
-    webui_return_int(e, number);
+    webui_return_int(e, res);
 }
 
 int main() {
@@ -95,13 +104,13 @@ int main() {
     "  <body>"
     "    <h1>WebUI - Call C from JavaScript</h1>"
     "    <p>Call C functions with arguments (<em>See the logs in your terminal</em>)</p>"
-    "    <button onclick=\"webui.call('MyID_One', 'Hello');\">Call my_function_string()</button>"
+    "    <button onclick=\"webui.call('MyID_One', 'Hello', 'World');\">Call my_function_string()</button>"
     "    <br>"
-    "    <button onclick=\"webui.call('MyID_Two', 123456789);\">Call my_function_integer()</button>"
+    "    <button onclick=\"webui.call('MyID_Two', 123, 456, 789);\">Call my_function_integer()</button>"
     "    <br>"
-    "    <button onclick=\"webui.call('MyID_Three', true);\">Call my_function_boolean()</button>"
+    "    <button onclick=\"webui.call('MyID_Three', true, false);\">Call my_function_boolean()</button>"
     "    <br>"
-    "    <button onclick=\"webui.call('MyID_RawBinary', new Uint8Array([0x41, 0x42, 0x43]));\">Call my_function_raw_binary()</button>"
+    "    <button onclick=\"webui.call('MyID_RawBinary', new Uint8Array([0x41]), new Uint8Array([0x42, 0x43]));\">Call my_function_raw_binary()</button>"
     "    <br>"
     "    <p>Call a C function that returns a response</p>"
     "    <button onclick=\"MyJS();\">Call my_function_with_response()</button>"
@@ -110,7 +119,7 @@ int main() {
     "      function MyJS() {"
     "        const MyInput = document.getElementById('MyInputID');"
     "        const number = MyInput.value;"
-    "        webui.call('MyID_Four', number).then((response) => {"
+    "        webui.call('MyID_Four', number, 2).then((response) => {"
     "            MyInput.value = response;"
     "        });"
     "      }"

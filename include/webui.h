@@ -11,10 +11,13 @@
 #ifndef _WEBUI_H
 #define _WEBUI_H
 
-#define WEBUI_VERSION "2.4.0"
+#define WEBUI_VERSION "2.4.0 (Beta)"
 
 // Max windows, servers and threads
-#define WEBUI_MAX_IDS (512)
+#define WEBUI_MAX_IDS (256)
+
+// Max allowed argument's index
+#define WEBUI_MAX_ARG (16)
 
 // Dynamic Library Exports
 #if defined(_MSC_VER) || defined(__TINYC__)
@@ -138,8 +141,6 @@ typedef struct webui_event_t {
     size_t window; // The window object number
     size_t event_type; // Event type
     char* element; // HTML element ID
-    char* data; // JavaScript data
-    size_t size; // JavaScript data len
     size_t event_number; // Internal WebUI
 } webui_event_t;
 
@@ -492,14 +493,29 @@ WEBUI_EXPORT bool webui_script(size_t window, const char* script, size_t timeout
 // Chose between Deno and Nodejs as runtime for .js and .ts files.
 WEBUI_EXPORT void webui_set_runtime(size_t window, size_t runtime);
 
-// Parse argument as integer.
+// Get an argument as integer at a specific index
+WEBUI_EXPORT long long int webui_get_int_at(webui_event_t* e, size_t index);
+
+// Get the first argument as integer
 WEBUI_EXPORT long long int webui_get_int(webui_event_t* e);
 
-// Parse argument as string.
+// Get an argument as string at a specific index
+WEBUI_EXPORT const char* webui_get_string_at(webui_event_t* e, size_t index);
+
+// Get the first argument as string
 WEBUI_EXPORT const char* webui_get_string(webui_event_t* e);
 
-// Parse argument as boolean.
+// Get an argument as boolean at a specific index
+WEBUI_EXPORT bool webui_get_bool_at(webui_event_t* e, size_t index);
+
+// Get the first argument as boolean
 WEBUI_EXPORT bool webui_get_bool(webui_event_t* e);
+
+// Get the size in bytes of an argument at a specific index
+WEBUI_EXPORT size_t webui_get_size_at(webui_event_t* e, size_t index);
+
+// Get size in bytes of the first argument
+WEBUI_EXPORT size_t webui_get_size(webui_event_t* e);
 
 // Return the response to JavaScript as integer.
 WEBUI_EXPORT void webui_return_int(webui_event_t* e, long long int n);
@@ -512,8 +528,8 @@ WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
 
 // -- Wrapper's Interface -------------
 
-// Bind a specific html element click event with a function. Empty element means all events. This replaces `webui_bind()`. The func is (Window, EventType, Element, Data, DataSize, EventNumber).
-WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, char*, size_t, size_t));
+// Bind a specific html element click event with a function. Empty element means all events. This replaces `webui_bind()`. The func is (Window, EventType, Element, EventNumber).
+WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, size_t));
 
 // When using `webui_interface_bind()`, you may need this function to easily set your callback response.
 WEBUI_EXPORT void webui_interface_set_response(size_t window, size_t event_number, const char* response);

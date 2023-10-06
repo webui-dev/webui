@@ -17,13 +17,10 @@
 //@ts-ignore use *.ts import real extension
 import { AsyncFunction, addRefreshableEventListener } from './utils.ts'
 
-type B64string = string
-type JSONValue =
+type DataTypes =
 	| string
 	| number
 	| boolean
-	| { [x: string]: JSONValue | undefined }
-	| JSONValue[]
 	| Uint8Array
 
 class WebuiBridge {
@@ -157,11 +154,6 @@ class WebuiBridge {
 						const { href } = event.target as HTMLAnchorElement
 						if (this.#hasEvents) {
 							if (this.#log) console.log(`WebUI -> DOM -> Navigation Click Event [${href}]`)
-							// if (this.#isExternalLink(href)) {
-							// 	this.#close(this.#CMD_NAVIGATION, href)
-							// } else {
-							// 	this.#sendEventNavigation(href)
-							// }
 							this.#sendEventNavigation(href)
 						}
 						else {
@@ -174,8 +166,7 @@ class WebuiBridge {
 
 		// Prevent F5 refresh
 		document.addEventListener('keydown', (event) => {
-			// Disable F5
-			if (this.#log) return
+			if (this.#log) return // Allowed in debug mode
 			if (event.key === 'F5') event.preventDefault()
 		})
 
@@ -195,7 +186,6 @@ class WebuiBridge {
 	}
 
 	#close(reason = 0, value = '') {
-		// if (reason === this.#CMD_NAVIGATION) this.#sendEventNavigation(value)
 		this.#wsStatus = false
 		this.#closeReason = reason
 		this.#closeValue = value
@@ -236,7 +226,6 @@ class WebuiBridge {
 			}
 			stringBytes.push(buffer[i]);
 		}
-	
 		// Convert the array of bytes to a string
 		const stringText = new TextDecoder().decode(new Uint8Array(stringBytes));
 		return stringText;
@@ -256,27 +245,23 @@ class WebuiBridge {
 		if (value < 0 || value > 0xFFFFFFFF) {
 			throw new Error('Number is out of the range for 4 bytes representation.');
 		}
-	
 		if (index < 0 || index > buffer.length - 4) {
 			throw new Error('Index out of bounds or insufficient space in buffer.');
 		}
-	
 		// WebUI expect Little-endian (Work for Little/Big endian platforms)
-		buffer[index] = value & 0xFF;
+		buffer[index] = value & 0xFF; // Least significant byte
 		buffer[index + 1] = (value >>> 8) & 0xFF;
 		buffer[index + 2] = (value >>> 16) & 0xFF;
-		buffer[index + 3] = (value >>> 24) & 0xFF;
+		buffer[index + 3] = (value >>> 24) & 0xFF; // Most significant byte
 	}
 
 	#addID(buffer: Uint8Array, value: number, index: number): void {
 		if (value < 0 || value > 0xFFFF) {
 			throw new Error('Number is out of the range for 2 bytes representation.');
 		}
-	
 		if (index < 0 || index > buffer.length - 2) {
 			throw new Error('Index out of bounds or insufficient space in buffer.');
 		}
-	
 		// WebUI expect Little-endian (Work for Little/Big endian platforms)
 		buffer[index] = value & 0xFF; // Least significant byte
 		buffer[index + 1] = (value >>> 8) & 0xFF; // Most significant byte
@@ -284,28 +269,23 @@ class WebuiBridge {
 
 	#start() {
 		this.#callPromiseID[0] = 0
-
 		if (this.#bindList.includes(this.#winNum + '/')) {
 			this.#hasEvents = true
 		}
-
 		this.#ws = new WebSocket(
 			`ws://localhost:${this.#port}/_webui_ws_connect`
 		)
 		this.#ws.binaryType = 'arraybuffer'
-
 		this.#ws.onopen = () => {
 			this.#wsStatus = true
 			this.#wsStatusOnce = true
 			if (this.#log) console.log('WebUI -> Connected')
 			this.#clicksListener()
 		}
-
 		this.#ws.onerror = () => {
 			if (this.#log) console.log('WebUI -> Connection Failed')
 			this.#freezeUi()
 		}
-
 		this.#ws.onclose = (event) => {
 			this.#wsStatus = false
 			if (this.#closeReason === this.#CMD_NAVIGATION) {
@@ -323,17 +303,13 @@ class WebuiBridge {
 				}
 			}
 		}
-
 		this.#ws.onmessage = async (event) => {
 			const buffer8 = new Uint8Array(event.data)
 			if (buffer8.length < this.#PROTOCOL_SIZE) return
 			if (buffer8[this.#PROTOCOL_SIGN] !== this.#WEBUI_SIGNATURE) return
-
 			if(this.#isTextBasedCommand(buffer8[this.#PROTOCOL_CMD])) {
 				// UTF8 Text based commands
-
 				const callId = this.#getID(buffer8, this.#PROTOCOL_ID)
-
 				// Process Command
 				switch (buffer8[this.#PROTOCOL_CMD]) {
 					case this.#CMD_CALL_FUNC:
@@ -344,9 +320,7 @@ class WebuiBridge {
 							// 2: [ID]
 							// 3: [CMD]
 							// 4: [Call Response]
-
 							const callResponse = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA)
-							
 							if (this.#log) {
 								console.log(`WebUI -> CMD -> Call Response [${callResponse}]`)
 							}
@@ -368,7 +342,6 @@ class WebuiBridge {
 						// 2: [ID]
 						// 3: [CMD]
 						// 4: [URL]
-
 						const url = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA)
 						console.log(`WebUI -> CMD -> Navigation [${url}]`)
 						this.#close(this.#CMD_NAVIGATION, url)
@@ -380,7 +353,6 @@ class WebuiBridge {
 						// 2: [ID]
 						// 3: [CMD]
 						// 4: [New Element]
-
 						const newElement = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA)
 						console.log(`WebUI -> CMD -> New Bind ID [${newElement}]`)
 						if(!this.#bindList.includes(newElement))
@@ -395,16 +367,13 @@ class WebuiBridge {
 							// 2: [ID]
 							// 3: [CMD]
 							// 4: [Script]
-
 							const script = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA)
 							const scriptSanitize = script.replace(
 								/(?:\r\n|\r|\n)/g,
 								'\n'
 							)
-
 							if (this.#log)
 								console.log(`WebUI -> CMD -> JS [${scriptSanitize}]`)
-
 							// Get callback result
 							let FunReturn = 'undefined'
 							let FunError = false
@@ -414,28 +383,23 @@ class WebuiBridge {
 								FunError = true
 								FunReturn = e.message
 							}
-
 							// Stop if this is a quick call
 							if (buffer8[this.#PROTOCOL_CMD] === this.#CMD_JS_QUICK) return
-
 							// Get the call return
 							if (FunReturn === undefined) {
 								FunReturn = 'undefined'
 							}
-
 							// Logging
 							if (this.#log && !FunError)
 								console.log(`WebUI -> CMD -> JS -> Return Success [${FunReturn}]`)
 							if (this.#log && FunError)
 								console.log(`WebUI -> CMD -> JS -> Return Error [${FunReturn}]`)
-
 							// Protocol
 							// 0: [SIGNATURE]
 							// 1: [TOKEN]
 							// 2: [ID]
 							// 3: [CMD]
 							// 4: [Error, Script Response]
-
 							const Return8 = Uint8Array.of(
 								this.#WEBUI_SIGNATURE,
 								0, 0, 0, 0, // Token (4 Bytes)
@@ -444,10 +408,8 @@ class WebuiBridge {
 								FunError ? 1 : 0,
 								...new TextEncoder().encode(FunReturn)
 							)
-
 							this.#addToken(Return8, this.#token, this.#PROTOCOL_TOKEN)
 							this.#addID(Return8, callId, this.#PROTOCOL_ID)
-
 							if (this.#wsStatus) this.#ws.send(Return8.buffer)
 						}
 						break
@@ -457,7 +419,6 @@ class WebuiBridge {
 						// 1: [TOKEN]
 						// 2: [ID]
 						// 3: [CMD]
-
 						if (!this.#log)
 							globalThis.close()
 						else {
@@ -469,7 +430,6 @@ class WebuiBridge {
 			}
 			else {
 				// Raw binary commands
-
 				// Process Command
 				switch (buffer8[this.#PROTOCOL_CMD]) {
 					case this.#CMD_SEND_RAW:
@@ -480,17 +440,13 @@ class WebuiBridge {
 							// 2: [ID]
 							// 3: [CMD]
 							// 4: [Function,Null,Raw Data]
-
 							// Get function name
 							const functionName: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA)
-							
 							// Get the raw data
 							const rawDataIndex: number = 2 + functionName.length + 1
 							const userRawData = buffer8.subarray(rawDataIndex);
-
 							if (this.#log)
 								console.log(`WebUI -> CMD -> Send Raw ${buffer8.length} bytes to [${functionName}()]`)
-							
 							// Call the user function, and pass the raw data
 							if (typeof window[functionName] === 'function')
 								window[functionName](userRawData);
@@ -502,7 +458,6 @@ class WebuiBridge {
 			}
 		}
 	}
-
 	#clicksListener() {
 		Object.keys(window).forEach((key) => {
 			if (/^on(click)/.test(key)) {
@@ -521,7 +476,6 @@ class WebuiBridge {
 			}
 		})
 	}
-
 	#sendClick(elem: string) {
 		if (this.#wsStatus) {
 			// Protocol
@@ -553,7 +507,6 @@ class WebuiBridge {
 			if (this.#log) console.log(`WebUI -> Send Click [${elem}]`)
 		}
 	}
-
 	#sendEventNavigation(url: string) {
 		if(url !== '') {
 			if(this.#hasEvents) {
@@ -572,10 +525,8 @@ class WebuiBridge {
 						this.#CMD_NAVIGATION,
 						...new TextEncoder().encode(url)
 					)
-
 					this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN)
 					// this.#addID(packet, 0, this.#PROTOCOL_ID)
-
 					this.#ws.send(packet.buffer)
 				}
 			}
@@ -586,33 +537,49 @@ class WebuiBridge {
 			}
 		}
 	}
-
-	#isExternalLink(url: string) {
-		return new URL(url).host === globalThis.location.host
-	}
-
 	#closeWindowTimer() {
 		setTimeout(function () {
 			globalThis.close()
 		}, 1000)
 	}
-
 	#toUint16(value: number): number {
 		return value & 0xFFFF;
 	}
-
-	#callPromise(fn: string, value: any) {
+	#callPromise(fn: string, ...args: DataTypes[]) {
 		--this.#callPromiseID[0]
 		const callId = this.#toUint16(this.#callPromiseID[0])
-		if (this.#log) console.log(`WebUI -> Call [${fn}](${value}) (ID:${this.#callPromiseID[0]})`)
-
+		// Combine lengths
+		let argsLengths = args.map(arg => {
+			if (typeof arg === 'object') {
+				// Uint8Array
+				return arg.length;
+			} else {
+				// string, number, boolean
+				return new TextEncoder().encode(arg.toString()).length;
+			}
+		}).join(';');
+		// Combine values
+		let argsValues: Uint8Array = new Uint8Array()
+		for (const arg of args) {
+			let buffer: Uint8Array
+			if (typeof arg === 'object') {
+				buffer = arg; // Uint8Array
+			} else { 
+				// string, number, boolean
+				buffer = new TextEncoder().encode(arg.toString())
+			}
+			const temp = new Uint8Array(argsValues.length + buffer.length + 1)
+			temp.set(argsValues, 0)
+			temp.set(buffer, argsValues.length)
+			temp[argsValues.length + buffer.length] = 0x00;
+			argsValues = temp
+		}
 		// Protocol
 		// 0: [SIGNATURE]
 		// 1: [TOKEN]
 		// 2: [ID]
 		// 3: [CMD]
-        // 4: [Element ID, Null, Len, Null, Data, Null]
-
+        // 4: [Fn, Null, {Len;Len;...}, Null, {Data,Null,Data,Null...}, Null]
 		const packet = Uint8Array.of(
 			this.#WEBUI_SIGNATURE,
 			0, 0, 0, 0, // Token (4 Bytes)
@@ -620,15 +587,13 @@ class WebuiBridge {
 			this.#CMD_CALL_FUNC,
 			...new TextEncoder().encode(fn),
 			0,
-			...new TextEncoder().encode(String(value.length)),
+			...new TextEncoder().encode(argsLengths),
 			0,
-			...typeof value === 'object' ? value : new TextEncoder().encode(value),
+			...argsValues,
 			0
 		)
-
 		this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN)
 		this.#addID(packet, callId, this.#PROTOCOL_ID)
-
 		return new Promise((resolve) => {
 			this.#callPromiseResolve[callId] = resolve
 			this.#ws.send(packet.buffer)
@@ -636,100 +601,39 @@ class WebuiBridge {
 	}
 
 	// -- APIs --------------------------
-
 	/**
-	 * Call a backend binding from the frontend.
-	 * @param bindingName - Backend bind name.
-	 * @param payload - Payload to send to the binding, accept any JSON valid data
-	 * (string, number, array, object, boolean, undefined).
-	 * @return - Response of the backend callback as JSON compatible value.
-	 * @example
-	 * __Backend (C)__
-	 * ```c
-	 * webui_bind(window, "get_cwd", get_current_working_directory);
-	 * ```
-	 * __Frontend (JS)__
-	 * ```js
-	 * const cwd = await webui.call("get_cwd");
-	 * ```
-	 * @example
-	 * __Backend (C)__
-	 * ```c
-	 * webui_bind(window, "write_file", write_file);
-	 * ```
-	 * __Frontend (JS)__
-	 * ```js
-	 * webui.call("write_file", "content to write")
-	 *  .then(() => console.log("Success"))
-	 *  .catch(() => console.error("Can't write the file"))
-	 * ```
-	 * @example
-	 * __Backend (C)__
-	 * ```c
-	 * //complex_datas() returns the following JSON string
-	 * //'{ "count": 1, "list": [ 1, 2, 3 ], "isGood": true }'
-	 * webui_bind(window, "complex_datas", complex_datas);
-	 * ```
-	 * __Frontend (JS)__
-	 * ```js
-	 * type ComplexDatas = {
-	 *  count: number;
-	 *  list: number[];
-	 *  isGood: boolean;
-	 * }
-	 *
-	 * const { count, list, isGood } = await webui
-	 *  .call<ComplexDatas>("complex_datas");
-	 *
-	 * //count = 1;
-	 * //list = [ 1, 2, 3 ];
-	 * //isGood = true;
-	 * ```
-	 */
-	async call<
-		Response extends JSONValue = string,
-		Payload extends JSONValue = JSONValue
-	>(bindingName: string, payload?: Payload): Promise<Response | void> {
-		if (!bindingName)
+	* Call a backend function
+	* 
+	* @param fn - binding name
+	* @param data - data to be send to the backend function
+	* @return - Response of the backend callback string
+	* @example - const res = await webui.call("myID", 123, true, "Hi", new Uint8Array([0x42, 0x43, 0x44]));
+	*/
+	async call(fn: string, ...args: DataTypes[]): Promise<DataTypes> {
+
+		if (!fn)
 			return Promise.reject(new SyntaxError('No binding name is provided'))
 
 		if (!this.#wsStatus)
 			return Promise.reject(new Error('WebSocket is not connected'))
+
 		// Check binding list
-		if (
-			!this.#hasEvents &&
-			!this.#bindList.includes(`${this.#winNum}/${bindingName}`)
-		)
-			return Promise.reject(
-				new ReferenceError(`No binding was found for "${bindingName}"`)
-			)
+		if (!this.#hasEvents && !this.#bindList.includes(`${this.#winNum}/${fn}`))
+			return Promise.reject(new ReferenceError(`No binding was found for "${fn}"`))
 
-		// Get the binding response
-		const response = (await this.#callPromise(
-			bindingName,
-			payload === undefined
-				? ''
-				: typeof payload === 'string'	// String()
-				? payload
-				: typeof payload === 'object'	// Uint8Array()
-				? payload
-				: JSON.stringify(payload)		// JSON String
-		)) as string | void
+		// Call backend and wait for response
+		if (this.#log) console.log(`WebUI -> Calling [${fn}(...)]`)
+		const response = (await this.#callPromise(fn, ...args)) as string
 
-		// Handle response type (void, string or JSON value)
-		if (response === undefined) return
+		// WebUI lib accept `DataTypes` but return only string
+		if (typeof response !== 'string') return ""
 
-		try {
-			return JSON.parse(response)
-		} catch {
-			//@ts-ignore string is a valid JSON value
-			return response
-		}
+		return response
 	}
-
 	/**
-	 * Active or deactivate webui debug logging.
-	 * @param status - log status to set.
+	 * Active or deactivate webui debug logging
+	 * 
+	 * @param status - log status to set
 	 */
 	setLogging(status: boolean) {
 		if (status) {
@@ -740,35 +644,27 @@ class WebuiBridge {
 			this.#log = false
 		}
 	}
-
 	/**
-	 * Encode datas into base64 string.
-	 * @param datas - string or JSON value.
+	 * Encode text into base64 string
+	 * 
+	 * @param data - text string
 	 */
-	encode(datas: JSONValue): B64string {
-		if (typeof datas === 'string') return btoa(datas)
-		return btoa(JSON.stringify(datas))
+	encode(data: string): string {
+		return btoa(data)
 	}
-
 	/**
-	 * Decode a base64 string into any JSON valid format
-	 * (string, number, array, object, boolean).
-	 * @param b64 - base64 string to decode.
+	 * Decode base64 string into text
+	 * 
+	 * @param data - base64 string
 	 */
-	decode<T extends JSONValue>(b64: B64string): T {
-		try {
-			return JSON.parse(atob(b64))
-		} catch {
-			//@ts-ignore string a valid JSON value
-			return atob(b64)
-		}
+	decode(data: string): string {
+		return atob(data)
 	}
 }
-
+// Export
 type webui = WebuiBridge
 export default webui
 export type { WebuiBridge }
-
 // Wait for the html to be parsed
 addEventListener('load', () => {
 	document.body.addEventListener('contextmenu', (event) =>

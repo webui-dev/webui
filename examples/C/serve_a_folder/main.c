@@ -26,12 +26,13 @@ void events(webui_event_t* e) {
     else if(e->event_type == WEBUI_EVENT_MOUSE_CLICK)
         printf("Click. \n");
     else if(e->event_type == WEBUI_EVENT_NAVIGATION) {
-        printf("Starting navigation to: %s \n", (char *)e->data);
+        const char* url = webui_get_string(e);
+        printf("Starting navigation to: %s \n", url);
 
         // Because we used `webui_bind(MyWindow, "", events);`
-        // then all `href` link clicks will be blocked by WebUI, so
-        // we need to use `webui_navigate()` to control the navigation
-        webui_navigate(e->window, (char *)e->data);
+        // WebUI will block all `href` link clicks and sent here instead.
+        // We can then control the behaviour of links as needed.
+        webui_navigate(e->window, url);
     }
 }
 
