@@ -5725,7 +5725,7 @@ static WEBUI_THREAD_SERVER_START
     const char* ws_server_options[] = {
         "listening_ports", ws_port,
         "document_root", "/_webui_ws_connect",
-        "websocket_timeout_ms", "30000",
+        "websocket_timeout_ms", "0",
         "enable_websocket_ping_pong", "yes",
         NULL, NULL
     };
