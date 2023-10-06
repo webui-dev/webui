@@ -107,6 +107,7 @@ typedef struct _webui_window_t {
     size_t current_browser;
     char* browser_path;
     bool custom_profile;
+    bool default_profile;
     char* profile_path;
     char* profile_name;
     size_t runtime;
@@ -1518,6 +1519,12 @@ void webui_set_profile(size_t window, const char* name, const char* path) {
     win->profile_name = name_cpy;
     win->profile_path = path_cpy;
     win->custom_profile = true;
+
+    // Default local machine profile
+    if(name_cpy == NULL && path_cpy == NULL)
+        win->default_profile = true;
+    else
+        win->default_profile = false;
 }
 
 const char* webui_get_url(size_t window) {
@@ -3061,9 +3068,19 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
         printf("[Core]\t\t_webui_browser_create_profile_folder(%zu)...\n", browser);
     #endif
 
-    if (!win->custom_profile) {
+    // Default local machine profile
+    if(win->default_profile)
+        return true;
 
-        // Default profile settings
+    if (win->custom_profile) {
+
+        // Custom profile
+        if (_webui_is_empty(win->profile_path) || _webui_is_empty(win->profile_name))
+            return false;
+    }
+    else {
+
+        // WebUI profile
         if (win->profile_name != NULL)
             _webui_free_mem((void*)win->profile_name);
         if (win->profile_path != NULL)
@@ -3071,12 +3088,6 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
         win->profile_path = (char*) _webui_malloc(WEBUI_MAX_PATH);
         win->profile_name = (char*) _webui_malloc(WEBUI_MAX_PATH);
         strcpy(win->profile_name, WEBUI_PROFILE_NAME);
-    }
-    else {
-
-        // Custom profile settings
-        if (_webui_is_empty(win->profile_path) || _webui_is_empty(win->profile_name))
-            return false;
     }
 
     #ifdef WEBUI_LOG
@@ -4181,10 +4192,8 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
         if (!_webui_is_empty(win->profile_path))
             c = sprintf(buffer, " --user-data-dir=\"%s\"", win->profile_path);
         // Basic
-        if (!win->custom_profile) {
-            for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
-                c += sprintf(buffer + c, " %s", chromium_options[i]);
-            }
+        for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
+            c += sprintf(buffer + c, " %s", chromium_options[i]);
         }
         // Kiosk Mode
         if (win->kiosk_mode)
@@ -4207,9 +4216,7 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char *b
         if (!_webui_is_empty(win->profile_name))
             c = sprintf(buffer, " -P %s", win->profile_name);
         // Basic
-        if (!win->custom_profile) {
-            c += sprintf(buffer + c, " -purgecaches");
-        }
+        c += sprintf(buffer + c, " -purgecaches");
         // Kiosk Mode
         if (win->kiosk_mode)
             c += sprintf(buffer + c, " %s", "-kiosk");
