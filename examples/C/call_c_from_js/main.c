@@ -52,13 +52,13 @@ void my_function_raw_binary(webui_event_t* e) {
     size_t len_2 = webui_get_size_at(e, 1);
 
     // Print raw_1
-    printf("my_function_raw_binary 1 (%zu bytes): ", len_1);
+    printf("my_function_raw_binary 1 (%llu bytes): ", len_1);
     for (size_t i = 0; i < len_1; i++)
         printf("0x%02x ", raw_1[i]);
     printf("\n");
 
     // Print raw_2
-    printf("my_function_raw_binary 2 (%zu bytes): ", len_2);
+    printf("my_function_raw_binary 2 (%llu bytes): ", len_2);
     for (size_t i = 0; i < len_2; i++)
         printf("0x%02x ", raw_2[i]);
     printf("\n");
@@ -72,7 +72,7 @@ void my_function_with_response(webui_event_t* e) {
     long long number = webui_get_int(e); // Or webui_get_int_at(e, 0);
     long long times = webui_get_int_at(e, 1);
 
-    int res = number * times;
+    long long res = number * times;
     printf("my_function_with_response: %lld * %lld = %lld\n", number, times, res);
 
     // Send back the response to JavaScript
