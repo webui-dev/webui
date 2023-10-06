@@ -1920,6 +1920,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
         #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user callback...\n[Call]\n");
         #endif
+        e->bind_id = cb_index;
         _webui_core.cb_interface[cb_index](e->window, e->event_type, e->element, e->event_number);
     }
 
@@ -2030,33 +2031,6 @@ size_t webui_interface_get_window_id(size_t window) {
     _webui_window_t* win = _webui_core.wins[window];
 
     return win->window_number;
-}
-
-size_t webui_interface_get_bind_id(size_t window, const char* element) {
-
-    #ifdef WEBUI_LOG
-        printf("[User] webui_interface_get_bind_id([%zu], [%s])...\n", window, element);
-    #endif
-
-    // Initialization
-    _webui_init();
-    
-    // Dereference
-    if (_webui_core.exit_now || _webui_core.wins[window] == NULL) return 0;
-    _webui_window_t* win = _webui_core.wins[window];
-
-    size_t len = _webui_strlen(element);
-    if (len < 1)
-        element = "";
-
-    // [win num][/][element]
-    char* webui_internal_id = _webui_malloc(3 + 1 + len);
-    sprintf(webui_internal_id, "%zu/%s", win->window_number, element);
-
-    size_t cb_index = _webui_get_cb_index(webui_internal_id);
-
-    _webui_free_mem((void*)webui_internal_id);
-    return cb_index;
 }
 
 // -- Core's Functions ----------------
@@ -3273,7 +3247,7 @@ static void _webui_delete_folder(char* folder) {
 static char* _webui_generate_internal_id(_webui_window_t* win, const char* element) {
 
     #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_generate_internal_id([%s])...\n", element);
+        printf("[Core]\t\t_webui_generate_internal_id([%zu], [%s])...\n", win->window_number, element);
     #endif
 
     // Generate WebUI internal id
@@ -4867,7 +4841,7 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
     win->server_port = port;
     win->ws_port = ws_port;
     
-    if (!webui_is_shown(win->window_number)) {
+    if (!win->connected) {
 
         // Start a new window
 
@@ -4935,10 +4909,11 @@ static void _webui_window_event(_webui_window_t* win, int event_type, char* elem
 
         if (events_cb_index > 0 && _webui_core.cb[events_cb_index] != NULL) {
 
-            // Call user all events cb
+            // Call user all-events cb
             #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_window_event() -> Calling user callback...\n[Call]\n");
+                printf("[Core]\t\t_webui_window_event() -> Calling all-events user callback...\n[Call]\n");
             #endif
+            e.bind_id = events_cb_index;
             _webui_core.cb[events_cb_index](&e);
         }
     }
@@ -4955,6 +4930,7 @@ static void _webui_window_event(_webui_window_t* win, int event_type, char* elem
                 #ifdef WEBUI_LOG
                     printf("[Core]\t\t_webui_window_event() -> Calling user callback...\n[Call]\n");
                 #endif
+                e.bind_id = cb_index;
                 _webui_core.cb[cb_index](&e);
             }
         }
@@ -6263,6 +6239,7 @@ static WEBUI_THREAD_RECEIVE
                             #ifdef WEBUI_LOG
                                 printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Calling user callback...\n[Call]\n", recvNum);
                             #endif
+                            e.bind_id = cb_index;
                             _webui_core.cb[cb_index](&e);
                         }
 
