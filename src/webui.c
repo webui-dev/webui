@@ -5621,7 +5621,7 @@ static int _webui_ws_data_handler(struct mg_connection *conn, int opcode, char* 
         printf("[Core]\t\t_webui_ws_data_handler()...\n");
     #endif
 
-    if (_webui_core.exit_now || datasize < 1)
+    if (_webui_core.exit_now || datasize < WEBUI_PROTOCOL_SIZE)
         return 1; // OK
 
     switch (opcode & 0xf) {
@@ -5725,7 +5725,7 @@ static WEBUI_THREAD_SERVER_START
     const char* ws_server_options[] = {
         "listening_ports", ws_port,
         "document_root", "/_webui_ws_connect",
-        "websocket_timeout_ms", "0",
+        "websocket_timeout_ms", "3600000",
         "enable_websocket_ping_pong", "yes",
         NULL, NULL
     };

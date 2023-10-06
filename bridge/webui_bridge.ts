@@ -60,7 +60,8 @@ class WebuiBridge {
 	#PROTOCOL_ID = 5 // Protocol byte position: ID (2 Bytes)
 	#PROTOCOL_CMD = 7 // Protocol byte position: Command (1 Byte)
 	#PROTOCOL_DATA = 8 // Protocol byte position: Data (n Byte)
-	#Token = new Uint32Array(1);
+	#Token = new Uint32Array(1)
+	#Ping: Boolean = true
 	constructor({
 		token,
 		port,
@@ -93,7 +94,7 @@ class WebuiBridge {
 		this.#winW = winW
 		this.#winH = winH
 		// Token
-		this.#Token[0] = this.#token;
+		this.#Token[0] = this.#token
 		// Instance
 		if ('webui' in globalThis) {
 			throw new Error(
@@ -197,55 +198,56 @@ class WebuiBridge {
 	}
 	#isTextBasedCommand(cmd: number): Boolean {
 		if(cmd !== this.#CMD_SEND_RAW)
-			return true;
-		return false;
+			return true
+		return false
 	}
 	#getDataStrFromPacket(buffer: Uint8Array, startIndex: number): string {
-		let stringBytes: number[] = [];
+		let stringBytes: number[] = []
 		for (let i = startIndex; i < buffer.length; i++) {
 			if (buffer[i] === 0) { // Check for null byte
-				break;
+				break
 			}
-			stringBytes.push(buffer[i]);
+			stringBytes.push(buffer[i])
 		}
 		// Convert the array of bytes to a string
-		const stringText = new TextDecoder().decode(new Uint8Array(stringBytes));
-		return stringText;
+		const stringText = new TextDecoder().decode(new Uint8Array(stringBytes))
+		return stringText
 	}
 	#getID(buffer: Uint8Array, index: number): number {
 		if (index < 0 || index >= buffer.length - 1) {
-			throw new Error('Index out of bounds or insufficient data.');
+			throw new Error('Index out of bounds or insufficient data.')
 		}
-		const firstByte = buffer[index];
-		const secondByte = buffer[index + 1];
-		const combined = (secondByte << 8) | firstByte; // Works only for little-endian
-		return combined;
+		const firstByte = buffer[index]
+		const secondByte = buffer[index + 1]
+		const combined = (secondByte << 8) | firstByte // Works only for little-endian
+		return combined
 	}
 	#addToken(buffer: Uint8Array, value: number, index: number): void {
 		if (value < 0 || value > 0xFFFFFFFF) {
-			throw new Error('Number is out of the range for 4 bytes representation.');
+			throw new Error('Number is out of the range for 4 bytes representation.')
 		}
 		if (index < 0 || index > buffer.length - 4) {
-			throw new Error('Index out of bounds or insufficient space in buffer.');
+			throw new Error('Index out of bounds or insufficient space in buffer.')
 		}
 		// WebUI expect Little-endian (Work for Little/Big endian platforms)
-		buffer[index] = value & 0xFF; // Least significant byte
-		buffer[index + 1] = (value >>> 8) & 0xFF;
-		buffer[index + 2] = (value >>> 16) & 0xFF;
-		buffer[index + 3] = (value >>> 24) & 0xFF; // Most significant byte
+		buffer[index] = value & 0xFF // Least significant byte
+		buffer[index + 1] = (value >>> 8) & 0xFF
+		buffer[index + 2] = (value >>> 16) & 0xFF
+		buffer[index + 3] = (value >>> 24) & 0xFF // Most significant byte
 	}
 	#addID(buffer: Uint8Array, value: number, index: number): void {
 		if (value < 0 || value > 0xFFFF) {
-			throw new Error('Number is out of the range for 2 bytes representation.');
+			throw new Error('Number is out of the range for 2 bytes representation.')
 		}
 		if (index < 0 || index > buffer.length - 2) {
-			throw new Error('Index out of bounds or insufficient space in buffer.');
+			throw new Error('Index out of bounds or insufficient space in buffer.')
 		}
 		// WebUI expect Little-endian (Work for Little/Big endian platforms)
-		buffer[index] = value & 0xFF; // Least significant byte
-		buffer[index + 1] = (value >>> 8) & 0xFF; // Most significant byte
+		buffer[index] = value & 0xFF // Least significant byte
+		buffer[index + 1] = (value >>> 8) & 0xFF // Most significant byte
 	}
 	#start() {
+		this.#keepAlive()
 		this.#callPromiseID[0] = 0
 		if (this.#bindList.includes(this.#winNum + '/')) {
 			this.#hasEvents = true
@@ -342,6 +344,7 @@ class WebuiBridge {
 							)
 							this.#addToken(Return8, this.#token, this.#PROTOCOL_TOKEN)
 							this.#addID(Return8, callId, this.#PROTOCOL_ID)
+							this.#Ping = false
 							if (this.#wsStatus) this.#ws.send(Return8.buffer)
 						}
 						break
@@ -421,17 +424,31 @@ class WebuiBridge {
 						const functionName: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA)
 						// Get the raw data
 						const rawDataIndex: number = 2 + functionName.length + 1
-						const userRawData = buffer8.subarray(rawDataIndex);
+						const userRawData = buffer8.subarray(rawDataIndex)
 						if (this.#log)
 							console.log(`WebUI -> CMD -> Send Raw ${buffer8.length} bytes to [${functionName}()]`)
 						// Call the user function, and pass the raw data
 						if (typeof window[functionName] === 'function')
-							window[functionName](userRawData);
+							window[functionName](userRawData)
 						else
-							await AsyncFunction(functionName + '(userRawData);')()
+							await AsyncFunction(functionName + '(userRawData)')()
 					break
 				}
 			}
+		}
+	}
+	#keepAlive = async() => {
+		while (true) {
+			if (this.#Ping) {
+				// Some web browsers may close the connection
+				// let's send a void message to keep WS open
+				if(this.#wsStatus)
+					this.#ws.send("ping")
+			} else {
+				// There is an active communication
+				this.#Ping = true
+			}
+			await new Promise(resolve => setTimeout(resolve, 20000))
 		}
 	}
 	#clicksListener() {
@@ -479,6 +496,7 @@ class WebuiBridge {
 					  )
 			this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN)
 			// this.#addID(packet, 0, this.#PROTOCOL_ID)
+			this.#Ping = false
 			this.#ws.send(packet.buffer)
 			if (this.#log) console.log(`WebUI -> Send Click [${elem}]`)
 		}
@@ -503,6 +521,7 @@ class WebuiBridge {
 					)
 					this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN)
 					// this.#addID(packet, 0, this.#PROTOCOL_ID)
+					this.#Ping = false
 					this.#ws.send(packet.buffer)
 				}
 			}
@@ -519,7 +538,7 @@ class WebuiBridge {
 		}, 1000)
 	}
 	#toUint16(value: number): number {
-		return value & 0xFFFF;
+		return value & 0xFFFF
 	}
 	#callPromise(fn: string, ...args: DataTypes[]) {
 		--this.#callPromiseID[0]
@@ -528,18 +547,18 @@ class WebuiBridge {
 		let argsLengths = args.map(arg => {
 			if (typeof arg === 'object') {
 				// Uint8Array
-				return arg.length;
+				return arg.length
 			} else {
 				// string, number, boolean
-				return new TextEncoder().encode(arg.toString()).length;
+				return new TextEncoder().encode(arg.toString()).length
 			}
-		}).join(';');
+		}).join(';')
 		// Combine values
 		let argsValues: Uint8Array = new Uint8Array()
 		for (const arg of args) {
 			let buffer: Uint8Array
 			if (typeof arg === 'object') {
-				buffer = arg; // Uint8Array
+				buffer = arg // Uint8Array
 			} else { 
 				// string, number, boolean
 				buffer = new TextEncoder().encode(arg.toString())
@@ -547,7 +566,7 @@ class WebuiBridge {
 			const temp = new Uint8Array(argsValues.length + buffer.length + 1)
 			temp.set(argsValues, 0)
 			temp.set(buffer, argsValues.length)
-			temp[argsValues.length + buffer.length] = 0x00;
+			temp[argsValues.length + buffer.length] = 0x00
 			argsValues = temp
 		}
 		// Protocol
@@ -572,10 +591,10 @@ class WebuiBridge {
 		this.#addID(packet, callId, this.#PROTOCOL_ID)
 		return new Promise((resolve) => {
 			this.#callPromiseResolve[callId] = resolve
+			this.#Ping = false
 			this.#ws.send(packet.buffer)
 		})
 	}
-
 	// -- APIs --------------------------
 	/**
 	* Call a backend function
@@ -583,7 +602,7 @@ class WebuiBridge {
 	* @param fn - binding name
 	* @param data - data to be send to the backend function
 	* @return - Response of the backend callback string
-	* @example - const res = await webui.call("myID", 123, true, "Hi", new Uint8Array([0x42, 0x43, 0x44]));
+	* @example - const res = await webui.call("myID", 123, true, "Hi", new Uint8Array([0x42, 0x43, 0x44]))
 	*/
 	async call(fn: string, ...args: DataTypes[]): Promise<DataTypes> {
 
