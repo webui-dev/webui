@@ -29,3 +29,6 @@ jobs:
     uses: ./.github/workflows/linux.yml
     permissions:
       contents: write
+
+  lint:
+    uses: ./.github/workflows/lint.yml
