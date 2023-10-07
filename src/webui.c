@@ -4611,7 +4611,7 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
             return _webui_browser_start_firefox(win, address);
         else if (win->current_browser == Yandex)
             return _webui_browser_start_yandex(win, address);
-        else if (browser == Chromium)
+        else if (win->current_browser == Chromium)
             return _webui_browser_start_chromium(win, address);
         else
             return false;
