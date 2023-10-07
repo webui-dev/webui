@@ -574,7 +574,7 @@ class WebuiBridge {
 		// 1: [TOKEN]
 		// 2: [ID]
 		// 3: [CMD]
-        // 4: [Fn, Null, {Len;Len;...}, Null, {Data,Null,Data,Null...}, Null]
+        // 4: [Fn, Null, {Len;Len;...}, Null, {Data,Null,Data,Null...}]
 		const packet = Uint8Array.of(
 			this.#WEBUI_SIGNATURE,
 			0, 0, 0, 0, // Token (4 Bytes)
@@ -584,8 +584,7 @@ class WebuiBridge {
 			0,
 			...new TextEncoder().encode(argsLengths),
 			0,
-			...argsValues,
-			0
+			...argsValues
 		)
 		this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN)
 		this.#addID(packet, callId, this.#PROTOCOL_ID)

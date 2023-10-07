@@ -57,11 +57,14 @@ void my_function_raw_binary(webui_event_t* e) {
         printf("0x%02x ", raw_1[i]);
     printf("\n");
 
+    // Check raw_2 (Big)
+    // [0xA1, 0x00..., 0xA2]
+    bool valid = false;
+    if(raw_2[0] == 0xA1 && raw_2[len_2 - 1] == 0xA2)
+        valid = true;
+
     // Print raw_2
-    printf("my_function_raw_binary 2 (%llu bytes): ", len_2);
-    for (size_t i = 0; i < len_2; i++)
-        printf("0x%02x ", raw_2[i]);
-    printf("\n");
+    printf("my_function_raw_binary 2 big (%llu bytes): valid data? %s\n", len_2, (valid ? "Yes" : "No"));
 }
 
 void my_function_with_response(webui_event_t* e) {
@@ -89,16 +92,30 @@ int main() {
     "    <script src=\"webui.js\"></script>"
     "    <title>Call C from JavaScript Example</title>"
     "    <style>"
-    "      body {"
-    "        background: linear-gradient(to left, #36265a, #654da9);"
-    "        color: AliceBlue;"
-    "        font: 16px sans-serif;"
-    "        text-align: center;"
-    "        margin-top: 30px;"
-    "      }"
-    "      button {"
-    "        margin: 5px 0 10px;"
-    "      }"
+    "       body {"
+    "            font-family: 'Arial', sans-serif;"
+    "            color: white;"
+    "            background: linear-gradient(to right, #507d91, #1c596f, #022737);"
+    "            text-align: center;"
+    "            font-size: 18px;"
+    "        }"
+    "        button, input {"
+    "            padding: 10px;"
+    "            margin: 10px;"
+    "            border-radius: 3px;"
+    "            border: 1px solid #ccc;"
+    "            box-shadow: 0 3px 5px rgba(0,0,0,0.1);"
+    "            transition: 0.2s;"
+    "        }"
+    "        button {"
+    "            background: #3498db;"
+    "            color: #fff; "
+    "            cursor: pointer;"
+    "            font-size: 16px;"
+    "        }"
+    "        h1 { text-shadow: -7px 10px 7px rgb(67 57 57 / 76%); }"
+    "        button:hover { background: #c9913d; }"
+    "        input:focus { outline: none; border-color: #3498db; }"
     "    </style>"
     "  </head>"
     "  <body>"
@@ -110,12 +127,16 @@ int main() {
     "    <br>"
     "    <button onclick=\"webui.call('MyID_Three', true, false);\">Call my_function_boolean()</button>"
     "    <br>"
-    "    <button onclick=\"webui.call('MyID_RawBinary', new Uint8Array([0x41]), new Uint8Array([0x42, 0x43]));\">Call my_function_raw_binary()</button>"
+    "    <button onclick=\"webui.call('MyID_RawBinary', new Uint8Array([0x41,0x42,0x43]), big_arr);\">Call my_function_raw_binary()</button>"
     "    <br>"
     "    <p>Call a C function that returns a response</p>"
     "    <button onclick=\"MyJS();\">Call my_function_with_response()</button>"
     "    <div>Double: <input type=\"text\" id=\"MyInputID\" value=\"2\"></div>"
     "    <script>"
+    "      const arr_size = 10000;"
+    "      const big_arr = new Uint8Array(arr_size);"
+    "      big_arr[0] = 0xA1;"
+    "      big_arr[arr_size - 1] = 0xA2;"
     "      function MyJS() {"
     "        const MyInput = document.getElementById('MyInputID');"
     "        const number = MyInput.value;"

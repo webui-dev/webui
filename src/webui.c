@@ -5205,7 +5205,10 @@ static size_t _webui_set_cb_index(char* webui_internal_id) {
     }
     static void _webui_print_ascii(const char* data, size_t len) {
         for (size_t i = 0; i < len; i++) {
-            printf("%c", (unsigned char)*data);
+            if((unsigned char)*data == 0x00)
+                putchar(0xCF); // ¤
+            else
+                printf("%c", (unsigned char)*data);
             data++;
         }
     }
@@ -5994,7 +5997,7 @@ static WEBUI_THREAD_SERVER_START
 static void _webui_receive(_webui_window_t* win, int event_type, void* data, size_t len) {
 
     #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_receive()...\n");
+        printf("[Core]\t\t_webui_receive([%zu], [%d], [%zu])...\n", win->window_number, event_type, len);
     #endif
 
     static size_t recvNum = 0;
@@ -6045,7 +6048,7 @@ static WEBUI_THREAD_RECEIVE
     // Get arguments
     _webui_recv_arg_t* arg = (_webui_recv_arg_t*) _arg;
     _webui_window_t* win = arg->win;
-    size_t len = arg->len;
+    size_t packet_len = arg->len;
     size_t recvNum = arg->recvNum;
     size_t event_type = arg->event_type;
     void* ptr = arg->ptr;
@@ -6064,18 +6067,18 @@ static WEBUI_THREAD_RECEIVE
 
             #ifdef WEBUI_LOG
                 printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Data received...\n", recvNum);
-                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Size : %zu bytes\n", recvNum, len);
+                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Size : %zu bytes\n", recvNum, packet_len);
                 printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Header : [ ", recvNum);
                     _webui_print_hex(packet, WEBUI_PROTOCOL_SIZE);
                 printf("]\n");
                 printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Token: 0x%08X (%" PRIu32 ")\n", recvNum, packet_token, packet_token);
                 printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet ID: 0x%04X (%u)\n", recvNum, packet_id, packet_id);
                 printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Data: [", recvNum);
-                    _webui_print_ascii(&packet[WEBUI_PROTOCOL_DATA], (len - WEBUI_PROTOCOL_SIZE));
+                    _webui_print_ascii(&packet[WEBUI_PROTOCOL_DATA], (packet_len - WEBUI_PROTOCOL_SIZE));
                 printf("]\n");
             #endif
 
-            if(len >= WEBUI_PROTOCOL_SIZE && (unsigned char)packet[WEBUI_PROTOCOL_SIGN] == WEBUI_SIGNATURE && packet_token == win->token) {
+            if(packet_len >= WEBUI_PROTOCOL_SIZE && (unsigned char)packet[WEBUI_PROTOCOL_SIGN] == WEBUI_SIGNATURE && packet_token == win->token) {
 
                 // Mutex
                 // wait for previous event to finish
@@ -6232,7 +6235,7 @@ static WEBUI_THREAD_RECEIVE
                         // Function Call
 
                         // 0: [Header]
-                        // 1: [Fn, Null, {Len;Len;...}, Null, {Data,Null,Data,Null...}, Null]
+                        // 1: [Fn, Null, {Len;Len;...}, Null, {Data,Null,Data,Null...}]
                         
                         // Get html element id
                         char* element = (char*)&packet[WEBUI_PROTOCOL_DATA];
@@ -6255,14 +6258,17 @@ static WEBUI_THREAD_RECEIVE
                         win->events[event_num] = event_inf;
                         
                         // Loop trough args
+                        size_t data_size_expected = 0;
                         char* args_lens = (char*)&packet[WEBUI_PROTOCOL_DATA + element_len + 1];
-                        char* args_ptr = (char*)&packet[WEBUI_PROTOCOL_DATA + element_len + 1 + _webui_strlen(args_lens) + 1];
+                        size_t args_len = _webui_strlen(args_lens);
+                        char* args_ptr = (char*)&packet[WEBUI_PROTOCOL_DATA + element_len + 1 + args_len + 1];
                         char* token = strtok(args_lens, ";");
                         size_t token_num = 0;
                         while (token != NULL) {
 
                             size_t arg_len = (size_t)strtoul(token, NULL, 10);
-
+                            data_size_expected = data_size_expected + arg_len + 1;
+                            
                             if(arg_len > 0) {
 
                                 // Set argument
@@ -6279,44 +6285,78 @@ static WEBUI_THREAD_RECEIVE
                             token = strtok(NULL, ";");
                         }
 
-                        // Create new event
-                        webui_event_t e;
-                        e.window = win->window_number;
-                        e.event_type = WEBUI_EVENT_CALLBACK;
-                        e.element = element;
-                        e.event_number = event_num;
+                        // Check data validity
+                        size_t data_size_recv = packet_len - (
+                            WEBUI_PROTOCOL_SIZE +   // [Header]
+                            element_len +           // [Fn]
+                            1 +                     // [Null]
+                            args_len +              // [{Len;Len;...}]
+                            1);                     // [Null]
 
-                        // Call user function
-                        size_t cb_index = _webui_get_cb_index(webui_internal_id);
-                        if (cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
+                        if(data_size_expected == data_size_recv) {
 
-                            // Call user cb
                             #ifdef WEBUI_LOG
-                                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Calling user callback...\n[Call]\n", recvNum);
+                                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Expected and received %zu bytes of data.\n", recvNum, data_size_expected);
                             #endif
-                            e.bind_id = cb_index;
-                            _webui_core.cb[cb_index](&e);
+
+                            // Create new event
+                            webui_event_t e;
+                            e.window = win->window_number;
+                            e.event_type = WEBUI_EVENT_CALLBACK;
+                            e.element = element;
+                            e.event_number = event_num;
+
+                            // Call user function
+                            size_t cb_index = _webui_get_cb_index(webui_internal_id);
+                            if (cb_index > 0 && _webui_core.cb[cb_index] != NULL) {
+
+                                // Call user cb
+                                #ifdef WEBUI_LOG
+                                    printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Calling user callback...\n[Call]\n", recvNum);
+                                #endif
+                                e.bind_id = cb_index;
+                                _webui_core.cb[cb_index](&e);
+                            }
+
+                            // Check the response
+                            if (_webui_is_empty(event_inf->response))
+                                event_inf->response = (char*)"";
+
+                            #ifdef WEBUI_LOG
+                                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> user-callback response [%s]\n", recvNum, event_inf->response);
+                            #endif
+
+                            // Packet Protocol Format:
+                            // [...]
+                            // [CMD]
+                            // [CallResponse]
+
+                            // Send the packet
+                            _webui_send(win, win->token, packet_id, WEBUI_CMD_CALL_FUNC, event_inf->response, _webui_strlen(event_inf->response));
+
+                            // Free event
+                            _webui_free_mem((void*)event_inf->response);
                         }
+                        else {
 
-                        // Check the response
-                        if (_webui_is_empty(event_inf->response))
-                            event_inf->response = (char*)"";
+                            // WebSocket/Civetweb did not send all the data as expected.
+                            #ifdef WEBUI_LOG
+                                printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> No enough data received. Expected %zu bytes, received %zu bytes.\n", recvNum, data_size_expected, data_size_recv);
+                            #endif
 
-                        #ifdef WEBUI_LOG
-                            printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> user-callback response [%s]\n", recvNum, event_inf->response);
-                        #endif
+                            // Send a void response to solve `.call()` promise
 
-                        // Packet Protocol Format:
-                        // [...]
-                        // [CMD]
-                        // [CallResponse]
+                            // Packet Protocol Format:
+                            // [...]
+                            // [CMD]
+                            // [CallResponse]
 
-                        // Send the packet
-                        _webui_send(win, win->token, packet_id, WEBUI_CMD_CALL_FUNC, event_inf->response, _webui_strlen(event_inf->response));
+                            // Send the packet
+                            _webui_send(win, win->token, packet_id, WEBUI_CMD_CALL_FUNC, NULL, 0);
+                        }
 
                         // Free event
                         _webui_free_mem((void*)webui_internal_id);
-                        _webui_free_mem((void*)event_inf->response);
                         _webui_free_mem((void*)event_inf);
                     }
                     #ifdef WEBUI_LOG
