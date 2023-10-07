@@ -6,55 +6,55 @@
 // Include C++ STD
 #include <iostream>
 #include <sstream>
-#include <string>
 #include <stdexcept>
+#include <string>
 
 void my_function_exit(webui::window::event* e) {
 
-    // Close all opened windows
-    webui::exit();
+	// Close all opened windows
+	webui::exit();
 }
 
 void my_function_count(webui::window::event* e) {
 
-    // This function gets called every time the user clicks on "MyButton1"
+	// This function gets called every time the user clicks on "MyButton1"
 
-    // Create a buffer to hold the response
-    char response[64];
+	// Create a buffer to hold the response
+	char response[64];
 
-    // This is another way to create a buffer:
-    //  std::string buffer;
-    //  buffer.reserve(64);
-    //  my_window.script(..., ..., &buffer[0], 64);
+	// This is another way to create a buffer:
+	//  std::string buffer;
+	//  buffer.reserve(64);
+	//  my_window.script(..., ..., &buffer[0], 64);
 
-    // Run JavaScript
-    if(!e->get_window().script("return GetCount();", 0, response, 64)) {
+	// Run JavaScript
+	if (!e->get_window().script("return GetCount();", 0, response, 64)) {
 
-        if(!e->get_window().is_shown())
-          std::cout << "Window closed." << std::endl;
-        else
-          std::cout << "JavaScript Error: " << response << std::endl;
-        return;
-    }
+		if (!e->get_window().is_shown())
+			std::cout << "Window closed." << std::endl;
+		else
+			std::cout << "JavaScript Error: " << response << std::endl;
+		return;
+	}
 
-    // Get the count
-    int count = std::stoi(response);
+	// Get the count
+	int count = std::stoi(response);
 
-    // Increment
-    count++;
+	// Increment
+	count++;
 
-    // Generate a JavaScript
-    std::stringstream js;
-    js << "SetCount(" << count << ");";
+	// Generate a JavaScript
+	std::stringstream js;
+	js << "SetCount(" << count << ");";
 
-    // Run JavaScript (Quick Way)
-    e->get_window().run(js.str());
+	// Run JavaScript (Quick Way)
+	e->get_window().run(js.str());
 }
 
 int main() {
 
-    // HTML
-    const std::string my_html = R"V0G0N(
+	// HTML
+	const std::string my_html = R"V0G0N(
       <html>
         <head>
           <meta charset="UTF-8">
@@ -102,24 +102,22 @@ int main() {
       </html>
     )V0G0N";
 
-    // Create a window
-    webui::window my_window;
+	// Create a window
+	webui::window my_window;
 
-    // Bind HTML elements with C++ functions
-    my_window.bind("MyButton1", my_function_count);
-    my_window.bind("MyButton2", my_function_exit);
+	// Bind HTML elements with C++ functions
+	my_window.bind("MyButton1", my_function_count);
+	my_window.bind("MyButton2", my_function_exit);
 
-    // Show the window
-    my_window.show(my_html); // my_window.show_browser(my_html, Chrome);
+	// Show the window
+	my_window.show(my_html); // my_window.show_browser(my_html, Chrome);
 
-    // Wait until all windows get closed
-    webui::wait();
+	// Wait until all windows get closed
+	webui::wait();
 
-    return 0;
+	return 0;
 }
 
 #if defined(_MSC_VER)
-    int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow) {
-        main();
-    }
+int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hInstPrev, PSTR cmdline, int cmdshow) { main(); }
 #endif
