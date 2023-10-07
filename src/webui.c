@@ -4926,6 +4926,10 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 
         // Refresh an existing running window
 
+        win->html_handled = false;
+        win->server_handled = false;
+        win->bridge_handled = false;
+
         // Packet Protocol Format:
         // [...]
         // [CMD]
