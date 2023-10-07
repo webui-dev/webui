@@ -1943,6 +1943,57 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
     #endif
 }
 
+const char* webui_interface_get_string_at(size_t window, size_t event_number, size_t index) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_interface_get_string_at([%zu], [%zu], [%zu])...\n", window, event_number, index);
+    #endif
+
+    // New Event
+    webui_event_t e;
+    e.window = window;
+    e.event_type = 0;
+    e.element = NULL;
+    e.event_number = event_number;
+    e.bind_id = 0;
+
+    return webui_get_string_at(&e, index);
+}
+
+long long int webui_interface_get_int_at(size_t window, size_t event_number, size_t index) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_interface_get_int_at([%zu], [%zu], [%zu])...\n", window, event_number, index);
+    #endif
+
+    // New Event
+    webui_event_t e;
+    e.window = window;
+    e.event_type = 0;
+    e.element = NULL;
+    e.event_number = event_number;
+    e.bind_id = 0;
+
+    return webui_get_int_at(&e, index);
+}
+
+bool webui_interface_get_bool_at(size_t window, size_t event_number, size_t index) {
+
+    #ifdef WEBUI_LOG
+        printf("[User] webui_interface_get_bool_at([%zu], [%zu], [%zu])...\n", window, event_number, index);
+    #endif
+
+    // New Event
+    webui_event_t e;
+    e.window = window;
+    e.event_type = 0;
+    e.element = NULL;
+    e.event_number = event_number;
+    e.bind_id = 0;
+
+    return webui_get_bool_at(&e, index);
+}
+
 size_t webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, size_t, size_t)) {
 
     #ifdef WEBUI_LOG
@@ -6116,7 +6167,7 @@ static WEBUI_THREAD_RECEIVE
                                 else {
 
                                     // Empty Result
-                                    memcpy(_webui_core.run_userBuffer[packet_id], 0x00, 1);
+                                    _webui_core.run_userBuffer[packet_id] = 0x00;
                                 }
 
                                 // Send ready signal to webui_script()

@@ -535,14 +535,19 @@ WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, voi
 // When using `webui_interface_bind()`, you may need this function to easily set your callback response.
 WEBUI_EXPORT void webui_interface_set_response(size_t window, size_t event_number, const char* response);
 
-/**
- * @brief Check if the app still running.
- * 
- * @example if (webui_interface_is_app_running()) ...
- */
+// Check if the app still running.
 WEBUI_EXPORT bool webui_interface_is_app_running(void);
 
 // Get a unique window ID.
 WEBUI_EXPORT size_t webui_interface_get_window_id(size_t window);
+
+// Get an argument as string at a specific index
+WEBUI_EXPORT const char* webui_interface_get_string_at(size_t window, size_t event_number, size_t index);
+
+// Get an argument as integer at a specific index
+WEBUI_EXPORT long long int webui_interface_get_int_at(size_t window, size_t event_number, size_t index);
+
+// Get an argument as boolean at a specific index
+WEBUI_EXPORT bool webui_interface_get_bool_at(size_t window, size_t event_number, size_t index);
 
 #endif /* _WEBUI_H */
