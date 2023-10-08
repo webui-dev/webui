@@ -32,9 +32,9 @@
 ## Features
 
 - Written in Pure C
-- Fully Independent (*No need for any third-party runtimes*)
+- Fully Independent (_No need for any third-party runtimes_)
 - Lightweight ~200 Kb & Small memory footprint
-- Fast binary communication protocol between WebUI and the browser (*Instead of JSON*)
+- Fast binary communication protocol between WebUI and the browser (_Instead of JSON_)
 - One header file
 - Multi-platform & Multi-Browser
 - Using private profile for safety
@@ -51,7 +51,7 @@ This [text editor](https://github.com/webui-dev/webui/tree/main/examples/C/text-
 
 ## UI & The Web Technologies
 
-[Borislav Stanimirov](https://ibob.bg/) discusses using HTML5 in the web browser as GUI at the [C++ Conference 2019 (*YouTube*)](https://www.youtube.com/watch?v=bbbcZd4cuxg).
+[Borislav Stanimirov](https://ibob.bg/) discusses using HTML5 in the web browser as GUI at the [C++ Conference 2019 (_YouTube_)](https://www.youtube.com/watch?v=bbbcZd4cuxg).
 
 <!-- <div align="center">
   <a href="https://www.youtube.com/watch?v=bbbcZd4cuxg"><img src="https://img.youtube.com/vi/bbbcZd4cuxg/0.jpg" alt="Embrace Modern Technology: Using HTML 5 for GUI in C++ - Borislav Stanimirov - CppCon 2019"></a>
@@ -81,38 +81,42 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ### Runtime Dependencies Comparison
 
-|  | WebView | Qt | WebUI |
-| ------ | ------ | ------ | ------ |
-| Runtime Dependencies on Windows | *WebView2* | *QtCore, QtGui, QtWidgets* | ***A Web Browser*** |
-| Runtime Dependencies on Linux | *GTK3, WebKitGTK* | *QtCore, QtGui, QtWidgets* | ***A Web Browser*** |
-| Runtime Dependencies on macOS | *Cocoa, WebKit* | *QtCore, QtGui, QtWidgets* | ***A Web Browser*** |
+|                                 | WebView           | Qt                         | WebUI               |
+| ------------------------------- | ----------------- | -------------------------- | ------------------- |
+| Runtime Dependencies on Windows | _WebView2_        | _QtCore, QtGui, QtWidgets_ | **_A Web Browser_** |
+| Runtime Dependencies on Linux   | _GTK3, WebKitGTK_ | _QtCore, QtGui, QtWidgets_ | **_A Web Browser_** |
+| Runtime Dependencies on macOS   | _Cocoa, WebKit_   | _QtCore, QtGui, QtWidgets_ | **_A Web Browser_** |
 
 ## Documentation
 
 > **Note**
 > We are currently writing documentation.
 
- - [Online Documentation - C](https://webui.me/docs/#/c_api)
- - [Online Documentation - C++](https://webui.me/docs/#/cpp_api)
+- [Online Documentation - C](https://webui.me/docs/#/c_api)
+- [Online Documentation - C++](https://webui.me/docs/#/cpp_api)
 
 ## Build
 
 - **Windows**
+
   ```powershell
   # GCC
   mingw32-make
-  
+
   # MSVC
   nmake -f Makefile.nmake
   ```
+
 - **Linux**
+
   ```sh
   # GCC
   make
-  
+
   # Clang
   make CC=clang
   ```
+
 - **macOS**
   ```sh
   make
@@ -125,31 +129,31 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ## Wrappers
 
-| Language | Status | Link |
-| ------ | ------ | ------ |
-| Go | ✔️ | [Go-WebUI](https://github.com/webui-dev/go-webui) |
-| Nim | ✔️ | [Nim-WebUI](https://github.com/webui-dev/nim-webui) |
-| Pascal | ✔️ | [Pascal-WebUI](https://github.com/webui-dev/pascal-webui) |
-| Python | ✔️ | [Python-WebUI](https://github.com/webui-dev/python-webui) |
-| Rust | *not complete* | [Rust-WebUI](https://github.com/webui-dev/rust-webui) |
-| TypeScript / JavaScript | ✔️ | [Deno-WebUI](https://github.com/webui-dev/deno-webui) |
-| V | ✔️ | [V-WebUI](https://github.com/webui-dev/v-webui) |
-| Zig | *not complete* | [Zig-WebUI](https://github.com/webui-dev/zig-webui) |
+| Language                | Status         | Link                                                      |
+| ----------------------- | -------------- | --------------------------------------------------------- |
+| Go                      | ✔️             | [Go-WebUI](https://github.com/webui-dev/go-webui)         |
+| Nim                     | ✔️             | [Nim-WebUI](https://github.com/webui-dev/nim-webui)       |
+| Pascal                  | ✔️             | [Pascal-WebUI](https://github.com/webui-dev/pascal-webui) |
+| Python                  | ✔️             | [Python-WebUI](https://github.com/webui-dev/python-webui) |
+| Rust                    | _not complete_ | [Rust-WebUI](https://github.com/webui-dev/rust-webui)     |
+| TypeScript / JavaScript | ✔️             | [Deno-WebUI](https://github.com/webui-dev/deno-webui)     |
+| V                       | ✔️             | [V-WebUI](https://github.com/webui-dev/v-webui)           |
+| Zig                     | _not complete_ | [Zig-WebUI](https://github.com/webui-dev/zig-webui)       |
 
 ## Supported Web Browsers
 
-| Browser | Windows | macOS | Linux |
-| ------ | ------ | ------ | ------ |
-| Mozilla Firefox | ✔️ | ✔️ | ✔️ |
-| Google Chrome | ✔️ | ✔️ | ✔️ |
-| Microsoft Edge | ✔️ | ✔️ | ✔️ |
-| Chromium | ✔️ | ✔️ | ✔️ |
-| Yandex | ✔️ | ✔️ | ✔️ |
-| Brave | ✔️ | ✔️ | ✔️ |
-| Vivaldi | ✔️ | ✔️ | ✔️ |
-| Epic | ✔️ | ✔️ | *not available* |
-| Apple Safari | *not available* | *coming soon* | *not available* |
-| Opera | *coming soon* | *coming soon* | *coming soon* |
+| Browser         | Windows         | macOS         | Linux           |
+| --------------- | --------------- | ------------- | --------------- |
+| Mozilla Firefox | ✔️              | ✔️            | ✔️              |
+| Google Chrome   | ✔️              | ✔️            | ✔️              |
+| Microsoft Edge  | ✔️              | ✔️            | ✔️              |
+| Chromium        | ✔️              | ✔️            | ✔️              |
+| Yandex          | ✔️              | ✔️            | ✔️              |
+| Brave           | ✔️              | ✔️            | ✔️              |
+| Vivaldi         | ✔️              | ✔️            | ✔️              |
+| Epic            | ✔️              | ✔️            | _not available_ |
+| Apple Safari    | _not available_ | _coming soon_ | _not available_ |
+| Opera           | _coming soon_   | _coming soon_ | _coming soon_   |
 
 ### License
 

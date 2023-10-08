@@ -29,7 +29,7 @@ if (!$?) {
     if (!$?) {
         Write-Host "Error: Please install Python."
         Set-Location $current_location
-        exit 
+        exit
     }
     else {
         $python_cmd = "python"

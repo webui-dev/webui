@@ -1,6 +1,6 @@
 /*
   WebUI Bridge Utils
-  
+
   Copyright (c) 2023 Oculi Julien.
   Licensed under MIT License.
   All rights reserved.
@@ -18,37 +18,35 @@
  * @param {boolean | AddEventListenerOptions} [options] - Event listener options (same as for addEventListener).
  * @returns the used observer to allow disconnect.
  */
-export function addRefreshableEventListener<
-	K extends keyof HTMLElementEventMap
->(
+export function addRefreshableEventListener<K extends keyof HTMLElementEventMap>(
 	root: HTMLElement,
 	targetSelector: string,
 	type: K,
 	listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => unknown,
-	options?: boolean | AddEventListenerOptions
+	options?: boolean | AddEventListenerOptions,
 ) {
 	function rebindListener(mutations: MutationRecord[]) {
 		for (const mutation of mutations) {
 			for (const node of mutation.addedNodes) {
-				if (!(node instanceof HTMLElement)) return // Target only html elements
+				if (!(node instanceof HTMLElement)) return; // Target only html elements
 				if (node.matches(targetSelector)) {
 					// Bind event on added nodes
-					node.addEventListener<K>(type, listener, options)
+					node.addEventListener<K>(type, listener, options);
 				}
 				for (const child of node.querySelectorAll(targetSelector)) {
-					if (!(child instanceof HTMLElement)) continue //Target only html elements
-					child.addEventListener<K>(type, listener, options)
+					if (!(child instanceof HTMLElement)) continue; //Target only html elements
+					child.addEventListener<K>(type, listener, options);
 				}
 			}
 		}
 	}
 
-	const observer = new MutationObserver(rebindListener) //Set mutation observer callback
-	observer.observe(root, { subtree: true, childList: true }) // Observe root element and all his children
-	return observer // Allow user to stop observer for performance issues
+	const observer = new MutationObserver(rebindListener); //Set mutation observer callback
+	observer.observe(root, { subtree: true, childList: true }); // Observe root element and all his children
+	return observer; // Allow user to stop observer for performance issues
 }
 
 /**
  * Async function constructor
  */
-export const AsyncFunction = async function () {}.constructor
+export const AsyncFunction = async function () {}.constructor;

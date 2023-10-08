@@ -1,103 +1,113 @@
 body {
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    font-family: 'Courier New', Courier, monospace;
-    background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
-    background-repeat: no-repeat;
-    background-position: center center;
-    background-size: cover;
-    background-attachment : fixed;
-    color: #ddecf9;
+	margin: 0;
+	padding: 0;
+	height: 100vh;
+	font-family: 'Courier New', Courier, monospace;
+	background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
+	background-repeat: no-repeat;
+	background-position: center center;
+	background-size: cover;
+	background-attachment: fixed;
+	color: #ddecf9;
 }
 
 .topbar {
-    width: 100%;
-    height: 4px;
-    background-image: linear-gradient(to right, #4ed2e7 0%, #db57eb 50%, #f98818 100%);
+	width: 100%;
+	height: 4px;
+	background-image: linear-gradient(to right, #4ed2e7 0%, #db57eb 50%, #f98818 100%);
 }
 
 header {
-    color: #fff;
+	color: #fff;
 }
 
 /* Nav */
 
 nav {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 25%, rgba(255, 255, 255, 0.2) 75%, rgba(255, 255, 255, 0) 100%);
-    box-shadow: 0 0 25px rgba(0, 0, 0, 0.1), inset 0 0 1px rgba(255, 255, 255, 0.6);
-    text-align: center;
+	background: linear-gradient(
+		90deg,
+		rgba(255, 255, 255, 0) 0%,
+		rgba(255, 255, 255, 0.2) 25%,
+		rgba(255, 255, 255, 0.2) 75%,
+		rgba(255, 255, 255, 0) 100%
+	);
+	box-shadow:
+		0 0 25px rgba(0, 0, 0, 0.1),
+		inset 0 0 1px rgba(255, 255, 255, 0.6);
+	text-align: center;
 }
 
 nav button {
-    background: none;
-    border: none;
-    text-shadow: 1px 1px 2px #000000;
-    font-family: 'Font Awesome 5 Free';
-    font-size: 18px;
-    color: #ddecf9;
-    cursor: pointer;
-    margin: 0 auto;
-    padding: 18px;
+	background: none;
+	border: none;
+	text-shadow: 1px 1px 2px #000000;
+	font-family: 'Font Awesome 5 Free';
+	font-size: 18px;
+	color: #ddecf9;
+	cursor: pointer;
+	margin: 0 auto;
+	padding: 18px;
 }
 
 nav button:hover {
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1), inset 0 0 1px rgba(255, 255, 255, 0.6);
-    background: rgba(255, 255, 255, 0.1);
+	box-shadow:
+		0 0 10px rgba(0, 0, 0, 0.1),
+		inset 0 0 1px rgba(255, 255, 255, 0.6);
+	background: rgba(255, 255, 255, 0.1);
 }
 
 nav #save-btn:disabled {
-    pointer-events: none;
-    color: #7ca0df;
+	pointer-events: none;
+	color: #7ca0df;
 }
 
 nav button i {
-    /* Click through the icon in the button */
-    pointer-events: none;
+	/* Click through the icon in the button */
+	pointer-events: none;
 }
 
 /* Code */
 
 .main {
-    padding: 0px;
+	padding: 0px;
 }
 
 /* About */
 
 .about-box {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%; 
-    background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
+	display: none;
+	position: fixed;
+	z-index: 1;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
 }
 
 .about-box-content {
-    background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
-    position: absolute;
-    margin: 0;
-    padding: 10px;
-    width: 30%;
-    border-radius: 5px;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+	background-image: linear-gradient(to right top, #8e44ad 0%, #3498db 100%);
+	position: absolute;
+	margin: 0;
+	padding: 10px;
+	width: 30%;
+	border-radius: 5px;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
 }
 
 .about-box-content h1 {
-    text-align: center;
+	text-align: center;
 }
 
 .about-box-content a {
-    color: inherit;
+	color: inherit;
 }
 
 .CodeMirror {
-    height: 100%;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 16px;
-    text-shadow: 1px 1px 2px #000000;
+	height: 100%;
+	font-family: 'Courier New', Courier, monospace;
+	font-size: 16px;
+	text-shadow: 1px 1px 2px #000000;
 }

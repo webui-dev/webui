@@ -1,4 +1,3 @@
-
 # WebUI Bridge
 
 The WebUI Bridge connects the UI (_Web Browser_) with the backend application through WebSocket. This bridge is written in TypeScript, and it needs to be transpiled to JavaScript using [ESBuild](https://esbuild.github.io/) to produce `webui_bridge.js`, then converted to C99 header using the Python script `js2c.py` to generate `webui_bridge.h`.
@@ -17,7 +16,7 @@ The WebUI Bridge connects the UI (_Web Browser_) with the backend application th
 - cd `webui\bridge`
 - `./build.ps1`
 - If you get _running scripts is disabled on this
-system_ error. Then run `Set-ExecutionPolicy RemoteSigned` to enable script execution. After done, you can roll back by running `Set-ExecutionPolicy Restricted`
+  system_ error. Then run `Set-ExecutionPolicy RemoteSigned` to enable script execution. After done, you can roll back by running `Set-ExecutionPolicy Restricted`
 
 ### Linux
 
