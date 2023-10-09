@@ -4,5 +4,5 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.{c,cpp,h,hpp,Makefile,js,ts,css,html}]
+[*.{c,cpp,h,hpp,Makefile,GNUmakefile,js,ts,css,html}]
 indent_style = tab
