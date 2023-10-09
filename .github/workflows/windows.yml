@@ -44,14 +44,14 @@ jobs:
       - name: Build Debug Target
         run: |
           if ('${{ matrix.compiler }}' -eq 'MSVC') {
-            nmake -f ./Makefile.nmake debug
+            nmake debug
           } else {
             mingw32-make debug
           }
       - name: Build Release Target
         run: |
           if ('${{ matrix.compiler }}' -eq 'MSVC') {
-            nmake -f ./Makefile.nmake
+            nmake
           } else {
             mingw32-make
           }
