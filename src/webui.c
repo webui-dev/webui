@@ -240,7 +240,7 @@ static bool _webui_browser_start_brave(_webui_window_t* win, const char* address
 static bool _webui_browser_start_firefox(_webui_window_t* win, const char* address);
 static bool _webui_browser_start_yandex(_webui_window_t* win, const char* address);
 static bool _webui_browser_start_chromium(_webui_window_t* win, const char* address);
-static bool _webui_browser_start(_webui_window_t* win, const char* address, size_t browser);
+static bool _webui_browser_start(_webui_window_t* win, const char* address, size_t _browser);
 static long _webui_timer_diff(struct timespec* start, struct timespec* end);
 static void _webui_timer_start(_webui_timer_t* t);
 static bool _webui_timer_is_end(_webui_timer_t* t, size_t ms);
@@ -291,6 +291,7 @@ static uint16_t _webui_get_id(const char* data);
 static uint32_t _webui_get_token(const char* data);
 static uint32_t _webui_generate_random_uint32();
 static const char* _webui_url_encode(const char* str);
+static bool _webui_regular_open_url(const char* url);
 static WEBUI_THREAD_SERVER_START;
 static WEBUI_THREAD_RECEIVE;
 
@@ -1025,12 +1026,8 @@ bool webui_show(size_t window, const char* content) {
 		return false;
 	_webui_window_t* win = _webui_core.wins[window];
 
-	// Find the best web browser to use
-	size_t browser =
-	    _webui_core.current_browser != 0 ? _webui_core.current_browser : _webui_find_the_best_browser(win);
-
 	// Show the window
-	return _webui_show(win, content, browser);
+	return _webui_show(win, content, AnyBrowser);
 }
 
 bool webui_show_browser(size_t window, const char* content, size_t browser) {
@@ -4707,19 +4704,28 @@ static bool _webui_browser_start_chromium(_webui_window_t* win, const char* addr
 		return false;
 }
 
-static bool _webui_browser_start(_webui_window_t* win, const char* address, size_t browser) {
+static bool _webui_browser_start(_webui_window_t* win, const char* address, size_t _browser) {
 
 #ifdef WEBUI_LOG
-	printf("[Core]\t\t_webui_browser_start([%s], [%zu])...\n", address, browser);
+	printf("[Core]\t\t_webui_browser_start([%s], [%zu])...\n", address, _browser);
 #endif
 
 	// Non existing browser
-	if (browser > 12)
+	if (_browser > 12)
 		return false;
 
 	// No browser mode
-	if (browser == NoBrowser)
+	if (_browser == NoBrowser)
 		return true;
+
+	// Find the best web browser to use
+	size_t browser = _browser;
+	if (browser == AnyBrowser) {
+		browser =
+			_webui_core.current_browser != 0 ? 
+				_webui_core.current_browser :
+				_webui_find_the_best_browser(win);
+	}
 
 	// Current browser used in the last opened window
 	if (browser == AnyBrowser && _webui_core.current_browser != 0)
@@ -5095,16 +5101,20 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		// Start a new window
 
 		// Run browser
+		bool runBrowser = false;
 		if (!_webui_browser_start(win, win->url, browser)) {
-			if (!_webui_regular_open_url(win->url)) {
+			if (browser == AnyBrowser && _webui_regular_open_url(win->url))
+				runBrowser = true;
+		} else runBrowser = true;
 
-				// Browser not available
-				_webui_free_mem((void*)win->html);
-				_webui_free_mem((void*)win->url);
-				_webui_free_port(win->server_port);
-				_webui_free_port(win->ws_port);
-				return false;
-			}
+		if (!runBrowser) {
+
+			// Browser not available
+			_webui_free_mem((void*)win->html);
+			_webui_free_mem((void*)win->url);
+			_webui_free_port(win->server_port);
+			_webui_free_port(win->ws_port);
+			return false;
 		}
 
 		_webui_core.ui = true;
