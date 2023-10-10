@@ -83,8 +83,8 @@ typedef struct _webui_timer_t {
 
 // Event data
 typedef struct webui_event_inf_t {
-	char* event_data[WEBUI_MAX_ARG];  // Event data (string | num | bool | raw)
-	size_t event_size[WEBUI_MAX_ARG]; // Event data size (in bytes)
+	char* event_data[WEBUI_MAX_ARG + 1];  // Event data (string | num | bool | raw)
+	size_t event_size[WEBUI_MAX_ARG + 1]; // Event data size (in bytes)
 	char* response;                   // Event response (string)
 } webui_event_inf_t;
 
