@@ -10,7 +10,7 @@ WEBUI_BUILD_FLAGS = /Fo"webui.obj" /c /EHsc "$(MAKEDIR)/src/webui.c" /I"$(MAKEDI
 
 # Output Commands
 LIB_STATIC_OUT = /OUT:"webui-2-static.lib" "webui.obj" "civetweb.obj"
-LIB_DYN_OUT = /DLL /OUT:"webui-2.dll" "webui.obj" "civetweb.obj" user32.lib Advapi32.lib
+LIB_DYN_OUT = /DLL /OUT:"webui-2.dll" "webui.obj" "civetweb.obj" user32.lib Advapi32.lib Shell32.lib
 
 # == 2.TARGETS ================================================================
 

@@ -16,10 +16,10 @@ debug:
 !ENDIF
 #	Static with Debug info
 	@echo Build C99 Example (Static Debug)...
-	@cl /Zi main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /MACHINE:X64 /SUBSYSTEM:CONSOLE webui-2-static.lib user32.lib Advapi32.lib /OUT:main.exe 1>NUL 2>&1
+	@cl /Zi main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /MACHINE:X64 /SUBSYSTEM:CONSOLE webui-2-static.lib user32.lib Advapi32.lib Shell32.lib /OUT:main.exe 1>NUL 2>&1
 #	Dynamic with Debug info
 	@echo Build C99 Example (Dynamic Debug)...
-	@cl /Zi main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /MACHINE:X64 /SUBSYSTEM:CONSOLE webui-2.lib user32.lib Advapi32.lib /OUT:main-dyn.exe 1>NUL 2>&1
+	@cl /Zi main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /MACHINE:X64 /SUBSYSTEM:CONSOLE webui-2.lib user32.lib Advapi32.lib Shell32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 #	Clean
 	@- del *.exp >nul 2>&1
 	@- del *.ilk >nul 2>&1
@@ -34,10 +34,10 @@ release:
 !ENDIF
 #	Static Release
 	@echo Build C99 Example (Static Release)...
-	@cl main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /MACHINE:X64 /SUBSYSTEM:WINDOWS webui-2-static.lib user32.lib Advapi32.lib /OUT:main.exe 1>NUL 2>&1
+	@cl main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /MACHINE:X64 /SUBSYSTEM:WINDOWS webui-2-static.lib user32.lib Advapi32.lib Shell32.lib /OUT:main.exe 1>NUL 2>&1
 #	Dynamic Release
 	@echo Build C99 Example (Dynamic Release)...
-	@cl main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /MACHINE:X64 /SUBSYSTEM:WINDOWS webui-2.lib user32.lib Advapi32.lib /OUT:main-dyn.exe 1>NUL 2>&1
+	@cl main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /MACHINE:X64 /SUBSYSTEM:WINDOWS webui-2.lib user32.lib Advapi32.lib Shell32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 #	Clean
 	@- del *.exp >nul 2>&1
 	@- del *.ilk >nul 2>&1
