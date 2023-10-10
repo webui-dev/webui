@@ -3164,7 +3164,7 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
 static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t browser) {
 
 #ifdef WEBUI_LOG
-	printf("[Core]\t\t_webui_browser_create_profile_folder(%zu)...\n", browser);
+	printf("[Core]\t\t_webui_browser_create_new_profile(%zu)...\n", browser);
 #endif
 
 	// Default local machine profile
@@ -3189,7 +3189,7 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
 	}
 
 #ifdef WEBUI_LOG
-	printf("[Core]\t\t_webui_browser_create_profile_folder(%zu) -> Generating WebUI profile...\n", browser);
+	printf("[Core]\t\t_webui_browser_create_new_profile(%zu) -> Generating WebUI profile...\n", browser);
 #endif
 
 	// Temp folder
@@ -3332,9 +3332,9 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
 			);
 #elif __APPLE__
 			fputs(
-			    ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) "
-			    "{--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not(["
-			    "inFullscreen]) #nav-bar{margin-top:calc(0px - "
+			    // ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) "
+			    // "{--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important} "
+			    ":root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - "
 			    "var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-"
 			    "toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-"
 			    "color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-"
@@ -5171,7 +5171,7 @@ static void _webui_ws_send(_webui_window_t* win, char* packet, size_t packets_si
 	printf("]\n");
 #endif
 
-	if (!win->connected || packet == NULL || packets_size < packets_size)
+	if (!win->connected || packet == NULL || packets_size < WEBUI_PROTOCOL_SIZE)
 		return;
 
 	int ret = 0;
