@@ -290,6 +290,7 @@ static void _webui_send(_webui_window_t* win, uint32_t token, uint16_t id, uint8
 static uint16_t _webui_get_id(const char* data);
 static uint32_t _webui_get_token(const char* data);
 static uint32_t _webui_generate_random_uint32();
+static const char* _webui_url_encode(const char* str);
 static WEBUI_THREAD_SERVER_START;
 static WEBUI_THREAD_RECEIVE;
 
@@ -2525,9 +2526,20 @@ static bool _webui_file_exist(char* file) {
 	if (_webui_is_empty(file))
 		return false;
 
-	if (WEBUI_FILE_EXIST(file, 0) == 0)
-		return true;
-	return false;
+#if defined(_WIN32)
+    // Convert UTF-8 to wide string on Windows
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, file, -1, NULL, 0);
+    wchar_t* wfilePath = (wchar_t*)_webui_malloc(wlen * sizeof(wchar_t));
+    if (!wfilePath)
+		return false;
+    MultiByteToWideChar(CP_UTF8, 0, file, -1, wfilePath, wlen);
+    DWORD dwAttrib = GetFileAttributesW(wfilePath);
+    _webui_free_mem((void*)wfilePath);
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+#else
+    // Linux / macOS
+    return (WEBUI_FILE_EXIST(file, 0) == 0);
+#endif
 }
 
 static const char* _webui_get_extension(const char* f) {
@@ -5046,9 +5058,10 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		win->html = NULL;
 
 		// Generate the URL
-		size_t url_len = 32 + _webui_strlen(content); // [http][domain][port][file]
+		const char* content_urlEncoded = _webui_url_encode(content);
+		size_t url_len = 32 + _webui_strlen(content) + _webui_strlen(content_urlEncoded); // [http][domain][port][file_encoded]
 		url = (char*)_webui_malloc(url_len);
-		sprintf(url, "http://localhost:%zu/%s", port, content);
+		sprintf(url, "http://localhost:%zu/%s", port, content_urlEncoded);
 	}
 
 	// Set URL
@@ -5306,6 +5319,34 @@ static void _webui_init(void) {
 	// unsigned char* c = (unsigned char*)&i;
 	// if (*c)
 	//     _webui_core.little_endian = true;
+}
+
+static const char* _webui_url_encode(const char* str) {
+
+#ifdef WEBUI_LOG
+	printf("[Core]\t\t_webui_url_encode()...\n");
+#endif
+
+    const char* hex = "0123456789ABCDEF";
+    size_t len = strlen(str);
+    char* encoded = (char*)_webui_malloc(4 * len + 1);
+    if (!encoded)
+		return NULL;
+
+    char* pOutput = encoded;
+    while (*str) {
+        unsigned char byte = (unsigned char)(*str);
+        if (isalnum(byte) || byte == '-' || byte == '_' || byte == '.' || byte == '~') {
+            *pOutput++ = byte;
+        } else {
+            *pOutput++ = '%';
+            *pOutput++ = hex[byte >> 4];
+            *pOutput++ = hex[byte & 15];
+        }
+        str++;
+    }
+
+    return (const char*)encoded;
 }
 
 static size_t _webui_get_cb_index(char* webui_internal_id) {
@@ -6980,8 +7021,12 @@ static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show) {
 	printf("[Core]\t\t_webui_system_win32()...\n");
 #endif
 
-	DWORD Return = 0;
-	DWORD CreationFlags = CREATE_NO_WINDOW;
+	// Convert UTF-8 to wide string
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, cmd, -1, NULL, 0);
+	wchar_t* wcmd = (wchar_t*)_webui_malloc(wlen * sizeof(wchar_t));
+    if (!wcmd)
+        return -1;
+    MultiByteToWideChar(CP_UTF8, 0, cmd, -1, wcmd, wlen);
 
 	/*
 	We should not kill this process, because may had many child
@@ -6999,17 +7044,20 @@ static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show) {
 	&ExtendedInfo, sizeof(ExtendedInfo));
 	*/
 
+	DWORD Return = 0;
+	DWORD CreationFlags = CREATE_NO_WINDOW;
+
 	if (show)
 		CreationFlags = SW_SHOW;
 
-	STARTUPINFOA si;
+	STARTUPINFOW si;
 	PROCESS_INFORMATION pi;
 	ZeroMemory(&si, sizeof(si));
 	si.cb = sizeof(si);
 	ZeroMemory(&pi, sizeof(pi));
-	if (!CreateProcessA(
+	if (!CreateProcessW(
 	        NULL,          // No module name (use command line)
-	        cmd,           // Command line
+	        wcmd,          // Command line
 	        NULL,          // Process handle not inheritable
 	        NULL,          // Thread handle not inheritable
 	        FALSE,         // Set handle inheritance to FALSE
@@ -7021,6 +7069,7 @@ static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show) {
 	    )) // Pointer to PROCESS_INFORMATION structure
 	{
 		// CreateProcess failed
+		_webui_free_mem((void*)wcmd);
 		return -1;
 	}
 
@@ -7032,6 +7081,7 @@ static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show) {
 	GetExitCodeProcess(pi.hProcess, &Return);
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
+	_webui_free_mem((void*)wcmd);
 
 	if (Return == 0)
 		return 0;
