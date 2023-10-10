@@ -18,7 +18,7 @@ To build an example, cd into its directory and run the make command.
   mingw32-make
 
   # MSVC
-  nmake -f Makefile.nmake
+  nmake
   ```
 
 - **Linux**

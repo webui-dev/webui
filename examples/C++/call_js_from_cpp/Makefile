@@ -1,120 +1,55 @@
 # WebUI C++ Example
+# Windows - Microsoft Visual C++
 
-# == 1. VARIABLES =============================================================
+SHELL = CMD
+LIB_DIR = ../../../dist
+INCLUDE_DIR = ../../../include
 
-PROJECT_DIR := $(shell git rev-parse --show-toplevel)
-LIB_DIR := $(PROJECT_DIR)/dist
-INCLUDE_DIR := $(PROJECT_DIR)/include
-
-# ARGS
-# Set a compiler when running on Linux via `make CC=g++` / `make CC=clang`
-CXX = g++
-# Build the WebUI library if running via `make BUILD_LIB=true`
-BUILD_LIB ?=
-
-# BUILD FLAGS
-STATIC_BUILD_FLAGS = -std=c++17 -lstdc++ main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
-DYN_BUILD_FLAGS = -std=c++17 -lstdc++ main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
-
-# Platform conditions
-ifeq ($(OS),Windows_NT)
-	# Windows
-	PLATFORM := windows
-	SHELL := CMD
-	STATIC_BUILD_FLAGS += -lwebui-2-static -lws2_32 -Wall -Wl,-subsystem=console -luser32 -static
-	DYN_BUILD_FLAGS += "$(LIB_DIR)/webui-2.dll" -lws2_32 -Wall -Wl,-subsystem=console -luser32
-	STATIC_OUT := main.exe
-	DYN_OUT := main-dyn.exe
-	LWS2_OPT := -lws2_32
-	STRIP_OPT := --strip-all
-else
-	STATIC_BUILD_FLAGS += -lpthread -lm -lwebui-2-static
-	DYN_BUILD_FLAGS += -lpthread -lm
-	STATIC_OUT := main
-	DYN_OUT := main-dyn
-	ifeq ($(shell uname),Darwin)
-		# MacOS
-		PLATFORM := macos
-		DYN_BUILD_FLAGS += "$(LIB_DIR)/webui-2.dylib"
-		CXX = clang
-	else
-		# Linux
-		PLATFORM := linux
-		DYN_BUILD_FLAGS += "$(LIB_DIR)/webui-2.so"
-		STRIP_OPT := --strip-all
-		ifeq ($(CXX),clang)
-			LLVM_OPT := llvm-
-		endif
-	endif
-endif
-
-# == 2.TARGETS ================================================================
+# Build the WebUI library if running `nmake BUILD_LIB=true`
+BUILD_LIB =
 
 all: release
 
-debug: LIB_DIR := $(LIB_DIR)/debug
-debug: --validate-args
-ifeq ($(BUILD_LIB),true)
-	@cd "$(PROJECT_DIR)" && $(MAKE) debug
-endif
+debug:
+!IF "$(BUILD_LIB)" == "true"
+	@cd "$(LIB_DIR)" && cd .. && $(MAKE) debug
+!ENDIF
 #	Static with Debug info
-	@echo "Build C99 Example ($(CXX) debug static)..."
-	@$(CXX) -g $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
+	@echo Build C++ Example (Debug Static)...
+	@cl /Zi /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /MACHINE:X64 /SUBSYSTEM:CONSOLE webui-2-static.lib user32.lib Advapi32.lib /OUT:main.exe 1>NUL 2>&1
 #	Dynamic with Debug info
-	@echo "Build C99 Example ($(CXX) debug dynamic)..."
-	@$(CXX) -g $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
+	@echo Build C++ Example (Debug Dynamic)...
+	@cl /Zi /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /MACHINE:X64 /SUBSYSTEM:CONSOLE webui-2.lib user32.lib Advapi32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 #	Clean
-ifeq ($(PLATFORM),windows)
-	@- del *.o >nul 2>&1
-else
-	@- rm -f *.o
-	@- rm -rf *.dSYM # macOS
-endif
-	@echo "Done."
+	@- del *.exp >nul 2>&1
+	@- del *.ilk >nul 2>&1
+	@- del *.lib >nul 2>&1
+	@- del *.obj >nul 2>&1
+	@- del *.pdb >nul 2>&1
+	@echo Done.
 
-release: --validate-args
-ifeq ($(BUILD_LIB),true)
-	@cd "$(PROJECT_DIR)" && $(MAKE)
-endif
+release:
+!IF "$(BUILD_LIB)" == "true"
+	@cd "$(LIB_DIR)" && cd .. && $(MAKE)
+!ENDIF
 #	Static Release
-	@echo "Build C99 Example ($(CXX) release static)..."
-	@$(CXX) -Os $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
-	@$(LLVM_OPT)strip $(STRIP_OPT) $(STATIC_OUT)
+	@echo Build C++ Example (Release Static)...
+	@cl /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /MACHINE:X64 /SUBSYSTEM:WINDOWS webui-2-static.lib user32.lib Advapi32.lib /OUT:main.exe 1>NUL 2>&1
 #	Dynamic Release
-	@echo "Build C99 Example ($(CXX) release dynamic)..."
-	@$(CXX) $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
-	@$(LLVM_OPT)strip $(STRIP_OPT) $(DYN_OUT)
+	@echo Build C++ Example (Release Dynamic)...
+	@cl /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /MACHINE:X64 /SUBSYSTEM:WINDOWS webui-2.lib user32.lib Advapi32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 #	Clean
-ifeq ($(PLATFORM),windows)
-	@- del *.o >nul 2>&1
-else
-	@- rm -f *.o
-	@- rm -rf *.dSYM # macOS
-endif
-	@echo "Done."
+	@- del *.exp >nul 2>&1
+	@- del *.ilk >nul 2>&1
+	@- del *.lib >nul 2>&1
+	@- del *.obj >nul 2>&1
+	@- del *.pdb >nul 2>&1
+	@echo Done.
 
-clean: --clean-$(PLATFORM)
-
-# INTERNAL TARGETS
-
---validate-args:
-ifneq ($(filter $(CXX),g++ clang),$(CXX))
-	$(error Invalid compiler specified: `$(CXX)`)
-endif
-
---clean-linux: --clean-unix
-
---clean-macos: --clean-unix
-
---clean-unix:
-	- rm -f *.o
-	- rm -f *.a
-	- rm -f *.so
-	- rm -f *.dylib
-	- rm -rf *.dSYM
-
---clean-windows:
-	- del *.o >nul 2>&1
-	- del *.dll >nul 2>&1
-	- del *.a >nul 2>&1
+clean:
+	- del *.obj >nul 2>&1
+	- del *.ilk >nul 2>&1
+	- del *.pdb >nul 2>&1
+	- del *.exp >nul 2>&1
 	- del *.exe >nul 2>&1
+	- del *.lib >nul 2>&1
