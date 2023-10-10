@@ -2517,6 +2517,27 @@ static bool _webui_file_exist_mg(_webui_window_t* win, struct mg_connection* con
 	return exist;
 }
 
+static bool _webui_regular_open_url(const char* url) {
+
+#ifdef WEBUI_LOG
+	printf("[Core]\t\t_webui_regular_open_url([%s])...\n", url);
+#endif
+
+#if defined(_WIN32)
+    HINSTANCE result = ShellExecuteA(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
+	return ((INT_PTR)result > 32);
+#elif defined(__APPLE__)
+    char command[1024];
+    snprintf(command, sizeof(command), "open \"%s\"", url);
+    return (system(command) == 0);
+#else
+    // Assuming Linux
+    char command[1024];
+    snprintf(command, sizeof(command), "xdg-open \"%s\"", url);
+    return (system(command) == 0);
+#endif
+}
+
 static bool _webui_file_exist(char* file) {
 
 #ifdef WEBUI_LOG
@@ -5075,13 +5096,15 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 
 		// Run browser
 		if (!_webui_browser_start(win, win->url, browser)) {
+			if (!_webui_regular_open_url(win->url)) {
 
-			// Browser not available
-			_webui_free_mem((void*)win->html);
-			_webui_free_mem((void*)win->url);
-			_webui_free_port(win->server_port);
-			_webui_free_port(win->ws_port);
-			return false;
+				// Browser not available
+				_webui_free_mem((void*)win->html);
+				_webui_free_mem((void*)win->url);
+				_webui_free_port(win->server_port);
+				_webui_free_port(win->ws_port);
+				return false;
+			}
 		}
 
 		_webui_core.ui = true;
