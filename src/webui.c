@@ -1132,7 +1132,7 @@ const char* webui_get_string_at(webui_event_t* e, size_t index) {
 	// Initialization
 	_webui_init();
 
-	if (index >= WEBUI_MAX_ARG)
+	if (index > WEBUI_MAX_ARG)
 		return NULL;
 
 	// Dereference
@@ -1163,7 +1163,7 @@ long long int webui_get_int_at(webui_event_t* e, size_t index) {
 	// Initialization & Dereference
 	// are done by webui_get_string()
 
-	if (index >= WEBUI_MAX_ARG)
+	if (index > WEBUI_MAX_ARG)
 		return 0;
 
 	const char* str = webui_get_string_at(e, index);
@@ -1189,7 +1189,7 @@ bool webui_get_bool_at(webui_event_t* e, size_t index) {
 	// Initialization & Dereference
 	// are done by webui_get_string()
 
-	if (index >= WEBUI_MAX_ARG)
+	if (index > WEBUI_MAX_ARG)
 		return false;
 
 	const char* str = webui_get_string_at(e, index);
@@ -1211,7 +1211,7 @@ size_t webui_get_size_at(webui_event_t* e, size_t index) {
 	// Initialization
 	_webui_init();
 
-	if (index >= WEBUI_MAX_ARG)
+	if (index > WEBUI_MAX_ARG)
 		return 0;
 
 	// Dereference
@@ -6367,7 +6367,7 @@ static WEBUI_THREAD_RECEIVE {
 						// New event inf
 						webui_event_inf_t* event_inf =
 						    (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
-						if (win->events_count >= WEBUI_MAX_ARG)
+						if (win->events_count > WEBUI_MAX_ARG)
 							win->events_count = 0;
 						size_t event_num = win->events_count++;
 						win->events[event_num] = event_inf;
@@ -6506,7 +6506,7 @@ static WEBUI_THREAD_RECEIVE {
 							webui_event_inf_t* event_inf =
 							    (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t)
 							    );
-							if (win->events_count >= WEBUI_MAX_ARG)
+							if (win->events_count > WEBUI_MAX_ARG)
 								win->events_count = 0;
 							size_t event_num = win->events_count++;
 							win->events[event_num] = event_inf;
@@ -6562,7 +6562,7 @@ static WEBUI_THREAD_RECEIVE {
 						// New event inf
 						webui_event_inf_t* event_inf =
 						    (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
-						if (win->events_count >= WEBUI_MAX_ARG)
+						if (win->events_count > WEBUI_MAX_ARG)
 							win->events_count = 0;
 						size_t event_num = win->events_count++;
 						win->events[event_num] = event_inf;
@@ -6575,7 +6575,7 @@ static WEBUI_THREAD_RECEIVE {
 						    [WEBUI_PROTOCOL_DATA + element_len + 1 + args_len + 1];
 						char* token = strtok(args_lens, ";");
 						size_t token_num = 0;
-						while (token != NULL) {
+						while (token != NULL && token_num < WEBUI_MAX_ARG+1) {
 
 							size_t arg_len = (size_t)strtoul(token, NULL, 10);
 							data_size_expected = data_size_expected + arg_len + 1;
@@ -6749,7 +6749,7 @@ static WEBUI_THREAD_RECEIVE {
 				// New event inf
 				webui_event_inf_t* event_inf =
 				    (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
-				if (win->events_count >= WEBUI_MAX_ARG)
+				if (win->events_count > WEBUI_MAX_ARG)
 					win->events_count = 0;
 				size_t event_num = win->events_count++;
 				win->events[event_num] = event_inf;
@@ -6790,7 +6790,7 @@ static WEBUI_THREAD_RECEIVE {
 				// New event inf
 				webui_event_inf_t* event_inf =
 				    (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
-				if (win->events_count >= WEBUI_MAX_ARG)
+				if (win->events_count > WEBUI_MAX_ARG)
 					win->events_count = 0;
 				size_t event_num = win->events_count++;
 				win->events[event_num] = event_inf;
