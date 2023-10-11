@@ -85,7 +85,7 @@ typedef struct _webui_timer_t {
 typedef struct webui_event_inf_t {
 	char* event_data[WEBUI_MAX_ARG + 1];  // Event data (string | num | bool | raw)
 	size_t event_size[WEBUI_MAX_ARG + 1]; // Event data size (in bytes)
-	char* response;                   // Event response (string)
+	char* response;                       // Event response (string)
 } webui_event_inf_t;
 
 // Window
@@ -2521,17 +2521,17 @@ static bool _webui_regular_open_url(const char* url) {
 #endif
 
 #if defined(_WIN32)
-    HINSTANCE result = ShellExecuteA(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
+	HINSTANCE result = ShellExecuteA(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL);
 	return ((INT_PTR)result > 32);
 #elif defined(__APPLE__)
-    char command[1024];
-    snprintf(command, sizeof(command), "open \"%s\"", url);
-    return (system(command) == 0);
+	char command[1024];
+	snprintf(command, sizeof(command), "open \"%s\"", url);
+	return (system(command) == 0);
 #else
-    // Assuming Linux
-    char command[1024];
-    snprintf(command, sizeof(command), "xdg-open \"%s\"", url);
-    return (system(command) == 0);
+	// Assuming Linux
+	char command[1024];
+	snprintf(command, sizeof(command), "xdg-open \"%s\"", url);
+	return (system(command) == 0);
 #endif
 }
 
@@ -2545,18 +2545,18 @@ static bool _webui_file_exist(char* file) {
 		return false;
 
 #if defined(_WIN32)
-    // Convert UTF-8 to wide string on Windows
-    int wlen = MultiByteToWideChar(CP_UTF8, 0, file, -1, NULL, 0);
-    wchar_t* wfilePath = (wchar_t*)_webui_malloc(wlen * sizeof(wchar_t));
-    if (!wfilePath)
+	// Convert UTF-8 to wide string on Windows
+	int wlen = MultiByteToWideChar(CP_UTF8, 0, file, -1, NULL, 0);
+	wchar_t* wfilePath = (wchar_t*)_webui_malloc(wlen * sizeof(wchar_t));
+	if (!wfilePath)
 		return false;
-    MultiByteToWideChar(CP_UTF8, 0, file, -1, wfilePath, wlen);
-    DWORD dwAttrib = GetFileAttributesW(wfilePath);
-    _webui_free_mem((void*)wfilePath);
-    return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+	MultiByteToWideChar(CP_UTF8, 0, file, -1, wfilePath, wlen);
+	DWORD dwAttrib = GetFileAttributesW(wfilePath);
+	_webui_free_mem((void*)wfilePath);
+	return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 #else
-    // Linux / macOS
-    return (WEBUI_FILE_EXIST(file, 0) == 0);
+	// Linux / macOS
+	return (WEBUI_FILE_EXIST(file, 0) == 0);
 #endif
 }
 
@@ -4722,9 +4722,7 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
 	size_t browser = _browser;
 	if (browser == AnyBrowser) {
 		browser =
-			_webui_core.current_browser != 0 ? 
-				_webui_core.current_browser :
-				_webui_find_the_best_browser(win);
+		    _webui_core.current_browser != 0 ? _webui_core.current_browser : _webui_find_the_best_browser(win);
 	}
 
 	// Current browser used in the last opened window
@@ -5086,7 +5084,8 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 
 		// Generate the URL
 		const char* content_urlEncoded = _webui_url_encode(content);
-		size_t url_len = 32 + _webui_strlen(content) + _webui_strlen(content_urlEncoded); // [http][domain][port][file_encoded]
+		size_t url_len = 32 + _webui_strlen(content) +
+		                 _webui_strlen(content_urlEncoded); // [http][domain][port][file_encoded]
 		url = (char*)_webui_malloc(url_len);
 		sprintf(url, "http://localhost:%zu/%s", port, content_urlEncoded);
 	}
@@ -5105,7 +5104,8 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		if (!_webui_browser_start(win, win->url, browser)) {
 			if (browser == AnyBrowser && _webui_regular_open_url(win->url))
 				runBrowser = true;
-		} else runBrowser = true;
+		} else
+			runBrowser = true;
 
 		if (!runBrowser) {
 
@@ -5360,26 +5360,26 @@ static const char* _webui_url_encode(const char* str) {
 	printf("[Core]\t\t_webui_url_encode()...\n");
 #endif
 
-    const char* hex = "0123456789ABCDEF";
-    size_t len = strlen(str);
-    char* encoded = (char*)_webui_malloc(4 * len + 1);
-    if (!encoded)
+	const char* hex = "0123456789ABCDEF";
+	size_t len = strlen(str);
+	char* encoded = (char*)_webui_malloc(4 * len + 1);
+	if (!encoded)
 		return NULL;
 
-    char* pOutput = encoded;
-    while (*str) {
-        unsigned char byte = (unsigned char)(*str);
-        if (isalnum(byte) || byte == '-' || byte == '_' || byte == '.' || byte == '~') {
-            *pOutput++ = byte;
-        } else {
-            *pOutput++ = '%';
-            *pOutput++ = hex[byte >> 4];
-            *pOutput++ = hex[byte & 15];
-        }
-        str++;
-    }
+	char* pOutput = encoded;
+	while (*str) {
+		unsigned char byte = (unsigned char)(*str);
+		if (isalnum(byte) || byte == '-' || byte == '_' || byte == '.' || byte == '~') {
+			*pOutput++ = byte;
+		} else {
+			*pOutput++ = '%';
+			*pOutput++ = hex[byte >> 4];
+			*pOutput++ = hex[byte & 15];
+		}
+		str++;
+	}
 
-    return (const char*)encoded;
+	return (const char*)encoded;
 }
 
 static size_t _webui_get_cb_index(char* webui_internal_id) {
@@ -7055,11 +7055,11 @@ static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show) {
 #endif
 
 	// Convert UTF-8 to wide string
-    int wlen = MultiByteToWideChar(CP_UTF8, 0, cmd, -1, NULL, 0);
+	int wlen = MultiByteToWideChar(CP_UTF8, 0, cmd, -1, NULL, 0);
 	wchar_t* wcmd = (wchar_t*)_webui_malloc(wlen * sizeof(wchar_t));
-    if (!wcmd)
-        return -1;
-    MultiByteToWideChar(CP_UTF8, 0, cmd, -1, wcmd, wlen);
+	if (!wcmd)
+		return -1;
+	MultiByteToWideChar(CP_UTF8, 0, cmd, -1, wcmd, wlen);
 
 	/*
 	We should not kill this process, because may had many child
