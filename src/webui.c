@@ -6575,7 +6575,7 @@ static WEBUI_THREAD_RECEIVE {
 						    [WEBUI_PROTOCOL_DATA + element_len + 1 + args_len + 1];
 						char* token = strtok(args_lens, ";");
 						size_t token_num = 0;
-						while (token != NULL) {
+						while (token != NULL && token_num < WEBUI_MAX_ARG+1) {
 
 							size_t arg_len = (size_t)strtoul(token, NULL, 10);
 							data_size_expected = data_size_expected + arg_len + 1;
