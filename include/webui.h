@@ -55,9 +55,10 @@
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <shellapi.h>
+
 #include <direct.h>
 #include <io.h>
+#include <shellapi.h>
 #include <tchar.h>
 #include <tlhelp32.h>
 #define WEBUI_GET_CURRENT_DIR _getcwd
