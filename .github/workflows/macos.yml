@@ -50,6 +50,8 @@ jobs:
           cp -r include dist
           # Add the ARTIFACT name(lowercased) as GitHub environment variable.
           artifact=webui-$(echo ${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
+          chmod -x dist/webui-2.dylib
+          chmod -x dist/debug/webui-2.dylib
           mv dist/ $artifact
           tar -czvf $artifact.tar.gz $artifact
           # Add the artifact name as GitHub environment variable for usage in later steps.
