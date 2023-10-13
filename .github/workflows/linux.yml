@@ -36,7 +36,7 @@ jobs:
         arch: [x64]
         include:
           - compiler: GCC
-            arch: aarch64
+            arch: arm64
           - compiler: GCC
             arch: arm
       fail-fast: false
@@ -52,14 +52,14 @@ jobs:
           if [ "${{ matrix.compiler }}" == "Clang" ]; then
             sudo ln -s llvm-ar-14 /usr/bin/llvm-ar
             sudo ln -s llvm-ranlib-14 /usr/bin/llvm-ranlib
-          elif [ "${{ matrix.arch }}" == "aarch64" ]; then
+          elif [ "${{ matrix.arch }}" == "arm64" ]; then
             sudo apt install gcc-aarch64-linux-gnu
           elif [ "${{ matrix.arch }}" == "arm" ]; then
             sudo apt install gcc-arm-linux-gnueabihf
           fi
       - name: Build Debug Target
         run: |
-          if [ "${{ matrix.arch }}" == "aarch64" ]; then
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
             make CC=aarch64-linux-gnu-gcc debug
           elif [ "${{ matrix.arch }}" == "arm" ]; then
             make CC=arm-linux-gnueabihf-gcc debug
@@ -69,7 +69,7 @@ jobs:
           fi
       - name: Build Release Target
         run: |
-          if [ "${{ matrix.arch }}" == "aarch64" ]; then
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
             make CC=aarch64-linux-gnu-gcc
           elif [ "${{ matrix.arch }}" == "arm" ]; then
             make CC=arm-linux-gnueabihf-gcc
