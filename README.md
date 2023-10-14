@@ -156,7 +156,8 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | Opera           | _coming soon_   | _coming soon_ | _coming soon_   |
 
 ### Who's integrating WebUI
-[Galaxy Browser](https://github.com/galaxydo/galaxy-browser) - interactive canvas-based knowledge management system, it allows users to write any javascript and python scripts directly on the canvas, then invoke them to be executed in Deno backend via WebUI, showing results as text and images appearing straight on the canvas.
+
+[Galaxy Browser](https://github.com/galaxydo/galaxy-browser) - interactive canvas-based knowledge management system. It allows users to write JavaScript and Python scripts directly on the canvas and invoke them in a Deno backend via WebUI. Results are shown as text and images appear straight on the canvas.
 
 ### License
 
