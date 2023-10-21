@@ -14,6 +14,7 @@
 // -- Third-party ---------------------
 #ifdef WEBUI_TLS
 // OpenSSL
+#include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
@@ -70,7 +71,7 @@
 #define WEBUI_SSL_EXPIRE (72*60*60) // SSL Expires (Integer)
 #define WEBUI_SSL_EXPIRE_STR "259201" // SSL Expires (String)
 #else
-#define WEBUI_SECURE "Non-Crypted"
+#define WEBUI_SECURE "Non-Encrypted"
 #define WEBUI_URL "http://" WEBUI_HOSTNAME
 #define WEBUI_WS_URL "ws://" WEBUI_HOSTNAME
 #endif
@@ -325,7 +326,8 @@ static uint32_t _webui_generate_random_uint32();
 static const char* _webui_url_encode(const char* str);
 static bool _webui_regular_open_url(const char* url);
 #ifdef WEBUI_TLS
-bool _webui_generate_self_signed_cert(char* ssl_cert, char* ssl_key);
+static int _webui_tls_initialization(void* ssl_ctx, void* ptr);
+static bool _webui_tls_generate_self_signed_cert(char* ssl_cert, char* ssl_key);
 #endif
 static WEBUI_THREAD_SERVER_START;
 static WEBUI_THREAD_RECEIVE;
@@ -5125,10 +5127,10 @@ static bool _webui_show(_webui_window_t* win, const char* content, size_t browse
 
 // TLS
 #ifdef WEBUI_TLS
-    static int _webui_tls_initialization(void* ssl_ctx, void* ptr) {
+static int _webui_tls_initialization(void* ssl_ctx, void* ptr) {
 
 #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_tls_initialization()...\n");
+	printf("[Core]\t\t_webui_tls_initialization()...\n");
 #endif
 
 	SSL_CTX* ctx = (SSL_CTX*)ssl_ctx;
@@ -5164,63 +5166,82 @@ static bool _webui_show(_webui_window_t* win, const char* content, size_t browse
 	return 0;
 }
 
-	bool _webui_generate_self_signed_cert(char* ssl_cert, char* ssl_key) {
+static bool _webui_tls_generate_self_signed_cert(char* ssl_cert, char* ssl_key) {
 
 #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_generate_self_signed_cert()...\n");
+	printf("[Core]\t\t_webui_tls_generate_self_signed_cert()...\n");
 #endif
-        int ret = 0;
-        int bits = 2048;
-        int serial = 0;
 
-        RSA* rsa = RSA_new();
-        BIGNUM* bignum = BN_new();
-        BN_set_word(bignum, RSA_F4);
-        RSA_generate_key_ex(rsa, bits, bignum, NULL);
+	int ret = 0;
+	int bits = 2048;
+	int serial = 0;
 
-        EVP_PKEY* pkey = EVP_PKEY_new();
-        ret = EVP_PKEY_assign_RSA(pkey, rsa);
-        if(ret != 1) return false;
+	EVP_PKEY* pkey = NULL;
+	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+	if (!ctx) return false;
 
-        X509* x509 = X509_new();
-        X509_set_version(x509, 2);
-        ASN1_INTEGER_set(X509_get_serialNumber(x509), serial);
-        X509_gmtime_adj(X509_get_notBefore(x509), 0);
-        X509_gmtime_adj(X509_get_notAfter(x509), (WEBUI_SSL_EXPIRE));
+	if (EVP_PKEY_keygen_init(ctx) <= 0 ||
+		EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, bits) <= 0 ||
+		EVP_PKEY_keygen(ctx, &pkey) <= 0) {
+		EVP_PKEY_CTX_free(ctx);
+		return false;
+	}
 
-        X509_NAME* name = X509_get_subject_name(x509);
-        X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1, 0); // Country
-        X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organization
-        X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organizational Unit
-        X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "WebUI", -1, -1, 0); // Common Name
-        X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
-        X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0); // Locality
+	EVP_PKEY_CTX_free(ctx);
 
-        X509_set_issuer_name(x509, name);
-        X509_set_pubkey(x509, pkey);
-        ret = X509_sign(x509, pkey, EVP_sha256());
-        if(ret <= 0) return false;
+	X509* x509 = X509_new();
+	X509_set_version(x509, 2);
+	ASN1_INTEGER_set(X509_get_serialNumber(x509), serial);
+	X509_gmtime_adj(X509_get_notBefore(x509), 0);
+	X509_gmtime_adj(X509_get_notAfter(x509), (WEBUI_SSL_EXPIRE));
 
-        BIO* bio_cert = BIO_new(BIO_s_mem());
-        ret = PEM_write_bio_X509(bio_cert, x509);
-        if(ret != 1) return false;
-        memset(ssl_cert, 0, WEBUI_SSL_SIZE);
-        BIO_read(bio_cert, ssl_cert, (WEBUI_SSL_SIZE - 1));
+	X509_NAME* name = X509_get_subject_name(x509);
+	X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1, 0); // Country
+	X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organization
+	X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organizational Unit
+	X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "WebUI", -1, -1, 0); // Common Name
+	X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
+	X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0); // Locality
 
-        BIO* bio_key = BIO_new(BIO_s_mem());
-        ret = PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
-        if(ret != 1) return false;
-        memset(ssl_key, 0, WEBUI_SSL_SIZE);
-        BIO_read(bio_key, ssl_key, (WEBUI_SSL_SIZE - 1));
+	X509_set_issuer_name(x509, name);
+	X509_set_pubkey(x509, pkey);
+	ret = X509_sign(x509, pkey, EVP_sha256());
+	if(ret <= 0) {
+		X509_free(x509);
+		EVP_PKEY_free(pkey);
+		return false;
+	}
 
-        X509_free(x509);
-        EVP_PKEY_free(pkey);
-        BN_free(bignum);
-        BIO_free_all(bio_cert);
-        BIO_free_all(bio_key);
+	BIO* bio_cert = BIO_new(BIO_s_mem());
+	ret = PEM_write_bio_X509(bio_cert, x509);
+	if(ret != 1) {
+		X509_free(x509);
+		EVP_PKEY_free(pkey);
+		BIO_free_all(bio_cert);
+		return false;
+	}
+	memset(ssl_cert, 0, WEBUI_SSL_SIZE);
+	BIO_read(bio_cert, ssl_cert, (WEBUI_SSL_SIZE - 1));
 
-        return true;
-    }
+	BIO* bio_key = BIO_new(BIO_s_mem());
+	ret = PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
+	if(ret != 1) {
+		X509_free(x509);
+		EVP_PKEY_free(pkey);
+		BIO_free_all(bio_cert);
+		BIO_free_all(bio_key);
+		return false;
+	}
+	memset(ssl_key, 0, WEBUI_SSL_SIZE);
+	BIO_read(bio_key, ssl_key, (WEBUI_SSL_SIZE - 1));
+
+	X509_free(x509);
+	EVP_PKEY_free(pkey);
+	BIO_free_all(bio_cert);
+	BIO_free_all(bio_key);
+
+	return true;
+}
 #endif
 
 static bool _webui_show_window(_webui_window_t* win, const char* content, bool is_embedded_html, size_t browser) {
@@ -5243,7 +5264,7 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		// Generate SSL self-signed certificate
 		char* ssl_cert = (char*) _webui_malloc(WEBUI_SSL_SIZE);
 		char* ssl_key = (char*) _webui_malloc(WEBUI_SSL_SIZE);
-		if(!_webui_generate_self_signed_cert(ssl_cert, ssl_key)) {
+		if(!_webui_tls_generate_self_signed_cert(ssl_cert, ssl_key)) {
 #ifdef WEBUI_LOG
 			printf("[Core]\t\t_webui_show_window() -> Generating self-signed TLS certificate failed.\n");
 #endif
@@ -5526,7 +5547,7 @@ static void _webui_init(void) {
 		return;
 
 #ifdef WEBUI_LOG
-	printf("[Core]\t\tWebUI v" WEBUI_VERSION " ("WEBUI_OS " " WEBUI_SECURE ")\n");
+	printf("[Core]\t\tWebUI v" WEBUI_VERSION " ("WEBUI_OS ", " WEBUI_SECURE ")\n");
 	printf("[Core]\t\t_webui_init()...\n");
 #endif
 

@@ -11,7 +11,7 @@
 #ifndef _WEBUI_H
 #define _WEBUI_H
 
-#define WEBUI_VERSION "2.4.0 (Beta)"
+#define WEBUI_VERSION "2.4.0-Beta"
 
 // Max windows, servers and threads
 #define WEBUI_MAX_IDS (256)
