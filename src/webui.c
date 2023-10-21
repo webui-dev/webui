@@ -12,6 +12,14 @@
 #define WEBUI_MAX_BUF (64000000)
 
 // -- Third-party ---------------------
+#ifdef WEBUI_TLS
+// OpenSSL
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
+#include <openssl/x509.h>
+#endif
 #define MG_BUF_LEN (WEBUI_MAX_BUF)
 #include "civetweb/civetweb.h"
 
@@ -54,6 +62,26 @@
 #define WEBUI_MAX_Y          (1800)      // Maximal window Y (4K Monitor)
 #define WEBUI_HOSTNAME       "localhost" // Host name to use `localhost` / `127.0.0.1`
 #define WEBUI_PROFILE_NAME   "WebUI"     // Default browser profile name (Used only for Firefox)
+#ifdef WEBUI_TLS
+#define WEBUI_SECURE "TLS-Encryption"
+#define WEBUI_URL "https://" WEBUI_HOSTNAME
+#define WEBUI_WS_URL "wss://" WEBUI_HOSTNAME
+#define WEBUI_SSL_SIZE (4096) // SSL Max PEM Size
+#define WEBUI_SSL_EXPIRE (72*60*60) // SSL Expires (Integer)
+#define WEBUI_SSL_EXPIRE_STR "259201" // SSL Expires (String)
+#else
+#define WEBUI_SECURE "Non-Crypted"
+#define WEBUI_URL "http://" WEBUI_HOSTNAME
+#define WEBUI_WS_URL "ws://" WEBUI_HOSTNAME
+#endif
+
+#ifdef _WIN32
+#define WEBUI_OS "Microsoft Windows"
+#elif __APPLE__
+#define WEBUI_OS "Apple macOS"
+#else
+#define WEBUI_OS "GNU/Linux"
+#endif
 
 // Mutex
 #ifdef _WIN32
@@ -166,6 +194,10 @@ typedef struct _webui_core_t {
 	char* default_server_root_path;
 	bool ui;
 	// bool little_endian;
+	#ifdef WEBUI_TLS
+        uint8_t* ssl_cert;
+        uint8_t* ssl_key;
+    #endif
 } _webui_core_t;
 
 typedef struct _webui_cb_arg_t {
@@ -292,6 +324,9 @@ static uint32_t _webui_get_token(const char* data);
 static uint32_t _webui_generate_random_uint32();
 static const char* _webui_url_encode(const char* str);
 static bool _webui_regular_open_url(const char* url);
+#ifdef WEBUI_TLS
+bool _webui_generate_self_signed_cert(char* ssl_cert, char* ssl_key);
+#endif
 static WEBUI_THREAD_SERVER_START;
 static WEBUI_THREAD_RECEIVE;
 
@@ -1377,6 +1412,47 @@ size_t webui_get_parent_process_id(size_t window) {
 	_webui_window_t* win = _webui_core.wins[window];
 
 	return win->process_id;
+}
+
+bool webui_set_tls_certificate(const char* certificate_pem, const char* private_key_pem) {
+
+#ifdef WEBUI_LOG
+	printf("[User] webui_set_tls_certificate()...\n");
+#endif
+
+    // Initialization
+	_webui_init();
+
+    #ifdef WEBUI_TLS
+        if(!_webui_is_empty(certificate_pem) && !_webui_is_empty(private_key_pem)) {
+
+            size_t certificate_len = strlen(certificate_pem);
+            size_t private_key_len = strlen(private_key_pem);
+
+            if(certificate_len >= WEBUI_SSL_SIZE) certificate_len = (WEBUI_SSL_SIZE - 1);
+            if(private_key_len >= WEBUI_SSL_SIZE) private_key_len = (WEBUI_SSL_SIZE - 1);
+
+            char* ssl_cert = (char*)_webui_malloc(certificate_len);
+            char* ssl_key = (char*)_webui_malloc(private_key_len);
+
+            snprintf(ssl_cert, certificate_len, "%s", certificate_pem);
+            snprintf(ssl_key, private_key_len, "%s", private_key_pem);
+
+            _webui_core.ssl_cert = ssl_cert;
+            _webui_core.ssl_key = ssl_key;
+
+#ifdef WEBUI_LOG
+			printf("[User] webui_set_tls_certificate() -> SSL/TLS Certificate:\n");
+			printf("- - -[Cert]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", (const char*)_webui_core.ssl_cert);
+			printf("[User] webui_set_tls_certificate() -> SSL/TLS Private Key:\n");
+			printf("- - -[Key]- - - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - - -\n", (const char*)_webui_core.ssl_key);
+#endif
+
+            return true;
+        }
+    #endif
+
+    return false;
 }
 
 size_t webui_get_child_process_id(size_t window) {
@@ -5047,6 +5123,106 @@ static bool _webui_show(_webui_window_t* win, const char* content, size_t browse
 	}
 }
 
+// TLS
+#ifdef WEBUI_TLS
+    static int _webui_tls_initialization(void* ssl_ctx, void* ptr) {
+
+#ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_tls_initialization()...\n");
+#endif
+
+	SSL_CTX* ctx = (SSL_CTX*)ssl_ctx;
+
+	// Load Certificate
+	BIO *bio_cert = BIO_new_mem_buf((void*)_webui_core.ssl_cert, -1);
+	X509 *cert = PEM_read_bio_X509(bio_cert, NULL, 0, NULL);
+	if (cert == NULL) {
+		_webui_panic();
+		return -1;
+	}
+	if (SSL_CTX_use_certificate(ctx, cert) <= 0) {
+		_webui_panic();
+		return -1;
+	}
+	X509_free(cert);
+	BIO_free(bio_cert);
+
+	// Load Key
+	BIO *bio_key = BIO_new_mem_buf((void*)_webui_core.ssl_key, -1);
+	EVP_PKEY *private_key = PEM_read_bio_PrivateKey(bio_key, NULL, 0, NULL);
+	if (private_key == NULL) {
+		_webui_panic();
+		return -1;
+	}
+	if (SSL_CTX_use_PrivateKey(ctx, private_key) <= 0) {
+		_webui_panic();
+		return -1;
+	}
+	EVP_PKEY_free(private_key);
+	BIO_free(bio_key);
+
+	return 0;
+}
+
+	bool _webui_generate_self_signed_cert(char* ssl_cert, char* ssl_key) {
+
+#ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_generate_self_signed_cert()...\n");
+#endif
+        int ret = 0;
+        int bits = 2048;
+        int serial = 0;
+
+        RSA* rsa = RSA_new();
+        BIGNUM* bignum = BN_new();
+        BN_set_word(bignum, RSA_F4);
+        RSA_generate_key_ex(rsa, bits, bignum, NULL);
+
+        EVP_PKEY* pkey = EVP_PKEY_new();
+        ret = EVP_PKEY_assign_RSA(pkey, rsa);
+        if(ret != 1) return false;
+
+        X509* x509 = X509_new();
+        X509_set_version(x509, 2);
+        ASN1_INTEGER_set(X509_get_serialNumber(x509), serial);
+        X509_gmtime_adj(X509_get_notBefore(x509), 0);
+        X509_gmtime_adj(X509_get_notAfter(x509), (WEBUI_SSL_EXPIRE));
+
+        X509_NAME* name = X509_get_subject_name(x509);
+        X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1, 0); // Country
+        X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organization
+        X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organizational Unit
+        X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "WebUI", -1, -1, 0); // Common Name
+        X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
+        X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0); // Locality
+
+        X509_set_issuer_name(x509, name);
+        X509_set_pubkey(x509, pkey);
+        ret = X509_sign(x509, pkey, EVP_sha256());
+        if(ret <= 0) return false;
+
+        BIO* bio_cert = BIO_new(BIO_s_mem());
+        ret = PEM_write_bio_X509(bio_cert, x509);
+        if(ret != 1) return false;
+        memset(ssl_cert, 0, WEBUI_SSL_SIZE);
+        BIO_read(bio_cert, ssl_cert, (WEBUI_SSL_SIZE - 1));
+
+        BIO* bio_key = BIO_new(BIO_s_mem());
+        ret = PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
+        if(ret != 1) return false;
+        memset(ssl_key, 0, WEBUI_SSL_SIZE);
+        BIO_read(bio_key, ssl_key, (WEBUI_SSL_SIZE - 1));
+
+        X509_free(x509);
+        EVP_PKEY_free(pkey);
+        BN_free(bignum);
+        BIO_free_all(bio_cert);
+        BIO_free_all(bio_key);
+
+        return true;
+    }
+#endif
+
 static bool _webui_show_window(_webui_window_t* win, const char* content, bool is_embedded_html, size_t browser) {
 
 #ifdef WEBUI_LOG
@@ -5054,6 +5230,38 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		printf("[Core]\t\t_webui_show_window(HTML, [%zu])...\n", browser);
 	else
 		printf("[Core]\t\t_webui_show_window(FILE, [%zu])...\n", browser);
+#endif
+
+#ifdef WEBUI_TLS
+	// TLS
+	if(_webui_is_empty(_webui_core.ssl_cert) || _webui_is_empty(_webui_core.ssl_key)) {
+
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_show_window() -> Generating self-signed TLS certificate...\n");
+#endif
+
+		// Generate SSL self-signed certificate
+		char* ssl_cert = (char*) _webui_malloc(WEBUI_SSL_SIZE);
+		char* ssl_key = (char*) _webui_malloc(WEBUI_SSL_SIZE);
+		if(!_webui_generate_self_signed_cert(ssl_cert, ssl_key)) {
+#ifdef WEBUI_LOG
+			printf("[Core]\t\t_webui_show_window() -> Generating self-signed TLS certificate failed.\n");
+#endif
+			_webui_free_mem((void*)ssl_cert);
+			_webui_free_mem((void*)ssl_key);
+			return false;
+		}
+
+		_webui_core.ssl_cert = ssl_cert;
+		_webui_core.ssl_key = ssl_key;
+
+#ifdef WEBUI_LOG
+			printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS Certificate:\n");
+			printf("- - -[Cert]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", (const char*)_webui_core.ssl_cert);
+			printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS Key:\n");
+			printf("- - -[Key]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", (const char*)_webui_core.ssl_key);
+#endif
+	}
 #endif
 
 	char* url = NULL;
@@ -5075,7 +5283,7 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		// Generate the URL
 		size_t url_len = 32; // [http][domain][port]
 		url = (char*)_webui_malloc(url_len);
-		sprintf(url, "http://localhost:%zu", port);
+		sprintf(url, WEBUI_URL ":%zu", port);
 	} else {
 
 		// Show a window using a local file
@@ -5087,7 +5295,7 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		size_t url_len = 32 + _webui_strlen(content) +
 		                 _webui_strlen(content_urlEncoded); // [http][domain][port][file_encoded]
 		url = (char*)_webui_malloc(url_len);
-		sprintf(url, "http://localhost:%zu/%s", port, content_urlEncoded);
+		sprintf(url, WEBUI_URL ":%zu/%s", port, content_urlEncoded);
 	}
 
 	// Set URL
@@ -5318,7 +5526,7 @@ static void _webui_init(void) {
 		return;
 
 #ifdef WEBUI_LOG
-	printf("[Core]\t\tWebUI v%s \n", WEBUI_VERSION);
+	printf("[Core]\t\tWebUI v" WEBUI_VERSION " ("WEBUI_OS " " WEBUI_SECURE ")\n");
 	printf("[Core]\t\t_webui_init()...\n");
 #endif
 
@@ -5336,7 +5544,12 @@ static void _webui_init(void) {
 	_webui_core.default_server_root_path = (char*)_webui_malloc(WEBUI_MAX_PATH);
 
 	// Initializing server services
+#ifdef WEBUI_TLS
+	if(mg_init_library(MG_FEATURES_TLS) != MG_FEATURES_TLS)
+		_webui_panic();
+#else
 	mg_init_library(0);
+#endif
 
 	// Initializing mutex
 	_webui_mutex_init(&_webui_core.mutex_server_start);
@@ -5962,11 +6175,21 @@ static WEBUI_THREAD_SERVER_START {
 	    "*",
 	    "access_control_allow_origin",
 	    "*",
+#ifdef WEBUI_TLS
+		"authentication_domain", WEBUI_HOSTNAME,
+		"enable_auth_domain_check", "no",
+		"ssl_protocol_version", "4",
+		"ssl_cipher_list", "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS",
+		"strict_transport_security_max_age", WEBUI_SSL_EXPIRE_STR,
+#endif
 	    NULL,
 	    NULL};
 	struct mg_callbacks http_callbacks;
 	struct mg_context* http_ctx;
 	memset(&http_callbacks, 0, sizeof(http_callbacks));
+#ifdef WEBUI_TLS
+    http_callbacks.init_ssl = _webui_tls_initialization; 
+#endif
 	http_callbacks.log_message = _webui_http_log;
 	http_ctx = mg_start(&http_callbacks, 0, http_options);
 	mg_set_request_handler(http_ctx, "/", _webui_http_handler, (void*)win);
@@ -5974,6 +6197,9 @@ static WEBUI_THREAD_SERVER_START {
 	// Start WS Server
 	struct mg_callbacks ws_callbacks = {0};
 	struct mg_init_data ws_mg_start_init_data = {0};
+#ifdef WEBUI_TLS
+	ws_callbacks.init_ssl = _webui_tls_initialization; 
+#endif
 	ws_mg_start_init_data.callbacks = &ws_callbacks;
 	ws_mg_start_init_data.user_data = (void*)win;
 	const char* ws_server_options[] = {
@@ -5985,6 +6211,13 @@ static WEBUI_THREAD_SERVER_START {
 	    "3600000",
 	    "enable_websocket_ping_pong",
 	    "yes",
+#ifdef WEBUI_TLS
+		"authentication_domain", WEBUI_HOSTNAME,
+		"enable_auth_domain_check", "no",
+		"ssl_protocol_version", "4",
+		"ssl_cipher_list", "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS",
+		"strict_transport_security_max_age", WEBUI_SSL_EXPIRE_STR,
+#endif
 	    NULL,
 	    NULL};
 	ws_mg_start_init_data.configuration_options = ws_server_options;
