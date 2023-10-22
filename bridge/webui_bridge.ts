@@ -21,6 +21,7 @@ type DataTypes = string | number | boolean | Uint8Array;
 
 class WebuiBridge {
 	// WebUI settings
+	#secure: boolean;
 	#token: number;
 	#port: number;
 	#winNum: number;
@@ -59,6 +60,7 @@ class WebuiBridge {
 	#Token = new Uint32Array(1);
 	#Ping: Boolean = true;
 	constructor({
+		secure,
 		token,
 		port,
 		winNum,
@@ -69,6 +71,7 @@ class WebuiBridge {
 		winW,
 		winH,
 	}: {
+		secure: boolean;
 		token: number;
 		port: number;
 		winNum: number;
@@ -80,6 +83,7 @@ class WebuiBridge {
 		winH: number;
 	}) {
 		// Constructor arguments are injected by webui.c
+		this.#secure = secure;
 		this.#token = token;
 		this.#port = port;
 		this.#winNum = winNum;
@@ -232,7 +236,8 @@ class WebuiBridge {
 		if (this.#bindList.includes(this.#winNum + '/')) {
 			this.#hasEvents = true;
 		}
-		this.#ws = new WebSocket(`ws://localhost:${this.#port}/_webui_ws_connect`);
+		const url = (this.#secure ? "wss://localhost" : "ws://localhost")
+		this.#ws = new WebSocket(`${url}:${this.#port}/_webui_ws_connect`);
 		this.#ws.binaryType = 'arraybuffer';
 		this.#ws.onopen = () => {
 			this.#wsStatus = true;
