@@ -61,19 +61,19 @@
 #define WEBUI_MIN_Y          (0)         // Minimal window Y
 #define WEBUI_MAX_X          (3000)      // Maximal window X (4K Monitor)
 #define WEBUI_MAX_Y          (1800)      // Maximal window Y (4K Monitor)
-#define WEBUI_HOSTNAME       "localhost" // Host name to use `localhost` / `127.0.0.1`
 #define WEBUI_PROFILE_NAME   "WebUI"     // Default browser profile name (Used only for Firefox)
+
 #ifdef WEBUI_TLS
 #define WEBUI_SECURE "TLS-Encryption"
-#define WEBUI_URL "https://" WEBUI_HOSTNAME
-#define WEBUI_WS_URL "wss://" WEBUI_HOSTNAME
 #define WEBUI_SSL_SIZE (4096) // SSL Max PEM Size
 #define WEBUI_SSL_EXPIRE (72*60*60) // SSL Expires (Integer)
 #define WEBUI_SSL_EXPIRE_STR "259201" // SSL Expires (String)
+#define WEBUI_HTTP_PROTOCOL "https://"
+#define WEBUI_WS_PROTOCOL "wss://"
 #else
 #define WEBUI_SECURE "Non-Encrypted"
-#define WEBUI_URL "http://" WEBUI_HOSTNAME
-#define WEBUI_WS_URL "ws://" WEBUI_HOSTNAME
+#define WEBUI_HTTP_PROTOCOL "http://"
+#define WEBUI_WS_PROTOCOL "ws://"
 #endif
 
 #ifdef _WIN32
@@ -3250,8 +3250,14 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
 	int c = sprintf(
 	    js,
 	    "%s\n document.addEventListener(\"DOMContentLoaded\",function(){ globalThis.webui = new WebuiBridge({ "
-	    "token: %" PRIu32 ", port: %zu, winNum: %zu, bindList: %s, log: %s, ",
-	    webui_javascript_bridge, token, win->ws_port, win->window_number, event_cb_js_array, log
+	    "secure: %s, token: %" PRIu32 ", port: %zu, winNum: %zu, bindList: %s, log: %s, ",
+	    webui_javascript_bridge,
+#ifdef WEBUI_TLS
+		"true",
+#else
+		"false",
+#endif
+		token, win->ws_port, win->window_number, event_cb_js_array, log
 	);
 	// Window Size
 	if (win->size_set)
@@ -5304,7 +5310,7 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		// Generate the URL
 		size_t url_len = 32; // [http][domain][port]
 		url = (char*)_webui_malloc(url_len);
-		sprintf(url, WEBUI_URL ":%zu", port);
+		sprintf(url, WEBUI_HTTP_PROTOCOL "localhost:%zu", port);
 	} else {
 
 		// Show a window using a local file
@@ -5316,7 +5322,7 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		size_t url_len = 32 + _webui_strlen(content) +
 		                 _webui_strlen(content_urlEncoded); // [http][domain][port][file_encoded]
 		url = (char*)_webui_malloc(url_len);
-		sprintf(url, WEBUI_URL ":%zu/%s", port, content_urlEncoded);
+		sprintf(url, WEBUI_HTTP_PROTOCOL"localhost:%zu/%s", port, content_urlEncoded);
 	}
 
 	// Set URL
@@ -6176,6 +6182,15 @@ static WEBUI_THREAD_SERVER_START {
 	if (_webui_core.startup_timeout > 30)
 		_webui_core.startup_timeout = 30;
 
+#ifdef WEBUI_TLS
+	// HTTP Secure Port
+	char* server_port = (char*)_webui_malloc(32);
+	sprintf(server_port, "127.0.0.1:%zus", win->server_port);
+
+	// WS Secure Port
+	char* ws_port = (char*)_webui_malloc(32);
+	sprintf(ws_port, "127.0.0.1:%zus", win->ws_port);
+#else
 	// HTTP Port
 	char* server_port = (char*)_webui_malloc(32);
 	sprintf(server_port, "127.0.0.1:%zu", win->server_port);
@@ -6183,6 +6198,7 @@ static WEBUI_THREAD_SERVER_START {
 	// WS Port
 	char* ws_port = (char*)_webui_malloc(32);
 	sprintf(ws_port, "127.0.0.1:%zu", win->ws_port);
+#endif
 
 	// Start HTTP Server
 	const char* http_options[] = {
@@ -6197,7 +6213,7 @@ static WEBUI_THREAD_SERVER_START {
 	    "access_control_allow_origin",
 	    "*",
 #ifdef WEBUI_TLS
-		"authentication_domain", WEBUI_HOSTNAME,
+		"authentication_domain", "localhost",
 		"enable_auth_domain_check", "no",
 		"ssl_protocol_version", "4",
 		"ssl_cipher_list", "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS",
@@ -6233,7 +6249,7 @@ static WEBUI_THREAD_SERVER_START {
 	    "enable_websocket_ping_pong",
 	    "yes",
 #ifdef WEBUI_TLS
-		"authentication_domain", WEBUI_HOSTNAME,
+		"authentication_domain", "localhost",
 		"enable_auth_domain_check", "no",
 		"ssl_protocol_version", "4",
 		"ssl_cipher_list", "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS",
