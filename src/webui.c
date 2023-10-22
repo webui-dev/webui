@@ -14,11 +14,11 @@
 // -- Third-party ---------------------
 #ifdef WEBUI_TLS
 // OpenSSL
-#include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
+#include <openssl/ssl.h>
 #include <openssl/x509.h>
 #endif
 #define MG_BUF_LEN (WEBUI_MAX_BUF)
@@ -29,51 +29,51 @@
 #include "webui.h"                  // WebUI Header
 
 // -- Defines -------------------------
-#define WEBUI_SIGNATURE      0xDD        // All packets should start with this 8bit
-#define WEBUI_CMD_JS         0xFE        // Command: JavaScript result in frontend
-#define WEBUI_CMD_JS_QUICK   0xFD        // Command: JavaScript result in frontend
-#define WEBUI_CMD_CLICK      0xFC        // Command: Click event
-#define WEBUI_CMD_NAVIGATION 0xFB        // Command: Frontend navigation
-#define WEBUI_CMD_CLOSE      0xFA        // Command: Close window
-#define WEBUI_CMD_CALL_FUNC  0xF9        // Command: Backend function call
-#define WEBUI_CMD_SEND_RAW   0xF8        // Command: Send raw binary data to the UI
-#define WEBUI_CMD_ADD_ID     0xF7        // Command: Add new bind ID
-#define WEBUI_PROTOCOL_SIZE  (8)         // Protocol header size in bytes
-#define WEBUI_PROTOCOL_SIGN  (0)         // Protocol byte position: Signature (1 Byte)
-#define WEBUI_PROTOCOL_TOKEN (1)         // Protocol byte position: Token (4 Bytes)
-#define WEBUI_PROTOCOL_ID    (5)         // Protocol byte position: ID (2 Bytes)
-#define WEBUI_PROTOCOL_CMD   (7)         // Protocol byte position: Command (1 Byte)
-#define WEBUI_PROTOCOL_DATA  (8)         // Protocol byte position: Data (n Byte)
-#define WEBUI_WS_DATA        (1)         // Internal WS Event (Data received)
-#define WEBUI_WS_OPEN        (2)         // Internal WS Event (New connection)
-#define WEBUI_WS_CLOSE       (3)         // Internal WS Event (Connection close)
-#define WEBUI_MIN_PORT       (10000)     // Minimum socket port
-#define WEBUI_MAX_PORT       (65500)     // Should be less than 65535
-#define WEBUI_STDOUT_BUF     (10240)     // Command STDOUT output buffer size
-#define WEBUI_DEFAULT_PATH   "."         // Default root path
-#define WEBUI_DEF_TIMEOUT    (30)        // Default startup timeout in seconds
-#define WEBUI_MAX_TIMEOUT    (60)        // Maximum startup timeout in seconds the user can set
-#define WEBUI_MIN_WIDTH      (100)       // Minimal window width
-#define WEBUI_MIN_HEIGHT     (100)       // Minimal window height
-#define WEBUI_MAX_WIDTH      (3840)      // Maximal window width (4K Monitor)
-#define WEBUI_MAX_HEIGHT     (2160)      // Maximal window height (4K Monitor)
-#define WEBUI_MIN_X          (0)         // Minimal window X
-#define WEBUI_MIN_Y          (0)         // Minimal window Y
-#define WEBUI_MAX_X          (3000)      // Maximal window X (4K Monitor)
-#define WEBUI_MAX_Y          (1800)      // Maximal window Y (4K Monitor)
-#define WEBUI_PROFILE_NAME   "WebUI"     // Default browser profile name (Used only for Firefox)
+#define WEBUI_SIGNATURE      0xDD    // All packets should start with this 8bit
+#define WEBUI_CMD_JS         0xFE    // Command: JavaScript result in frontend
+#define WEBUI_CMD_JS_QUICK   0xFD    // Command: JavaScript result in frontend
+#define WEBUI_CMD_CLICK      0xFC    // Command: Click event
+#define WEBUI_CMD_NAVIGATION 0xFB    // Command: Frontend navigation
+#define WEBUI_CMD_CLOSE      0xFA    // Command: Close window
+#define WEBUI_CMD_CALL_FUNC  0xF9    // Command: Backend function call
+#define WEBUI_CMD_SEND_RAW   0xF8    // Command: Send raw binary data to the UI
+#define WEBUI_CMD_ADD_ID     0xF7    // Command: Add new bind ID
+#define WEBUI_PROTOCOL_SIZE  (8)     // Protocol header size in bytes
+#define WEBUI_PROTOCOL_SIGN  (0)     // Protocol byte position: Signature (1 Byte)
+#define WEBUI_PROTOCOL_TOKEN (1)     // Protocol byte position: Token (4 Bytes)
+#define WEBUI_PROTOCOL_ID    (5)     // Protocol byte position: ID (2 Bytes)
+#define WEBUI_PROTOCOL_CMD   (7)     // Protocol byte position: Command (1 Byte)
+#define WEBUI_PROTOCOL_DATA  (8)     // Protocol byte position: Data (n Byte)
+#define WEBUI_WS_DATA        (1)     // Internal WS Event (Data received)
+#define WEBUI_WS_OPEN        (2)     // Internal WS Event (New connection)
+#define WEBUI_WS_CLOSE       (3)     // Internal WS Event (Connection close)
+#define WEBUI_MIN_PORT       (10000) // Minimum socket port
+#define WEBUI_MAX_PORT       (65500) // Should be less than 65535
+#define WEBUI_STDOUT_BUF     (10240) // Command STDOUT output buffer size
+#define WEBUI_DEFAULT_PATH   "."     // Default root path
+#define WEBUI_DEF_TIMEOUT    (30)    // Default startup timeout in seconds
+#define WEBUI_MAX_TIMEOUT    (60)    // Maximum startup timeout in seconds the user can set
+#define WEBUI_MIN_WIDTH      (100)   // Minimal window width
+#define WEBUI_MIN_HEIGHT     (100)   // Minimal window height
+#define WEBUI_MAX_WIDTH      (3840)  // Maximal window width (4K Monitor)
+#define WEBUI_MAX_HEIGHT     (2160)  // Maximal window height (4K Monitor)
+#define WEBUI_MIN_X          (0)     // Minimal window X
+#define WEBUI_MIN_Y          (0)     // Minimal window Y
+#define WEBUI_MAX_X          (3000)  // Maximal window X (4K Monitor)
+#define WEBUI_MAX_Y          (1800)  // Maximal window Y (4K Monitor)
+#define WEBUI_PROFILE_NAME   "WebUI" // Default browser profile name (Used only for Firefox)
 
 #ifdef WEBUI_TLS
-#define WEBUI_SECURE "TLS-Encryption"
-#define WEBUI_SSL_SIZE (4096) // SSL Max PEM Size
-#define WEBUI_SSL_EXPIRE (72*60*60) // SSL Expires (Integer)
-#define WEBUI_SSL_EXPIRE_STR "259201" // SSL Expires (String)
-#define WEBUI_HTTP_PROTOCOL "https://"
-#define WEBUI_WS_PROTOCOL "wss://"
+#define WEBUI_SECURE         "TLS-Encryption"
+#define WEBUI_SSL_SIZE       (4096)         // SSL Max PEM Size
+#define WEBUI_SSL_EXPIRE     (72 * 60 * 60) // SSL Expires (Integer)
+#define WEBUI_SSL_EXPIRE_STR "259201"       // SSL Expires (String)
+#define WEBUI_HTTP_PROTOCOL  "https://"
+#define WEBUI_WS_PROTOCOL    "wss://"
 #else
-#define WEBUI_SECURE "Non-Encrypted"
+#define WEBUI_SECURE        "Non-Encrypted"
 #define WEBUI_HTTP_PROTOCOL "http://"
-#define WEBUI_WS_PROTOCOL "ws://"
+#define WEBUI_WS_PROTOCOL   "ws://"
 #endif
 
 #ifdef _WIN32
@@ -194,11 +194,11 @@ typedef struct _webui_core_t {
 	webui_condition_t condition_wait;
 	char* default_server_root_path;
 	bool ui;
-	// bool little_endian;
-	#ifdef WEBUI_TLS
-        uint8_t* ssl_cert;
-        uint8_t* ssl_key;
-    #endif
+// bool little_endian;
+#ifdef WEBUI_TLS
+	uint8_t* ssl_cert;
+	uint8_t* ssl_key;
+#endif
 } _webui_core_t;
 
 typedef struct _webui_cb_arg_t {
@@ -1422,39 +1422,47 @@ bool webui_set_tls_certificate(const char* certificate_pem, const char* private_
 	printf("[User] webui_set_tls_certificate()...\n");
 #endif
 
-    // Initialization
+	// Initialization
 	_webui_init();
 
-    #ifdef WEBUI_TLS
-        if(!_webui_is_empty(certificate_pem) && !_webui_is_empty(private_key_pem)) {
+#ifdef WEBUI_TLS
+	if (!_webui_is_empty(certificate_pem) && !_webui_is_empty(private_key_pem)) {
 
-            size_t certificate_len = strlen(certificate_pem);
-            size_t private_key_len = strlen(private_key_pem);
+		size_t certificate_len = strlen(certificate_pem);
+		size_t private_key_len = strlen(private_key_pem);
 
-            if(certificate_len >= WEBUI_SSL_SIZE) certificate_len = (WEBUI_SSL_SIZE - 1);
-            if(private_key_len >= WEBUI_SSL_SIZE) private_key_len = (WEBUI_SSL_SIZE - 1);
+		if (certificate_len >= WEBUI_SSL_SIZE)
+			certificate_len = (WEBUI_SSL_SIZE - 1);
+		if (private_key_len >= WEBUI_SSL_SIZE)
+			private_key_len = (WEBUI_SSL_SIZE - 1);
 
-            char* ssl_cert = (char*)_webui_malloc(certificate_len);
-            char* ssl_key = (char*)_webui_malloc(private_key_len);
+		char* ssl_cert = (char*)_webui_malloc(certificate_len);
+		char* ssl_key = (char*)_webui_malloc(private_key_len);
 
-            snprintf(ssl_cert, certificate_len, "%s", certificate_pem);
-            snprintf(ssl_key, private_key_len, "%s", private_key_pem);
+		snprintf(ssl_cert, certificate_len, "%s", certificate_pem);
+		snprintf(ssl_key, private_key_len, "%s", private_key_pem);
 
-            _webui_core.ssl_cert = ssl_cert;
-            _webui_core.ssl_key = ssl_key;
+		_webui_core.ssl_cert = ssl_cert;
+		_webui_core.ssl_key = ssl_key;
 
 #ifdef WEBUI_LOG
-			printf("[User] webui_set_tls_certificate() -> SSL/TLS Certificate:\n");
-			printf("- - -[Cert]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", (const char*)_webui_core.ssl_cert);
-			printf("[User] webui_set_tls_certificate() -> SSL/TLS Private Key:\n");
-			printf("- - -[Key]- - - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - - -\n", (const char*)_webui_core.ssl_key);
+		printf("[User] webui_set_tls_certificate() -> SSL/TLS Certificate:\n");
+		printf(
+		    "- - -[Cert]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n",
+		    (const char*)_webui_core.ssl_cert
+		);
+		printf("[User] webui_set_tls_certificate() -> SSL/TLS Private Key:\n");
+		printf(
+		    "- - -[Key]- - - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - - -\n",
+		    (const char*)_webui_core.ssl_key
+		);
 #endif
 
-            return true;
-        }
-    #endif
+		return true;
+	}
+#endif
 
-    return false;
+	return false;
 }
 
 size_t webui_get_child_process_id(size_t window) {
@@ -3253,11 +3261,11 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
 	    "secure: %s, token: %" PRIu32 ", port: %zu, winNum: %zu, bindList: %s, log: %s, ",
 	    webui_javascript_bridge,
 #ifdef WEBUI_TLS
-		"true",
+	    "true",
 #else
-		"false",
+	    "false",
 #endif
-		token, win->ws_port, win->window_number, event_cb_js_array, log
+	    token, win->ws_port, win->window_number, event_cb_js_array, log
 	);
 	// Window Size
 	if (win->size_set)
@@ -5142,8 +5150,8 @@ static int _webui_tls_initialization(void* ssl_ctx, void* ptr) {
 	SSL_CTX* ctx = (SSL_CTX*)ssl_ctx;
 
 	// Load Certificate
-	BIO *bio_cert = BIO_new_mem_buf((void*)_webui_core.ssl_cert, -1);
-	X509 *cert = PEM_read_bio_X509(bio_cert, NULL, 0, NULL);
+	BIO* bio_cert = BIO_new_mem_buf((void*)_webui_core.ssl_cert, -1);
+	X509* cert = PEM_read_bio_X509(bio_cert, NULL, 0, NULL);
 	if (cert == NULL) {
 		_webui_panic();
 		return -1;
@@ -5156,8 +5164,8 @@ static int _webui_tls_initialization(void* ssl_ctx, void* ptr) {
 	BIO_free(bio_cert);
 
 	// Load Key
-	BIO *bio_key = BIO_new_mem_buf((void*)_webui_core.ssl_key, -1);
-	EVP_PKEY *private_key = PEM_read_bio_PrivateKey(bio_key, NULL, 0, NULL);
+	BIO* bio_key = BIO_new_mem_buf((void*)_webui_core.ssl_key, -1);
+	EVP_PKEY* private_key = PEM_read_bio_PrivateKey(bio_key, NULL, 0, NULL);
 	if (private_key == NULL) {
 		_webui_panic();
 		return -1;
@@ -5183,12 +5191,12 @@ static bool _webui_tls_generate_self_signed_cert(char* ssl_cert, char* ssl_key) 
 	int serial = 0;
 
 	EVP_PKEY* pkey = NULL;
-	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
-	if (!ctx) return false;
+	EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+	if (!ctx)
+		return false;
 
-	if (EVP_PKEY_keygen_init(ctx) <= 0 ||
-		EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, bits) <= 0 ||
-		EVP_PKEY_keygen(ctx, &pkey) <= 0) {
+	if (EVP_PKEY_keygen_init(ctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, bits) <= 0 ||
+	    EVP_PKEY_keygen(ctx, &pkey) <= 0) {
 		EVP_PKEY_CTX_free(ctx);
 		return false;
 	}
@@ -5202,17 +5210,17 @@ static bool _webui_tls_generate_self_signed_cert(char* ssl_cert, char* ssl_key) 
 	X509_gmtime_adj(X509_get_notAfter(x509), (WEBUI_SSL_EXPIRE));
 
 	X509_NAME* name = X509_get_subject_name(x509);
-	X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1, 0); // Country
-	X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organization
+	X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1, 0);     // Country
+	X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1, 0);  // Organization
 	X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organizational Unit
 	X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "WebUI", -1, -1, 0); // Common Name
 	X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
-	X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0); // Locality
+	X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0);  // Locality
 
 	X509_set_issuer_name(x509, name);
 	X509_set_pubkey(x509, pkey);
 	ret = X509_sign(x509, pkey, EVP_sha256());
-	if(ret <= 0) {
+	if (ret <= 0) {
 		X509_free(x509);
 		EVP_PKEY_free(pkey);
 		return false;
@@ -5220,7 +5228,7 @@ static bool _webui_tls_generate_self_signed_cert(char* ssl_cert, char* ssl_key) 
 
 	BIO* bio_cert = BIO_new(BIO_s_mem());
 	ret = PEM_write_bio_X509(bio_cert, x509);
-	if(ret != 1) {
+	if (ret != 1) {
 		X509_free(x509);
 		EVP_PKEY_free(pkey);
 		BIO_free_all(bio_cert);
@@ -5231,7 +5239,7 @@ static bool _webui_tls_generate_self_signed_cert(char* ssl_cert, char* ssl_key) 
 
 	BIO* bio_key = BIO_new(BIO_s_mem());
 	ret = PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
-	if(ret != 1) {
+	if (ret != 1) {
 		X509_free(x509);
 		EVP_PKEY_free(pkey);
 		BIO_free_all(bio_cert);
@@ -5261,16 +5269,16 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 
 #ifdef WEBUI_TLS
 	// TLS
-	if(_webui_is_empty(_webui_core.ssl_cert) || _webui_is_empty(_webui_core.ssl_key)) {
+	if (_webui_is_empty(_webui_core.ssl_cert) || _webui_is_empty(_webui_core.ssl_key)) {
 
 #ifdef WEBUI_LOG
 		printf("[Core]\t\t_webui_show_window() -> Generating self-signed TLS certificate...\n");
 #endif
 
 		// Generate SSL self-signed certificate
-		char* ssl_cert = (char*) _webui_malloc(WEBUI_SSL_SIZE);
-		char* ssl_key = (char*) _webui_malloc(WEBUI_SSL_SIZE);
-		if(!_webui_tls_generate_self_signed_cert(ssl_cert, ssl_key)) {
+		char* ssl_cert = (char*)_webui_malloc(WEBUI_SSL_SIZE);
+		char* ssl_key = (char*)_webui_malloc(WEBUI_SSL_SIZE);
+		if (!_webui_tls_generate_self_signed_cert(ssl_cert, ssl_key)) {
 #ifdef WEBUI_LOG
 			printf("[Core]\t\t_webui_show_window() -> Generating self-signed TLS certificate failed.\n");
 #endif
@@ -5283,10 +5291,16 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		_webui_core.ssl_key = ssl_key;
 
 #ifdef WEBUI_LOG
-			printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS Certificate:\n");
-			printf("- - -[Cert]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", (const char*)_webui_core.ssl_cert);
-			printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS Key:\n");
-			printf("- - -[Key]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", (const char*)_webui_core.ssl_key);
+		printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS Certificate:\n");
+		printf(
+		    "- - -[Cert]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n",
+		    (const char*)_webui_core.ssl_cert
+		);
+		printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS Key:\n");
+		printf(
+		    "- - -[Key]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n",
+		    (const char*)_webui_core.ssl_key
+		);
 #endif
 	}
 #endif
@@ -5322,7 +5336,7 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		size_t url_len = 32 + _webui_strlen(content) +
 		                 _webui_strlen(content_urlEncoded); // [http][domain][port][file_encoded]
 		url = (char*)_webui_malloc(url_len);
-		sprintf(url, WEBUI_HTTP_PROTOCOL"localhost:%zu/%s", port, content_urlEncoded);
+		sprintf(url, WEBUI_HTTP_PROTOCOL "localhost:%zu/%s", port, content_urlEncoded);
 	}
 
 	// Set URL
@@ -5553,7 +5567,7 @@ static void _webui_init(void) {
 		return;
 
 #ifdef WEBUI_LOG
-	printf("[Core]\t\tWebUI v" WEBUI_VERSION " ("WEBUI_OS ", " WEBUI_SECURE ")\n");
+	printf("[Core]\t\tWebUI v" WEBUI_VERSION " (" WEBUI_OS ", " WEBUI_SECURE ")\n");
 	printf("[Core]\t\t_webui_init()...\n");
 #endif
 
@@ -5572,7 +5586,7 @@ static void _webui_init(void) {
 
 	// Initializing server services
 #ifdef WEBUI_TLS
-	if(mg_init_library(MG_FEATURES_TLS) != MG_FEATURES_TLS)
+	if (mg_init_library(MG_FEATURES_TLS) != MG_FEATURES_TLS)
 		_webui_panic();
 #else
 	mg_init_library(0);
@@ -6213,19 +6227,25 @@ static WEBUI_THREAD_SERVER_START {
 	    "access_control_allow_origin",
 	    "*",
 #ifdef WEBUI_TLS
-		"authentication_domain", "localhost",
-		"enable_auth_domain_check", "no",
-		"ssl_protocol_version", "4",
-		"ssl_cipher_list", "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS",
-		"strict_transport_security_max_age", WEBUI_SSL_EXPIRE_STR,
+	    "authentication_domain",
+	    "localhost",
+	    "enable_auth_domain_check",
+	    "no",
+	    "ssl_protocol_version",
+	    "4",
+	    "ssl_cipher_list",
+	    "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS",
+	    "strict_transport_security_max_age",
+	    WEBUI_SSL_EXPIRE_STR,
 #endif
 	    NULL,
-	    NULL};
+	    NULL
+	};
 	struct mg_callbacks http_callbacks;
 	struct mg_context* http_ctx;
 	memset(&http_callbacks, 0, sizeof(http_callbacks));
 #ifdef WEBUI_TLS
-    http_callbacks.init_ssl = _webui_tls_initialization; 
+	http_callbacks.init_ssl = _webui_tls_initialization;
 #endif
 	http_callbacks.log_message = _webui_http_log;
 	http_ctx = mg_start(&http_callbacks, 0, http_options);
@@ -6235,7 +6255,7 @@ static WEBUI_THREAD_SERVER_START {
 	struct mg_callbacks ws_callbacks = {0};
 	struct mg_init_data ws_mg_start_init_data = {0};
 #ifdef WEBUI_TLS
-	ws_callbacks.init_ssl = _webui_tls_initialization; 
+	ws_callbacks.init_ssl = _webui_tls_initialization;
 #endif
 	ws_mg_start_init_data.callbacks = &ws_callbacks;
 	ws_mg_start_init_data.user_data = (void*)win;
@@ -6249,14 +6269,20 @@ static WEBUI_THREAD_SERVER_START {
 	    "enable_websocket_ping_pong",
 	    "yes",
 #ifdef WEBUI_TLS
-		"authentication_domain", "localhost",
-		"enable_auth_domain_check", "no",
-		"ssl_protocol_version", "4",
-		"ssl_cipher_list", "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS",
-		"strict_transport_security_max_age", WEBUI_SSL_EXPIRE_STR,
+	    "authentication_domain",
+	    "localhost",
+	    "enable_auth_domain_check",
+	    "no",
+	    "ssl_protocol_version",
+	    "4",
+	    "ssl_cipher_list",
+	    "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS",
+	    "strict_transport_security_max_age",
+	    WEBUI_SSL_EXPIRE_STR,
 #endif
 	    NULL,
-	    NULL};
+	    NULL
+	};
 	ws_mg_start_init_data.configuration_options = ws_server_options;
 	struct mg_error_data ws_mg_start_error_data = {0};
 	char ws_errtxtbuf[256] = {0};
