@@ -5,6 +5,10 @@
 PROJECT_DIR := $(shell git rev-parse --show-toplevel)
 LIB_DIR := $(PROJECT_DIR)/dist
 INCLUDE_DIR := $(PROJECT_DIR)/include
+WEBUI_LIB_NAME = webui-2
+ifeq ($(WEBUI_USE_TLS), 1)
+WEBUI_LIB_NAME = webui-2-secure
+endif
 
 # ARGS
 # Set a compiler when running on Linux via `make CC=gcc` / `make CC=clang`
@@ -21,14 +25,14 @@ ifeq ($(OS),Windows_NT)
 	# Windows
 	PLATFORM := windows
 	SHELL := CMD
-	STATIC_BUILD_FLAGS += -lwebui-2-static -lws2_32 -Wall -Wl,-subsystem=console -luser32 -static
-	DYN_BUILD_FLAGS += "$(LIB_DIR)/webui-2.dll" -lws2_32 -Wall -Wl,-subsystem=console -luser32
+	STATIC_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)-static -lws2_32 -Wall -luser32 -static
+	DYN_BUILD_FLAGS += "$(LIB_DIR)/$(WEBUI_LIB_NAME).dll" -lws2_32 -Wall -luser32
 	STATIC_OUT := main.exe
 	DYN_OUT := main-dyn.exe
 	LWS2_OPT := -lws2_32
 	STRIP_OPT := --strip-all
 else
-	STATIC_BUILD_FLAGS += -lpthread -lm -lwebui-2-static
+	STATIC_BUILD_FLAGS += -lpthread -lm -l$(WEBUI_LIB_NAME)-static
 	DYN_BUILD_FLAGS += -lpthread -lm
 	STATIC_OUT := main
 	DYN_OUT := main-dyn
@@ -36,11 +40,11 @@ else
 		# MacOS
 		PLATFORM := macos
 		CC = clang
-		DYN_BUILD_FLAGS += "$(LIB_DIR)/webui-2.dylib"
+		DYN_BUILD_FLAGS += "$(LIB_DIR)/$(WEBUI_LIB_NAME).dylib"
 	else
 		# Linux
 		PLATFORM := linux
-		DYN_BUILD_FLAGS += "$(LIB_DIR)/webui-2.so"
+		DYN_BUILD_FLAGS += "$(LIB_DIR)/$(WEBUI_LIB_NAME).so"
 		STRIP_OPT := --strip-all
 		ifeq ($(CC),clang)
 			LLVM_OPT := llvm-
@@ -58,11 +62,13 @@ ifeq ($(BUILD_LIB),true)
 	@cd "$(PROJECT_DIR)" && $(MAKE) debug
 endif
 #	Static with Debug info
+ifneq ($(WEBUI_USE_TLS), 1)
 	@echo "Build C99 Example ($(CC) debug static)..."
-	@$(CC) -g $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
+	@$(CC) -g -Wl,-subsystem=console $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
+endif
 #	Dynamic with Debug info
 	@echo "Build C99 Example ($(CC) debug dynamic)..."
-	@$(CC) -g $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
+	@$(CC) -g -Wl,-subsystem=console $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@- del *.o >nul 2>&1
@@ -77,12 +83,14 @@ ifeq ($(BUILD_LIB),true)
 	@cd "$(PROJECT_DIR)" && $(MAKE)
 endif
 #	Static Release
+ifneq ($(WEBUI_USE_TLS), 1)
 	@echo "Build C99 Example ($(CC) release static)..."
-	@$(CC) -Os $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
+	@$(CC) -Os -Wl,-subsystem=windows $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(STATIC_OUT)
+endif
 #	Dynamic Release
 	@echo "Build C99 Example ($(CC) release dynamic)..."
-	@$(CC) $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
+	@$(CC) -Wl,-subsystem=windows $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(DYN_OUT)
 #	Clean
 ifeq ($(PLATFORM),windows)

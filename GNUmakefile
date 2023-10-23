@@ -2,6 +2,20 @@
 
 # == 1. VARIABLES =============================================================
 
+WEBUI_OUT_LIB_NAME = webui-2
+
+# TLS
+WEBUI_USE_TLS =
+WEBUI_TLS_INCLUDE = .
+WEBUI_TLS_LIB = .
+TLS_CFLAG = -DNO_SSL
+TLS_LDFLAG_DYNAMIC =
+ifeq ($(WEBUI_USE_TLS), 1)
+WEBUI_OUT_LIB_NAME = webui-2-secure
+TLS_CFLAG = -DWEBUI_TLS -DNO_SSL_DL -DOPENSSL_API_1_1
+TLS_LDFLAG_DYNAMIC = -lssl -lcrypto -lbcrypt
+endif
+
 MAKEFILE_DIR := $(shell git rev-parse --show-toplevel)
 BUILD_DIR := $(MAKEFILE_DIR)/dist
 
@@ -12,32 +26,32 @@ CC = gcc
 ARCH_TARGET ?=
 
 # BUILD FLAGS
-CIVETWEB_BUILD_FLAGS := -o civetweb.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/civetweb/civetweb.c"
-CIVETWEB_DEFINE_FLAGS = -DNDEBUG -DNO_CACHING -DNO_CGI -DNO_SSL -DUSE_WEBSOCKET
-WEBUI_BUILD_FLAGS := -o webui.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webui.c"
+CIVETWEB_BUILD_FLAGS := -o civetweb.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/civetweb/civetweb.c" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG)
+CIVETWEB_DEFINE_FLAGS = -DNDEBUG -DNO_CACHING -DNO_CGI -DUSE_WEBSOCKET $(TLS_CFLAG)
+WEBUI_BUILD_FLAGS := -o webui.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webui.c" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG)
 
 # OUTPUT FILES
 # The static output is the same for all platforms
 # The dynamic output is platform dependent
-LIB_STATIC_OUT := libwebui-2-static.a
+LIB_STATIC_OUT := lib$(WEBUI_OUT_LIB_NAME)-static.a
 
 # Platform defaults and dynamic library outputs
 ifeq ($(OS),Windows_NT)
 	# Windows
 	SHELL := CMD
 	PLATFORM := windows
-	LIB_DYN_OUT := webui-2.dll
+	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).dll
 	LWS2_OPT := -lws2_32
 	CIVETWEB_DEFINE_FLAGS += -DMUST_IMPLEMENT_CLOCK_GETTIME
 else ifeq ($(shell uname),Darwin)
 	# MacOS
 	PLATFORM := macos
 	CC = clang
-	LIB_DYN_OUT := webui-2.dylib
+	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).dylib
 else
 	# Linux
 	PLATFORM := linux
-	LIB_DYN_OUT := webui-2.so
+	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).so
 	ifneq ($(filter $(CC),gcc clang aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc),$(CC))
 		$(error Invalid compiler specified: `$(CC)`)
 	else ifeq ($(CC),clang)
@@ -84,7 +98,7 @@ endif
 	&& echo "Build WebUI library ($(CC) $(TARGET)debug dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) -g -fPIC -DWEBUI_LOG \
-	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o -g $(LWS2_OPT)
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT)
 ifeq ($(PLATFORM),windows)
 	@cd "$(BUILD_DIR)/debug" && del *.o >nul 2>&1
 else
@@ -111,7 +125,7 @@ endif
 	&& echo "Build WebUI library ($(CC) $(TARGET)release dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) -O3 -fPIC \
-	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(LWS2_OPT)
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT)
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@strip --strip-unneeded $(BUILD_DIR)/$(LIB_DYN_OUT)
