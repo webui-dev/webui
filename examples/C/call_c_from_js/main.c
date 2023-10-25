@@ -135,7 +135,7 @@ int main() {
 	    "    <button onclick=\"MyJS();\">Call my_function_with_response()</button>"
 	    "    <div>Double: <input type=\"text\" id=\"MyInputID\" value=\"2\"></div>"
 	    "    <script>"
-	    "      const arr_size = 10000;"
+	    "      const arr_size = 100000;"
 	    "      const big_arr = new Uint8Array(arr_size);"
 	    "      big_arr[0] = 0xA1;"
 	    "      big_arr[arr_size - 1] = 0xA2;"
