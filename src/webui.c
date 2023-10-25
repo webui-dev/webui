@@ -38,6 +38,7 @@
 #define WEBUI_CMD_CALL_FUNC  0xF9    // Command: Backend function call
 #define WEBUI_CMD_SEND_RAW   0xF8    // Command: Send raw binary data to the UI
 #define WEBUI_CMD_ADD_ID     0xF7    // Command: Add new bind ID
+#define WEBUI_CMD_MULTI      0xF6    // Command: Multi packet data
 #define WEBUI_PROTOCOL_SIZE  (8)     // Protocol header size in bytes
 #define WEBUI_PROTOCOL_SIGN  (0)     // Protocol byte position: Signature (1 Byte)
 #define WEBUI_PROTOCOL_TOKEN (1)     // Protocol byte position: Token (4 Bytes)
@@ -6531,30 +6532,88 @@ static void _webui_receive(_webui_window_t* win, int event_type, void* data, siz
 	printf("[Core]\t\t_webui_receive([%zu], [%d], [%zu])...\n", win->window_number, event_type, len);
 #endif
 
-	static size_t recvNum = 0;
+	// This function get called when WS Connect, close, and receives data.
+	// We should copy the data once. Process the event in a new thread and
+	// return as soon as possible so the WS protocol get handeled fatser.
 
-	// This function get called when WS Connect, close, and receives data
-	// we should copy the data once. Process the event in a new thread and
-	// return as soon as possible so the WS protocol handeled fatser.
+	static size_t recvNum = 0;
+	static bool multi_packet = false;
+	static size_t multi_expect = 0;
+	static size_t multi_receive = 0;
+	static void* multi_buf = NULL;
+
+	// Multi Packet
+	if(multi_packet) {
+		if((multi_receive + len) > multi_expect) {
+			// Received more data than expected
+#ifdef WEBUI_LOG
+			printf("[Core]\t\t_webui_receive()... > Multi packet received more data than expected (%zu + %zu > %zu).\n", multi_receive, len, multi_expect);
+#endif
+			multi_packet = false;
+			multi_expect = 0;
+			multi_receive = 0;
+			_webui_free_mem(multi_buf);
+			multi_buf = NULL;
+			return;
+		}
+		// Accumulate packet
+#ifdef WEBUI_LOG
+			printf("[Core]\t\t_webui_receive()... > Multi packet accumulate %zu bytes\n", len);
+#endif
+		memcpy(((unsigned char*)multi_buf + multi_receive), data, len);
+        multi_receive += len;
+		// Check if theire is more packet comming
+		if(multi_receive < multi_expect)
+			return;
+	}
+	else if (((unsigned char*)data)[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_MULTI) {
+		if (len >= WEBUI_PROTOCOL_SIZE && ((unsigned char*)data)[WEBUI_PROTOCOL_SIGN] == WEBUI_SIGNATURE) {
+			size_t expect_len = (size_t)strtoul(&((const char*)data)[WEBUI_PROTOCOL_DATA], NULL, 10);
+			if(expect_len > 0 && expect_len <= WEBUI_MAX_BUF) {
+#ifdef WEBUI_LOG
+				printf("[Core]\t\t_webui_receive()... > Multi packet started, Expecting %zu bytes...\n", expect_len);
+#endif
+				multi_buf = _webui_malloc(expect_len);
+				memcpy(multi_buf, data, len);
+				multi_receive = 0;
+				multi_expect = expect_len;
+				multi_packet = true;
+			}			
+		}
+		return;
+	}
 
 	// Create a new thread args
 	_webui_recv_arg_t* arg = (_webui_recv_arg_t*)_webui_malloc(sizeof(_webui_recv_arg_t));
 	arg->win = win;
-	arg->len = len;
 	arg->recvNum = ++recvNum;
 	arg->event_type = event_type;
 
-	if (len > 0) {
-
-		// This event has data. We should copy it once
-		void* data_cpy = (void*)_webui_malloc(len);
-		memcpy((char*)data_cpy, data, len);
-		arg->ptr = data_cpy;
-	} else {
-
-		// This is a WS event
-		// `ptr` is `mg_connection`
-		arg->ptr = data;
+	if(multi_packet) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_receive()... > Processing multi packet...\n");
+#endif
+		// Get data from accumulated multipackets
+		arg->len = multi_receive;
+		arg->ptr = multi_buf;
+		// Reset
+		multi_packet = false;
+		multi_expect = 0;
+		multi_receive = 0;
+		multi_buf = NULL;
+	}
+	else {
+		arg->len = len;
+		if (len > 0) {
+			// This event has data. We should copy it once
+			void* data_cpy = (void*)_webui_malloc(len);
+			memcpy((char*)data_cpy, data, len);
+			arg->ptr = data_cpy;
+		} else {
+			// This is a WS connect/disconnect event
+			// `ptr` is `mg_connection`
+			arg->ptr = data;
+		}
 	}
 
 // Process the packet in a new thread
@@ -6612,7 +6671,7 @@ static WEBUI_THREAD_RECEIVE {
 			    packet_id, packet_id
 			);
 			printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Data: [", recvNum);
-			_webui_print_ascii(&packet[WEBUI_PROTOCOL_DATA], (packet_len - WEBUI_PROTOCOL_SIZE));
+			//_webui_print_ascii(&packet[WEBUI_PROTOCOL_DATA], (packet_len - WEBUI_PROTOCOL_SIZE));
 			printf("]\n");
 #endif
 
