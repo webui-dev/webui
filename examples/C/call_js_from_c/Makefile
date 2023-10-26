@@ -21,11 +21,12 @@ debug:
 #	Static with Debug info
 !IF "$(WEBUI_USE_TLS)" != "1"
 	@echo Build C99 Example (Static Debug)...
-	@cl /Zi main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /MACHINE:X64 /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME)-static.lib user32.lib Advapi32.lib Shell32.lib /OUT:main.exe 1>NUL 2>&1
+	@cl /Zi main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)\debug" /MACHINE:X64 /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME)-static.lib user32.lib Advapi32.lib Shell32.lib /OUT:main.exe 1>NUL 2>&1
 !ENDIF
 #	Dynamic with Debug info
 	@echo Build C99 Example (Dynamic Debug)...
-	@cl /Zi main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /MACHINE:X64 /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME).lib user32.lib Advapi32.lib Shell32.lib /OUT:main-dyn.exe 1>NUL 2>&1
+	@copy "$(LIB_DIR)\debug\$(WEBUI_LIB_NAME).dll" "$(WEBUI_LIB_NAME).dll"
+	@cl /Zi main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)\debug" /MACHINE:X64 /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME).lib user32.lib Advapi32.lib Shell32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 #	Clean
 	@- del *.exp >nul 2>&1
 	@- del *.ilk >nul 2>&1
@@ -45,6 +46,7 @@ release:
 !ENDIF
 #	Dynamic Release
 	@echo Build C99 Example (Dynamic Release)...
+	@copy "$(LIB_DIR)\$(WEBUI_LIB_NAME).dll" "$(WEBUI_LIB_NAME).dll"
 	@cl main.c /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /MACHINE:X64 /SUBSYSTEM:WINDOWS $(WEBUI_LIB_NAME).lib user32.lib Advapi32.lib Shell32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 #	Clean
 	@- del *.exp >nul 2>&1
