@@ -1041,7 +1041,9 @@ void webui_delete_profile(size_t window) {
 #elif __linux__
 			// Linux
 			_webui_remove_firefox_profile_ini("~/.mozilla/firefox/profiles.ini", win->profile_name);
-			_webui_remove_firefox_profile_ini("~/snap/firefox/common/.mozilla/firefox/profiles.ini", win->profile_name);
+			_webui_remove_firefox_profile_ini(
+			    "~/snap/firefox/common/.mozilla/firefox/profiles.ini", win->profile_name
+			);
 			_webui_delete_folder(win->profile_path);
 #else
 			// macOS
@@ -1435,14 +1437,14 @@ static bool _webui_check_certificate(const char* certificate_pem, const char* pr
 	OpenSSL_add_all_algorithms();
 
 	// SSL Context
-	SSL_CTX *ctx;
+	SSL_CTX* ctx;
 	SSL_library_init();
 	ctx = SSL_CTX_new(TLS_client_method());
 	if (!ctx)
 		return false;
 
 	// Disable security levels. It is The end-user
-	// responsability to provide a high encryption 
+	// responsability to provide a high encryption
 	// level certificate. While WebUI should just
 	// use the end-user's certificates.
 	SSL_CTX_set_security_level(ctx, 0);
@@ -1532,7 +1534,7 @@ bool webui_set_tls_certificate(const char* certificate_pem, const char* private_
 			return false;
 
 		// Check certificate validity
-		if(!_webui_check_certificate(certificate_pem, private_key_pem)) {
+		if (!_webui_check_certificate(certificate_pem, private_key_pem)) {
 #ifdef WEBUI_LOG
 			unsigned long err = ERR_get_error();
 			char err_buf[1024];
@@ -1553,8 +1555,8 @@ bool webui_set_tls_certificate(const char* certificate_pem, const char* private_
 
 #ifdef WEBUI_LOG
 		printf("[User] webui_set_tls_certificate() -> SSL/TLS Certificate:\n");
-		printf("%s\n",(const char*)_webui_core.ssl_cert);
-		printf("%s\n",(const char*)_webui_core.ssl_key);
+		printf("%s\n", (const char*)_webui_core.ssl_cert);
+		printf("%s\n", (const char*)_webui_core.ssl_key);
 #endif
 
 		return true;
@@ -2585,9 +2587,9 @@ static void _webui_sleep(long unsigned int ms) {
 	Sleep(ms);
 #else
 	struct timespec req;
-    req.tv_sec = ms / 1000; // Convert ms to seconds
-    req.tv_nsec = (ms % 1000) * 1000000L; // Convert remainder to nanoseconds
-    nanosleep(&req, NULL);
+	req.tv_sec = ms / 1000;               // Convert ms to seconds
+	req.tv_nsec = (ms % 1000) * 1000000L; // Convert remainder to nanoseconds
+	nanosleep(&req, NULL);
 #endif
 }
 
@@ -3497,11 +3499,12 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
 #elif __linux__
 		// Linux
 		const char* path_ini = "";
-		if(_webui_file_exist("~/.mozilla/firefox/profiles.ini"))
+		if (_webui_file_exist("~/.mozilla/firefox/profiles.ini"))
 			path_ini = "~/.mozilla/firefox/profiles.ini";
-		else if(_webui_file_exist("~/snap/firefox/common/.mozilla/firefox/profiles.ini"))
+		else if (_webui_file_exist("~/snap/firefox/common/.mozilla/firefox/profiles.ini"))
 			path_ini = "~/snap/firefox/common/.mozilla/firefox/profiles.ini";
-		else return false;
+		else
+			return false;
 #else
 		// macOS
 		const char* path_ini = "~/Library/Application Support/Firefox/profiles.ini";
@@ -5337,125 +5340,129 @@ static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key
 	printf("[Core]\t\t_webui_tls_generate_self_signed_cert()...\n");
 #endif
 
-    int ret = 0;
-    int bits = 2048;
+	int ret = 0;
+	int bits = 2048;
 
-    // ----- Create Root Certificate -----
-    EVP_PKEY* root_pkey = NULL;
-    EVP_PKEY_CTX* root_ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
-    if (!root_ctx)
-        return false;
+	// ----- Create Root Certificate -----
+	EVP_PKEY* root_pkey = NULL;
+	EVP_PKEY_CTX* root_ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+	if (!root_ctx)
+		return false;
 
-    if (EVP_PKEY_keygen_init(root_ctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(root_ctx, bits) <= 0 ||
-        EVP_PKEY_keygen(root_ctx, &root_pkey) <= 0) {
-        EVP_PKEY_CTX_free(root_ctx);
-        return false;
-    }
+	if (EVP_PKEY_keygen_init(root_ctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(root_ctx, bits) <= 0 ||
+	    EVP_PKEY_keygen(root_ctx, &root_pkey) <= 0) {
+		EVP_PKEY_CTX_free(root_ctx);
+		return false;
+	}
 
-    EVP_PKEY_CTX_free(root_ctx);
+	EVP_PKEY_CTX_free(root_ctx);
 
-    X509* root_x509 = X509_new();
-    X509_set_version(root_x509, 2);
-    ASN1_INTEGER_set(X509_get_serialNumber(root_x509), (long)_webui_generate_random_uint32());
-    X509_gmtime_adj(X509_get_notBefore(root_x509), 0);
-    X509_gmtime_adj(X509_get_notAfter(root_x509), (long)(WEBUI_SSL_EXPIRE));
+	X509* root_x509 = X509_new();
+	X509_set_version(root_x509, 2);
+	ASN1_INTEGER_set(X509_get_serialNumber(root_x509), (long)_webui_generate_random_uint32());
+	X509_gmtime_adj(X509_get_notBefore(root_x509), 0);
+	X509_gmtime_adj(X509_get_notAfter(root_x509), (long)(WEBUI_SSL_EXPIRE));
 
-    X509_NAME* root_name = X509_get_subject_name(root_x509);
-	X509_NAME_add_entry_by_txt(root_name, "C", MBSTRING_ASC, "CA", -1, -1, 0);     // Country
-	X509_NAME_add_entry_by_txt(root_name, "O", MBSTRING_ASC, "WebUI Root Authority", -1, -1, 0);  // Organization
-	X509_NAME_add_entry_by_txt(root_name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organizational Unit
+	X509_NAME* root_name = X509_get_subject_name(root_x509);
+	X509_NAME_add_entry_by_txt(root_name, "C", MBSTRING_ASC, "CA", -1, -1, 0);                   // Country
+	X509_NAME_add_entry_by_txt(root_name, "O", MBSTRING_ASC, "WebUI Root Authority", -1, -1, 0); // Organization
+	X509_NAME_add_entry_by_txt(root_name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0);     // Organizational Unit
 	X509_NAME_add_entry_by_txt(root_name, "CN", MBSTRING_ASC, "localhost", -1, -1, 0); // Common Name
-	X509_NAME_add_entry_by_txt(root_name, "subjectAltName", MBSTRING_ASC, "127.0.0.1", -1, -1, 0); // Subject Alternative Name
+	X509_NAME_add_entry_by_txt(
+	    root_name, "subjectAltName", MBSTRING_ASC, "127.0.0.1", -1, -1, 0
+	);                                                                             // Subject Alternative Name
 	X509_NAME_add_entry_by_txt(root_name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
 	X509_NAME_add_entry_by_txt(root_name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0);  // Locality
 
-    X509_set_issuer_name(root_x509, root_name);
-    X509_set_pubkey(root_x509, root_pkey);
-    ret = X509_sign(root_x509, root_pkey, EVP_sha256());
-    if (ret <= 0) {
-        X509_free(root_x509);
-        EVP_PKEY_free(root_pkey);
-        return false;
-    }
+	X509_set_issuer_name(root_x509, root_name);
+	X509_set_pubkey(root_x509, root_pkey);
+	ret = X509_sign(root_x509, root_pkey, EVP_sha256());
+	if (ret <= 0) {
+		X509_free(root_x509);
+		EVP_PKEY_free(root_pkey);
+		return false;
+	}
 
-    // Write Root Certificate and Key
-    BIO* bio_root_cert = BIO_new(BIO_s_mem());
-    PEM_write_bio_X509(bio_root_cert, root_x509);
-    memset(root_cert, 0, WEBUI_SSL_SIZE);
-    BIO_read(bio_root_cert, root_cert, (WEBUI_SSL_SIZE - 1));
+	// Write Root Certificate and Key
+	BIO* bio_root_cert = BIO_new(BIO_s_mem());
+	PEM_write_bio_X509(bio_root_cert, root_x509);
+	memset(root_cert, 0, WEBUI_SSL_SIZE);
+	BIO_read(bio_root_cert, root_cert, (WEBUI_SSL_SIZE - 1));
 
-    BIO* bio_root_key = BIO_new(BIO_s_mem());
-    PEM_write_bio_PrivateKey(bio_root_key, root_pkey, NULL, NULL, 0, NULL, NULL);
-    memset(root_key, 0, WEBUI_SSL_SIZE);
-    BIO_read(bio_root_key, root_key, (WEBUI_SSL_SIZE - 1));
+	BIO* bio_root_key = BIO_new(BIO_s_mem());
+	PEM_write_bio_PrivateKey(bio_root_key, root_pkey, NULL, NULL, 0, NULL, NULL);
+	memset(root_key, 0, WEBUI_SSL_SIZE);
+	BIO_read(bio_root_key, root_key, (WEBUI_SSL_SIZE - 1));
 
-    // ----- Create Server Certificate and sign with Root -----
-    EVP_PKEY* pkey = NULL;
-    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
-    if (!ctx) {
-        X509_free(root_x509);
-        EVP_PKEY_free(root_pkey);
-        return false;
-    }
+	// ----- Create Server Certificate and sign with Root -----
+	EVP_PKEY* pkey = NULL;
+	EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+	if (!ctx) {
+		X509_free(root_x509);
+		EVP_PKEY_free(root_pkey);
+		return false;
+	}
 
-    if (EVP_PKEY_keygen_init(ctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, bits) <= 0 ||
-        EVP_PKEY_keygen(ctx, &pkey) <= 0) {
-        X509_free(root_x509);
-        EVP_PKEY_free(root_pkey);
-        EVP_PKEY_CTX_free(ctx);
-        return false;
-    }
+	if (EVP_PKEY_keygen_init(ctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, bits) <= 0 ||
+	    EVP_PKEY_keygen(ctx, &pkey) <= 0) {
+		X509_free(root_x509);
+		EVP_PKEY_free(root_pkey);
+		EVP_PKEY_CTX_free(ctx);
+		return false;
+	}
 
-    EVP_PKEY_CTX_free(ctx);
+	EVP_PKEY_CTX_free(ctx);
 
-    X509* x509 = X509_new();
-    X509_set_version(x509, 2);
-    ASN1_INTEGER_set(X509_get_serialNumber(x509), (long)_webui_generate_random_uint32());
-    X509_gmtime_adj(X509_get_notBefore(x509), 0);
-    X509_gmtime_adj(X509_get_notAfter(x509), (long)(WEBUI_SSL_EXPIRE));
+	X509* x509 = X509_new();
+	X509_set_version(x509, 2);
+	ASN1_INTEGER_set(X509_get_serialNumber(x509), (long)_webui_generate_random_uint32());
+	X509_gmtime_adj(X509_get_notBefore(x509), 0);
+	X509_gmtime_adj(X509_get_notAfter(x509), (long)(WEBUI_SSL_EXPIRE));
 
-    X509_NAME* name = X509_get_subject_name(x509);
-    X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1, 0); // Country
-    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organization
-    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organizational Unit
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "localhost", -1, -1, 0); // Common Name
-	X509_NAME_add_entry_by_txt(name, "subjectAltName", MBSTRING_ASC, "127.0.0.1", -1, -1, 0); // Subject Alternative Name
-    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
-    X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0); // Locality
+	X509_NAME* name = X509_get_subject_name(x509);
+	X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1, 0);         // Country
+	X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1, 0);      // Organization
+	X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0);     // Organizational Unit
+	X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "localhost", -1, -1, 0); // Common Name
+	X509_NAME_add_entry_by_txt(
+	    name, "subjectAltName", MBSTRING_ASC, "127.0.0.1", -1, -1, 0
+	);                                                                        // Subject Alternative Name
+	X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
+	X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0);  // Locality
 
-    X509_set_issuer_name(x509, root_name);
+	X509_set_issuer_name(x509, root_name);
 	X509_set_pubkey(x509, pkey);
-    ret = X509_sign(x509, root_pkey, EVP_sha256());
-    if (ret <= 0) {
-        X509_free(root_x509);
-        EVP_PKEY_free(root_pkey);
-        X509_free(x509);
-        EVP_PKEY_free(pkey);
-        return false;
-    }
+	ret = X509_sign(x509, root_pkey, EVP_sha256());
+	if (ret <= 0) {
+		X509_free(root_x509);
+		EVP_PKEY_free(root_pkey);
+		X509_free(x509);
+		EVP_PKEY_free(pkey);
+		return false;
+	}
 
-    // Write the Server Certificate and Key
-    BIO* bio_cert = BIO_new(BIO_s_mem());
-    PEM_write_bio_X509(bio_cert, x509);
-    memset(ssl_cert, 0, WEBUI_SSL_SIZE);
-    BIO_read(bio_cert, ssl_cert, (WEBUI_SSL_SIZE - 1));
+	// Write the Server Certificate and Key
+	BIO* bio_cert = BIO_new(BIO_s_mem());
+	PEM_write_bio_X509(bio_cert, x509);
+	memset(ssl_cert, 0, WEBUI_SSL_SIZE);
+	BIO_read(bio_cert, ssl_cert, (WEBUI_SSL_SIZE - 1));
 
-    BIO* bio_key = BIO_new(BIO_s_mem());
-    PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
-    memset(ssl_key, 0, WEBUI_SSL_SIZE);
-    BIO_read(bio_key, ssl_key, (WEBUI_SSL_SIZE - 1));
+	BIO* bio_key = BIO_new(BIO_s_mem());
+	PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
+	memset(ssl_key, 0, WEBUI_SSL_SIZE);
+	BIO_read(bio_key, ssl_key, (WEBUI_SSL_SIZE - 1));
 
-    // Cleanup
-    X509_free(root_x509);
-    EVP_PKEY_free(root_pkey);
-    BIO_free_all(bio_root_cert);
-    BIO_free_all(bio_root_key);
-    X509_free(x509);
-    EVP_PKEY_free(pkey);
-    BIO_free_all(bio_cert);
-    BIO_free_all(bio_key);
+	// Cleanup
+	X509_free(root_x509);
+	EVP_PKEY_free(root_pkey);
+	BIO_free_all(bio_root_cert);
+	BIO_free_all(bio_root_key);
+	X509_free(x509);
+	EVP_PKEY_free(pkey);
+	BIO_free_all(bio_cert);
+	BIO_free_all(bio_key);
 
-    return true;
+	return true;
 }
 #endif
 
@@ -5486,7 +5493,10 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 			unsigned long err = ERR_get_error();
 			char err_buf[1024];
 			ERR_error_string_n(err, err_buf, sizeof(err_buf));
-			printf("[Core]\t\t_webui_show_window() -> Generating self-signed TLS certificate failed:\n%s\n", err_buf);
+			printf(
+			    "[Core]\t\t_webui_show_window() -> Generating self-signed TLS certificate failed:\n%s\n",
+			    err_buf
+			);
 #endif
 			_webui_free_mem((void*)root_cert);
 			_webui_free_mem((void*)root_key);
@@ -5504,9 +5514,9 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 #ifdef WEBUI_LOG
 		printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS Certificate:\nRoot:\n");
 		printf("%s\n", (const char*)_webui_core.root_cert);
-		printf("%s\nServer:\n",(const char*)_webui_core.root_key);
+		printf("%s\nServer:\n", (const char*)_webui_core.root_key);
 		printf("%s\n", (const char*)_webui_core.ssl_cert);
-		printf("%s\n",(const char*)_webui_core.ssl_key);
+		printf("%s\n", (const char*)_webui_core.ssl_key);
 #endif
 	}
 #endif
@@ -6748,11 +6758,15 @@ static void _webui_receive(_webui_window_t* win, int event_type, void* data, siz
 	static void* multi_buf = NULL;
 
 	// Multi Packet
-	if(multi_packet) {
-		if((multi_receive + len) > multi_expect) {
+	if (multi_packet) {
+		if ((multi_receive + len) > multi_expect) {
 			// Received more data than expected
 #ifdef WEBUI_LOG
-			printf("[Core]\t\t_webui_receive()... > Multi packet received more data than expected (%zu + %zu > %zu).\n", multi_receive, len, multi_expect);
+			printf(
+			    "[Core]\t\t_webui_receive()... > Multi packet received more data than expected (%zu + %zu "
+			    "> %zu).\n",
+			    multi_receive, len, multi_expect
+			);
 #endif
 			multi_packet = false;
 			multi_expect = 0;
@@ -6763,27 +6777,29 @@ static void _webui_receive(_webui_window_t* win, int event_type, void* data, siz
 		}
 		// Accumulate packet
 #ifdef WEBUI_LOG
-			printf("[Core]\t\t_webui_receive()... > Multi packet accumulate %zu bytes\n", len);
+		printf("[Core]\t\t_webui_receive()... > Multi packet accumulate %zu bytes\n", len);
 #endif
 		memcpy(((unsigned char*)multi_buf + multi_receive), data, len);
-        multi_receive += len;
+		multi_receive += len;
 		// Check if theire is more packet comming
-		if(multi_receive < multi_expect)
+		if (multi_receive < multi_expect)
 			return;
-	}
-	else if (((unsigned char*)data)[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_MULTI) {
+	} else if (((unsigned char*)data)[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_MULTI) {
 		if (len >= WEBUI_PROTOCOL_SIZE && ((unsigned char*)data)[WEBUI_PROTOCOL_SIGN] == WEBUI_SIGNATURE) {
 			size_t expect_len = (size_t)strtoul(&((const char*)data)[WEBUI_PROTOCOL_DATA], NULL, 10);
-			if(expect_len > 0 && expect_len <= WEBUI_MAX_BUF) {
+			if (expect_len > 0 && expect_len <= WEBUI_MAX_BUF) {
 #ifdef WEBUI_LOG
-				printf("[Core]\t\t_webui_receive()... > Multi packet started, Expecting %zu bytes...\n", expect_len);
+				printf(
+				    "[Core]\t\t_webui_receive()... > Multi packet started, Expecting %zu bytes...\n",
+				    expect_len
+				);
 #endif
 				multi_buf = _webui_malloc(expect_len);
 				memcpy(multi_buf, data, len);
 				multi_receive = 0;
 				multi_expect = expect_len;
 				multi_packet = true;
-			}			
+			}
 		}
 		return;
 	}
@@ -6794,7 +6810,7 @@ static void _webui_receive(_webui_window_t* win, int event_type, void* data, siz
 	arg->recvNum = ++recvNum;
 	arg->event_type = event_type;
 
-	if(multi_packet) {
+	if (multi_packet) {
 #ifdef WEBUI_LOG
 		printf("[Core]\t\t_webui_receive()... > Processing multi packet...\n");
 #endif
@@ -6806,8 +6822,7 @@ static void _webui_receive(_webui_window_t* win, int event_type, void* data, siz
 		multi_expect = 0;
 		multi_receive = 0;
 		multi_buf = NULL;
-	}
-	else {
+	} else {
 		arg->len = len;
 		if (len > 0) {
 			// This event has data. We should copy it once
