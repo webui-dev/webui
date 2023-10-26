@@ -20,6 +20,9 @@
 #include <openssl/rsa.h>
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
+#ifdef WEBUI_LOG
+#include <openssl/err.h>
+#endif
 #endif
 #define MG_BUF_LEN (WEBUI_MAX_BUF)
 #include "civetweb/civetweb.h"
@@ -197,6 +200,8 @@ typedef struct _webui_core_t {
 	bool ui;
 // bool little_endian;
 #ifdef WEBUI_TLS
+	uint8_t* root_cert;
+	uint8_t* root_key;
 	uint8_t* ssl_cert;
 	uint8_t* ssl_key;
 #endif
@@ -281,10 +286,9 @@ static bool _webui_timer_is_end(_webui_timer_t* t, size_t ms);
 static void _webui_timer_clock_gettime(struct timespec* spec);
 static bool _webui_set_root_folder(_webui_window_t* win, const char* path);
 static const char* _webui_generate_js_bridge(_webui_window_t* win);
-static void _webui_print_hex(const char* data, size_t len);
 static void _webui_free_mem(void* ptr);
 static bool _webui_file_exist_mg(_webui_window_t* win, struct mg_connection* conn);
-static bool _webui_file_exist(char* file);
+static bool _webui_file_exist(char* path);
 static void _webui_free_all_mem(void);
 static bool _webui_show_window(_webui_window_t* win, const char* content, bool is_embedded_html, size_t browser);
 static char* _webui_generate_internal_id(_webui_window_t* win, const char* element);
@@ -295,8 +299,6 @@ static void* _webui_malloc(size_t size);
 static void _webui_sleep(long unsigned int ms);
 static size_t _webui_find_the_best_browser(_webui_window_t* win);
 static bool _webui_is_process_running(const char* process_name);
-static void _webui_print_hex(const char* data, size_t len);
-static void _webui_print_ascii(const char* data, size_t len);
 static void _webui_panic(void);
 static void _webui_kill_pid(size_t pid);
 static _webui_window_t* _webui_dereference_win_ptr(void* ptr);
@@ -311,14 +313,13 @@ static void _webui_condition_signal(webui_condition_t* cond);
 static void _webui_condition_destroy(webui_condition_t* cond);
 static void _webui_http_send(struct mg_connection* conn, const char* mime_type, const char* body);
 static void _webui_http_send_error_page(struct mg_connection* conn, const char* body, int status);
-static int _webui_http_log(const struct mg_connection* conn, const char* message);
 static int _webui_http_handler(struct mg_connection* conn, void* _win);
 static int _webui_ws_connect_handler(const struct mg_connection* conn, void* _win);
 static void _webui_ws_ready_handler(struct mg_connection* conn, void* _win);
 static int _webui_ws_data_handler(struct mg_connection* conn, int opcode, char* data, size_t datasize, void* _win);
 static void _webui_ws_close_handler(const struct mg_connection* conn, void* _win);
 static void _webui_receive(_webui_window_t* win, int event_type, void* data, size_t len);
-static void _webui_remove_firefox_ini_profile(const char* path, const char* profile_name);
+static void _webui_remove_firefox_profile_ini(const char* path, const char* profile_name);
 static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* profile_name);
 static void _webui_send(_webui_window_t* win, uint32_t token, uint16_t id, uint8_t cmd, const char* data, size_t len);
 static uint16_t _webui_get_id(const char* data);
@@ -328,7 +329,12 @@ static const char* _webui_url_encode(const char* str);
 static bool _webui_regular_open_url(const char* url);
 #ifdef WEBUI_TLS
 static int _webui_tls_initialization(void* ssl_ctx, void* ptr);
-static bool _webui_tls_generate_self_signed_cert(char* ssl_cert, char* ssl_key);
+static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key, char* ssl_cert, char* ssl_key);
+#endif
+#ifdef WEBUI_LOG
+static void _webui_print_hex(const char* data, size_t len);
+static void _webui_print_ascii(const char* data, size_t len);
+static int _webui_http_log(const struct mg_connection* conn, const char* message);
 #endif
 static WEBUI_THREAD_SERVER_START;
 static WEBUI_THREAD_RECEIVE;
@@ -926,7 +932,7 @@ static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* pr
 	return false;
 }
 
-static void _webui_remove_firefox_ini_profile(const char* path, const char* profile_name) {
+static void _webui_remove_firefox_profile_ini(const char* path, const char* profile_name) {
 
 #ifdef WEBUI_LOG
 	printf("[Core]\t\t_webui_remove_firefox_profile_ini([%s], [%s])...\n", path, profile_name);
@@ -1027,17 +1033,18 @@ void webui_delete_profile(size_t window) {
 
 #ifdef _WIN32
 			// Windows
-			_webui_remove_firefox_ini_profile(
+			_webui_remove_firefox_profile_ini(
 			    "%APPDATA%\\Mozilla\\Firefox\\profiles.ini", win->profile_name
 			);
 			_webui_delete_folder(win->profile_path);
 #elif __linux__
 			// Linux
-			_webui_remove_firefox_ini_profile("~/.mozilla/firefox/profiles.ini", win->profile_name);
+			_webui_remove_firefox_profile_ini("~/.mozilla/firefox/profiles.ini", win->profile_name);
+			_webui_remove_firefox_profile_ini("~/snap/firefox/common/.mozilla/firefox/profiles.ini", win->profile_name);
 			_webui_delete_folder(win->profile_path);
 #else
 			// macOS
-			_webui_remove_firefox_ini_profile(
+			_webui_remove_firefox_profile_ini(
 			    "~/Library/Application Support/Firefox/profiles.ini", win->profile_name
 			);
 			_webui_delete_folder(win->profile_path);
@@ -1448,15 +1455,8 @@ bool webui_set_tls_certificate(const char* certificate_pem, const char* private_
 
 #ifdef WEBUI_LOG
 		printf("[User] webui_set_tls_certificate() -> SSL/TLS Certificate:\n");
-		printf(
-		    "- - -[Cert]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n",
-		    (const char*)_webui_core.ssl_cert
-		);
-		printf("[User] webui_set_tls_certificate() -> SSL/TLS Private Key:\n");
-		printf(
-		    "- - -[Key]- - - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - - -\n",
-		    (const char*)_webui_core.ssl_key
-		);
+		printf("%s\n",(const char*)_webui_core.ssl_cert);
+		printf("%s\n",(const char*)_webui_core.ssl_key);
 #endif
 
 		return true;
@@ -1506,12 +1506,12 @@ size_t webui_get_child_process_id(size_t window) {
 	while ((entry = readdir(dir)) != NULL) {
 		// Ensure we're looking at a process directory (directories that are just numbers)
 		if (entry->d_type == DT_DIR && strspn(entry->d_name, "0123456789") == strlen(entry->d_name)) {
-			char statFilepath[256];
+			char statFilepath[1024];
 			snprintf(statFilepath, sizeof(statFilepath), "/proc/%s/stat", entry->d_name);
 			FILE* f = fopen(statFilepath, "r");
 			if (f) {
 				pid_t pid, ppid;
-				char comm[256];
+				char comm[1024];
 				char state;
 				// Extract data from the stat file; fields are space-delimited
 				if (fscanf(f, "%d %s %c %d", &pid, comm, &state, &ppid) == 4) {
@@ -2486,7 +2486,10 @@ static void _webui_sleep(long unsigned int ms) {
 #ifdef _WIN32
 	Sleep(ms);
 #else
-	usleep(ms);
+	struct timespec req;
+    req.tv_sec = ms / 1000; // Convert ms to seconds
+    req.tv_nsec = (ms % 1000) * 1000000L; // Convert remainder to nanoseconds
+    nanosleep(&req, NULL);
 #endif
 }
 
@@ -2622,28 +2625,54 @@ static bool _webui_regular_open_url(const char* url) {
 #endif
 }
 
-static bool _webui_file_exist(char* file) {
+static bool _webui_file_exist(char* path) {
 
 #ifdef WEBUI_LOG
-	printf("[Core]\t\t_webui_file_exist([%s])...\n", file);
+	printf("[Core]\t\t_webui_file_exist([%s])...\n", path);
 #endif
 
-	if (_webui_is_empty(file))
+	if (_webui_is_empty(path))
 		return false;
+
+// Parse home environments in the path
+#ifdef _WIN32
+	// Windows
+	char full_path[WEBUI_MAX_PATH];
+	ExpandEnvironmentStringsA(path, full_path, sizeof(full_path));
+#else
+	// Linux & macOS
+	char full_path[WEBUI_MAX_PATH];
+	if (path[0] == '~') {
+		const char* home = getenv("HOME");
+		if (home) {
+			snprintf(full_path, sizeof(full_path), "%s/%s", home, &path[1]);
+		} else {
+			// If for some reason HOME isn't set
+			// fall back to the original path.
+			strncpy(full_path, path, sizeof(full_path));
+		}
+	} else {
+		strncpy(full_path, path, sizeof(full_path));
+	}
+#endif
+
+#ifdef WEBUI_LOG
+	printf("[Core]\t\t_webui_file_exist() -> Parsed to [%s]\n", full_path);
+#endif
 
 #if defined(_WIN32)
 	// Convert UTF-8 to wide string on Windows
-	int wlen = MultiByteToWideChar(CP_UTF8, 0, file, -1, NULL, 0);
+	int wlen = MultiByteToWideChar(CP_UTF8, 0, full_path, -1, NULL, 0);
 	wchar_t* wfilePath = (wchar_t*)_webui_malloc(wlen * sizeof(wchar_t));
 	if (!wfilePath)
 		return false;
-	MultiByteToWideChar(CP_UTF8, 0, file, -1, wfilePath, wlen);
+	MultiByteToWideChar(CP_UTF8, 0, full_path, -1, wfilePath, wlen);
 	DWORD dwAttrib = GetFileAttributesW(wfilePath);
 	_webui_free_mem((void*)wfilePath);
 	return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 #else
 	// Linux / macOS
-	return (WEBUI_FILE_EXIST(file, 0) == 0);
+	return (WEBUI_FILE_EXIST(full_path, 0) == 0);
 #endif
 }
 
@@ -3369,12 +3398,16 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
 		const char* path_ini = "%APPDATA%\\Mozilla\\Firefox\\profiles.ini";
 #elif __linux__
 		// Linux
-		const char* path_ini = "~/.mozilla/firefox/profiles.ini";
+		const char* path_ini = "";
+		if(_webui_file_exist("~/.mozilla/firefox/profiles.ini"))
+			path_ini = "~/.mozilla/firefox/profiles.ini";
+		else if(_webui_file_exist("~/snap/firefox/common/.mozilla/firefox/profiles.ini"))
+			path_ini = "~/snap/firefox/common/.mozilla/firefox/profiles.ini";
+		else return false;
 #else
 		// macOS
 		const char* path_ini = "~/Library/Application Support/Firefox/profiles.ini";
 #endif
-
 		if (!win->custom_profile)
 			sprintf(win->profile_path, "%s%s.WebUI%sWebUIFirefoxProfile", temp, webui_sep, webui_sep);
 
@@ -3386,7 +3419,7 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
 			// There is a possibility that the profile name
 			// does not exist in the INI file. or folder does not exist.
 			// let's delete the profile name from the ini file, and folder.
-			_webui_remove_firefox_ini_profile(path_ini, win->profile_name);
+			_webui_remove_firefox_profile_ini(path_ini, win->profile_name);
 			_webui_delete_folder(win->profile_path);
 
 			// Creating the Firefox profile
@@ -4477,6 +4510,7 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
 	    "--disable-sync",
 	    "--disable-sync-preferences",
 	    "--disable-component-update",
+	    "--allow-insecure-localhost",
 	};
 
 	int c = 0;
@@ -5181,81 +5215,131 @@ static int _webui_tls_initialization(void* ssl_ctx, void* ptr) {
 	return 0;
 }
 
-static bool _webui_tls_generate_self_signed_cert(char* ssl_cert, char* ssl_key) {
+static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key, char* ssl_cert, char* ssl_key) {
 
 #ifdef WEBUI_LOG
 	printf("[Core]\t\t_webui_tls_generate_self_signed_cert()...\n");
 #endif
 
-	int ret = 0;
-	int bits = 2048;
-	int serial = 0;
+    int ret = 0;
+    int bits = 2048;
 
-	EVP_PKEY* pkey = NULL;
-	EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
-	if (!ctx)
-		return false;
+    // ----- Create Root Certificate -----
+    EVP_PKEY* root_pkey = NULL;
+    EVP_PKEY_CTX* root_ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+    if (!root_ctx)
+        return false;
 
-	if (EVP_PKEY_keygen_init(ctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, bits) <= 0 ||
-	    EVP_PKEY_keygen(ctx, &pkey) <= 0) {
-		EVP_PKEY_CTX_free(ctx);
-		return false;
-	}
+    if (EVP_PKEY_keygen_init(root_ctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(root_ctx, bits) <= 0 ||
+        EVP_PKEY_keygen(root_ctx, &root_pkey) <= 0) {
+        EVP_PKEY_CTX_free(root_ctx);
+        return false;
+    }
 
-	EVP_PKEY_CTX_free(ctx);
+    EVP_PKEY_CTX_free(root_ctx);
 
-	X509* x509 = X509_new();
-	X509_set_version(x509, 2);
-	ASN1_INTEGER_set(X509_get_serialNumber(x509), serial);
-	X509_gmtime_adj(X509_get_notBefore(x509), 0);
-	X509_gmtime_adj(X509_get_notAfter(x509), (WEBUI_SSL_EXPIRE));
+    X509* root_x509 = X509_new();
+    X509_set_version(root_x509, 2);
+    ASN1_INTEGER_set(X509_get_serialNumber(root_x509), (long)_webui_generate_random_uint32());
+    X509_gmtime_adj(X509_get_notBefore(root_x509), 0);
+    X509_gmtime_adj(X509_get_notAfter(root_x509), (long)(WEBUI_SSL_EXPIRE));
 
-	X509_NAME* name = X509_get_subject_name(x509);
-	X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1, 0);     // Country
-	X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1, 0);  // Organization
-	X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organizational Unit
-	X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "WebUI", -1, -1, 0); // Common Name
-	X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
-	X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0);  // Locality
+    X509_NAME* root_name = X509_get_subject_name(root_x509);
+	X509_NAME_add_entry_by_txt(root_name, "C", MBSTRING_ASC, "CA", -1, -1, 0);     // Country
+	X509_NAME_add_entry_by_txt(root_name, "O", MBSTRING_ASC, "WebUI Root Authority", -1, -1, 0);  // Organization
+	X509_NAME_add_entry_by_txt(root_name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organizational Unit
+	X509_NAME_add_entry_by_txt(root_name, "CN", MBSTRING_ASC, "localhost", -1, -1, 0); // Common Name
+	X509_NAME_add_entry_by_txt(root_name, "subjectAltName", MBSTRING_ASC, "127.0.0.1", -1, -1, 0); // Subject Alternative Name
+	X509_NAME_add_entry_by_txt(root_name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
+	X509_NAME_add_entry_by_txt(root_name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0);  // Locality
 
-	X509_set_issuer_name(x509, name);
+    X509_set_issuer_name(root_x509, root_name);
+    X509_set_pubkey(root_x509, root_pkey);
+    ret = X509_sign(root_x509, root_pkey, EVP_sha256());
+    if (ret <= 0) {
+        X509_free(root_x509);
+        EVP_PKEY_free(root_pkey);
+        return false;
+    }
+
+    // Write Root Certificate and Key
+    BIO* bio_root_cert = BIO_new(BIO_s_mem());
+    PEM_write_bio_X509(bio_root_cert, root_x509);
+    memset(root_cert, 0, WEBUI_SSL_SIZE);
+    BIO_read(bio_root_cert, root_cert, (WEBUI_SSL_SIZE - 1));
+
+    BIO* bio_root_key = BIO_new(BIO_s_mem());
+    PEM_write_bio_PrivateKey(bio_root_key, root_pkey, NULL, NULL, 0, NULL, NULL);
+    memset(root_key, 0, WEBUI_SSL_SIZE);
+    BIO_read(bio_root_key, root_key, (WEBUI_SSL_SIZE - 1));
+
+    // ----- Create Server Certificate and sign with Root -----
+    EVP_PKEY* pkey = NULL;
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL);
+    if (!ctx) {
+        X509_free(root_x509);
+        EVP_PKEY_free(root_pkey);
+        return false;
+    }
+
+    if (EVP_PKEY_keygen_init(ctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, bits) <= 0 ||
+        EVP_PKEY_keygen(ctx, &pkey) <= 0) {
+        X509_free(root_x509);
+        EVP_PKEY_free(root_pkey);
+        EVP_PKEY_CTX_free(ctx);
+        return false;
+    }
+
+    EVP_PKEY_CTX_free(ctx);
+
+    X509* x509 = X509_new();
+    X509_set_version(x509, 2);
+    ASN1_INTEGER_set(X509_get_serialNumber(x509), (long)_webui_generate_random_uint32());
+    X509_gmtime_adj(X509_get_notBefore(x509), 0);
+    X509_gmtime_adj(X509_get_notAfter(x509), (long)(WEBUI_SSL_EXPIRE));
+
+    X509_NAME* name = X509_get_subject_name(x509);
+    X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1, 0); // Country
+    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organization
+    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0); // Organizational Unit
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "localhost", -1, -1, 0); // Common Name
+	X509_NAME_add_entry_by_txt(name, "subjectAltName", MBSTRING_ASC, "127.0.0.1", -1, -1, 0); // Subject Alternative Name
+    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
+    X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0); // Locality
+
+    X509_set_issuer_name(x509, root_name);
 	X509_set_pubkey(x509, pkey);
-	ret = X509_sign(x509, pkey, EVP_sha256());
-	if (ret <= 0) {
-		X509_free(x509);
-		EVP_PKEY_free(pkey);
-		return false;
-	}
+    ret = X509_sign(x509, root_pkey, EVP_sha256());
+    if (ret <= 0) {
+        X509_free(root_x509);
+        EVP_PKEY_free(root_pkey);
+        X509_free(x509);
+        EVP_PKEY_free(pkey);
+        return false;
+    }
 
-	BIO* bio_cert = BIO_new(BIO_s_mem());
-	ret = PEM_write_bio_X509(bio_cert, x509);
-	if (ret != 1) {
-		X509_free(x509);
-		EVP_PKEY_free(pkey);
-		BIO_free_all(bio_cert);
-		return false;
-	}
-	memset(ssl_cert, 0, WEBUI_SSL_SIZE);
-	BIO_read(bio_cert, ssl_cert, (WEBUI_SSL_SIZE - 1));
+    // Write the Server Certificate and Key
+    BIO* bio_cert = BIO_new(BIO_s_mem());
+    PEM_write_bio_X509(bio_cert, x509);
+    memset(ssl_cert, 0, WEBUI_SSL_SIZE);
+    BIO_read(bio_cert, ssl_cert, (WEBUI_SSL_SIZE - 1));
 
-	BIO* bio_key = BIO_new(BIO_s_mem());
-	ret = PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
-	if (ret != 1) {
-		X509_free(x509);
-		EVP_PKEY_free(pkey);
-		BIO_free_all(bio_cert);
-		BIO_free_all(bio_key);
-		return false;
-	}
-	memset(ssl_key, 0, WEBUI_SSL_SIZE);
-	BIO_read(bio_key, ssl_key, (WEBUI_SSL_SIZE - 1));
+    BIO* bio_key = BIO_new(BIO_s_mem());
+    PEM_write_bio_PrivateKey(bio_key, pkey, NULL, NULL, 0, NULL, NULL);
+    memset(ssl_key, 0, WEBUI_SSL_SIZE);
+    BIO_read(bio_key, ssl_key, (WEBUI_SSL_SIZE - 1));
 
-	X509_free(x509);
-	EVP_PKEY_free(pkey);
-	BIO_free_all(bio_cert);
-	BIO_free_all(bio_key);
+    // Cleanup
+    X509_free(root_x509);
+    EVP_PKEY_free(root_pkey);
+    BIO_free_all(bio_root_cert);
+    BIO_free_all(bio_root_key);
+    X509_free(x509);
+    EVP_PKEY_free(pkey);
+    BIO_free_all(bio_cert);
+    BIO_free_all(bio_key);
 
-	return true;
+    return true;
 }
 #endif
 
@@ -5277,31 +5361,36 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 #endif
 
 		// Generate SSL self-signed certificate
+		char* root_cert = (char*)_webui_malloc(WEBUI_SSL_SIZE);
+		char* root_key = (char*)_webui_malloc(WEBUI_SSL_SIZE);
 		char* ssl_cert = (char*)_webui_malloc(WEBUI_SSL_SIZE);
 		char* ssl_key = (char*)_webui_malloc(WEBUI_SSL_SIZE);
-		if (!_webui_tls_generate_self_signed_cert(ssl_cert, ssl_key)) {
+		if (!_webui_tls_generate_self_signed_cert(root_cert, root_key, ssl_cert, ssl_key)) {
 #ifdef WEBUI_LOG
-			printf("[Core]\t\t_webui_show_window() -> Generating self-signed TLS certificate failed.\n");
+			unsigned long err = ERR_get_error();
+			char err_buf[1024];
+			ERR_error_string_n(err, err_buf, sizeof(err_buf));
+			printf("[Core]\t\t_webui_show_window() -> Generating self-signed TLS certificate failed:\n%s\n", err_buf);
 #endif
+			_webui_free_mem((void*)root_cert);
+			_webui_free_mem((void*)root_key);
 			_webui_free_mem((void*)ssl_cert);
 			_webui_free_mem((void*)ssl_key);
+			_webui_panic();
 			return false;
 		}
 
+		_webui_core.root_cert = root_cert;
+		_webui_core.root_key = root_key;
 		_webui_core.ssl_cert = ssl_cert;
 		_webui_core.ssl_key = ssl_key;
 
 #ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS Certificate:\n");
-		printf(
-		    "- - -[Cert]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n",
-		    (const char*)_webui_core.ssl_cert
-		);
-		printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS Key:\n");
-		printf(
-		    "- - -[Key]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n",
-		    (const char*)_webui_core.ssl_key
-		);
+		printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS Certificate:\nRoot:\n");
+		printf("%s\n", (const char*)_webui_core.root_cert);
+		printf("%s\nServer:\n",(const char*)_webui_core.root_key);
+		printf("%s\n", (const char*)_webui_core.ssl_cert);
+		printf("%s\n",(const char*)_webui_core.ssl_key);
 #endif
 	}
 #endif
@@ -5744,15 +5833,13 @@ static void _webui_http_send_error_page(struct mg_connection* conn, const char* 
 	mg_write(conn, body, strlen(body));
 }
 
-static int _webui_http_log(const struct mg_connection* conn, const char* message) {
-
 #ifdef WEBUI_LOG
+static int _webui_http_log(const struct mg_connection* conn, const char* message) {
 	printf("[Core]\t\t_webui_http_log()...\n");
 	printf("[Core]\t\t_webui_http_log() -> Log: %s.\n", message);
-#endif
-
 	return 1;
 }
+#endif
 
 /*
     static char* _webui_inject_bridge(_webui_window_t* win, const char *user_html) {
@@ -6248,7 +6335,9 @@ static WEBUI_THREAD_SERVER_START {
 #ifdef WEBUI_TLS
 	http_callbacks.init_ssl = _webui_tls_initialization;
 #endif
+#ifdef WEBUI_LOG
 	http_callbacks.log_message = _webui_http_log;
+#endif
 	http_ctx = mg_start(&http_callbacks, 0, http_options);
 	mg_set_request_handler(http_ctx, "/", _webui_http_handler, (void*)win);
 
