@@ -330,6 +330,7 @@ static bool _webui_regular_open_url(const char* url);
 #ifdef WEBUI_TLS
 static int _webui_tls_initialization(void* ssl_ctx, void* ptr);
 static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key, char* ssl_cert, char* ssl_key);
+static bool _webui_check_certificate(const char* certificate_pem, const char* private_key_pem);
 #endif
 #ifdef WEBUI_LOG
 static void _webui_print_hex(const char* data, size_t len);
@@ -1424,6 +1425,94 @@ size_t webui_get_parent_process_id(size_t window) {
 	return win->process_id;
 }
 
+#ifdef WEBUI_TLS
+static bool _webui_check_certificate(const char* certificate_pem, const char* private_key_pem) {
+
+#ifdef WEBUI_LOG
+	printf("[Core]\t\t_webui_check_certificate()...\n");
+#endif
+
+	OpenSSL_add_all_algorithms();
+
+	// SSL Context
+	SSL_CTX *ctx;
+	SSL_library_init();
+	ctx = SSL_CTX_new(TLS_client_method());
+	if (!ctx)
+		return false;
+
+	// Disable security levels. It is The end-user
+	// responsability to provide a high encryption 
+	// level certificate. While WebUI should just
+	// use the end-user's certificates.
+	SSL_CTX_set_security_level(ctx, 0);
+
+	// Load Certificate
+	BIO* bio_cert = BIO_new_mem_buf((void*)certificate_pem, -1);
+	X509* cert = PEM_read_bio_X509(bio_cert, NULL, 0, NULL);
+	if (cert == NULL) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_check_certificate() -> PEM_read_bio_X509 failed\n");
+#endif
+		BIO_free_all(bio_cert);
+		X509_free(cert);
+		SSL_CTX_free(ctx);
+		return false;
+	}
+
+	// Use certificate
+	if (SSL_CTX_use_certificate(ctx, cert) <= 0) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_check_certificate() -> SSL_CTX_use_certificate failed\n");
+#endif
+		BIO_free_all(bio_cert);
+		X509_free(cert);
+		SSL_CTX_free(ctx);
+		return false;
+	}
+
+	// Load Key
+	BIO* bio_key = BIO_new_mem_buf((void*)private_key_pem, -1);
+	EVP_PKEY* private_key = PEM_read_bio_PrivateKey(bio_key, NULL, 0, NULL);
+	if (private_key == NULL) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_check_certificate() -> PEM_read_bio_PrivateKey failed\n");
+#endif
+		EVP_PKEY_free(private_key);
+		BIO_free_all(bio_key);
+		BIO_free_all(bio_cert);
+		X509_free(cert);
+		SSL_CTX_free(ctx);
+		EVP_cleanup();
+		return false;
+	}
+
+	// Use key
+	if (SSL_CTX_use_PrivateKey(ctx, private_key) <= 0) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_check_certificate() -> SSL_CTX_use_PrivateKey failed\n");
+#endif
+		EVP_PKEY_free(private_key);
+		BIO_free_all(bio_key);
+		BIO_free_all(bio_cert);
+		X509_free(cert);
+		SSL_CTX_free(ctx);
+		EVP_cleanup();
+		return false;
+	}
+
+	// Free
+	EVP_PKEY_free(private_key);
+	BIO_free_all(bio_key);
+	BIO_free_all(bio_cert);
+	X509_free(cert);
+	SSL_CTX_free(ctx);
+	EVP_cleanup();
+
+	return true;
+}
+#endif
+
 bool webui_set_tls_certificate(const char* certificate_pem, const char* private_key_pem) {
 
 #ifdef WEBUI_LOG
@@ -1436,13 +1525,22 @@ bool webui_set_tls_certificate(const char* certificate_pem, const char* private_
 #ifdef WEBUI_TLS
 	if (!_webui_is_empty(certificate_pem) && !_webui_is_empty(private_key_pem)) {
 
+		// Check size
 		size_t certificate_len = strlen(certificate_pem);
 		size_t private_key_len = strlen(private_key_pem);
+		if (certificate_len >= WEBUI_SSL_SIZE || private_key_len >= WEBUI_SSL_SIZE)
+			return false;
 
-		if (certificate_len >= WEBUI_SSL_SIZE)
-			certificate_len = (WEBUI_SSL_SIZE - 1);
-		if (private_key_len >= WEBUI_SSL_SIZE)
-			private_key_len = (WEBUI_SSL_SIZE - 1);
+		// Check certificate validity
+		if(!_webui_check_certificate(certificate_pem, private_key_pem)) {
+#ifdef WEBUI_LOG
+			unsigned long err = ERR_get_error();
+			char err_buf[1024];
+			ERR_error_string_n(err, err_buf, sizeof(err_buf));
+			printf("[User] webui_set_tls_certificate() -> Invalid certificate:\n%s\n", err_buf);
+#endif
+			return false;
+		}
 
 		char* ssl_cert = (char*)_webui_malloc(certificate_len);
 		char* ssl_key = (char*)_webui_malloc(private_key_len);
@@ -2017,7 +2115,7 @@ bool webui_set_root_folder(size_t window, const char* path) {
 
 		sprintf(win->server_root_path, "%s", WEBUI_DEFAULT_PATH);
 #ifdef WEBUI_LOG
-		printf("[User] webui_set_root_folder() -> Failed.\n");
+		printf("[User] webui_set_root_folder() -> failed\n");
 #endif
 		return false;
 	}
@@ -2044,7 +2142,7 @@ bool webui_set_default_root_folder(const char* path) {
 
 		_webui_core.default_server_root_path[0] = '\0';
 #ifdef WEBUI_LOG
-		printf("[User] webui_set_default_root_folder() -> Failed.\n");
+		printf("[User] webui_set_default_root_folder() -> failed\n");
 #endif
 		return false;
 	}
@@ -5184,14 +5282,26 @@ static int _webui_tls_initialization(void* ssl_ctx, void* ptr) {
 
 	SSL_CTX* ctx = (SSL_CTX*)ssl_ctx;
 
+	// Disable security levels. It is The end-user
+	// responsability to provide a high encryption
+	// level certificate. While WebUI should just
+	// use the end-user's certificates.
+	SSL_CTX_set_security_level(ctx, 0);
+
 	// Load Certificate
 	BIO* bio_cert = BIO_new_mem_buf((void*)_webui_core.ssl_cert, -1);
 	X509* cert = PEM_read_bio_X509(bio_cert, NULL, 0, NULL);
 	if (cert == NULL) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_tls_initialization() -> PEM_read_bio_X509 failed\n");
+#endif
 		_webui_panic();
 		return -1;
 	}
 	if (SSL_CTX_use_certificate(ctx, cert) <= 0) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_tls_initialization() -> SSL_CTX_use_certificate failed\n");
+#endif
 		_webui_panic();
 		return -1;
 	}
@@ -5202,10 +5312,16 @@ static int _webui_tls_initialization(void* ssl_ctx, void* ptr) {
 	BIO* bio_key = BIO_new_mem_buf((void*)_webui_core.ssl_key, -1);
 	EVP_PKEY* private_key = PEM_read_bio_PrivateKey(bio_key, NULL, 0, NULL);
 	if (private_key == NULL) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_tls_initialization() -> PEM_read_bio_PrivateKey failed\n");
+#endif
 		_webui_panic();
 		return -1;
 	}
 	if (SSL_CTX_use_PrivateKey(ctx, private_key) <= 0) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_tls_initialization() -> SSL_CTX_use_PrivateKey failed\n");
+#endif
 		_webui_panic();
 		return -1;
 	}

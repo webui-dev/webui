@@ -486,7 +486,18 @@ WEBUI_EXPORT size_t webui_get_parent_process_id(size_t window);
  */
 WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
 
-// Set a custom SSL/TLS certificate and the private key in PEM format. If set empty WebUI will generate a self-signed certificate
+// -- SSL/TLS -------------------------
+
+/**
+ * @brief Set the SSL/TLS certificate and the private key content, both in PEM format. This works only with `webui-2-secure` library. If set empty WebUI will generate a self-signed certificate.
+ *
+ * @param certificate_pem The SSL/TLS certificate content in PEM format
+ * @param private_key_pem The private key content in PEM format
+ *
+ * @return Returns True if the certificate and the key are valid.
+ *
+ * @example bool ret = webui_set_tls_certificate("-----BEGIN CERTIFICATE-----\n...", "-----BEGIN PRIVATE KEY-----\n...");
+ */
 WEBUI_EXPORT bool webui_set_tls_certificate(const char* certificate_pem, const char* private_key_pem);
 
 // -- JavaScript ----------------------
