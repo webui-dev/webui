@@ -13,7 +13,11 @@ TLS_LDFLAG_DYNAMIC =
 ifeq ($(WEBUI_USE_TLS), 1)
 WEBUI_OUT_LIB_NAME = webui-2-secure
 TLS_CFLAG = -DWEBUI_TLS -DNO_SSL_DL -DOPENSSL_API_1_1
+ifeq ($(OS),Windows_NT)
 TLS_LDFLAG_DYNAMIC = -lssl -lcrypto -lbcrypt
+else
+TLS_LDFLAG_DYNAMIC = -lssl -lcrypto
+endif
 endif
 
 MAKEFILE_DIR := $(shell git rev-parse --show-toplevel)
@@ -26,9 +30,9 @@ CC = gcc
 ARCH_TARGET ?=
 
 # BUILD FLAGS
-CIVETWEB_BUILD_FLAGS := -o civetweb.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/civetweb/civetweb.c" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG)
+CIVETWEB_BUILD_FLAGS := -o civetweb.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/civetweb/civetweb.c" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG) -w
 CIVETWEB_DEFINE_FLAGS = -DNDEBUG -DNO_CACHING -DNO_CGI -DUSE_WEBSOCKET $(TLS_CFLAG)
-WEBUI_BUILD_FLAGS := -o webui.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webui.c" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG)
+WEBUI_BUILD_FLAGS := -o webui.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webui.c" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG) -w
 
 # OUTPUT FILES
 # The static output is the same for all platforms

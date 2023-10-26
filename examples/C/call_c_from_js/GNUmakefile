@@ -3,7 +3,11 @@
 # == 1. VARIABLES =============================================================
 
 PROJECT_DIR := $(shell git rev-parse --show-toplevel)
+TARGET := $(firstword $(MAKECMDGOALS))
 LIB_DIR := $(PROJECT_DIR)/dist
+ifeq ($(TARGET), debug)
+LIB_DIR := $(LIB_DIR)/debug
+endif
 INCLUDE_DIR := $(PROJECT_DIR)/include
 WEBUI_LIB_NAME = webui-2
 ifeq ($(WEBUI_USE_TLS), 1)
@@ -26,25 +30,32 @@ ifeq ($(OS),Windows_NT)
 	PLATFORM := windows
 	SHELL := CMD
 	STATIC_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)-static -lws2_32 -Wall -luser32 -static
-	DYN_BUILD_FLAGS += "$(LIB_DIR)/$(WEBUI_LIB_NAME).dll" -lws2_32 -Wall -luser32
+	COPY_LIB_CMD := @copy "$(LIB_DIR)\$(WEBUI_LIB_NAME).dll" "$(WEBUI_LIB_NAME).dll"
+	DYN_BUILD_FLAGS += "$(WEBUI_LIB_NAME).dll" -lws2_32 -Wall -luser32
 	STATIC_OUT := main.exe
 	DYN_OUT := main-dyn.exe
 	LWS2_OPT := -lws2_32
 	STRIP_OPT := --strip-all
+	CONSOLE_APP := -Wl,-subsystem=console
+	GUI_APP := -Wl,-subsystem=windows
 else
 	STATIC_BUILD_FLAGS += -lpthread -lm -l$(WEBUI_LIB_NAME)-static
 	DYN_BUILD_FLAGS += -lpthread -lm
 	STATIC_OUT := main
 	DYN_OUT := main-dyn
+	CONSOLE_APP := 
+	GUI_APP := 
 	ifeq ($(shell uname),Darwin)
 		# MacOS
 		PLATFORM := macos
 		CC = clang
-		DYN_BUILD_FLAGS += "$(LIB_DIR)/$(WEBUI_LIB_NAME).dylib"
+		COPY_LIB_CMD := @cp "$(LIB_DIR)/$(WEBUI_LIB_NAME).dylib" "$(WEBUI_LIB_NAME).dylib"
+		DYN_BUILD_FLAGS += "./$(WEBUI_LIB_NAME).dylib"
 	else
 		# Linux
 		PLATFORM := linux
-		DYN_BUILD_FLAGS += "$(LIB_DIR)/$(WEBUI_LIB_NAME).so"
+		COPY_LIB_CMD := @cp "$(LIB_DIR)/$(WEBUI_LIB_NAME).so" "$(WEBUI_LIB_NAME).so"
+		DYN_BUILD_FLAGS += "./$(WEBUI_LIB_NAME).so"
 		STRIP_OPT := --strip-all
 		ifeq ($(CC),clang)
 			LLVM_OPT := llvm-
@@ -56,7 +67,6 @@ endif
 
 all: release
 
-debug: LIB_DIR := $(LIB_DIR)/debug
 debug: --validate-args
 ifeq ($(BUILD_LIB),true)
 	@cd "$(PROJECT_DIR)" && $(MAKE) debug
@@ -64,11 +74,12 @@ endif
 #	Static with Debug info
 ifneq ($(WEBUI_USE_TLS), 1)
 	@echo "Build C99 Example ($(CC) debug static)..."
-	@$(CC) -g -Wl,-subsystem=console $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
+	@$(CC) -g $(CONSOLE_APP) $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
 endif
 #	Dynamic with Debug info
 	@echo "Build C99 Example ($(CC) debug dynamic)..."
-	@$(CC) -g -Wl,-subsystem=console $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
+	$(COPY_LIB_CMD)
+	@$(CC) -g $(CONSOLE_APP) $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@- del *.o >nul 2>&1
@@ -85,12 +96,13 @@ endif
 #	Static Release
 ifneq ($(WEBUI_USE_TLS), 1)
 	@echo "Build C99 Example ($(CC) release static)..."
-	@$(CC) -Os -Wl,-subsystem=windows $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
+	@$(CC) -Os $(GUI_APP) $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(STATIC_OUT)
 endif
 #	Dynamic Release
 	@echo "Build C99 Example ($(CC) release dynamic)..."
-	@$(CC) -Wl,-subsystem=windows $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
+	$(COPY_LIB_CMD)
+	@$(CC) $(GUI_APP) $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(DYN_OUT)
 #	Clean
 ifeq ($(PLATFORM),windows)
