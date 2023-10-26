@@ -109,14 +109,16 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
   **Windows SSL/TLS (*Optional*)**
 
-  Download and install OpenSSL pre-compiled binaries: [x64 OpenSSL v3.1.3](https://slproweb.com/download/Win64OpenSSL-3_1_3.msi) or [*32Bit*](https://slproweb.com/download/Win32OpenSSL-3_1_3.msi). Please check this [Wiki list](https://wiki.openssl.org/index.php/Binaries) for more info.
+  Download and install the OpenSSL pre-compiled binaries for Windows:
+  - MSVC: [x64 OpenSSL v3.1.3](https://slproweb.com/download/Win64OpenSSL-3_1_3.msi) or [*32Bit*](https://slproweb.com/download/Win32OpenSSL-3_1_3.msi). Please check this [Wiki list](https://wiki.openssl.org/index.php/Binaries) for more info.
+  - MinGW: [Curl for Windows win OpenSSL](https://curl.se/windows/)
 
   ```powershell
   # GCC
-  mingw32-make WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="C:\OpenSSL\include" WEBUI_TLS_LIB="C:\OpenSSL\lib"
+  mingw32-make WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="C:\curl-xxx-xxx-mingw\curl-xxx-xxx-mingw\include" WEBUI_TLS_LIB="C:\curl-xxx-xxx-mingw\curl-xxx-xxx-mingw\lib"
 
   # MSVC
-  nmake WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="C:\OpenSSL\include" WEBUI_TLS_LIB="C:\OpenSSL\lib"
+  nmake WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="C:\Program Files\OpenSSL-xxx\include" WEBUI_TLS_LIB="C:\Program Files\OpenSSL-xxx\lib"
   ```
 
 - **Linux**
