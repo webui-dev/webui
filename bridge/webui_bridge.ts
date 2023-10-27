@@ -25,7 +25,7 @@ class WebuiBridge {
 	#token: number;
 	#port: number;
 	#winNum: number;
-	#bindList: unknown[] = [];
+	#bindList: string[] = [];
 	#log: boolean;
 	#winX: number;
 	#winY: number;
@@ -79,7 +79,7 @@ class WebuiBridge {
 		token: number;
 		port: number;
 		winNum: number;
-		bindList: unknown[];
+		bindList: string[];
 		log?: boolean;
 		winX: number;
 		winY: number;
@@ -235,6 +235,7 @@ class WebuiBridge {
 		buffer[index + 1] = (value >>> 8) & 0xff; // Most significant byte
 	}
 	#start() {
+		this.#generateCallObjects();
 		this.#keepAlive();
 		this.#callPromiseID[0] = 0;
 		if (this.#bindList.includes(this.#winNum + '/')) {
@@ -560,6 +561,15 @@ class WebuiBridge {
 	}
 	#toUint16(value: number): number {
 		return value & 0xffff;
+	}
+	#generateCallObjects() {
+		for (const bind of this.#bindList) {
+			if (bind.trim()) {
+				const fn = bind.replace(`${this.#winNum}/`, '');
+				if (fn.trim())
+					this[fn] = (...args: DataTypes[]) => this.call(fn, ...args);
+			}
+		}
 	}
 	#callPromise(fn: string, ...args: DataTypes[]) {
 		--this.#callPromiseID[0];
