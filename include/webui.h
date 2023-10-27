@@ -169,7 +169,8 @@ WEBUI_EXPORT size_t webui_new_window(void);
 WEBUI_EXPORT size_t webui_new_window_id(size_t window_number);
 
 /**
- * @brief Get a free window number that can be used with `webui_new_window_id()`.
+ * @brief Get a free window number that can be used with
+ * `webui_new_window_id()`.
  *
  * @return Returns the first available free window number. Starting from 1.
  *
@@ -178,7 +179,8 @@ WEBUI_EXPORT size_t webui_new_window_id(size_t window_number);
 WEBUI_EXPORT size_t webui_get_new_window_id(void);
 
 /**
- * @brief Bind a specific html element click event with a function. Empty element means all events.
+ * @brief Bind a specific html element click event with a function. Empty
+ * element means all events.
  *
  * @param window The window number
  * @param element The HTML ID
@@ -191,14 +193,16 @@ WEBUI_EXPORT size_t webui_get_new_window_id(void);
 WEBUI_EXPORT size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t* e));
 
 /**
- * @brief Show a window using embedded HTML, or a file. If the window is already open, it will be refreshed.
+ * @brief Show a window using embedded HTML, or a file. If the window is already
+ * open, it will be refreshed.
  *
  * @param window The window number
  * @param content The HTML, Or a local file
  *
  * @return Returns True if showing the window is successed.
  *
- * @example webui_show(myWindow, "<html>...</html>"); | webui_show(myWindow, "index.html");
+ * @example webui_show(myWindow, "<html>...</html>"); | webui_show(myWindow,
+ * "index.html");
  */
 WEBUI_EXPORT bool webui_show(size_t window, const char* content);
 
@@ -211,7 +215,8 @@ WEBUI_EXPORT bool webui_show(size_t window, const char* content);
  *
  * @return Returns True if showing the window is successed.
  *
- * @example webui_show_browser(myWindow, "<html>...</html>", Chrome); | webui_show(myWindow, "index.html", Firefox);
+ * @example webui_show_browser(myWindow, "<html>...</html>", Chrome); |
+ * webui_show(myWindow, "index.html", Firefox);
  */
 WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, size_t browser);
 
@@ -268,7 +273,8 @@ WEBUI_EXPORT void webui_exit(void);
 WEBUI_EXPORT bool webui_set_root_folder(size_t window, const char* path);
 
 /**
- * @brief Set the web-server root folder path for all windows. Should be used before `webui_show()`.
+ * @brief Set the web-server root folder path for all windows. Should be used
+ * before `webui_show()`.
  *
  * @param path The local folder full path
  *
@@ -280,7 +286,8 @@ WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
  * @brief Set a custom handler to serve files.
  *
  * @param window The window number
- * @param handler The handler function: `void myHandler(const char* filename, int* length)`
+ * @param handler The handler function: `void myHandler(const char* filename,
+ * int* length)`
  *
  * @return Returns a unique bind ID.
  *
@@ -318,7 +325,8 @@ WEBUI_EXPORT void webui_set_timeout(size_t second);
 WEBUI_EXPORT void webui_set_icon(size_t window, const char* icon, const char* icon_type);
 
 /**
- * @brief Base64 encoding. Use this to safely send text based data to the UI. If it fails it will return NULL.
+ * @brief Base64 encoding. Use this to safely send text based data to the UI. If
+ * it fails it will return NULL.
  *
  * @param str The string to encode (Should be null terminated)
  *
@@ -327,7 +335,8 @@ WEBUI_EXPORT void webui_set_icon(size_t window, const char* icon, const char* ic
 WEBUI_EXPORT char* webui_encode(const char* str);
 
 /**
- * @brief Base64 decoding. Use this to safely decode received Base64 text from the UI. If it fails it will return NULL.
+ * @brief Base64 decoding. Use this to safely decode received Base64 text from
+ * the UI. If it fails it will return NULL.
  *
  * @param str The string to decode (Should be null terminated)
  *
@@ -345,8 +354,8 @@ WEBUI_EXPORT char* webui_decode(const char* str);
 WEBUI_EXPORT void webui_free(void* ptr);
 
 /**
- * @brief Safely allocate memory using the WebUI memory management system. It can be safely freed using `webui_free()`
- * at any time.
+ * @brief Safely allocate memory using the WebUI memory management system. It
+ * can be safely freed using `webui_free()` at any time.
  *
  * @param size The size of memory in bytes
  *
@@ -358,7 +367,8 @@ WEBUI_EXPORT void* webui_malloc(size_t size);
  * @brief Safely send raw data to the UI.
  *
  * @param window The window number
- * @param function The JavaScript function to receive raw data: `function myFunc(myData){}`
+ * @param function The JavaScript function to receive raw data: `function
+ * myFunc(myData){}`
  * @param raw The raw data buffer
  * @param size The raw data size in bytes
  *
@@ -399,14 +409,15 @@ WEBUI_EXPORT void webui_set_size(size_t window, unsigned int width, unsigned int
 WEBUI_EXPORT void webui_set_position(size_t window, unsigned int x, unsigned int y);
 
 /**
- * @brief Set the web browser profile to use. An empty `name` and `path` means the default user profile. Need to be
- * called before `webui_show()`.
+ * @brief Set the web browser profile to use. An empty `name` and `path` means
+ * the default user profile. Need to be called before `webui_show()`.
  *
  * @param window The window number
  * @param name The web browser profile name
  * @param path The web browser profile full path
  *
- * @example webui_set_profile(myWindow, "Bar", "/Home/Foo/Bar"); | webui_set_profile(myWindow, "", "");
+ * @example webui_set_profile(myWindow, "Bar", "/Home/Foo/Bar"); |
+ * webui_set_profile(myWindow, "", "");
  */
 WEBUI_EXPORT void webui_set_profile(size_t window, const char* name, const char* path);
 
@@ -441,7 +452,8 @@ WEBUI_EXPORT void webui_navigate(size_t window, const char* url);
 WEBUI_EXPORT void webui_clean();
 
 /**
- * @brief Delete all local web-browser profiles folder. It should called at the end.
+ * @brief Delete all local web-browser profiles folder. It should called at the
+ * end.
  *
  * @example
  * webui_wait();
@@ -460,12 +472,14 @@ WEBUI_EXPORT void webui_delete_all_profiles();
  * webui_delete_profile(myWindow);
  * webui_clean();
  *
- * @note This can break functionality of other windows if using the same web-browser.
+ * @note This can break functionality of other windows if using the same
+ * web-browser.
  */
 WEBUI_EXPORT void webui_delete_profile(size_t window);
 
 /**
- * @brief Get the ID of the parent process (The web browser may re-create another new process).
+ * @brief Get the ID of the parent process (The web browser may re-create
+ * another new process).
  *
  * @param window The window number
  *
@@ -489,14 +503,17 @@ WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
 // -- SSL/TLS -------------------------
 
 /**
- * @brief Set the SSL/TLS certificate and the private key content, both in PEM format. This works only with `webui-2-secure` library. If set empty WebUI will generate a self-signed certificate.
+ * @brief Set the SSL/TLS certificate and the private key content, both in PEM
+ * format. This works only with `webui-2-secure` library. If set empty WebUI
+ * will generate a self-signed certificate.
  *
  * @param certificate_pem The SSL/TLS certificate content in PEM format
  * @param private_key_pem The private key content in PEM format
  *
  * @return Returns True if the certificate and the key are valid.
  *
- * @example bool ret = webui_set_tls_certificate("-----BEGIN CERTIFICATE-----\n...", "-----BEGIN PRIVATE KEY-----\n...");
+ * @example bool ret = webui_set_tls_certificate("-----BEGIN
+ * CERTIFICATE-----\n...", "-----BEGIN PRIVATE KEY-----\n...");
  */
 WEBUI_EXPORT bool webui_set_tls_certificate(const char* certificate_pem, const char* private_key_pem);
 
@@ -505,7 +522,8 @@ WEBUI_EXPORT bool webui_set_tls_certificate(const char* certificate_pem, const c
 // Run JavaScript without waiting for the response.
 WEBUI_EXPORT void webui_run(size_t window, const char* script);
 
-// Run JavaScript and get the response back (Make sure your local buffer can hold the response).
+// Run JavaScript and get the response back (Make sure your local buffer can
+// hold the response).
 WEBUI_EXPORT bool webui_script(size_t window, const char* script, size_t timeout, char* buffer, size_t buffer_length);
 
 // Chose between Deno and Nodejs as runtime for .js and .ts files.
@@ -546,12 +564,14 @@ WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
 
 // -- Wrapper's Interface -------------
 
-// Bind a specific html element click event with a function. Empty element means all events. This replaces
-// `webui_bind()`. The func is (Window, EventType, Element, EventNumber, BindID).
+// Bind a specific html element click event with a function. Empty element means
+// all events. This replaces `webui_bind()`. The func is (Window, EventType,
+// Element, EventNumber, BindID).
 WEBUI_EXPORT size_t
     webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, size_t, size_t));
 
-// When using `webui_interface_bind()`, you may need this function to easily set your callback response.
+// When using `webui_interface_bind()`, you may need this function to easily set
+// your callback response.
 WEBUI_EXPORT void webui_interface_set_response(size_t window, size_t event_number, const char* response);
 
 // Check if the app still running.

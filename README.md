@@ -107,10 +107,11 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
   nmake
   ```
 
-  **Windows SSL/TLS (*Optional*)**
+  **Windows SSL/TLS (_Optional_)**
 
   Download and install the OpenSSL pre-compiled binaries for Windows:
-  - MSVC: [x64 OpenSSL v3.1.3](https://slproweb.com/download/Win64OpenSSL-3_1_3.msi) or [*32Bit*](https://slproweb.com/download/Win32OpenSSL-3_1_3.msi). Please check this [Wiki list](https://wiki.openssl.org/index.php/Binaries) for more info.
+
+  - MSVC: [x64 OpenSSL v3.1.3](https://slproweb.com/download/Win64OpenSSL-3_1_3.msi) or [_32Bit_](https://slproweb.com/download/Win32OpenSSL-3_1_3.msi). Please check this [Wiki list](https://wiki.openssl.org/index.php/Binaries) for more info.
   - MinGW: [Curl for Windows win OpenSSL](https://curl.se/windows/)
 
   ```powershell
@@ -131,7 +132,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
   make CC=clang
   ```
 
-  **Linux SSL/TLS (*Optional*)**
+  **Linux SSL/TLS (_Optional_)**
 
   ```sh
   sudo apt update
@@ -145,11 +146,12 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
   ```
 
 - **macOS**
+
   ```sh
   make
   ```
 
-  **macOS SSL/TLS (*Optional*)**
+  **macOS SSL/TLS (_Optional_)**
 
   ```sh
   brew install openssl
