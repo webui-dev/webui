@@ -118,8 +118,8 @@ clean: --clean-$(PLATFORM)
 # INTERNAL TARGETS
 
 --validate-args:
-ifneq ($(filter $(CC),gcc clang),$(CC))
-	$(error Invalid compiler specified: `$(CC)`)
+ifneq ($(filter $(CC),gcc clang aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc musl-gcc),$(CC))
+$(error Invalid compiler specified: `$(CC)`)
 endif
 
 --clean-linux: --clean-unix

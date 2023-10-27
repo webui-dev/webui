@@ -26,6 +26,10 @@ BUILD_DIR := $(MAKEFILE_DIR)/dist
 # ARGS
 # Set a compiler when running on Linux via `make CC=gcc` / `make CC=clang`
 CC = gcc
+ifneq ($(filter $(CC),gcc clang aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc musl-gcc),$(CC))
+$(error Invalid compiler specified: `$(CC)`)
+endif
+
 # Allow to add arch-target for macOS CI cross compilation
 ARCH_TARGET ?=
 
@@ -56,9 +60,7 @@ else
 	# Linux
 	PLATFORM := linux
 	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).so
-	ifneq ($(filter $(CC),gcc clang aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc),$(CC))
-		$(error Invalid compiler specified: `$(CC)`)
-	else ifeq ($(CC),clang)
+	ifeq ($(CC),clang)
 		LLVM_OPT := llvm-
 	endif
 endif
