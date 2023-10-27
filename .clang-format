@@ -8,7 +8,4 @@ IndentWrappedFunctionNames: true
 AccessModifierOffset: 0
 AlignAfterOpenBracket: BlockIndent
 PointerAlignment: Left
-AlignConsecutiveMacros:
-  Enabled: true
-  AcrossEmptyLines: true
-  AcrossComments: false
+AlignConsecutiveMacros: AcrossEmptyLines

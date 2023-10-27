@@ -345,52 +345,78 @@ static _webui_core_t _webui_core;
 static const char* webui_html_served =
     "<html><head><title>Access Denied</title><script "
     "src=\"/webui.js\"></"
-    "script><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;"
+    "script><style>body{margin:0;background-repeat:no-repeat;background-"
+    "attachment:fixed;background-color:#FF3CAC;"
     "background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 "
-    "100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Access "
-    "Denied</h2><p>You can't access this content<br>because it's already in use in<br>another window.</p><br><a "
+    "100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</"
+    "style></head><body><h2>&#9888; Access "
+    "Denied</h2><p>You can't access this content<br>because it's already in "
+    "use in<br>another window.</p><br><a "
     "href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
 static const char* webui_html_res_not_available =
     "<html><head><title>Resource Not Available</title><script "
     "src=\"/webui.js\"></"
-    "script><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;"
+    "script><style>body{margin:0;background-repeat:no-repeat;background-"
+    "attachment:fixed;background-color:#FF3CAC;"
     "background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 "
-    "100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Resource Not "
-    "Available</h2><p>The requested resource is not available.</p><br><a href=\"https://www.webui.me\"><small>WebUI "
+    "100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</"
+    "style></head><body><h2>&#9888; Resource Not "
+    "Available</h2><p>The requested resource is not available.</p><br><a "
+    "href=\"https://www.webui.me\"><small>WebUI "
     "v" WEBUI_VERSION "<small></a></body></html>";
 static const char* webui_deno_not_found =
     "<html><head><title>Deno Not Found</title><script "
     "src=\"/webui.js\"></"
-    "script><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;"
+    "script><style>body{margin:0;background-repeat:no-repeat;background-"
+    "attachment:fixed;background-color:#FF3CAC;"
     "background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 "
-    "100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Deno Not "
-    "Found</h2><p>Deno is not found on this system.<br>Please download it from <a "
-    "href=\"https://github.com/denoland/deno/releases\">https://github.com/denoland/deno/releases</a></p><br><a "
+    "100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</"
+    "style></head><body><h2>&#9888; Deno Not "
+    "Found</h2><p>Deno is not found on this system.<br>Please download it from "
+    "<a "
+    "href=\"https://github.com/denoland/deno/releases\">https://github.com/"
+    "denoland/deno/releases</a></p><br><a "
     "href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
 static const char* webui_nodejs_not_found =
     "<html><head><title>Node.js Not Found</title><script "
     "src=\"/webui.js\"></"
-    "script><style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;"
+    "script><style>body{margin:0;background-repeat:no-repeat;background-"
+    "attachment:fixed;background-color:#FF3CAC;"
     "background-image:linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 "
-    "100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style></head><body><h2>&#9888; Node.js Not "
-    "Found</h2><p>Node.js is not found on this system.<br>Please download it from <a "
-    "href=\"https://nodejs.org/en/download/\">https://nodejs.org/en/download/</a></p><br><a "
+    "100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</"
+    "style></head><body><h2>&#9888; Node.js Not "
+    "Found</h2><p>Node.js is not found on this system.<br>Please download it "
+    "from <a "
+    "href=\"https://nodejs.org/en/download/\">https://nodejs.org/en/download/</"
+    "a></p><br><a "
     "href=\"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
-static const char* webui_def_icon =
-    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"64\" height=\"64\" viewBox=\"0 0 64 64\" version=\"1.1\"><path "
-    "d=\"M 35.315 15.983 C 30.885 17.816, 29.305 25.835, 33.500 25.195 C 34.600 25.027, 37.177 24.802, 39.227 24.695 C "
-    "44.084 24.441, 49.054 19.899, 47.386 17.239 C 46.146 15.262, 38.884 14.507, 35.315 15.983 M 54.602 17.835 C "
-    "54.058 18.716, 60.204 22.022, 62.284 21.968 C 63.958 21.925, 58.228 17, 56.503 17 C 55.741 17, 54.886 17.376, "
-    "54.602 17.835\" stroke=\"none\" fill=\"#789dcc\" fill-rule=\"evenodd\"/><path d=\"M 3.635 19.073 C 2.098 20.282, "
-    "1 22.144, 1 23.542 C 1 26.692, 12.655 53.139, 14.754 54.750 C 15.650 55.437, 17.882 56, 19.716 56 C 23.227 56, "
-    "22.667 56.645, 30.331 43.762 L 32.163 40.684 36.109 47.830 C 40.333 55.479, 42.889 57.131, 47.815 55.394 C 49.855 "
-    "54.675, 51.575 51.765, 56.620 40.500 C 60.068 32.800, 62.904 25.600, 62.921 24.500 C 62.944 23.042, 61.572 "
-    "21.893, 57.862 20.262 C 55.062 19.031, 52.336 18.292, 51.806 18.620 C 51.275 18.948, 49.385 22.428, 47.604 26.353 "
-    "L 44.367 33.490 42.504 30.647 C 41.121 28.536, 40.907 27.379, 41.673 26.152 C 42.567 24.721, 42.224 24.526, "
-    "39.103 24.695 C 37.121 24.802, 34.600 25.027, 33.500 25.195 C 31.780 25.457, 31.517 24.966, 31.620 21.688 L "
-    "31.739 17.876 28.799 20.688 C 27.182 22.235, 24.694 25.637, 23.270 28.250 C 21.847 30.863, 20.354 33, 19.954 33 C "
-    "19.553 33, 17.969 30.044, 16.433 26.431 C 12.452 17.064, 8.833 14.984, 3.635 19.073\" stroke=\"none\" "
-    "fill=\"#294fb7\" fill-rule=\"evenodd\"/></svg>";
+static const char* webui_def_icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"64\" height=\"64\" "
+                                    "viewBox=\"0 0 64 64\" version=\"1.1\"><path "
+                                    "d=\"M 35.315 15.983 C 30.885 17.816, 29.305 25.835, 33.500 25.195 C "
+                                    "34.600 25.027, 37.177 24.802, 39.227 24.695 C "
+                                    "44.084 24.441, 49.054 19.899, 47.386 17.239 C 46.146 15.262, 38.884 "
+                                    "14.507, 35.315 15.983 M 54.602 17.835 C "
+                                    "54.058 18.716, 60.204 22.022, 62.284 21.968 C 63.958 21.925, 58.228 17, "
+                                    "56.503 17 C 55.741 17, 54.886 17.376, "
+                                    "54.602 17.835\" stroke=\"none\" fill=\"#789dcc\" "
+                                    "fill-rule=\"evenodd\"/><path d=\"M 3.635 19.073 C 2.098 20.282, "
+                                    "1 22.144, 1 23.542 C 1 26.692, 12.655 53.139, 14.754 54.750 C 15.650 "
+                                    "55.437, 17.882 56, 19.716 56 C 23.227 56, "
+                                    "22.667 56.645, 30.331 43.762 L 32.163 40.684 36.109 47.830 C 40.333 "
+                                    "55.479, 42.889 57.131, 47.815 55.394 C 49.855 "
+                                    "54.675, 51.575 51.765, 56.620 40.500 C 60.068 32.800, 62.904 25.600, "
+                                    "62.921 24.500 C 62.944 23.042, 61.572 "
+                                    "21.893, 57.862 20.262 C 55.062 19.031, 52.336 18.292, 51.806 18.620 C "
+                                    "51.275 18.948, 49.385 22.428, 47.604 26.353 "
+                                    "L 44.367 33.490 42.504 30.647 C 41.121 28.536, 40.907 27.379, 41.673 "
+                                    "26.152 C 42.567 24.721, 42.224 24.526, "
+                                    "39.103 24.695 C 37.121 24.802, 34.600 25.027, 33.500 25.195 C 31.780 "
+                                    "25.457, 31.517 24.966, 31.620 21.688 L "
+                                    "31.739 17.876 28.799 20.688 C 27.182 22.235, 24.694 25.637, 23.270 28.250 "
+                                    "C 21.847 30.863, 20.354 33, 19.954 33 C "
+                                    "19.553 33, 17.969 30.044, 16.433 26.431 C 12.452 17.064, 8.833 14.984, "
+                                    "3.635 19.073\" stroke=\"none\" "
+                                    "fill=\"#294fb7\" fill-rule=\"evenodd\"/></svg>";
 static const char* webui_def_icon_type = "image/svg+xml";
 
 // -- Functions -----------------------
@@ -1465,7 +1491,8 @@ static bool _webui_check_certificate(const char* certificate_pem, const char* pr
 	// Use certificate
 	if (SSL_CTX_use_certificate(ctx, cert) <= 0) {
 #ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_check_certificate() -> SSL_CTX_use_certificate failed\n");
+		printf("[Core]\t\t_webui_check_certificate() -> SSL_CTX_use_certificate "
+		       "failed\n");
 #endif
 		BIO_free_all(bio_cert);
 		X509_free(cert);
@@ -1478,7 +1505,8 @@ static bool _webui_check_certificate(const char* certificate_pem, const char* pr
 	EVP_PKEY* private_key = PEM_read_bio_PrivateKey(bio_key, NULL, 0, NULL);
 	if (private_key == NULL) {
 #ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_check_certificate() -> PEM_read_bio_PrivateKey failed\n");
+		printf("[Core]\t\t_webui_check_certificate() -> PEM_read_bio_PrivateKey "
+		       "failed\n");
 #endif
 		EVP_PKEY_free(private_key);
 		BIO_free_all(bio_key);
@@ -1492,7 +1520,8 @@ static bool _webui_check_certificate(const char* certificate_pem, const char* pr
 	// Use key
 	if (SSL_CTX_use_PrivateKey(ctx, private_key) <= 0) {
 #ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_check_certificate() -> SSL_CTX_use_PrivateKey failed\n");
+		printf("[Core]\t\t_webui_check_certificate() -> SSL_CTX_use_PrivateKey "
+		       "failed\n");
 #endif
 		EVP_PKEY_free(private_key);
 		BIO_free_all(bio_key);
@@ -1604,7 +1633,8 @@ size_t webui_get_child_process_id(size_t window) {
 	if (!dir)
 		return win->process_id;
 	while ((entry = readdir(dir)) != NULL) {
-		// Ensure we're looking at a process directory (directories that are just numbers)
+		// Ensure we're looking at a process directory (directories that are just
+		// numbers)
 		if (entry->d_type == DT_DIR && strspn(entry->d_name, "0123456789") == strlen(entry->d_name)) {
 			char statFilepath[1024];
 			snprintf(statFilepath, sizeof(statFilepath), "/proc/%s/stat", entry->d_name);
@@ -2199,7 +2229,8 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
 
 // Call cb
 #ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user callback...\n[Call]\n");
+		printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user "
+		       "callback...\n[Call]\n");
 #endif
 		_webui_core.cb_interface[cb_index](e->window, e->event_type, e->element, e->event_number, e->bind_id);
 	}
@@ -2219,7 +2250,11 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
 			response = event_inf->response;
 	}
 
-	printf("[Core]\t\t_webui_interface_bind_handler() -> user-callback response [%s]\n", response);
+	printf(
+	    "[Core]\t\t_webui_interface_bind_handler() -> user-callback response "
+	    "[%s]\n",
+	    response
+	);
 #endif
 }
 
@@ -2403,7 +2438,8 @@ static void _webui_ptr_add(void* ptr, size_t size) {
 			if (_webui_core.ptr_list[i] == NULL) {
 
 #ifdef WEBUI_LOG
-				// printf("[Core]\t\t_webui_ptr_add(0x%p) -> Allocate %zu bytes\n", ptr, size);
+				// printf("[Core]\t\t_webui_ptr_add(0x%p) -> Allocate %zu bytes\n", ptr,
+				// size);
 #endif
 
 				_webui_core.ptr_list[i] = ptr;
@@ -2413,7 +2449,8 @@ static void _webui_ptr_add(void* ptr, size_t size) {
 		}
 
 #ifdef WEBUI_LOG
-		// printf("[Core]\t\t_webui_ptr_add(0x%p) -> Allocate %zu bytes\n", ptr, size);
+		// printf("[Core]\t\t_webui_ptr_add(0x%p) -> Allocate %zu bytes\n", ptr,
+		// size);
 #endif
 
 		_webui_core.ptr_list[_webui_core.ptr_position] = ptr;
@@ -3228,14 +3265,16 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* con
 #ifdef _WIN32
 				sprintf(
 				    cmd,
-				    "Set NO_COLOR=1 & Set DENO_NO_UPDATE_CHECK=1 & deno run --quiet --allow-all "
+				    "Set NO_COLOR=1 & Set DENO_NO_UPDATE_CHECK=1 & deno run "
+				    "--quiet --allow-all "
 				    "--unstable \"%s\" \"%s\"",
 				    full_path, query
 				);
 #else
 				sprintf(
 				    cmd,
-				    "NO_COLOR=1; DENO_NO_UPDATE_CHECK=1; deno run --quiet --allow-all --unstable "
+				    "NO_COLOR=1; DENO_NO_UPDATE_CHECK=1; deno run --quiet "
+				    "--allow-all --unstable "
 				    "\"%s\" \"%s\"",
 				    full_path, query
 				);
@@ -3343,7 +3382,8 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
 #ifdef WEBUI_LOG
 	// Non-authorized connection
 	else
-		printf("[Core]\t\t_webui_generate_js_bridge() -> Non-authorized connection.\n");
+		printf("[Core]\t\t_webui_generate_js_bridge() -> Non-authorized "
+		       "connection.\n");
 #endif
 
 	if (token == 0) {
@@ -3387,7 +3427,8 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win) {
 	char* js = (char*)_webui_malloc(len);
 	int c = sprintf(
 	    js,
-	    "%s\n document.addEventListener(\"DOMContentLoaded\",function(){ globalThis.webui = new WebuiBridge({ "
+	    "%s\n document.addEventListener(\"DOMContentLoaded\",function(){ "
+	    "globalThis.webui = new WebuiBridge({ "
 	    "secure: %s, token: %" PRIu32 ", port: %zu, winNum: %zu, bindList: %s, log: %s, ",
 	    webui_javascript_bridge,
 #ifdef WEBUI_TLS
@@ -3441,7 +3482,11 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
 	}
 
 #ifdef WEBUI_LOG
-	printf("[Core]\t\t_webui_browser_create_new_profile(%zu) -> Generating WebUI profile...\n", browser);
+	printf(
+	    "[Core]\t\t_webui_browser_create_new_profile(%zu) -> Generating WebUI "
+	    "profile...\n",
+	    browser
+	);
 #endif
 
 	// Temp folder
@@ -3551,7 +3596,11 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
 			file = fopen(buf, "a");
 			if (file == NULL)
 				return false;
-			fputs("user_pref(\"toolkit.legacyUserProfileCustomizations.stylesheets\", true); ", file);
+			fputs(
+			    "user_pref(\"toolkit.legacyUserProfileCustomizations.stylesheets\","
+			    " true); ",
+			    file
+			);
 			fputs("user_pref(\"browser.shell.checkDefaultBrowser\", false); ", file);
 			fputs("user_pref(\"browser.tabs.warnOnClose\", false); ", file);
 			fclose(file);
@@ -3570,60 +3619,94 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
 #ifdef _WIN32
 			fputs(
 			    ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) "
-			    "{--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not(["
+			    "{--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!"
+			    "important}:root:not(["
 			    "inFullscreen]) #nav-bar{margin-top:calc(0px - "
-			    "var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-"
-			    "toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-"
-			    "color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-"
+			    "var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!"
+			    "important;height:var(--uc-"
+			    "toolbar-height)!important;position:relative}#main-menubar{-moz-"
+			    "box-flex:1;background-"
+			    "color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-"
+			    "clip:padding-box;border-"
 			    "right:30px solid transparent;border-image:linear-gradient(to "
-			    "left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / "
-			    "30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > "
-			    "#menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,"
+			    "left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) "
+			    "30px) 20 / "
+			    "30px}#toolbar-menubar:not([inactive]) "
+			    "{z-index:2}#toolbar-menubar[inactive] > "
+			    "#menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-"
+			    "window-drag-space-width,"
 			    "0px)}#nav-bar{visibility:collapse}@-moz-document "
-			    "url(chrome://browser/content/browser.xhtml) {:root:not([sizemode=\"fullscreen\"]) > "
-			    "head{display: block;position: fixed;width: calc(200vw - 440px);text-align: left;z-index: "
-			    "9;pointer-events: none;}head > *{ display: none }head > title{display: "
-			    "-moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: hidden;text-overflow: "
+			    "url(chrome://browser/content/browser.xhtml) "
+			    "{:root:not([sizemode=\"fullscreen\"]) > "
+			    "head{display: block;position: fixed;width: calc(200vw - "
+			    "440px);text-align: left;z-index: "
+			    "9;pointer-events: none;}head > *{ display: none }head > "
+			    "title{display: "
+			    "-moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: "
+			    "hidden;text-overflow: "
 			    "ellipsis;}}",
 			    file
 			);
 #elif __APPLE__
 			fputs(
-			    // ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) "
-			    // "{--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important} "
+			    // ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"])
+			    // "
+			    // "{--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}
+			    // "
 			    ":root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - "
-			    "var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-"
-			    "toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-"
-			    "color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-"
+			    "var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!"
+			    "important;height:var(--uc-"
+			    "toolbar-height)!important;position:relative}#main-menubar{-moz-box-"
+			    "flex:1;background-"
+			    "color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-"
+			    "clip:padding-box;border-"
 			    "right:30px solid transparent;border-image:linear-gradient(to "
-			    "left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / "
-			    "30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > "
-			    "#menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,"
+			    "left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) "
+			    "30px) 20 / "
+			    "30px}#toolbar-menubar:not([inactive]) "
+			    "{z-index:2}#toolbar-menubar[inactive] > "
+			    "#menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-"
+			    "window-drag-space-width,"
 			    "0px)}#nav-bar{visibility:collapse}@-moz-document "
-			    "url(chrome://browser/content/browser.xhtml) {:root:not([sizemode=\"fullscreen\"]) > "
-			    "head{display: block;position: fixed;width: calc(200vw - 440px);text-align: left;z-index: "
-			    "9;pointer-events: none;}head > *{ display: none }head > title{display: "
-			    "-moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: hidden;text-overflow: "
+			    "url(chrome://browser/content/browser.xhtml) "
+			    "{:root:not([sizemode=\"fullscreen\"]) > "
+			    "head{display: block;position: fixed;width: calc(200vw - "
+			    "440px);text-align: left;z-index: "
+			    "9;pointer-events: none;}head > *{ display: none }head > "
+			    "title{display: "
+			    "-moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: "
+			    "hidden;text-overflow: "
 			    "ellipsis;}}",
 			    file
 			);
 #else
 			fputs(
 			    ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) "
-			    "{--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}:root:not(["
+			    "{--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!"
+			    "important}:root:not(["
 			    "inFullscreen]) #nav-bar{margin-top:calc(0px - "
-			    "var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!important;height:var(--uc-"
-			    "toolbar-height)!important;position:relative}#main-menubar{-moz-box-flex:1;background-"
-			    "color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-clip:padding-box;border-"
+			    "var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!"
+			    "important;height:var(--uc-"
+			    "toolbar-height)!important;position:relative}#main-menubar{-moz-"
+			    "box-flex:1;background-"
+			    "color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-"
+			    "clip:padding-box;border-"
 			    "right:30px solid transparent;border-image:linear-gradient(to "
-			    "left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) 30px) 20 / "
-			    "30px}#toolbar-menubar:not([inactive]) {z-index:2}#toolbar-menubar[inactive] > "
-			    "#menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-window-drag-space-width,"
+			    "left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) "
+			    "30px) 20 / "
+			    "30px}#toolbar-menubar:not([inactive]) "
+			    "{z-index:2}#toolbar-menubar[inactive] > "
+			    "#menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-"
+			    "window-drag-space-width,"
 			    "0px)}#nav-bar{visibility:collapse}@-moz-document "
-			    "url(chrome://browser/content/browser.xhtml) {:root:not([sizemode=\"fullscreen\"]) > "
-			    "head{display: block;position: fixed;width: calc(200vw - 440px);text-align: left;z-index: "
-			    "9;pointer-events: none;}head > *{ display: none }head > title{display: "
-			    "-moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: hidden;text-overflow: "
+			    "url(chrome://browser/content/browser.xhtml) "
+			    "{:root:not([sizemode=\"fullscreen\"]) > "
+			    "head{display: block;position: fixed;width: calc(200vw - "
+			    "440px);text-align: left;z-index: "
+			    "9;pointer-events: none;}head > *{ display: none }head > "
+			    "title{display: "
+			    "-moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: "
+			    "hidden;text-overflow: "
 			    "ellipsis;}}",
 			    file
 			);
@@ -3906,9 +3989,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		char browser_folder[WEBUI_MAX_PATH];
 
-		// Search in `HKEY_LOCAL_MACHINE` (If Google Chrome installed for multi-user)
+		// Search in `HKEY_LOCAL_MACHINE` (If Google Chrome installed for
+		// multi-user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe",
+		        HKEY_LOCAL_MACHINE,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\chrome.exe",
 		        L"Path", browser_folder
 		    )) {
 
@@ -3924,7 +4010,9 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_CURRENT_USER` (If Google Chrome installed for one user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe",
+		        HKEY_CURRENT_USER,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\chrome.exe",
 		        L"Path", browser_folder
 		    )) {
 
@@ -3983,8 +4071,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_LOCAL_MACHINE` (If Edge installed for multi-user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe", L"",
-		        browser_fullpath
+		        HKEY_LOCAL_MACHINE,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\msedge.exe",
+		        L"", browser_fullpath
 		    )) {
 
 			// Make sure the browser executable file exist
@@ -3999,8 +4089,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_CURRENT_USER` (If Edge installed for one user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe", L"",
-		        browser_fullpath
+		        HKEY_CURRENT_USER,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\msedge.exe",
+		        L"", browser_fullpath
 		    )) {
 
 			// Make sure the browser executable file exist
@@ -4064,8 +4156,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_CURRENT_USER` (If Epic installed for one user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\epic.exe", L"",
-		        browser_fullpath
+		        HKEY_CURRENT_USER,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\epic.exe",
+		        L"", browser_fullpath
 		    )) {
 
 			// Make sure the browser executable file exist
@@ -4080,8 +4174,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_LOCAL_MACHINE` (If Epic installed for multi-user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\epic.exe", L"",
-		        browser_fullpath
+		        HKEY_LOCAL_MACHINE,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\epic.exe",
+		        L"", browser_fullpath
 		    )) {
 
 			// Make sure the browser executable file exist
@@ -4133,7 +4229,9 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_LOCAL_MACHINE` (If Vivaldi installed for multi-user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\vivaldi.exe",
+		        HKEY_LOCAL_MACHINE,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\vivaldi.exe",
 		        L"", browser_fullpath
 		    )) {
 
@@ -4149,8 +4247,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_CURRENT_USER` (If Vivaldi installed for one user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\vivaldi.exe", L"",
-		        browser_fullpath
+		        HKEY_CURRENT_USER,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\vivaldi.exe",
+		        L"", browser_fullpath
 		    )) {
 
 			// Make sure the browser executable file exist
@@ -4212,8 +4312,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_LOCAL_MACHINE` (If Brave installed for multi-user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\brave.exe", L"",
-		        browser_fullpath
+		        HKEY_LOCAL_MACHINE,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\brave.exe",
+		        L"", browser_fullpath
 		    )) {
 
 			// Make sure the browser executable file exist
@@ -4228,8 +4330,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_CURRENT_USER` (If Brave installed for one user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\brave.exe", L"",
-		        browser_fullpath
+		        HKEY_CURRENT_USER,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\brave.exe",
+		        L"", browser_fullpath
 		    )) {
 
 			// Make sure the browser executable file exist
@@ -4281,7 +4385,9 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_LOCAL_MACHINE` (If Firefox installed for multi-user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\firefox.exe",
+		        HKEY_LOCAL_MACHINE,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\firefox.exe",
 		        L"", browser_fullpath
 		    )) {
 
@@ -4297,8 +4403,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_CURRENT_USER` (If Firefox installed for one user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\firefox.exe", L"",
-		        browser_fullpath
+		        HKEY_CURRENT_USER,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\firefox.exe",
+		        L"", browser_fullpath
 		    )) {
 
 			// Make sure the browser executable file exist
@@ -4353,8 +4461,10 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_CURRENT_USER` (If Yandex installed for one user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\browser.exe", L"",
-		        browser_fullpath
+		        HKEY_CURRENT_USER,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\browser.exe",
+		        L"", browser_fullpath
 		    )) {
 
 			// Make sure the browser executable file exist
@@ -4369,7 +4479,9 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_LOCAL_MACHINE` (If Yandex installed for multi-user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\browser.exe",
+		        HKEY_LOCAL_MACHINE,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\browser.exe",
 		        L"", browser_fullpath
 		    )) {
 
@@ -4422,7 +4534,9 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_CURRENT_USER` (If Chromium installed for one user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe",
+		        HKEY_CURRENT_USER,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\chrome.exe",
 		        L"Path", browser_folder
 		    )) {
 
@@ -4438,7 +4552,9 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
 		// Search in `HKEY_LOCAL_MACHINE` (If Chromium installed for multi-user)
 		if (_webui_get_windows_reg_value(
-		        HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe",
+		        HKEY_LOCAL_MACHINE,
+		        L"Software\\Microsoft\\Windows\\CurrentVer"
+		        L"sion\\App Paths\\chrome.exe",
 		        L"Path", browser_folder
 		    )) {
 
@@ -4964,7 +5080,8 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
 	// #5 - Brave - Shows a policy notification in the first run
 	// #6 - Firefox - Does not support App-Mode like Chrome (Looks not great)
 	// #7 - Yandex - Shows a big welcome window in the first run
-	// #8 - Chromium - Some Anti-Malware shows a false alert when using ungoogled-chromium-binaries
+	// #8 - Chromium - Some Anti-Malware shows a false alert when using
+	// ungoogled-chromium-binaries
 
 	if (browser != AnyBrowser) {
 
@@ -5172,7 +5289,8 @@ static size_t _webui_find_the_best_browser(_webui_window_t* win) {
 	// #5 - Brave - Shows a policy notification in the first run
 	// #6 - Firefox - Does not support App-Mode like Chrome (Looks not great)
 	// #7 - Yandex - Shows a big welcome window in the first run
-	// #8 - Chromium - Some Anti-Malware shows a false alert when using ungoogled-chromium-binaries
+	// #8 - Chromium - Some Anti-Malware shows a false alert when using
+	// ungoogled-chromium-binaries
 
 	// To save memory, let's search if a web browser is already running
 
@@ -5303,7 +5421,8 @@ static int _webui_tls_initialization(void* ssl_ctx, void* ptr) {
 	}
 	if (SSL_CTX_use_certificate(ctx, cert) <= 0) {
 #ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_tls_initialization() -> SSL_CTX_use_certificate failed\n");
+		printf("[Core]\t\t_webui_tls_initialization() -> SSL_CTX_use_certificate "
+		       "failed\n");
 #endif
 		_webui_panic();
 		return -1;
@@ -5316,14 +5435,16 @@ static int _webui_tls_initialization(void* ssl_ctx, void* ptr) {
 	EVP_PKEY* private_key = PEM_read_bio_PrivateKey(bio_key, NULL, 0, NULL);
 	if (private_key == NULL) {
 #ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_tls_initialization() -> PEM_read_bio_PrivateKey failed\n");
+		printf("[Core]\t\t_webui_tls_initialization() -> PEM_read_bio_PrivateKey "
+		       "failed\n");
 #endif
 		_webui_panic();
 		return -1;
 	}
 	if (SSL_CTX_use_PrivateKey(ctx, private_key) <= 0) {
 #ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_tls_initialization() -> SSL_CTX_use_PrivateKey failed\n");
+		printf("[Core]\t\t_webui_tls_initialization() -> SSL_CTX_use_PrivateKey "
+		       "failed\n");
 #endif
 		_webui_panic();
 		return -1;
@@ -5364,15 +5485,21 @@ static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key
 	X509_gmtime_adj(X509_get_notAfter(root_x509), (long)(WEBUI_SSL_EXPIRE));
 
 	X509_NAME* root_name = X509_get_subject_name(root_x509);
-	X509_NAME_add_entry_by_txt(root_name, "C", MBSTRING_ASC, "CA", -1, -1, 0);                   // Country
+	X509_NAME_add_entry_by_txt(root_name, "C", MBSTRING_ASC, "CA", -1, -1,
+	                           0);                                                               // Country
 	X509_NAME_add_entry_by_txt(root_name, "O", MBSTRING_ASC, "WebUI Root Authority", -1, -1, 0); // Organization
-	X509_NAME_add_entry_by_txt(root_name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0);     // Organizational Unit
-	X509_NAME_add_entry_by_txt(root_name, "CN", MBSTRING_ASC, "localhost", -1, -1, 0); // Common Name
+	X509_NAME_add_entry_by_txt(root_name, "OU", MBSTRING_ASC, "WebUI", -1, -1,
+	                           0); // Organizational Unit
+	X509_NAME_add_entry_by_txt(root_name, "CN", MBSTRING_ASC, "localhost", -1, -1,
+	                           0); // Common Name
 	X509_NAME_add_entry_by_txt(
-	    root_name, "subjectAltName", MBSTRING_ASC, "127.0.0.1", -1, -1, 0
-	);                                                                             // Subject Alternative Name
-	X509_NAME_add_entry_by_txt(root_name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
-	X509_NAME_add_entry_by_txt(root_name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0);  // Locality
+	    root_name, "subjectAltName", MBSTRING_ASC, "127.0.0.1", -1, -1,
+	    0
+	); // Subject Alternative Name
+	X509_NAME_add_entry_by_txt(root_name, "ST", MBSTRING_ASC, "WebUI", -1, -1,
+	                           0); // State
+	X509_NAME_add_entry_by_txt(root_name, "L", MBSTRING_ASC, "WebUI", -1, -1,
+	                           0); // Locality
 
 	X509_set_issuer_name(root_x509, root_name);
 	X509_set_pubkey(root_x509, root_pkey);
@@ -5420,15 +5547,21 @@ static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key
 	X509_gmtime_adj(X509_get_notAfter(x509), (long)(WEBUI_SSL_EXPIRE));
 
 	X509_NAME* name = X509_get_subject_name(x509);
-	X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1, 0);         // Country
-	X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1, 0);      // Organization
-	X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, "WebUI", -1, -1, 0);     // Organizational Unit
-	X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "localhost", -1, -1, 0); // Common Name
+	X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1,
+	                           0); // Country
+	X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1,
+	                           0); // Organization
+	X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, "WebUI", -1, -1,
+	                           0); // Organizational Unit
+	X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "localhost", -1, -1,
+	                           0); // Common Name
 	X509_NAME_add_entry_by_txt(
 	    name, "subjectAltName", MBSTRING_ASC, "127.0.0.1", -1, -1, 0
-	);                                                                        // Subject Alternative Name
-	X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, "WebUI", -1, -1, 0); // State
-	X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1, 0);  // Locality
+	); // Subject Alternative Name
+	X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, "WebUI", -1, -1,
+	                           0); // State
+	X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1,
+	                           0); // Locality
 
 	X509_set_issuer_name(x509, root_name);
 	X509_set_pubkey(x509, pkey);
@@ -5480,7 +5613,8 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 	if (_webui_is_empty(_webui_core.ssl_cert) || _webui_is_empty(_webui_core.ssl_key)) {
 
 #ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_show_window() -> Generating self-signed TLS certificate...\n");
+		printf("[Core]\t\t_webui_show_window() -> Generating self-signed TLS "
+		       "certificate...\n");
 #endif
 
 		// Generate SSL self-signed certificate
@@ -5494,7 +5628,8 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 			char err_buf[1024];
 			ERR_error_string_n(err, err_buf, sizeof(err_buf));
 			printf(
-			    "[Core]\t\t_webui_show_window() -> Generating self-signed TLS certificate failed:\n%s\n",
+			    "[Core]\t\t_webui_show_window() -> Generating self-signed TLS "
+			    "certificate failed:\n%s\n",
 			    err_buf
 			);
 #endif
@@ -5512,7 +5647,8 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		_webui_core.ssl_key = ssl_key;
 
 #ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS Certificate:\nRoot:\n");
+		printf("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS "
+		       "Certificate:\nRoot:\n");
 		printf("%s\n", (const char*)_webui_core.root_cert);
 		printf("%s\nServer:\n", (const char*)_webui_core.root_key);
 		printf("%s\n", (const char*)_webui_core.ssl_cert);
@@ -5642,7 +5778,8 @@ static void _webui_window_event(
 
 // Call user all-events cb
 #ifdef WEBUI_LOG
-			printf("[Core]\t\t_webui_window_event() -> Calling all-events user callback...\n[Call]\n");
+			printf("[Core]\t\t_webui_window_event() -> Calling all-events user "
+			       "callback...\n[Call]\n");
 #endif
 			e.bind_id = events_cb_index;
 			_webui_core.cb[events_cb_index](&e);
@@ -5659,7 +5796,8 @@ static void _webui_window_event(
 
 // Call user cb
 #ifdef WEBUI_LOG
-				printf("[Core]\t\t_webui_window_event() -> Calling user callback...\n[Call]\n");
+				printf("[Core]\t\t_webui_window_event() -> Calling user "
+				       "callback...\n[Call]\n");
 #endif
 				e.bind_id = cb_index;
 				_webui_core.cb[cb_index](&e);
@@ -5968,7 +6106,8 @@ static int _webui_http_log(const struct mg_connection* conn, const char* message
 #endif
 
 /*
-    static char* _webui_inject_bridge(_webui_window_t* win, const char *user_html) {
+    static char* _webui_inject_bridge(_webui_window_t* win, const char
+   *user_html) {
 
         #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_inject_bridge()...\n");
@@ -6000,8 +6139,8 @@ static int _webui_http_log(const struct mg_connection* conn, const char* message
             size_t len = _webui_strlen(user_html) + 128;
             char* buffer = (char*) _webui_malloc(len);
             sprintf(buffer,
-                "<html> <script type=\"application/javascript\" src=\"webui.js\"></script>\n %s",
-                user_html
+                "<html> <script type=\"application/javascript\"
+   src=\"webui.js\"></script>\n %s", user_html
             );
             return buffer;
         }
@@ -6015,8 +6154,9 @@ static int _webui_http_log(const struct mg_connection* conn, const char* message
         int offset = (int)(head_pos - user_html) + 6;
 
         // Calculate the length for the new string
-        const char* script = "<script type=\"application/javascript\" src=\"webui.js\"></script> \n";
-        size_t new_len = strlen(user_html) + strlen(script) + 1;
+        const char* script = "<script type=\"application/javascript\"
+   src=\"webui.js\"></script> \n"; size_t new_len = strlen(user_html) +
+   strlen(script) + 1;
 
         // Allocate memory for the new string
         char* buffer = (char*) _webui_malloc(new_len);
@@ -6024,7 +6164,8 @@ static int _webui_http_log(const struct mg_connection* conn, const char* message
         // Construct the new HTML with script injected
         strncpy(buffer, user_html, offset); // Copy up to and including <head>
         strcpy(buffer + offset, script);    // Copy the script
-        strcpy(buffer + offset + strlen(script), user_html + offset); // Copy the rest of the user HTML
+        strcpy(buffer + offset + strlen(script), user_html + offset); // Copy
+   the rest of the user HTML
 
         return buffer;
     }
@@ -6103,7 +6244,8 @@ static int _webui_http_handler(struct mg_connection* conn, void* _win) {
 					// Forbidden 403
 
 #ifdef WEBUI_LOG
-					printf("[Core]\t\t_webui_http_handler() -> Embedded Index HTML Already Handled "
+					printf("[Core]\t\t_webui_http_handler() -> Embedded Index HTML "
+					       "Already Handled "
 					       "(403)\n");
 #endif
 
@@ -6136,7 +6278,8 @@ static int _webui_http_handler(struct mg_connection* conn, void* _win) {
 					// Forbidden 403
 
 #ifdef WEBUI_LOG
-					printf("[Core]\t\t_webui_http_handler() -> Index local file Already Handled "
+					printf("[Core]\t\t_webui_http_handler() -> Index local file Already "
+					       "Handled "
 					       "(403)\n");
 #endif
 
@@ -6240,8 +6383,8 @@ static int _webui_http_handler(struct mg_connection* conn, void* _win) {
 			//     // Forbidden 403
 
 			//     #ifdef WEBUI_LOG
-			//         printf("[Core]\t\t_webui_http_handler() -> Local file .HTML Already Handled
-			//         (403)\n");
+			//         printf("[Core]\t\t_webui_http_handler() -> Local file .HTML
+			//         Already Handled (403)\n");
 			//     #endif
 
 			//     _webui_http_send_error_page(
@@ -6261,7 +6404,8 @@ static int _webui_http_handler(struct mg_connection* conn, void* _win) {
 
 #ifdef WEBUI_LOG
 				printf(
-				    "[Core]\t\t_webui_http_handler() -> Trying to interpret local file (Runtime = "
+				    "[Core]\t\t_webui_http_handler() -> Trying to interpret local "
+				    "file (Runtime = "
 				    "%zu)\n",
 				    win->runtime
 				);
@@ -6307,7 +6451,8 @@ static int _webui_ws_connect_handler(const struct mg_connection* conn, void* _wi
 
 // Non-authorized connection
 #ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_ws_connect_handler() -> Non-authorized connection.\n");
+		printf("[Core]\t\t_webui_ws_connect_handler() -> Non-authorized "
+		       "connection.\n");
 #endif
 
 		// Block handshake
@@ -6453,8 +6598,7 @@ static WEBUI_THREAD_SERVER_START {
 	    WEBUI_SSL_EXPIRE_STR,
 #endif
 	    NULL,
-	    NULL
-	};
+	    NULL};
 	struct mg_callbacks http_callbacks;
 	struct mg_context* http_ctx;
 	memset(&http_callbacks, 0, sizeof(http_callbacks));
@@ -6497,8 +6641,7 @@ static WEBUI_THREAD_SERVER_START {
 	    WEBUI_SSL_EXPIRE_STR,
 #endif
 	    NULL,
-	    NULL
-	};
+	    NULL};
 	ws_mg_start_init_data.configuration_options = ws_server_options;
 	struct mg_error_data ws_mg_start_error_data = {0};
 	char ws_errtxtbuf[256] = {0};
@@ -6763,7 +6906,8 @@ static void _webui_receive(_webui_window_t* win, int event_type, void* data, siz
 			// Received more data than expected
 #ifdef WEBUI_LOG
 			printf(
-			    "[Core]\t\t_webui_receive()... > Multi packet received more data than expected (%zu + %zu "
+			    "[Core]\t\t_webui_receive()... > Multi packet received more data "
+			    "than expected (%zu + %zu "
 			    "> %zu).\n",
 			    multi_receive, len, multi_expect
 			);
@@ -6790,7 +6934,8 @@ static void _webui_receive(_webui_window_t* win, int event_type, void* data, siz
 			if (expect_len > 0 && expect_len <= WEBUI_MAX_BUF) {
 #ifdef WEBUI_LOG
 				printf(
-				    "[Core]\t\t_webui_receive()... > Multi packet started, Expecting %zu bytes...\n",
+				    "[Core]\t\t_webui_receive()... > Multi packet started, "
+				    "Expecting %zu bytes...\n",
 				    expect_len
 				);
 #endif
@@ -6874,24 +7019,36 @@ static WEBUI_THREAD_RECEIVE {
 			uint16_t packet_id = _webui_get_id(packet);
 
 #ifdef WEBUI_LOG
-			printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Data received...\n", recvNum);
 			printf(
-			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Size : %zu bytes\n", recvNum,
-			    packet_len
+			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Data "
+			    "received...\n",
+			    recvNum
 			);
-			printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Header : [ ", recvNum);
+			printf(
+			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Size : "
+			    "%zu bytes\n",
+			    recvNum, packet_len
+			);
+			printf(
+			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Header "
+			    ": [ ",
+			    recvNum
+			);
 			_webui_print_hex(packet, WEBUI_PROTOCOL_SIZE);
 			printf("]\n");
 			printf(
-			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Token: 0x%08X (%" PRIu32 ")\n",
+			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Token: "
+			    "0x%08X (%" PRIu32 ")\n",
 			    recvNum, packet_token, packet_token
 			);
 			printf(
-			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet ID: 0x%04X (%u)\n", recvNum,
-			    packet_id, packet_id
+			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet ID: "
+			    "0x%04X (%u)\n",
+			    recvNum, packet_id, packet_id
 			);
 			printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Packet Data: [", recvNum);
-			//_webui_print_ascii(&packet[WEBUI_PROTOCOL_DATA], (packet_len - WEBUI_PROTOCOL_SIZE));
+			//_webui_print_ascii(&packet[WEBUI_PROTOCOL_DATA], (packet_len -
+			// WEBUI_PROTOCOL_SIZE));
 			printf("]\n");
 #endif
 
@@ -6920,17 +7077,20 @@ static WEBUI_THREAD_RECEIVE {
 
 #ifdef WEBUI_LOG
 						printf(
-						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> WEBUI_CMD_CLICK "
+						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> "
+						    "WEBUI_CMD_CLICK "
 						    "\n",
 						    recvNum
 						);
 						printf(
-						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Element size: "
+						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Element "
+						    "size: "
 						    "%zu bytes \n",
 						    recvNum, element_len
 						);
 						printf(
-						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Element : [%s] "
+						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Element "
+						    ": [%s] "
 						    "\n",
 						    recvNum, element
 						);
@@ -7120,12 +7280,14 @@ static WEBUI_THREAD_RECEIVE {
 						    recvNum
 						);
 						printf(
-						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Call ID: [%u] "
+						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Call ID: "
+						    "[%u] "
 						    "\n",
 						    recvNum, packet_id
 						);
 						printf(
-						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Element: [%s] "
+						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Element: "
+						    "[%s] "
 						    "\n",
 						    recvNum, element
 						);
@@ -7272,7 +7434,8 @@ static WEBUI_THREAD_RECEIVE {
 #ifdef WEBUI_LOG
 					else {
 						printf(
-						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Unknown command "
+						    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Unknown "
+						    "command "
 						    "[0x%02x]\n",
 						    recvNum, (unsigned char)packet[WEBUI_PROTOCOL_CMD]
 						);
@@ -7282,7 +7445,8 @@ static WEBUI_THREAD_RECEIVE {
 #ifdef WEBUI_LOG
 				else {
 					printf(
-					    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Window disconnected.\n",
+					    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Window "
+					    "disconnected.\n",
 					    recvNum
 					);
 				}
@@ -7294,7 +7458,11 @@ static WEBUI_THREAD_RECEIVE {
 			} else {
 
 #ifdef WEBUI_LOG
-				printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> Invalid Packet.\n", recvNum);
+				printf(
+				    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> Invalid "
+				    "Packet.\n",
+				    recvNum
+				);
 #endif
 
 				// Forced close
@@ -7312,7 +7480,11 @@ static WEBUI_THREAD_RECEIVE {
 			win->mg_connection = conn;          // send
 
 #ifdef WEBUI_LOG
-			printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> WebSocket connected\n", recvNum);
+			printf(
+			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> WebSocket "
+			    "connected\n",
+			    recvNum
+			);
 #endif
 
 			// New Event
@@ -7353,7 +7525,11 @@ static WEBUI_THREAD_RECEIVE {
 			win->bridge_handled = false;
 
 #ifdef WEBUI_LOG
-			printf("[Core]\t\t[Thread %zu] _webui_receive_thread() -> WebSocket Closed\n", recvNum);
+			printf(
+			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> WebSocket "
+			    "Closed\n",
+			    recvNum
+			);
 #endif
 
 			// Events
@@ -7389,8 +7565,9 @@ static WEBUI_THREAD_RECEIVE {
 #ifdef WEBUI_LOG
 		else {
 			printf(
-			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> UNKNOWN EVENT TYPE (%zu)\n", recvNum,
-			    event_type
+			    "[Core]\t\t[Thread %zu] _webui_receive_thread() -> UNKNOWN EVENT "
+			    "TYPE (%zu)\n",
+			    recvNum, event_type
 			);
 		}
 #endif
@@ -7599,7 +7776,8 @@ static int _webui_system_win32_out(const char* cmd, char** output, bool show) {
 }
 
 /*
-static BOOL CALLBACK _webui_enum_windows_proc_win32(HWND hwnd, LPARAM targetProcessId) {
+static BOOL CALLBACK _webui_enum_windows_proc_win32(HWND hwnd, LPARAM
+targetProcessId) {
 
     #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_enum_windows_proc_win32()...\n");
@@ -7611,8 +7789,8 @@ static BOOL CALLBACK _webui_enum_windows_proc_win32(HWND hwnd, LPARAM targetProc
     if (windowProcessId == targetProcessId) {
 
         #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_enum_windows_proc_win32() -> Bring the process (%lu) to the front\n",
-windowProcessId); #endif
+            printf("[Core]\t\t_webui_enum_windows_proc_win32() -> Bring the
+process (%lu) to the front\n", windowProcessId); #endif
 
         SetFocus(hwnd);
         SetForegroundWindow(hwnd);
@@ -7647,9 +7825,10 @@ static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show) {
 	// webui.js will try to close the window.
 	HANDLE JobObject = CreateJobObject(NULL, NULL);
 	JOB_OBJECT_EXTENDED_LIMIT_INFORMATION ExtendedInfo = { 0 };
-	ExtendedInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION |
-	JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE; SetInformationJobObject(JobObject, JobObjectExtendedLimitInformation,
-	&ExtendedInfo, sizeof(ExtendedInfo));
+	ExtendedInfo.BasicLimitInformation.LimitFlags =
+	JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION |
+	JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE; SetInformationJobObject(JobObject,
+	JobObjectExtendedLimitInformation, &ExtendedInfo, sizeof(ExtendedInfo));
 	*/
 
 	DWORD Return = 0;
