@@ -2,7 +2,7 @@
 
 Examples of how to create a WebUI application in C.
 
-## C99 Examples
+## C Examples
 
 The only requirement to build the examples is a C compiler.
 

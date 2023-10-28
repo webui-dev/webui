@@ -1,4 +1,4 @@
-# WebUI C99 Example
+# WebUI C Example
 
 # == 1. VARIABLES =============================================================
 
@@ -73,11 +73,11 @@ ifeq ($(BUILD_LIB),true)
 endif
 #	Static with Debug info
 ifneq ($(WEBUI_USE_TLS), 1)
-	@echo "Build C99 Example ($(CC) debug static)..."
+	@echo "Build C Example ($(CC) debug static)..."
 	@$(CC) -g $(CONSOLE_APP) $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
 endif
 #	Dynamic with Debug info
-	@echo "Build C99 Example ($(CC) debug dynamic)..."
+	@echo "Build C Example ($(CC) debug dynamic)..."
 	$(COPY_LIB_CMD)
 	@$(CC) -g $(CONSOLE_APP) $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
 #	Clean
@@ -95,12 +95,12 @@ ifeq ($(BUILD_LIB),true)
 endif
 #	Static Release
 ifneq ($(WEBUI_USE_TLS), 1)
-	@echo "Build C99 Example ($(CC) release static)..."
+	@echo "Build C Example ($(CC) release static)..."
 	@$(CC) -Os $(GUI_APP) $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(STATIC_OUT)
 endif
 #	Dynamic Release
-	@echo "Build C99 Example ($(CC) release dynamic)..."
+	@echo "Build C Example ($(CC) release dynamic)..."
 	$(COPY_LIB_CMD)
 	@$(CC) $(GUI_APP) $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(DYN_OUT)

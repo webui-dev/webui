@@ -4,7 +4,7 @@
 # Licensed under MIT License.
 # All rights reserved.
 #
-# WebUI JavaScript to C99 Header
+# WebUI JavaScript to C Header
 
 def js_to_c_header(input_filename, output_filename):
     try:

@@ -63,11 +63,11 @@ ifeq ($(BUILD_LIB),true)
 endif
 #	Static with Debug info
 ifneq ($(WEBUI_USE_TLS), 1)
-	@echo "Build C99 Example ($(CXX) debug static)..."
+	@echo "Build C Example ($(CXX) debug static)..."
 	@$(CXX) -g $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
 endif
 #	Dynamic with Debug info
-	@echo "Build C99 Example ($(CXX) debug dynamic)..."
+	@echo "Build C Example ($(CXX) debug dynamic)..."
 	@$(CXX) -g $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
 #	Clean
 ifeq ($(PLATFORM),windows)
@@ -84,12 +84,12 @@ ifeq ($(BUILD_LIB),true)
 endif
 #	Static Release
 ifneq ($(WEBUI_USE_TLS), 1)
-	@echo "Build C99 Example ($(CXX) release static)..."
+	@echo "Build C Example ($(CXX) release static)..."
 	@$(CXX) -Os $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(STATIC_OUT)
 endif
 #	Dynamic Release
-	@echo "Build C99 Example ($(CXX) release dynamic)..."
+	@echo "Build C Example ($(CXX) release dynamic)..."
 	@$(CXX) $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(DYN_OUT)
 #	Clean

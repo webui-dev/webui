@@ -55,7 +55,7 @@ if (!$silent) { Write-Host "Transpile and bundle WebUI-Bridge from TypeScript to
 .\node_modules\.bin\esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=. ./webui_bridge.ts $log_level
 
 # Convert WebUI-Bridge (JS to C)
-if (!$silent) { Write-Host "Convert WebUI-Bridge JavaScript to C99 Header..." }
+if (!$silent) { Write-Host "Convert WebUI-Bridge JavaScript to C Header..." }
 & $python_cmd js2c.py
 
 # Done
