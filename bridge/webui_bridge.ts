@@ -566,8 +566,12 @@ class WebuiBridge {
 		for (const bind of this.#bindList) {
 			if (bind.trim()) {
 				const fn = bind.replace(`${this.#winNum}/`, '');
-				if (fn.trim())
+				if (fn.trim()) {
 					this[fn] = (...args: DataTypes[]) => this.call(fn, ...args);
+					if (typeof (window as any)[fn] === 'undefined') {
+						(window as any)[fn] = (...args: string[]) => this.call(fn, ...args);
+					}
+				}
 			}
 		}
 	}
