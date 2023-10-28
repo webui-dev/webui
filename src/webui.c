@@ -51,6 +51,9 @@
 #define WEBUI_WS_DATA        (1)     // Internal WS Event (Data received)
 #define WEBUI_WS_OPEN        (2)     // Internal WS Event (New connection)
 #define WEBUI_WS_CLOSE       (3)     // Internal WS Event (Connection close)
+#define WEBUI_SHOW_HTML      (1)     // Show window using HTML
+#define WEBUI_SHOW_FILE      (2)     // Show window using a local file
+#define WEBUI_SHOW_URL       (3)     // Show window using a URL
 #define WEBUI_MIN_PORT       (10000) // Minimum socket port
 #define WEBUI_MAX_PORT       (65500) // Should be less than 65535
 #define WEBUI_STDOUT_BUF     (10240) // Command STDOUT output buffer size
@@ -290,7 +293,7 @@ static void _webui_free_mem(void* ptr);
 static bool _webui_file_exist_mg(_webui_window_t* win, struct mg_connection* conn);
 static bool _webui_file_exist(char* path);
 static void _webui_free_all_mem(void);
-static bool _webui_show_window(_webui_window_t* win, const char* content, bool is_embedded_html, size_t browser);
+static bool _webui_show_window(_webui_window_t* win, const char* content, int type, size_t browser);
 static char* _webui_generate_internal_id(_webui_window_t* win, const char* element);
 static bool _webui_is_empty(const char* s);
 static size_t _webui_strlen(const char* s);
@@ -327,6 +330,7 @@ static uint32_t _webui_get_token(const char* data);
 static uint32_t _webui_generate_random_uint32();
 static const char* _webui_url_encode(const char* str);
 static bool _webui_regular_open_url(const char* url);
+static bool _webui_is_valid_url(const char* url);
 #ifdef WEBUI_TLS
 static int _webui_tls_initialization(void* ssl_ctx, void* ptr);
 static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key, char* ssl_cert, char* ssl_key);
@@ -2739,6 +2743,19 @@ static bool _webui_file_exist_mg(_webui_window_t* win, struct mg_connection* con
 	_webui_free_mem((void*)full_path);
 
 	return exist;
+}
+
+static bool _webui_is_valid_url(const char* url) {
+
+#ifdef WEBUI_LOG
+	printf("[Core]\t\t_webui_is_valid_url([%.8s...])...\n", url);
+#endif
+
+    if (_webui_is_empty(url))
+        return false;
+    if (strncmp(url, "http://", 7) == 0 || strncmp(url, "https://", 8) == 0)
+        return true;
+    return false;
 }
 
 static bool _webui_regular_open_url(const char* url) {
@@ -5369,27 +5386,30 @@ static bool _webui_show(_webui_window_t* win, const char* content, size_t browse
 	const char* content_cpy = (const char*)_webui_malloc(content_len);
 	memcpy((char*)content_cpy, content, content_len);
 
-	if (strstr(content_cpy, "<html") || strstr(content_cpy, "<!DOCTYPE") || strstr(content_cpy, "<!doctype") ||
+	// URL
+	if(_webui_is_valid_url(content_cpy)) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_show() -> URL: [%s]\n", content_cpy);
+#endif
+		return _webui_show_window(win, content_cpy, WEBUI_SHOW_URL, browser);
+	}
+	// Embedded HTML
+	else if (strstr(content_cpy, "<html") || strstr(content_cpy, "<!DOCTYPE") || strstr(content_cpy, "<!doctype") ||
 	    strstr(content_cpy, "<!Doctype")) {
-
-// Embedded HTML
 #ifdef WEBUI_LOG
 		printf("[Core]\t\t_webui_show() -> Embedded HTML:\n");
 		printf("- - -[HTML]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", content_cpy);
 #endif
-
-		return _webui_show_window(win, content_cpy, true, browser);
-	} else {
-
-// File
+		return _webui_show_window(win, content_cpy, WEBUI_SHOW_HTML, browser);
+	}
+	// File
+	else {
 #ifdef WEBUI_LOG
-		printf("[User] webui_show() -> File: [%s]\n", content_cpy);
+		printf("[Core]\t\t_webui_show() -> File: [%s]\n", content_cpy);
 #endif
-
 		if (content_len > WEBUI_MAX_PATH || strstr(content_cpy, "<"))
 			return false;
-
-		return _webui_show_window(win, content_cpy, false, browser);
+		return _webui_show_window(win, content_cpy, WEBUI_SHOW_FILE, browser);
 	}
 }
 
@@ -5599,11 +5619,13 @@ static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key
 }
 #endif
 
-static bool _webui_show_window(_webui_window_t* win, const char* content, bool is_embedded_html, size_t browser) {
+static bool _webui_show_window(_webui_window_t* win, const char* content, int type, size_t browser) {
 
 #ifdef WEBUI_LOG
-	if (is_embedded_html)
+	if (type == WEBUI_SHOW_HTML)
 		printf("[Core]\t\t_webui_show_window(HTML, [%zu])...\n", browser);
+	else if (type == WEBUI_SHOW_URL)
+		printf("[Core]\t\t_webui_show_window(URL, [%zu])...\n", browser);
 	else
 		printf("[Core]\t\t_webui_show_window(FILE, [%zu])...\n", browser);
 #endif
@@ -5617,7 +5639,7 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		       "certificate...\n");
 #endif
 
-		// Generate SSL self-signed certificate
+		// Generate SSL self-signed certificate once
 		char* root_cert = (char*)_webui_malloc(WEBUI_SSL_SIZE);
 		char* root_key = (char*)_webui_malloc(WEBUI_SSL_SIZE);
 		char* ssl_cert = (char*)_webui_malloc(WEBUI_SSL_SIZE);
@@ -5657,56 +5679,78 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 	}
 #endif
 
-	char* url = NULL;
-	size_t port = (win->server_port == 0 ? _webui_get_free_port() : win->server_port);
-	size_t ws_port = (win->ws_port == 0 ? _webui_get_free_port() : win->ws_port);
-
 	// Initialization
 	if (win->html != NULL)
 		_webui_free_mem((void*)win->html);
 	if (win->url != NULL)
 		_webui_free_mem((void*)win->url);
 
-	if (is_embedded_html) {
+	// Get network ports
+	win->server_port = (win->server_port == 0 ? _webui_get_free_port() : win->server_port);
+	win->ws_port = (win->ws_port == 0 ? _webui_get_free_port() : win->ws_port);
+
+	// Generate the server URL
+	win->url = (char*)_webui_malloc(32); // [http][domain][port]
+	sprintf(win->url, WEBUI_HTTP_PROTOCOL "localhost:%zu", win->server_port);
+
+	// Generate the window URL
+	char* window_url = NULL;
+	if (type == WEBUI_SHOW_HTML) {
+
+		const char* user_html = content;
 
 		// Show a window using the embedded HTML
 		win->is_embedded_html = true;
-		win->html = (content == NULL ? "" : content);
+		win->html = (user_html == NULL ? "" : user_html);
 
-		// Generate the URL
-		size_t url_len = 32; // [http][domain][port]
-		url = (char*)_webui_malloc(url_len);
-		sprintf(url, WEBUI_HTTP_PROTOCOL "localhost:%zu", port);
-	} else {
+		// Set window URL
+		window_url = (char*)_webui_malloc(strlen(win->url));
+		strcpy(window_url, win->url);
+	}
+	else if (type == WEBUI_SHOW_URL) {
+
+		const char* user_url = content;
+
+		// Show a window using a specific URL
+		win->is_embedded_html = true;
+		char* refresh = (char*)_webui_malloc(64 + strlen(user_url));
+		sprintf(refresh, "<meta http-equiv=\"refresh\" content=\"0;url=%s\">", user_url);
+		win->html = refresh;
+
+		// Set window URL
+		window_url = user_url;
+	}
+	else {
+
+		const char* user_file = content;
 
 		// Show a window using a local file
 		win->is_embedded_html = false;
 		win->html = NULL;
 
 		// Generate the URL
-		const char* content_urlEncoded = _webui_url_encode(content);
-		size_t url_len = 32 + _webui_strlen(content) +
-		                 _webui_strlen(content_urlEncoded); // [http][domain][port][file_encoded]
-		url = (char*)_webui_malloc(url_len);
-		sprintf(url, WEBUI_HTTP_PROTOCOL "localhost:%zu/%s", port, content_urlEncoded);
+		const char* file_url_encoded = _webui_url_encode(user_file);
+		char* url_encoded = (char*)_webui_malloc(64 + _webui_strlen(file_url_encoded)); // [http][domain][port] [file_encoded]
+		sprintf(url_encoded, WEBUI_HTTP_PROTOCOL "localhost:%zu/%s", win->server_port, file_url_encoded);
+		_webui_free_mem((void*)file_url_encoded);
+		_webui_free_mem((void*)user_file);
+
+		// Set window URL
+		window_url = url_encoded;
 	}
 
-	// Set URL
-	win->url = url;
-	win->server_port = port;
-	win->ws_port = ws_port;
-
+	// Run the web-browser window
 	if (!win->connected) {
 
 		// Start a new window
 
 		// Run browser
 		bool runBrowser = false;
-		if (!_webui_browser_start(win, win->url, browser)) {
-			if (browser == AnyBrowser && _webui_regular_open_url(win->url))
+		if (!_webui_browser_start(win, window_url, browser)) {
+			if (browser == AnyBrowser && _webui_regular_open_url(window_url))
 				runBrowser = true;
-		} else
-			runBrowser = true;
+		} else runBrowser = true;
+		_webui_free_mem((void*)window_url);
 
 		if (!runBrowser) {
 
@@ -5715,9 +5759,13 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 			_webui_free_mem((void*)win->url);
 			_webui_free_port(win->server_port);
 			_webui_free_port(win->ws_port);
+			win->server_port = 0;
+			win->ws_port = 0;
 			return false;
 		}
 
+		// Let wait() knows that this app
+		// has atleast one window to wait
 		_webui_core.ui = true;
 
 // New server thread
@@ -5746,7 +5794,10 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, bool i
 		// [URL]
 
 		// Send the packet
-		_webui_send(win, win->token, 0, WEBUI_CMD_NAVIGATION, (const char*)win->url, _webui_strlen(win->url));
+		_webui_send(win, win->token, 0, WEBUI_CMD_NAVIGATION, (const char*)window_url, _webui_strlen(window_url));
+
+		// Free
+		_webui_free_mem((void*)window_url);
 	}
 
 	return true;
@@ -6855,6 +6906,8 @@ static WEBUI_THREAD_SERVER_START {
 	win->connected = false;
 	_webui_free_port(win->server_port);
 	_webui_free_port(win->ws_port);
+	win->server_port = 0;
+	win->ws_port = 0;
 
 	// Kill Process
 	// _webui_kill_pid(win->process_id);
