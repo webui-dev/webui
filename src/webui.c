@@ -5709,22 +5709,10 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, int ty
 		_webui_free_mem((void*)win->url);
 
 	// Get network ports
-	win->server_port = (win->custom_server_port > 0 ? win->custom_server_port : _webui_get_free_port());
-	win->ws_port = (win->ws_port > 0 ? win->ws_port : _webui_get_free_port());
-	if (_webui_port_is_used(win->server_port)) {
-#ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_show_window() -> Web server port %zu is busy.\n", 
-		win->server_port);
-#endif
-		return false;
-	}
-	else if (_webui_port_is_used(win->ws_port)) {
-#ifdef WEBUI_LOG
-		printf("[Core]\t\t_webui_show_window() -> WebSocket server port %zu is busy.\n", 
-		win->ws_port);
-#endif
-		return false;
-	}
+	if (win->custom_server_port > 0)
+		win->server_port = win->custom_server_port;
+	win->server_port = (win->server_port == 0 ? _webui_get_free_port() : win->server_port);
+	win->ws_port = (win->ws_port == 0 ? _webui_get_free_port() : win->ws_port);
 
 	// Generate the server URL
 	win->url = (char*)_webui_malloc(32); // [http][domain][port]
