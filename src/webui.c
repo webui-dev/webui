@@ -134,6 +134,7 @@ typedef struct _webui_window_t {
 	bool bridge_handled;
 	bool server_handled;
 	bool is_embedded_html;
+	size_t custom_server_port;
 	size_t server_port;
 	size_t ws_port;
 	char* url;
@@ -331,6 +332,7 @@ static uint32_t _webui_generate_random_uint32();
 static const char* _webui_url_encode(const char* str);
 static bool _webui_regular_open_url(const char* url);
 static bool _webui_is_valid_url(const char* url);
+static bool _webui_port_is_used(size_t port_num);
 #ifdef WEBUI_TLS
 static int _webui_tls_initialization(void* ssl_ctx, void* ptr);
 static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key, char* ssl_cert, char* ssl_key);
@@ -1597,6 +1599,27 @@ bool webui_set_tls_certificate(const char* certificate_pem, const char* private_
 #endif
 
 	return false;
+}
+
+bool webui_set_port(size_t window, size_t port) {
+
+#ifdef WEBUI_LOG
+	printf("[User] webui_set_port([%zu], [%zu])...\n", window, port);
+#endif
+
+	// Initialization
+	_webui_init();
+
+	// Dereference
+	if (_webui_core.exit_now || _webui_core.wins[window] == NULL)
+		return false;
+	_webui_window_t* win = _webui_core.wins[window];
+
+	if (_webui_port_is_used(port))
+		return false;
+	
+	win->custom_server_port = port;
+	return true;
 }
 
 size_t webui_get_child_process_id(size_t window) {
@@ -5686,8 +5709,22 @@ static bool _webui_show_window(_webui_window_t* win, const char* content, int ty
 		_webui_free_mem((void*)win->url);
 
 	// Get network ports
-	win->server_port = (win->server_port == 0 ? _webui_get_free_port() : win->server_port);
-	win->ws_port = (win->ws_port == 0 ? _webui_get_free_port() : win->ws_port);
+	win->server_port = (win->custom_server_port > 0 ? win->custom_server_port : _webui_get_free_port());
+	win->ws_port = (win->ws_port > 0 ? win->ws_port : _webui_get_free_port());
+	if (_webui_port_is_used(win->server_port)) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_show_window() -> Web server port %zu is busy.\n", 
+		win->server_port);
+#endif
+		return false;
+	}
+	else if (_webui_port_is_used(win->ws_port)) {
+#ifdef WEBUI_LOG
+		printf("[Core]\t\t_webui_show_window() -> WebSocket server port %zu is busy.\n", 
+		win->ws_port);
+#endif
+		return false;
+	}
 
 	// Generate the server URL
 	win->url = (char*)_webui_malloc(32); // [http][domain][port]

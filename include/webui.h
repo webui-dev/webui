@@ -500,6 +500,20 @@ WEBUI_EXPORT size_t webui_get_parent_process_id(size_t window);
  */
 WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
 
+/**
+ * @brief Set a custom web-server network port to be used by WebUI.
+ * This can be useful to determine the HTTP link of `webui.js` in case
+ * you are trying to use WebUI with an external web-server like NGNIX
+ *
+ * @param window The window number
+ * @param port The web-server network port WebUI should use
+ *
+ * @return Returns True if the port is free and usable by WebUI
+ *
+ * @example bool ret = webui_set_port(myWindow, 8080);
+ */
+WEBUI_EXPORT bool webui_set_port(size_t window, size_t port);
+
 // -- SSL/TLS -------------------------
 
 /**
