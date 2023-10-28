@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title>WebUI - Custom Web-Server Example (C99)</title>
+		<!-- Connect this window to the back-end app -->
+		<script src="http://localhost:8081/webui.js"></script>
+	</head>
+	<body>
+		<h3>Custom Web-Server Example (C99)</h3>
+		<p>
+			This HTML page is handled by a custom Web-Server other than WebUI.<br />
+			This window is connected to the back-end because we used: <pre>http://localhost:8081/webui.js</pre>
+		</p>
+		<h4><a href="second.html">Simple link example (Local file)</a></h4>
+		<button onclick="my_backend_func(123, 456, 789);">Call my_backend_func()</button>
+	</body>
+</html>
