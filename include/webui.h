@@ -1,5 +1,5 @@
 /*
-  WebUI Library 2.4.0
+  WebUI Library 2.4.0-Beta
   http://webui.me
   https://github.com/webui-dev/webui
   Copyright (c) 2020-2023 Hassan Draga.
@@ -21,13 +21,13 @@
 
 // Dynamic Library Exports
 #if defined(_MSC_VER) || defined(__TINYC__)
-	#ifndef WEBUI_EXPORT
-		#define WEBUI_EXPORT __declspec(dllexport)
-	#endif
+    #ifndef WEBUI_EXPORT
+        #define WEBUI_EXPORT __declspec(dllexport)
+    #endif
 #else
-	#ifndef WEBUI_EXPORT
-		#define WEBUI_EXPORT extern
-	#endif
+    #ifndef WEBUI_EXPORT
+        #define WEBUI_EXPORT extern
+    #endif
 #endif
 
 // -- C STD ---------------------------
@@ -44,106 +44,106 @@
 #include <string.h>
 #include <time.h>
 #if defined(__GNUC__) || defined(__TINYC__)
-	#include <dirent.h>
+    #include <dirent.h>
 #endif
 
 // -- Windows -------------------------
 #ifdef _WIN32
-	#ifndef WIN32_LEAN_AND_MEAN
-		#define WIN32_LEAN_AND_MEAN
-	#endif
-	#include <windows.h>
-	#include <winsock2.h>
-	#include <ws2tcpip.h>
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
 
-	#include <direct.h>
-	#include <io.h>
-	#include <shellapi.h>
-	#include <tchar.h>
-	#include <tlhelp32.h>
-	#define WEBUI_GET_CURRENT_DIR _getcwd
-	#define WEBUI_FILE_EXIST      _access
-	#define WEBUI_POPEN           _popen
-	#define WEBUI_PCLOSE          _pclose
-	#define WEBUI_MAX_PATH        MAX_PATH
+    #include <direct.h>
+    #include <io.h>
+    #include <shellapi.h>
+    #include <tchar.h>
+    #include <tlhelp32.h>
+    #define WEBUI_GET_CURRENT_DIR _getcwd
+    #define WEBUI_FILE_EXIST      _access
+    #define WEBUI_POPEN           _popen
+    #define WEBUI_PCLOSE          _pclose
+    #define WEBUI_MAX_PATH        MAX_PATH
 #endif
 
 // -- Linux ---------------------------
 #ifdef __linux__
-	#include <dirent.h>
-	#include <fcntl.h>
-	#include <limits.h>
-	#include <poll.h>
-	#include <pthread.h>
-	#include <signal.h>
-	#include <sys/socket.h>
-	#include <sys/time.h>
-	#include <unistd.h>
-	#define WEBUI_GET_CURRENT_DIR getcwd
-	#define WEBUI_FILE_EXIST      access
-	#define WEBUI_POPEN           popen
-	#define WEBUI_PCLOSE          pclose
-	#define WEBUI_MAX_PATH        PATH_MAX
+    #include <dirent.h>
+    #include <fcntl.h>
+    #include <limits.h>
+    #include <poll.h>
+    #include <pthread.h>
+    #include <signal.h>
+    #include <sys/socket.h>
+    #include <sys/time.h>
+    #include <unistd.h>
+    #define WEBUI_GET_CURRENT_DIR getcwd
+    #define WEBUI_FILE_EXIST      access
+    #define WEBUI_POPEN           popen
+    #define WEBUI_PCLOSE          pclose
+    #define WEBUI_MAX_PATH        PATH_MAX
 #endif
 
 // -- Apple ---------------------------
 #ifdef __APPLE__
-	#include <dirent.h>
-	#include <fcntl.h>
-	#include <limits.h>
-	#include <poll.h>
-	#include <pthread.h>
-	#include <signal.h>
-	#include <sys/socket.h>
-	#include <sys/sysctl.h>
-	#include <sys/syslimits.h>
-	#include <sys/time.h>
-	#include <unistd.h>
-	#define WEBUI_GET_CURRENT_DIR getcwd
-	#define WEBUI_FILE_EXIST      access
-	#define WEBUI_POPEN           popen
-	#define WEBUI_PCLOSE          pclose
-	#define WEBUI_MAX_PATH        PATH_MAX
+    #include <dirent.h>
+    #include <fcntl.h>
+    #include <limits.h>
+    #include <poll.h>
+    #include <pthread.h>
+    #include <signal.h>
+    #include <sys/socket.h>
+    #include <sys/sysctl.h>
+    #include <sys/syslimits.h>
+    #include <sys/time.h>
+    #include <unistd.h>
+    #define WEBUI_GET_CURRENT_DIR getcwd
+    #define WEBUI_FILE_EXIST      access
+    #define WEBUI_POPEN           popen
+    #define WEBUI_PCLOSE          pclose
+    #define WEBUI_MAX_PATH        PATH_MAX
 #endif
 
 // -- Enums ---------------------------
 enum webui_browsers {
-	NoBrowser = 0,  // 0. No web browser
-	AnyBrowser = 1, // 1. Default recommended web browser
-	Chrome,         // 2. Google Chrome
-	Firefox,        // 3. Mozilla Firefox
-	Edge,           // 4. Microsoft Edge
-	Safari,         // 5. Apple Safari
-	Chromium,       // 6. The Chromium Project
-	Opera,          // 7. Opera Browser
-	Brave,          // 8. The Brave Browser
-	Vivaldi,        // 9. The Vivaldi Browser
-	Epic,           // 10. The Epic Browser
-	Yandex,         // 11. The Yandex Browser
-	ChromiumBased,  // 12. Any Chromium based browser
+    NoBrowser = 0,  // 0. No web browser
+    AnyBrowser = 1, // 1. Default recommended web browser
+    Chrome,         // 2. Google Chrome
+    Firefox,        // 3. Mozilla Firefox
+    Edge,           // 4. Microsoft Edge
+    Safari,         // 5. Apple Safari
+    Chromium,       // 6. The Chromium Project
+    Opera,          // 7. Opera Browser
+    Brave,          // 8. The Brave Browser
+    Vivaldi,        // 9. The Vivaldi Browser
+    Epic,           // 10. The Epic Browser
+    Yandex,         // 11. The Yandex Browser
+    ChromiumBased,  // 12. Any Chromium based browser
 };
 
 enum webui_runtimes {
-	None = 0, // 0. Prevent WebUI from using any runtime for .js and .ts files
-	Deno,     // 1. Use Deno runtime for .js and .ts files
-	NodeJS,   // 2. Use Nodejs runtime for .js files
+    None = 0, // 0. Prevent WebUI from using any runtime for .js and .ts files
+    Deno,     // 1. Use Deno runtime for .js and .ts files
+    NodeJS,   // 2. Use Nodejs runtime for .js files
 };
 
 enum webui_events {
-	WEBUI_EVENT_DISCONNECTED = 0, // 0. Window disconnection event
-	WEBUI_EVENT_CONNECTED,        // 1. Window connection event
-	WEBUI_EVENT_MOUSE_CLICK,      // 2. Mouse click event
-	WEBUI_EVENT_NAVIGATION,       // 3. Window navigation event
-	WEBUI_EVENT_CALLBACK,         // 4. Function call event
+    WEBUI_EVENT_DISCONNECTED = 0, // 0. Window disconnection event
+    WEBUI_EVENT_CONNECTED,        // 1. Window connection event
+    WEBUI_EVENT_MOUSE_CLICK,      // 2. Mouse click event
+    WEBUI_EVENT_NAVIGATION,       // 3. Window navigation event
+    WEBUI_EVENT_CALLBACK,         // 4. Function call event
 };
 
 // -- Structs -------------------------
 typedef struct webui_event_t {
-	size_t window;       // The window object number
-	size_t event_type;   // Event type
-	char* element;       // HTML element ID
-	size_t event_number; // Internal WebUI
-	size_t bind_id;      // Bind ID
+    size_t window;       // The window object number
+    size_t event_type;   // Event type
+    char* element;       // HTML element ID
+    size_t event_number; // Internal WebUI
+    size_t bind_id;      // Bind ID
 } webui_event_t;
 
 // -- Definitions ---------------------
@@ -340,7 +340,7 @@ WEBUI_EXPORT char* webui_encode(const char* str);
  *
  * @param str The string to decode (Should be null terminated)
  *
- * @example webui_encode("SGVsbG8=");
+ * @example webui_decode("SGVsbG8=");
  */
 WEBUI_EXPORT char* webui_decode(const char* str);
 
@@ -359,7 +359,7 @@ WEBUI_EXPORT void webui_free(void* ptr);
  *
  * @param size The size of memory in bytes
  *
- * @example webui_malloc(1024);
+ * @example char* myBuffer = (char*)webui_malloc(1024);
  */
 WEBUI_EXPORT void* webui_malloc(size_t size);
 
@@ -533,47 +533,163 @@ WEBUI_EXPORT bool webui_set_tls_certificate(const char* certificate_pem, const c
 
 // -- JavaScript ----------------------
 
-// Run JavaScript without waiting for the response.
+/**
+ * @brief Run JavaScript without waiting for the response.
+ *
+ * @param window The window number
+ * @param script The JavaScript to be run
+ *
+ * @example webui_run(myWindow, "alert('Hello');");
+ */
 WEBUI_EXPORT void webui_run(size_t window, const char* script);
 
-// Run JavaScript and get the response back (Make sure your local buffer can
-// hold the response).
-WEBUI_EXPORT bool webui_script(size_t window, const char* script, size_t timeout, char* buffer, size_t buffer_length);
+/**
+ * @brief Run JavaScript and get the response back.
+ * Make sure your local buffer can hold the response.
+ *
+ * @param window The window number
+ * @param script The JavaScript to be run
+ * @param timeout The execution timeout
+ * @param buffer The local buffer to hold the response
+ * @param buffer_length The local buffer size
+ *
+ * @return Returns True if there is no execution error
+ *
+ * @example bool err = webui_script(myWindow, "return 4 + 6;", 0, myBuffer, myBufferSize);
+ */
+WEBUI_EXPORT bool webui_script(size_t window, const char* script, size_t timeout,
+    char* buffer, size_t buffer_length);
 
-// Chose between Deno and Nodejs as runtime for .js and .ts files.
+/**
+ * @brief Chose between Deno and Nodejs as runtime for .js and .ts files.
+ *
+ * @param window The window number
+ * @param runtime Deno | Nodejs
+ *
+ * @example webui_set_runtime(myWindow, Deno);
+ */
 WEBUI_EXPORT void webui_set_runtime(size_t window, size_t runtime);
 
-// Get an argument as integer at a specific index
+/**
+ * @brief Get an argument as integer at a specific index
+ *
+ * @param e The event struct
+ * @param index The argument position starting from 0
+ *
+ * @return Returns argument as integer
+ *
+ * @example long long int myNum = webui_get_int_at(e, 0);
+ */
 WEBUI_EXPORT long long int webui_get_int_at(webui_event_t* e, size_t index);
 
-// Get the first argument as integer
+/**
+ * @brief Get the first argument as integer
+ *
+ * @param e The event struct
+ *
+ * @return Returns argument as integer
+ *
+ * @example long long int myNum = webui_get_int(e);
+ */
 WEBUI_EXPORT long long int webui_get_int(webui_event_t* e);
 
-// Get an argument as string at a specific index
+/**
+ * @brief Get an argument as string at a specific index
+ *
+ * @param e The event struct
+ * @param index The argument position starting from 0
+ *
+ * @return Returns argument as string
+ *
+ * @example const char* myStr = webui_get_string_at(e, 0);
+ */
 WEBUI_EXPORT const char* webui_get_string_at(webui_event_t* e, size_t index);
 
-// Get the first argument as string
+/**
+ * @brief Get the first argument as string
+ *
+ * @param e The event struct
+ *
+ * @return Returns argument as string
+ *
+ * @example const char* myStr = webui_get_string(e);
+ */
 WEBUI_EXPORT const char* webui_get_string(webui_event_t* e);
 
-// Get an argument as boolean at a specific index
+/**
+ * @brief Get an argument as boolean at a specific index
+ *
+ * @param e The event struct
+ * @param index The argument position starting from 0
+ *
+ * @return Returns argument as boolean
+ *
+ * @example bool myBool = webui_get_bool_at(e, 0);
+ */
 WEBUI_EXPORT bool webui_get_bool_at(webui_event_t* e, size_t index);
 
-// Get the first argument as boolean
+/**
+ * @brief Get the first argument as boolean
+ *
+ * @param e The event struct
+ *
+ * @return Returns argument as boolean
+ *
+ * @example bool myBool = webui_get_bool(e);
+ */
 WEBUI_EXPORT bool webui_get_bool(webui_event_t* e);
 
-// Get the size in bytes of an argument at a specific index
+/**
+ * @brief Get the size in bytes of an argument at a specific index
+ *
+ * @param e The event struct
+ * @param index The argument position starting from 0
+ *
+ * @return Returns size in bytes
+ *
+ * @example size_t argLen = webui_get_size_at(e, 0);
+ */
 WEBUI_EXPORT size_t webui_get_size_at(webui_event_t* e, size_t index);
 
-// Get size in bytes of the first argument
+/**
+ * @brief Get size in bytes of the first argument
+ *
+ * @param e The event struct
+ *
+ * @return Returns size in bytes
+ *
+ * @example size_t argLen = webui_get_size(e);
+ */
 WEBUI_EXPORT size_t webui_get_size(webui_event_t* e);
 
-// Return the response to JavaScript as integer.
+/**
+ * @brief Return the response to JavaScript as integer.
+ *
+ * @param e The event struct
+ * @param n The integer to be send to JavaScript
+ *
+ * @example webui_return_int(e, 123);
+ */
 WEBUI_EXPORT void webui_return_int(webui_event_t* e, long long int n);
 
-// Return the response to JavaScript as string.
+/**
+ * @brief Return the response to JavaScript as string.
+ *
+ * @param e The event struct
+ * @param n The string to be send to JavaScript
+ *
+ * @example webui_return_string(e, "Response...");
+ */
 WEBUI_EXPORT void webui_return_string(webui_event_t* e, const char* s);
 
-// Return the response to JavaScript as boolean.
+/**
+ * @brief Return the response to JavaScript as boolean.
+ *
+ * @param e The event struct
+ * @param n The boolean to be send to JavaScript
+ *
+ * @example webui_return_bool(e, true);
+ */
 WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
 
 // -- Wrapper's Interface -------------
@@ -581,26 +697,89 @@ WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
 // Bind a specific html element click event with a function. Empty element means
 // all events. This replaces `webui_bind()`. The func is (Window, EventType,
 // Element, EventNumber, BindID).
-WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, 
-	void (*func)(size_t, size_t, char*, size_t, size_t));
+/**
+ * @brief Bind a specific HTML element click event with a function. Empty element means all events.
+ *
+ * @param window The window number
+ * @param element The element ID
+ * @param func The callback as myFunc(Window, EventType, Element, EventNumber, BindID)
+ *
+ * @return Returns unique bind ID
+ *
+ * @example size_t id = webui_interface_bind(myWindow, "myID", myCallback);
+ */
+WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element,
+    void (*func)(size_t, size_t, char*, size_t, size_t));
 
-// When using `webui_interface_bind()`, you may need this function to easily set
-// your callback response.
+/**
+ * @brief When using `webui_interface_bind()`, you may need this function to easily set a response.
+ *
+ * @param window The window number
+ * @param event_number The event number
+ * @param response The response as string to be send to JavaScript
+ *
+ * @example webui_interface_set_response(myWindow, e->event_number, "Response...");
+ */
 WEBUI_EXPORT void webui_interface_set_response(size_t window, size_t event_number, const char* response);
 
-// Check if the app still running.
+/**
+ * @brief Check if the app still running.
+ *
+ * @return Returns True if app is running
+ *
+ * @example bool status = webui_interface_is_app_running();
+ */
 WEBUI_EXPORT bool webui_interface_is_app_running(void);
 
-// Get a unique window ID.
+/**
+ * @brief Get a unique window ID.
+ *
+ * @param window The window number
+ *
+ * @return Returns the unique window ID as integer
+ *
+ * @example size_t id = webui_interface_get_window_id(myWindow);
+ */
 WEBUI_EXPORT size_t webui_interface_get_window_id(size_t window);
 
-// Get an argument as string at a specific index
+/**
+ * @brief Get an argument as string at a specific index
+ *
+ * @param window The window number
+ * @param event_number The event number
+ * @param index The argument position
+ *
+ * @return Returns argument as string
+ *
+ * @example const char* myStr = webui_interface_get_string_at(myWindow, e->event_number, 0);
+ */
 WEBUI_EXPORT const char* webui_interface_get_string_at(size_t window, size_t event_number, size_t index);
 
-// Get an argument as integer at a specific index
+/**
+ * @brief Get an argument as integer at a specific index
+ *
+ * @param window The window number
+ * @param event_number The event number
+ * @param index The argument position
+ *
+ * @return Returns argument as integer
+ *
+ * @example long long int myNum = webui_interface_get_int_at(myWindow, e->event_number, 0);
+ */
 WEBUI_EXPORT long long int webui_interface_get_int_at(size_t window, size_t event_number, size_t index);
 
 // Get an argument as boolean at a specific index
+/**
+ * @brief Get an argument as boolean at a specific index
+ *
+ * @param window The window number
+ * @param event_number The event number
+ * @param index The argument position
+ *
+ * @return Returns argument as boolean
+ *
+ * @example bool myBool = webui_interface_get_bool_at(myWindow, e->event_number, 0);
+ */
 WEBUI_EXPORT bool webui_interface_get_bool_at(size_t window, size_t event_number, size_t index);
 
 #endif /* _WEBUI_H */
