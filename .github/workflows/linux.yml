@@ -112,7 +112,7 @@ jobs:
         with:
           tag_name: nightly
       - name: Release
-        if: github.ref_name == 'main' && (github.ref_type == 'tag' || github.event_name == 'push')
+        if: github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push')
         uses: ncipollo/release-action@v1
         with:
           artifacts: ${{ env.ARTIFACT }}.tar.gz
