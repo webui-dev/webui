@@ -2579,7 +2579,7 @@ static void _webui_sleep(long unsigned int ms) {
     #else
     struct timespec req;
     req.tv_sec = ms / 1000; // Convert ms to seconds
-    req.tv_nsec = (ms % 1000) * 1000000 L; // Convert remainder to nanoseconds
+    req.tv_nsec = (ms % 1000) * 1000000L; // Convert remainder to nanoseconds
     nanosleep( & req, NULL);
     #endif
 }
