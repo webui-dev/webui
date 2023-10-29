@@ -21,13 +21,13 @@
 
 // Dynamic Library Exports
 #if defined(_MSC_VER) || defined(__TINYC__)
-#ifndef WEBUI_EXPORT
-#define WEBUI_EXPORT __declspec(dllexport)
-#endif
+	#ifndef WEBUI_EXPORT
+		#define WEBUI_EXPORT __declspec(dllexport)
+	#endif
 #else
-#ifndef WEBUI_EXPORT
-#define WEBUI_EXPORT extern
-#endif
+	#ifndef WEBUI_EXPORT
+		#define WEBUI_EXPORT extern
+	#endif
 #endif
 
 // -- C STD ---------------------------
@@ -44,66 +44,66 @@
 #include <string.h>
 #include <time.h>
 #if defined(__GNUC__) || defined(__TINYC__)
-#include <dirent.h>
+	#include <dirent.h>
 #endif
 
 // -- Windows -------------------------
 #ifdef _WIN32
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
+	#ifndef WIN32_LEAN_AND_MEAN
+		#define WIN32_LEAN_AND_MEAN
+	#endif
+	#include <windows.h>
+	#include <winsock2.h>
+	#include <ws2tcpip.h>
 
-#include <direct.h>
-#include <io.h>
-#include <shellapi.h>
-#include <tchar.h>
-#include <tlhelp32.h>
-#define WEBUI_GET_CURRENT_DIR _getcwd
-#define WEBUI_FILE_EXIST      _access
-#define WEBUI_POPEN           _popen
-#define WEBUI_PCLOSE          _pclose
-#define WEBUI_MAX_PATH        MAX_PATH
+	#include <direct.h>
+	#include <io.h>
+	#include <shellapi.h>
+	#include <tchar.h>
+	#include <tlhelp32.h>
+	#define WEBUI_GET_CURRENT_DIR _getcwd
+	#define WEBUI_FILE_EXIST      _access
+	#define WEBUI_POPEN           _popen
+	#define WEBUI_PCLOSE          _pclose
+	#define WEBUI_MAX_PATH        MAX_PATH
 #endif
 
 // -- Linux ---------------------------
 #ifdef __linux__
-#include <dirent.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <poll.h>
-#include <pthread.h>
-#include <signal.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <unistd.h>
-#define WEBUI_GET_CURRENT_DIR getcwd
-#define WEBUI_FILE_EXIST      access
-#define WEBUI_POPEN           popen
-#define WEBUI_PCLOSE          pclose
-#define WEBUI_MAX_PATH        PATH_MAX
+	#include <dirent.h>
+	#include <fcntl.h>
+	#include <limits.h>
+	#include <poll.h>
+	#include <pthread.h>
+	#include <signal.h>
+	#include <sys/socket.h>
+	#include <sys/time.h>
+	#include <unistd.h>
+	#define WEBUI_GET_CURRENT_DIR getcwd
+	#define WEBUI_FILE_EXIST      access
+	#define WEBUI_POPEN           popen
+	#define WEBUI_PCLOSE          pclose
+	#define WEBUI_MAX_PATH        PATH_MAX
 #endif
 
 // -- Apple ---------------------------
 #ifdef __APPLE__
-#include <dirent.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <poll.h>
-#include <pthread.h>
-#include <signal.h>
-#include <sys/socket.h>
-#include <sys/sysctl.h>
-#include <sys/syslimits.h>
-#include <sys/time.h>
-#include <unistd.h>
-#define WEBUI_GET_CURRENT_DIR getcwd
-#define WEBUI_FILE_EXIST      access
-#define WEBUI_POPEN           popen
-#define WEBUI_PCLOSE          pclose
-#define WEBUI_MAX_PATH        PATH_MAX
+	#include <dirent.h>
+	#include <fcntl.h>
+	#include <limits.h>
+	#include <poll.h>
+	#include <pthread.h>
+	#include <signal.h>
+	#include <sys/socket.h>
+	#include <sys/sysctl.h>
+	#include <sys/syslimits.h>
+	#include <sys/time.h>
+	#include <unistd.h>
+	#define WEBUI_GET_CURRENT_DIR getcwd
+	#define WEBUI_FILE_EXIST      access
+	#define WEBUI_POPEN           popen
+	#define WEBUI_PCLOSE          pclose
+	#define WEBUI_MAX_PATH        PATH_MAX
 #endif
 
 // -- Enums ---------------------------
@@ -581,8 +581,8 @@ WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
 // Bind a specific html element click event with a function. Empty element means
 // all events. This replaces `webui_bind()`. The func is (Window, EventType,
 // Element, EventNumber, BindID).
-WEBUI_EXPORT size_t
-    webui_interface_bind(size_t window, const char* element, void (*func)(size_t, size_t, char*, size_t, size_t));
+WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element, 
+	void (*func)(size_t, size_t, char*, size_t, size_t));
 
 // When using `webui_interface_bind()`, you may need this function to easily set
 // your callback response.
