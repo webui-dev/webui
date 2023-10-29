@@ -175,6 +175,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | TypeScript / JavaScript | ✔️             | [Deno-WebUI](https://github.com/webui-dev/deno-webui)     |
 | V                       | ✔️             | [V-WebUI](https://github.com/webui-dev/v-webui)           |
 | Zig                     | _not complete_ | [Zig-WebUI](https://github.com/webui-dev/zig-webui)       |
+| Odin                    | _not complete_ | [Odin-WebUI](https://github.com/webui-dev/odin-webui)       |
 
 ## Supported Web Browsers
 
