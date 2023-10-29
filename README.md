@@ -4,7 +4,10 @@
 
 # WebUI v2.4.0
 
-[![BuildStatus](https://img.shields.io/circleci/project/github/badges/shields/master?style=for-the-badge)](https://github.com/webui-dev/webui/actions?query=branch%3Amain) [![Issues](https://img.shields.io/github/issues/webui-dev/webui.svg?branch=master&style=for-the-badge&url=https://google.com)](https://github.com/webui-dev/webui/issues) [![Website](https://img.shields.io/website?label=webui.me&style=for-the-badge&url=https://google.com)](https://webui.me/)
+[![][build-status]](https://github.com/webui-dev/webui/actions?query=branch%3Amain)
+[![][last-commit]](https://github.com/webui-dev/webui/pulse)
+[![][release-version]](https://github.com/webui-dev/webui/releases/latest)
+[![][license]](https://github.com/webui-dev/webui/blob/main/LICENSE)
 
 > WebUI is not a web-server solution or a framework, but it allows you to use any web browser as a GUI, with your preferred language in the backend and HTML5 in the frontend. All in a lightweight portable lib.
 
