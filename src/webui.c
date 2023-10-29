@@ -1,5 +1,5 @@
 /*
-  WebUI Library 2.4.0-Beta
+  WebUI Library 2.4.0
   http://webui.me
   https://github.com/webui-dev/webui
   Copyright (c) 2020-2023 Hassan Draga.
