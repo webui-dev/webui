@@ -48,6 +48,9 @@
 #define WEBUI_PROTOCOL_ID    (5)     // Protocol byte position: ID (2 Bytes)
 #define WEBUI_PROTOCOL_CMD   (7)     // Protocol byte position: Command (1 Byte)
 #define WEBUI_PROTOCOL_DATA  (8)     // Protocol byte position: Data (n Byte)
+#define WEBUI_MUTEX_NONE     (0)     // Check boolen mutex without update
+#define WEBUI_MUTEX_TRUE     (1)     // Check boolen mutex and update to true
+#define WEBUI_MUTEX_FALSE    (2)     // Check boolen mutex and update to false
 #define WEBUI_WS_DATA        (1)     // Internal WS Event (Data received)
 #define WEBUI_WS_OPEN        (2)     // Internal WS Event (New connection)
 #define WEBUI_WS_CLOSE       (3)     // Internal WS Event (Connection close)
@@ -201,6 +204,7 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_wait;
     webui_mutex_t mutex_bridge;
     webui_mutex_t mutex_js_run;
+    webui_mutex_t mutex_win_connect;
     webui_condition_t condition_wait;
     char* default_server_root_path;
     bool ui;
@@ -339,6 +343,8 @@ static const char* _webui_url_encode(const char* str);
 static bool _webui_open_url_native(const char* url);
 static bool _webui_is_valid_url(const char* url);
 static bool _webui_port_is_used(size_t port_num);
+static bool _webui_mtx_is_connected(_webui_window_t * win, int update);
+static bool _webui_mtx_is_exit_now(int update);
 #ifdef WEBUI_TLS
 static int _webui_tls_initialization(void * ssl_ctx, void * ptr);
 static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key, char* ssl_cert, char* ssl_key);
@@ -410,7 +416,7 @@ void webui_run(size_t window, const char* script) {
         return;
     _webui_window_t * win = _webui_core.wins[window];
 
-    if (!win->connected)
+    if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE))
         return;
 
     // Packet Protocol Format:
@@ -459,7 +465,7 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
     if (buffer_length > 0)
         memset(buffer, 0, buffer_length);
 
-    if (!win->connected)
+    if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE))
         return false;
 
     size_t js_len = _webui_strlen(script);
@@ -662,7 +668,7 @@ void webui_close(size_t window) {
         return;
     _webui_window_t * win = _webui_core.wins[window];
 
-    if (win->connected) {
+    if (_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE)) {
 
         // Packet Protocol Format:
         // [...]
@@ -710,7 +716,7 @@ void webui_destroy(size_t window) {
             #endif
 
             // Forced close
-            win->connected = false;
+            _webui_mtx_is_connected(win, WEBUI_MUTEX_FALSE);
 
             // Wait for server threads to stop
             _webui_timer_t timer_2;
@@ -760,7 +766,7 @@ bool webui_is_shown(size_t window) {
         return false;
     _webui_window_t * win = _webui_core.wins[window];
 
-    return win->connected;
+    return _webui_mtx_is_connected(win, WEBUI_MUTEX_NONE);
 }
 
 void webui_set_icon(size_t window, const char* icon, const char* icon_type) {
@@ -814,7 +820,7 @@ void webui_navigate(size_t window, const char* url) {
         return;
     _webui_window_t * win = _webui_core.wins[window];
 
-    if (!win->connected)
+    if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE))
         return;
 
     // Packet Protocol Format:
@@ -1127,12 +1133,12 @@ size_t webui_bind(size_t window, const char* element, void( * func)(webui_event_
                 // to this UI. We need to send this new binding
                 // ID to to the UI.
 
-                if (!win->connected) {
+                if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE)) {
                     _webui_timer_t timer;
                     _webui_timer_start( & timer);
                     for (;;) {
                         _webui_sleep(10);
-                        if (win->connected)
+                        if (_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE))
                             break;
                         if (_webui_timer_is_end( & timer, 3000))
                             break;
@@ -1719,7 +1725,7 @@ void webui_set_size(size_t window, unsigned int width, unsigned int height) {
     win->height = height;
     win->size_set = true;
 
-    if (win->connected) {
+    if (_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE)) {
 
         // Resize the current window
         char script[128];
@@ -1752,7 +1758,7 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
     win->y = y;
     win->position_set = true;
 
-    if (win->connected) {
+    if (_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE)) {
 
         // Positioning the current window
         char script[128];
@@ -3400,7 +3406,7 @@ static const char* _webui_generate_js_bridge(_webui_window_t * win) {
     uint32_t token = 0;
 
     // Get Token Authorization
-    if (!win->connected) {
+    if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE)) {
         // First connection
         token = win->token;
     }
@@ -3476,6 +3482,28 @@ static const char* _webui_generate_js_bridge(_webui_window_t * win) {
 
     _webui_mutex_unlock( & _webui_core.mutex_bridge);
     return js;
+}
+
+static bool _webui_mtx_is_connected(_webui_window_t * win, int update) {
+
+    bool status = false;
+    _webui_mutex_lock( & _webui_core.mutex_win_connect);
+    if (update == WEBUI_MUTEX_TRUE) win->connected = true;
+    else if (update == WEBUI_MUTEX_FALSE) win->connected = false;
+    status = win->connected;
+    _webui_mutex_unlock( & _webui_core.mutex_win_connect);
+    return status;
+}
+
+static bool _webui_mtx_is_exit_now(int update) {
+
+    bool status = false;
+    _webui_mutex_lock( & _webui_core.mutex_win_connect);
+    if (update == WEBUI_MUTEX_TRUE) _webui_core.exit_now = true;
+    else if (update == WEBUI_MUTEX_FALSE) _webui_core.exit_now = false;
+    status = _webui_core.exit_now;
+    _webui_mutex_unlock( & _webui_core.mutex_win_connect);
+    return status;
 }
 
 static bool _webui_browser_create_new_profile(_webui_window_t * win, size_t browser) {
@@ -4652,6 +4680,7 @@ static void _webui_clean(void) {
     _webui_mutex_destroy( & _webui_core.mutex_receive);
     _webui_mutex_destroy( & _webui_core.mutex_wait);
     _webui_mutex_destroy( & _webui_core.mutex_js_run);
+    _webui_mutex_destroy( & _webui_core.mutex_win_connect);
     _webui_condition_destroy( & _webui_core.condition_wait);
 
     #ifdef WEBUI_LOG
@@ -5788,7 +5817,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
     }
 
     // Run the web-browser window
-    if (!win->connected) {
+    if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE)) {
 
         // Start a new window
 
@@ -5921,7 +5950,7 @@ static void _webui_ws_send(_webui_window_t * win, char* packet, size_t packets_s
     printf("]\n");
     #endif
 
-    if (!win->connected || packet == NULL || packets_size < WEBUI_PROTOCOL_SIZE)
+    if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE) || packet == NULL || packets_size < WEBUI_PROTOCOL_SIZE)
         return;
 
     int ret = 0;
@@ -6058,6 +6087,7 @@ static void _webui_init(void) {
     _webui_mutex_init( & _webui_core.mutex_wait);
     _webui_mutex_init( & _webui_core.mutex_bridge);
     _webui_mutex_init( & _webui_core.mutex_js_run);
+    _webui_mutex_init( & _webui_core.mutex_win_connect);
     _webui_condition_init( & _webui_core.condition_wait);
 
     // // Determine whether the current device
@@ -6461,7 +6491,7 @@ static int _webui_ws_connect_handler(const struct mg_connection * conn, void * _
     if (_webui_core.exit_now || win == NULL)
         return 1;
 
-    if (win->connected) {
+    if (_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE)) {
 
         // Non-authorized connection
         #ifdef WEBUI_LOG
@@ -6535,7 +6565,7 @@ static void _webui_ws_close_handler(const struct mg_connection * conn, void * _w
 
     // Dereference
     _webui_window_t * win = _webui_dereference_win_ptr(_win);
-    if (_webui_core.exit_now || win == NULL || !win->connected)
+    if (_webui_core.exit_now || win == NULL || !_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE))
         return;
 
     _webui_receive(win, WEBUI_WS_CLOSE, (void * ) conn, 0);
@@ -6705,7 +6735,7 @@ static WEBUI_THREAD_SERVER_START {
 
             while(!stop) {
 
-                if (!win->connected) {
+                if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE)) {
 
                     #ifdef WEBUI_LOG
                     printf(
@@ -6722,7 +6752,7 @@ static WEBUI_THREAD_SERVER_START {
 
                         // Stop if window is connected
                         _webui_sleep(1);
-                        if (win->connected || win->server_handled)
+                        if (_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE) || win->server_handled)
                             break;
 
                         // Stop if timer is finished
@@ -6731,7 +6761,7 @@ static WEBUI_THREAD_SERVER_START {
                             break;
                     }
 
-                    if (!win->connected && win->server_handled) {
+                    if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE) && win->server_handled) {
 
                         // At this moment the browser is already started and HTML
                         // is already handled, so, let's wait more time to give
@@ -6755,17 +6785,17 @@ static WEBUI_THREAD_SERVER_START {
 
                                 // Stop if window is connected
                                 _webui_sleep(1);
-                                if (win->connected)
+                                if (_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE))
                                     break;
 
                                 // Stop if timer is finished
                                 if (_webui_timer_is_end( & timer_2, 3000))
                                     break;
                             }
-                        } while(win->file_handled && !win->connected);
+                        } while(win->file_handled && !_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE));
                     }
 
-                    if (!win->connected)
+                    if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE))
                         stop = true; // First run failed
                 } else {
 
@@ -6790,7 +6820,7 @@ static WEBUI_THREAD_SERVER_START {
                             break;
                         }
 
-                        if (!win->connected && !_webui_core.exit_now) {
+                        if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE) && !_webui_core.exit_now) {
 
                             // The UI is just get disconnected
                             // probably the user did a refresh
@@ -6821,16 +6851,16 @@ static WEBUI_THREAD_SERVER_START {
 
                                     // Stop if window is re-connected
                                     _webui_sleep(1);
-                                    if (win->connected)
+                                    if (_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE))
                                         break;
 
                                     // Stop if timer is finished
                                     if (_webui_timer_is_end( & timer_3, 1000))
                                         break;
                                 }
-                            } while(win->file_handled && !win->connected);
+                            } while(win->file_handled && !_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE));
 
-                            if (!win->connected) {
+                            if (!_webui_mtx_is_connected(win, WEBUI_MUTEX_NONE)) {
                                 stop = true;
                                 break;
                             }
@@ -6877,7 +6907,7 @@ static WEBUI_THREAD_SERVER_START {
     win->html_handled = false;
     win->server_handled = false;
     win->bridge_handled = false;
-    win->connected = false;
+    _webui_mtx_is_connected(win, WEBUI_MUTEX_FALSE);
     _webui_free_port(win->server_port);
     _webui_free_port(win->ws_port);
     win->server_port = 0;
@@ -7483,7 +7513,7 @@ static WEBUI_THREAD_RECEIVE {
                 #endif
 
                 // Forced close
-                win->connected = false;
+                _webui_mtx_is_connected(win, WEBUI_MUTEX_FALSE);
             }
         } else if (event_type == WEBUI_WS_OPEN) {
 
@@ -7492,7 +7522,7 @@ static WEBUI_THREAD_RECEIVE {
             struct mg_connection * conn = (struct mg_connection * ) ptr;
 
             // First connection
-            win->connected = true; // server thread
+            _webui_mtx_is_connected(win, WEBUI_MUTEX_TRUE); // server thread
             event_user = WEBUI_EVENT_CONNECTED; // User event
             win->mg_connection = conn; // send
 
@@ -7536,7 +7566,7 @@ static WEBUI_THREAD_RECEIVE {
         } else if (event_type == WEBUI_WS_CLOSE) {
 
             // Main connection close
-            win->connected = false;
+            _webui_mtx_is_connected(win, WEBUI_MUTEX_FALSE);
             win->html_handled = false;
             win->server_handled = false;
             win->bridge_handled = false;
