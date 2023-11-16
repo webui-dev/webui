@@ -200,6 +200,7 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_receive;
     webui_mutex_t mutex_wait;
     webui_mutex_t mutex_bridge;
+    webui_mutex_t mutex_js_run;
     webui_condition_t condition_wait;
     char* default_server_root_path;
     bool ui;
@@ -468,7 +469,9 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
 
     // Initializing pipe
     uint16_t run_id = _webui_get_run_id();
+    _webui_mutex_lock( & _webui_core.mutex_js_run);
     _webui_core.run_done[run_id] = false;
+    _webui_mutex_unlock( & _webui_core.mutex_js_run);
     _webui_core.run_error[run_id] = false;
     _webui_core.run_userBuffer[run_id] = buffer;
     _webui_core.run_userBufferLen[run_id] = buffer_length;
@@ -481,13 +484,18 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
     // Send the packet
     _webui_send(win, win->token, run_id, WEBUI_CMD_JS, script, js_len);
 
+    bool js_status = false;
+
     // Wait for UI response
     if (timeout_second < 1 || timeout_second > 86400) {
 
         // Wait forever
         for (;;) {
             _webui_sleep(1);
-            if (_webui_core.run_done[run_id])
+            _webui_mutex_lock( & _webui_core.mutex_js_run);
+            js_status = _webui_core.run_done[run_id];
+            _webui_mutex_unlock( & _webui_core.mutex_js_run);
+            if (js_status)
                 break;
         }
     } else {
@@ -497,14 +505,17 @@ bool webui_script(size_t window, const char* script, size_t timeout_second, char
         _webui_timer_start( & timer);
         for (;;) {
             _webui_sleep(1);
-            if (_webui_core.run_done[run_id])
+            _webui_mutex_lock( & _webui_core.mutex_js_run);
+            js_status = _webui_core.run_done[run_id];
+            _webui_mutex_unlock( & _webui_core.mutex_js_run);
+            if (js_status)
                 break;
             if (_webui_timer_is_end( & timer, (timeout_second * 1000)))
                 break;
         }
     }
 
-    if (_webui_core.run_done[run_id]) {
+    if (js_status) {
 
         #ifdef WEBUI_LOG
         printf(
@@ -2286,6 +2297,23 @@ bool webui_interface_get_bool_at(size_t window, size_t event_number, size_t inde
     e.bind_id = 0;
 
     return webui_get_bool_at(&e, index);
+}
+
+size_t webui_interface_get_size_at(size_t window, size_t event_number, size_t index) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_interface_get_size_at([%zu], [%zu], [%zu])...\n", window, event_number, index);
+    #endif
+
+    // New Event
+    webui_event_t e;
+    e.window = window;
+    e.event_type = 0;
+    e.element = NULL;
+    e.event_number = event_number;
+    e.bind_id = 0;
+
+    return webui_get_size_at(&e, index);
 }
 
 size_t webui_interface_bind(size_t window, const char* element, void( * func)(size_t, size_t, char* , size_t, size_t)) {
@@ -4623,6 +4651,7 @@ static void _webui_clean(void) {
     _webui_mutex_destroy( & _webui_core.mutex_send);
     _webui_mutex_destroy( & _webui_core.mutex_receive);
     _webui_mutex_destroy( & _webui_core.mutex_wait);
+    _webui_mutex_destroy( & _webui_core.mutex_js_run);
     _webui_condition_destroy( & _webui_core.condition_wait);
 
     #ifdef WEBUI_LOG
@@ -6028,6 +6057,7 @@ static void _webui_init(void) {
     _webui_mutex_init( & _webui_core.mutex_receive);
     _webui_mutex_init( & _webui_core.mutex_wait);
     _webui_mutex_init( & _webui_core.mutex_bridge);
+    _webui_mutex_init( & _webui_core.mutex_js_run);
     _webui_condition_init( & _webui_core.condition_wait);
 
     // // Determine whether the current device
@@ -7131,7 +7161,9 @@ static WEBUI_THREAD_RECEIVE {
 
                             if (_webui_core.run_userBuffer[packet_id] != NULL) {
 
+                                _webui_mutex_lock( & _webui_core.mutex_js_run);
                                 _webui_core.run_done[packet_id] = false;
+                                _webui_mutex_unlock( & _webui_core.mutex_js_run);
 
                                 // Get js-error
                                 bool error = true;
@@ -7195,7 +7227,9 @@ static WEBUI_THREAD_RECEIVE {
                                 }
 
                                 // Send ready signal to webui_script()
+                                _webui_mutex_lock( & _webui_core.mutex_js_run);
                                 _webui_core.run_done[packet_id] = true;
+                                _webui_mutex_unlock( & _webui_core.mutex_js_run);
                             }
                         }
                     } else if ((unsigned char) packet[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_NAVIGATION) {

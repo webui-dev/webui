@@ -694,9 +694,6 @@ WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
 
 // -- Wrapper's Interface -------------
 
-// Bind a specific html element click event with a function. Empty element means
-// all events. This replaces `webui_bind()`. The func is (Window, EventType,
-// Element, EventNumber, BindID).
 /**
  * @brief Bind a specific HTML element click event with a function. Empty element means all events.
  *
@@ -768,7 +765,6 @@ WEBUI_EXPORT const char* webui_interface_get_string_at(size_t window, size_t eve
  */
 WEBUI_EXPORT long long int webui_interface_get_int_at(size_t window, size_t event_number, size_t index);
 
-// Get an argument as boolean at a specific index
 /**
  * @brief Get an argument as boolean at a specific index
  *
@@ -781,5 +777,18 @@ WEBUI_EXPORT long long int webui_interface_get_int_at(size_t window, size_t even
  * @example bool myBool = webui_interface_get_bool_at(myWindow, e->event_number, 0);
  */
 WEBUI_EXPORT bool webui_interface_get_bool_at(size_t window, size_t event_number, size_t index);
+
+/**
+ * @brief Get the size in bytes of an argument at a specific index
+ *
+ * @param window The window number
+ * @param event_number The event number
+ * @param index The argument position
+ *
+ * @return Returns size in bytes
+ *
+ * @example size_t argLen = webui_interface_get_size_at(myWindow, e->event_number, 0);
+ */
+WEBUI_EXPORT size_t webui_interface_get_size_at(size_t window, size_t event_number, size_t index);
 
 #endif /* _WEBUI_H */
