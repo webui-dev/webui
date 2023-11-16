@@ -612,21 +612,22 @@ class WebuiBridge {
 		// 2: [ID]
 		// 3: [CMD]
 		// 4: [Fn, Null, {LenLen...}, Null, {Data,Null,Data,Null...}]
-		const packet = Uint8Array.of(
-			this.#WEBUI_SIGNATURE,
-			0,
-			0,
-			0,
-			0, // Token (4 Bytes)
-			0,
-			0, // ID (2 Bytes)
-			this.#CMD_CALL_FUNC,
-			...new TextEncoder().encode(fn),
-			0,
-			...new TextEncoder().encode(argsLengths),
-			0,
-			...argsValues,
-		);
+		let packet = new Uint8Array(0);
+		const packetPush = (data: Uint8Array) => {
+			const newPacket = new Uint8Array(packet.length + data.length);
+			newPacket.set(packet);
+			newPacket.set(data, packet.length);
+			packet = newPacket;
+		};
+		packetPush(new Uint8Array([this.#WEBUI_SIGNATURE]));
+		packetPush(new Uint8Array([0, 0, 0, 0])); // Token (4 Bytes)
+		packetPush(new Uint8Array([0, 0])); // ID (2 Bytes)
+		packetPush(new Uint8Array([this.#CMD_CALL_FUNC]));
+		packetPush(new TextEncoder().encode(fn));
+		packetPush(new Uint8Array([0]));
+		packetPush(new TextEncoder().encode(argsLengths));
+		packetPush(new Uint8Array([0]));
+		packetPush(new Uint8Array(argsValues));
 		this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN);
 		this.#addID(packet, callId, this.#PROTOCOL_ID);
 		return new Promise((resolve) => {
