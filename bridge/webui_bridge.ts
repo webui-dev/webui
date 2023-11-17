@@ -314,36 +314,36 @@ class WebuiBridge {
 							// 2: [ID]
 							// 3: [CMD]
 							// 4: [Error, Script Response]
-							let Return8 = new Uint8Array(0);
+							let packet = new Uint8Array(0);
 							const packetPush = (data: Uint8Array) => {
-								const newPacket = new Uint8Array(Return8.length + data.length);
-								newPacket.set(Return8);
-								newPacket.set(data, Return8.length);
-								Return8 = newPacket;
+								const newPacket = new Uint8Array(packet.length + data.length);
+								newPacket.set(packet);
+								newPacket.set(data, packet.length);
+								packet = newPacket;
 							};
-							function* encodeAndChunk(str, chunkSize) {
-								const encoder = new TextEncoder();
-								for (let start = 0; start < str.length; start += chunkSize) {
-									const chunk = str.substring(start, start + chunkSize);
-									yield encoder.encode(chunk);
+							const packetPushStr = (data: string) => {
+								const chunkSize = 1024 * 8;
+								if (data.length > chunkSize) {
+									const encoder = new TextEncoder();
+									for (let i = 0; i < data.length; i += chunkSize) {
+										const chunk = data.substring(i, Math.min(i + chunkSize, data.length));
+										const encodedChunk = encoder.encode(chunk);
+										packetPush(encodedChunk);
+									}
+								} else {
+									packetPush(new TextEncoder().encode(data));
 								}
-							}
+							};
 							packetPush(new Uint8Array([this.#WEBUI_SIGNATURE]));
 							packetPush(new Uint8Array([0, 0, 0, 0])); // Token (4 Bytes)
 							packetPush(new Uint8Array([0, 0])); // ID (2 Bytes)
 							packetPush(new Uint8Array([this.#CMD_JS]));
-							if (FunError) {
-								packetPush(new Uint8Array([1]));
-							} else {
-								packetPush(new Uint8Array([0]));
-							}
-							const chunkSize = 1024 * 16; // 16KB chunk size to reduce call stack size
-							for (const chunk of encodeAndChunk(FunReturn, chunkSize)) {
-								packetPush(chunk);
-							}
-							this.#addToken(Return8, this.#token, this.#PROTOCOL_TOKEN);
-							this.#addID(Return8, callId, this.#PROTOCOL_ID);
-							this.#sendData(Return8);
+							packetPush(new Uint8Array(FunError ? [1] : [0]));
+							packetPushStr(FunReturn);
+							packetPush(new Uint8Array([0]));
+							this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN);
+							this.#addID(packet, callId, this.#PROTOCOL_ID);
+							this.#sendData(packet);
 						}
 						break;
 					case this.#CMD_CALL_FUNC:
