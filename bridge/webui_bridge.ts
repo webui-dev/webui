@@ -314,18 +314,33 @@ class WebuiBridge {
 							// 2: [ID]
 							// 3: [CMD]
 							// 4: [Error, Script Response]
-							const Return8 = Uint8Array.of(
-								this.#WEBUI_SIGNATURE,
-								0,
-								0,
-								0,
-								0, // Token (4 Bytes)
-								0,
-								0, // ID (2 Bytes)
-								this.#CMD_JS,
-								FunError ? 1 : 0,
-								...new TextEncoder().encode(FunReturn),
-							);
+							let Return8 = new Uint8Array(0);
+							const packetPush = (data: Uint8Array) => {
+								const newPacket = new Uint8Array(Return8.length + data.length);
+								newPacket.set(Return8);
+								newPacket.set(data, Return8.length);
+								Return8 = newPacket;
+							};
+							function* encodeAndChunk(str, chunkSize) {
+								const encoder = new TextEncoder();
+								for (let start = 0; start < str.length; start += chunkSize) {
+									const chunk = str.substring(start, start + chunkSize);
+									yield encoder.encode(chunk);
+								}
+							}
+							packetPush(new Uint8Array([this.#WEBUI_SIGNATURE]));
+							packetPush(new Uint8Array([0, 0, 0, 0])); // Token (4 Bytes)
+							packetPush(new Uint8Array([0, 0])); // ID (2 Bytes)
+							packetPush(new Uint8Array([this.#CMD_JS]));
+							if (FunError) {
+								packetPush(new Uint8Array([1]));
+							} else {
+								packetPush(new Uint8Array([0]));
+							}
+							const chunkSize = 1024 * 16; // 16KB chunk size to reduce call stack size
+							for (const chunk of encodeAndChunk(FunReturn, chunkSize)) {
+								packetPush(chunk);
+							}
 							this.#addToken(Return8, this.#token, this.#PROTOCOL_TOKEN);
 							this.#addID(Return8, callId, this.#PROTOCOL_ID);
 							this.#sendData(Return8);
