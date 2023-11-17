@@ -1,17 +1,17 @@
 'use-strict'; // Force strict mode for transpiled
 
 /*
-  WebUI Bridge
+	WebUI Bridge
 
-  http://webui.me
-  https://github.com/webui-dev/webui
-  Copyright (c) 2020-2023 Hassan Draga.
-  Licensed under MIT License.
-  All rights reserved.
-  Canada.
+	http://webui.me
+	https://github.com/webui-dev/webui
+	Copyright (c) 2020-2023 Hassan Draga.
+	Licensed under MIT License.
+	All rights reserved.
+	Canada.
 
-  Converted from JavaScript to TypeScript
-  By Oculi Julien. Copyright (c) 2023.
+	Converted from JavaScript to TypeScript
+	By Oculi Julien. Copyright (c) 2023.
 */
 
 //@ts-ignore use *.ts import real extension
@@ -314,18 +314,33 @@ class WebuiBridge {
 							// 2: [ID]
 							// 3: [CMD]
 							// 4: [Error, Script Response]
-							const Return8 = Uint8Array.of(
-								this.#WEBUI_SIGNATURE,
-								0,
-								0,
-								0,
-								0, // Token (4 Bytes)
-								0,
-								0, // ID (2 Bytes)
-								this.#CMD_JS,
-								FunError ? 1 : 0,
-								...new TextEncoder().encode(FunReturn),
-							);
+							let Return8 = new Uint8Array(0);
+							const packetPush = (data: Uint8Array) => {
+								const newPacket = new Uint8Array(Return8.length + data.length);
+								newPacket.set(Return8);
+								newPacket.set(data, Return8.length);
+								Return8 = newPacket;
+							};
+							function* encodeAndChunk(str, chunkSize) {
+								const encoder = new TextEncoder();
+								for (let start = 0; start < str.length; start += chunkSize) {
+									const chunk = str.substring(start, start + chunkSize);
+									yield encoder.encode(chunk);
+								}
+							}
+							packetPush(new Uint8Array([this.#WEBUI_SIGNATURE]));
+							packetPush(new Uint8Array([0, 0, 0, 0])); // Token (4 Bytes)
+							packetPush(new Uint8Array([0, 0])); // ID (2 Bytes)
+							packetPush(new Uint8Array([this.#CMD_JS]));
+							if (FunError) {
+								packetPush(new Uint8Array([1]));
+							} else {
+								packetPush(new Uint8Array([0]));
+							}
+							const chunkSize = 1024 * 16; // 16KB chunk size to reduce call stack size
+							for (const chunk of encodeAndChunk(FunReturn, chunkSize)) {
+								packetPush(chunk);
+							}
 							this.#addToken(Return8, this.#token, this.#PROTOCOL_TOKEN);
 							this.#addID(Return8, callId, this.#PROTOCOL_ID);
 							this.#sendData(Return8);
@@ -493,28 +508,28 @@ class WebuiBridge {
 			const packet =
 				elem !== ''
 					? Uint8Array.of(
-							this.#WEBUI_SIGNATURE,
-							0,
-							0,
-							0,
-							0, // Token (4 Bytes)
-							0,
-							0, // ID (2 Bytes)
-							this.#CMD_CLICK,
-							...new TextEncoder().encode(elem),
-							0,
-					  )
+						this.#WEBUI_SIGNATURE,
+						0,
+						0,
+						0,
+						0, // Token (4 Bytes)
+						0,
+						0, // ID (2 Bytes)
+						this.#CMD_CLICK,
+						...new TextEncoder().encode(elem),
+						0,
+					)
 					: Uint8Array.of(
-							this.#WEBUI_SIGNATURE,
-							0,
-							0,
-							0,
-							0, // Token (4 Bytes)
-							0,
-							0, // ID (2 Bytes)
-							this.#CMD_CLICK,
-							0,
-					  );
+						this.#WEBUI_SIGNATURE,
+						0,
+						0,
+						0,
+						0, // Token (4 Bytes)
+						0,
+						0, // ID (2 Bytes)
+						this.#CMD_CLICK,
+						0,
+					);
 			this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN);
 			// this.#addID(packet, 0, this.#PROTOCOL_ID)
 			this.#sendData(packet);
@@ -555,7 +570,7 @@ class WebuiBridge {
 		}
 	}
 	#closeWindowTimer() {
-		setTimeout(function () {
+		setTimeout(function() {
 			globalThis.close();
 		}, 1000);
 	}
