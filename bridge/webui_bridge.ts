@@ -1,17 +1,17 @@
 'use-strict'; // Force strict mode for transpiled
 
 /*
-	WebUI Bridge
+  WebUI Bridge
 
-	http://webui.me
-	https://github.com/webui-dev/webui
-	Copyright (c) 2020-2023 Hassan Draga.
-	Licensed under MIT License.
-	All rights reserved.
-	Canada.
+  http://webui.me
+  https://github.com/webui-dev/webui
+  Copyright (c) 2020-2023 Hassan Draga.
+  Licensed under MIT License.
+  All rights reserved.
+  Canada.
 
-	Converted from JavaScript to TypeScript
-	By Oculi Julien. Copyright (c) 2023.
+  Converted from JavaScript to TypeScript
+  By Oculi Julien. Copyright (c) 2023.
 */
 
 //@ts-ignore use *.ts import real extension
@@ -508,28 +508,28 @@ class WebuiBridge {
 			const packet =
 				elem !== ''
 					? Uint8Array.of(
-						this.#WEBUI_SIGNATURE,
-						0,
-						0,
-						0,
-						0, // Token (4 Bytes)
-						0,
-						0, // ID (2 Bytes)
-						this.#CMD_CLICK,
-						...new TextEncoder().encode(elem),
-						0,
-					)
+							this.#WEBUI_SIGNATURE,
+							0,
+							0,
+							0,
+							0, // Token (4 Bytes)
+							0,
+							0, // ID (2 Bytes)
+							this.#CMD_CLICK,
+							...new TextEncoder().encode(elem),
+							0,
+					  )
 					: Uint8Array.of(
-						this.#WEBUI_SIGNATURE,
-						0,
-						0,
-						0,
-						0, // Token (4 Bytes)
-						0,
-						0, // ID (2 Bytes)
-						this.#CMD_CLICK,
-						0,
-					);
+							this.#WEBUI_SIGNATURE,
+							0,
+							0,
+							0,
+							0, // Token (4 Bytes)
+							0,
+							0, // ID (2 Bytes)
+							this.#CMD_CLICK,
+							0,
+					  );
 			this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN);
 			// this.#addID(packet, 0, this.#PROTOCOL_ID)
 			this.#sendData(packet);
@@ -570,7 +570,7 @@ class WebuiBridge {
 		}
 	}
 	#closeWindowTimer() {
-		setTimeout(function() {
+		setTimeout(function () {
 			globalThis.close();
 		}, 1000);
 	}
