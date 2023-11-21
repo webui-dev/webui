@@ -33,7 +33,7 @@ jobs:
     strategy:
       matrix:
         compiler: [GCC, Clang]
-        arch: [x64]
+        arch: [x64, x86]
         include:
           - compiler: GCC
             arch: arm64
@@ -56,6 +56,8 @@ jobs:
             sudo apt install gcc-aarch64-linux-gnu
           elif [ "${{ matrix.arch }}" == "arm" ]; then
             sudo apt install gcc-arm-linux-gnueabihf
+          elif [ "${{ matrix.arch }}" == "x86" ]; then
+            sudo apt install gcc-multilib g++-multilib
           fi
       - name: Build Debug Target
         run: |
@@ -63,6 +65,8 @@ jobs:
             make CC=aarch64-linux-gnu-gcc debug
           elif [ "${{ matrix.arch }}" == "arm" ]; then
             make CC=arm-linux-gnueabihf-gcc debug
+          elif [ "${{ matrix.arch }}" == "x86" ]; then
+            make CC=gcc -m32 debug
           else
             compiler=${{ matrix.compiler }}
             make CC=${compiler,,} debug
@@ -73,6 +77,8 @@ jobs:
             make CC=aarch64-linux-gnu-gcc
           elif [ "${{ matrix.arch }}" == "arm" ]; then
             make CC=arm-linux-gnueabihf-gcc
+          elif [ "${{ matrix.arch }}" == "x86" ]; then
+            make CC=gcc -m32
           else
             compiler=${{ matrix.compiler }}
             make CC=${compiler,,}
