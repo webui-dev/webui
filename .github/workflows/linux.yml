@@ -94,7 +94,7 @@ jobs:
       - name: Prepare Release
         if: github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push')
         run: |
-          tar -czvf ${{ env.ARTIFACT }}.tar.gz ${{ env.ARTIFACT }}
+          zip -r ${{ env.ARTIFACT }}.zip ${{ env.ARTIFACT }}
           if [ $GITHUB_REF_TYPE == tag ]; then
             echo "TAG=$GITHUB_REF_NAME" >> $GITHUB_ENV
           else
@@ -115,7 +115,7 @@ jobs:
         if: github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push')
         uses: ncipollo/release-action@v1
         with:
-          artifacts: ${{ env.ARTIFACT }}.tar.gz
+          artifacts: ${{ env.ARTIFACT }}.zip
           tag: ${{ env.TAG }}
           body: ${{ env.BODY }}
           name: ${{ env.TITLE }}
