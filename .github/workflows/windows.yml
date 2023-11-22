@@ -62,6 +62,8 @@ jobs:
           artifact=webui-${{ runner.os }}-${{ matrix.compiler }}-x64
           # Convert to lowercase (`,,` ^= lowercase shell param)
           artifact=${artifact,,}
+          # Create the directory for the artifact
+          mkdir $artifact
           # Add the ARTIFACT name as GitHub environment variable.
           echo "ARTIFACT=$artifact" >> $GITHUB_ENV
           mv dist/* $artifact/
