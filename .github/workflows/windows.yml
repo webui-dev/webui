@@ -64,7 +64,7 @@ jobs:
           artifact=${artifact,,}
           # Add the ARTIFACT name as GitHub environment variable.
           echo "ARTIFACT=$artifact" >> $GITHUB_ENV
-          mv dist/ $artifact
+          mv dist/* $artifact/
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -74,7 +74,7 @@ jobs:
         if: github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push')
         shell: bash
         run: |
-          7z a -tzip ${{ env.ARTIFACT }}.zip ${{ env.ARTIFACT }}
+          7z a -tzip ${{ env.ARTIFACT }}.zip ${{ env.ARTIFACT }}/*
           if [ $GITHUB_REF_TYPE == tag ]; then
             echo "TAG=$GITHUB_REF_NAME" >> $GITHUB_ENV
           else
