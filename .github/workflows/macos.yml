@@ -50,12 +50,8 @@ jobs:
           cp -r include dist
           # Add the ARTIFACT name(lowercased) as GitHub environment variable.
           artifact=webui-$(echo ${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
-          chmod -x dist/webui-2.dylib
-          chmod -x dist/debug/webui-2.dylib
-          mv dist/ $artifact
-          zip -r $artifact.zip $artifact
-          # Add the artifact name as GitHub environment variable for usage in later steps.
           echo "ARTIFACT=$artifact" >> $GITHUB_ENV
+          mv dist/ $artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -64,6 +60,7 @@ jobs:
       - name: Prepare Release
         if: github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push')
         run: |
+          zip -r ${{ env.ARTIFACT }}.zip ${{ env.ARTIFACT }}
           if [ $GITHUB_REF_TYPE == tag ]; then
             echo "TAG=$GITHUB_REF_NAME" >> $GITHUB_ENV
           else
