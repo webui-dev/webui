@@ -1,5 +1,5 @@
 /*
-  WebUI Library 2.4.1
+  WebUI Library 2.4.2
   http://webui.me
   https://github.com/webui-dev/webui
   Copyright (c) 2020-2023 Hassan Draga.
@@ -11,7 +11,7 @@
 #ifndef _WEBUI_H
 #define _WEBUI_H
 
-#define WEBUI_VERSION "2.4.1"
+#define WEBUI_VERSION "2.4.2"
 
 // Max windows, servers and threads
 #define WEBUI_MAX_IDS (256)
