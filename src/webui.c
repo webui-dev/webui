@@ -1852,7 +1852,7 @@ void webui_set_public(size_t window, bool status) {
 
     // Dereference
     if (_webui_mtx_is_exit_now(WEBUI_MUTEX_NONE) || _webui_core.wins[window] == NULL)
-        return NULL;
+        return;
     _webui_window_t * win = _webui_core.wins[window];
 
     win->is_public = status;
