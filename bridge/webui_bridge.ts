@@ -241,7 +241,8 @@ class WebuiBridge {
 		if (this.#bindList.includes(this.#winNum + '/')) {
 			this.#hasEvents = true;
 		}
-		const url = this.#secure ? 'wss://localhost' : 'ws://localhost';
+		const host = window.location.hostname;
+		const url = this.#secure ? ('wss://' + host) : ('ws://' + host);
 		this.#ws = new WebSocket(`${url}:${this.#port}/_webui_ws_connect`);
 		this.#ws.binaryType = 'arraybuffer';
 		this.#ws.onopen = () => {
