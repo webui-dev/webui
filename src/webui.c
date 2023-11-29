@@ -2208,46 +2208,77 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
         return;
     _webui_window_t * win = _webui_core.wins[e->window];
 
-    // Generate WebUI internal id
-    char* webui_internal_id = _webui_generate_internal_id(win, e->element);
-    size_t cb_index = _webui_get_cb_index(webui_internal_id);
+    // Check for all events-bind functions
+    if (win->has_events) {
 
-    if (cb_index > 0 && _webui_core.cb_interface[cb_index] != NULL) {
+        char* events_id = _webui_generate_internal_id(win, "");
+        size_t events_cb_index = _webui_get_cb_index(events_id);
+        _webui_free_mem((void * ) events_id);
 
-        #ifdef WEBUI_LOG
-        printf(
-            "[Core]\t\t_webui_interface_bind_handler() -> User callback @ 0x%p\n",
-            _webui_core.cb_interface[cb_index]
-        );
-        printf("[Core]\t\t_webui_interface_bind_handler() -> e->event_type [%zu]\n", e->event_type);
-        printf("[Core]\t\t_webui_interface_bind_handler() -> e->element [%s]\n", e->element);
-        printf("[Core]\t\t_webui_interface_bind_handler() -> e->event_number %zu\n", e->event_number);
-        printf("[Core]\t\t_webui_interface_bind_handler() -> e->bind_id %zu\n", e->bind_id);
-        #endif
+        if (events_cb_index > 0 && _webui_core.cb_interface[events_cb_index] != NULL) {
 
-        // Call cb
-        #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user "
-            "callback...\n[Call]\n");
-        #endif
-        _webui_core.cb_interface[cb_index](e->window, e->event_type, e->element, e->event_number, e->bind_id);
+            // Call user all-events cb
+            #ifdef WEBUI_LOG
+            printf(
+                "[Core]\t\t_webui_interface_bind_handler() -> User all-events callback @ 0x%p\n",
+                _webui_core.cb_interface[events_cb_index]
+            );
+            printf("[Core]\t\t_webui_interface_bind_handler() -> User all-events e->event_type [%zu]\n", e->event_type);
+            printf("[Core]\t\t_webui_interface_bind_handler() -> User all-events e->element [%s]\n", e->element);
+            printf("[Core]\t\t_webui_interface_bind_handler() -> User all-events e->event_number %zu\n", e->event_number);
+            printf("[Core]\t\t_webui_interface_bind_handler() -> User all-events e->bind_id %zu\n", e->bind_id);
+            #endif
+
+            // Call all-events cb
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user "
+                "all-events callback...\n[Call]\n");
+            #endif
+            _webui_core.cb_interface[events_cb_index](e->window, e->event_type, e->element, e->event_number, e->bind_id);
+        }
     }
 
-    // Free
-    _webui_free_mem((void * ) webui_internal_id);
+    // Check for the regular bind functions
+    if (!_webui_mtx_is_exit_now(WEBUI_MUTEX_NONE) && !_webui_is_empty(e->element)) {
+
+        // Generate WebUI internal id
+        char* webui_internal_id = _webui_generate_internal_id(win, e->element);
+        size_t cb_index = _webui_get_cb_index(webui_internal_id);
+
+        if (cb_index > 0 && _webui_core.cb_interface[cb_index] != NULL) {
+
+            #ifdef WEBUI_LOG
+            printf(
+                "[Core]\t\t_webui_interface_bind_handler() -> User callback @ 0x%p\n",
+                _webui_core.cb_interface[cb_index]
+            );
+            printf("[Core]\t\t_webui_interface_bind_handler() -> e->event_type [%zu]\n", e->event_type);
+            printf("[Core]\t\t_webui_interface_bind_handler() -> e->element [%s]\n", e->element);
+            printf("[Core]\t\t_webui_interface_bind_handler() -> e->event_number %zu\n", e->event_number);
+            printf("[Core]\t\t_webui_interface_bind_handler() -> e->bind_id %zu\n", e->bind_id);
+            #endif
+
+            // Call cb
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user "
+                "callback...\n[Call]\n");
+            #endif
+            _webui_core.cb_interface[cb_index](e->window, e->event_type, e->element, e->event_number, e->bind_id);
+        }
+
+        // Free
+        _webui_free_mem((void * ) webui_internal_id);
+    }
 
     #ifdef WEBUI_LOG
-
     // Print cb response
     char* response = NULL;
-
     // Get event inf
     webui_event_inf_t* event_inf = win->events[e->event_number];
     if (event_inf != NULL) {
         if (event_inf->response != NULL)
             response = event_inf->response;
     }
-
     printf(
         "[Core]\t\t_webui_interface_bind_handler() -> user-callback response [%s]\n",
         response
