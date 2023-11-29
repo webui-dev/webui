@@ -39,11 +39,10 @@
 
 ## Features
 
-- Written in Pure C
-- Fully Independent (_No need for any third-party runtimes_)
-- Lightweight ~200 Kb & Small memory footprint
-- Fast binary communication protocol between WebUI and the browser (_Instead of JSON_)
+- Portable (*Needs only a web browser at runtime*)
 - One header file
+- Lightweight (*Few Kb library*) & Small memory footprint
+- Fast binary communication protocol
 - Multi-platform & Multi-Browser
 - Using private profile for safety
 
