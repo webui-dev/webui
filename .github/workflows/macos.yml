@@ -56,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.ARTIFACT }}
-          path: ${{ env.ARTIFACT }}.zip
+          path: ${{ env.ARTIFACT }}
       - name: Prepare Release
         if: github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push')
         run: |
