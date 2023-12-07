@@ -32,13 +32,8 @@ jobs:
       contents: write
     strategy:
       matrix:
-        compiler: [GCC, Clang]
-        arch: [x64]
-        include:
-          - compiler: GCC
-            arch: arm64
-          - compiler: GCC
-            arch: arm
+        compiler: [GCC]
+        arch: [x64, arm64]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
