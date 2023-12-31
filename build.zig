@@ -45,98 +45,36 @@ pub fn build(b: *std.Build) void {
 
 fn build_webui(b: *Build, optimize: OptimizeMode, target: CrossTarget, is_static: bool, enable_tls: bool) *Compile {
     const name = "webui";
-    const webui = if (is_static) b.addStaticLibrary(.{
-        .name = name,
-        .target = target,
-        .optimize = optimize,
-    }) else b.addSharedLibrary(.{
-        .name = name,
-        .target = target,
-        .optimize = optimize,
-    });
+    const webui = if (is_static) b.addStaticLibrary(.{ .name = name, .target = target, .optimize = optimize }) else b.addSharedLibrary(.{ .name = name, .target = target, .optimize = optimize });
 
     webui.addCSourceFile(.{
-        .file = .{
-            .path = "src/webui.c",
-        },
+        .file = .{ .path = "src/webui.c" },
         .flags = if (enable_tls)
-            &[_][]const u8{
-                "-DNO_SSL",
-                "-DWEBUI_TLS",
-                "-DNO_SSL_DL",
-                "-DOPENSSL_API_1_1",
-            }
+            &[_][]const u8{ "-DNO_SSL", "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1" }
         else
-            &[_][]const u8{
-                "-DNO_SSL",
-            },
+            &[_][]const u8{"-DNO_SSL"},
     });
 
     webui.linkLibC();
 
-    webui.addIncludePath(.{
-        .path = "include",
-    });
+    webui.addIncludePath(.{ .path = "include" });
 
     return webui;
 }
 
 fn build_civetweb(b: *Build, optimize: OptimizeMode, target: CrossTarget, is_static: bool, enable_tls: bool) *Compile {
     const name = "civetweb";
-    const civetweb = if (is_static) b.addStaticLibrary(.{
-        .name = name,
-        .target = target,
-        .optimize = optimize,
-    }) else b.addSharedLibrary(.{
-        .name = name,
-        .target = target,
-        .optimize = optimize,
-    });
+    const civetweb = if (is_static) b.addStaticLibrary(.{ .name = name, .target = target, .optimize = optimize }) else b.addSharedLibrary(.{ .name = name, .target = target, .optimize = optimize });
 
-    civetweb.addIncludePath(.{
-        .path = "include",
-    });
+    civetweb.addIncludePath(.{ .path = "include" });
 
-    const cflags = if (target.os_tag == .windows and !enable_tls) &[_][]const u8{
-        "-DNO_SSL",
-        "-DNDEBUG",
-        "-DNO_CACHING",
-        "-DNO_CGI",
-        "-DUSE_WEBSOCKET",
-        "-DMUST_IMPLEMENT_CLOCK_GETTIME",
-    } else if (target.os_tag == .windows and enable_tls) &[_][]const u8{
-        "-DNDEBUG",
-        "-DNO_CACHING",
-        "-DNO_CGI",
-        "-DUSE_WEBSOCKET",
-        "-DWEBUI_TLS",
-        "-DNO_SSL_DL",
-        "-DOPENSSL_API_1_1",
-        "-DMUST_IMPLEMENT_CLOCK_GETTIME",
-    } else if (target.os_tag != .windows and enable_tls)
-        &[_][]const u8{
-            "-DNDEBUG",
-            "-DNO_CACHING",
-            "-DNO_CGI",
-            "-DUSE_WEBSOCKET",
-            "-DWEBUI_TLS",
-            "-DNO_SSL_DL",
-            "-DOPENSSL_API_1_1",
-        }
-    else
-        &[_][]const u8{
-            "-DNO_SSL",
-            "-DNDEBUG",
-            "-DNO_CACHING",
-            "-DNO_CGI",
-            "-DUSE_WEBSOCKET",
-        };
+    const extra_flags = if (target.os_tag == .windows) "-DMUST_IMPLEMENT_CLOCK_GETTIME" else "";
+
+    const cflags = if (enable_tls) [_][]const u8{ "-DNDEBUG", "-DNO_CACHING", "-DNO_CGI", "-DUSE_WEBSOCKET", "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1", extra_flags } else [_][]const u8{ "-DNDEBUG", "-DNO_CACHING", "-DNO_CGI", "-DUSE_WEBSOCKET", "-DNO_SSL", extra_flags, "", "" };
 
     civetweb.addCSourceFile(.{
-        .file = .{
-            .path = "src/civetweb/civetweb.c",
-        },
-        .flags = cflags,
+        .file = .{ .path = "src/civetweb/civetweb.c" },
+        .flags = &cflags,
     });
 
     civetweb.linkLibC();
