@@ -68,7 +68,7 @@ fn build_civetweb(b: *Build, optimize: OptimizeMode, target: CrossTarget, is_sta
 
     civetweb.addIncludePath(.{ .path = "include" });
 
-    const extra_flags = if (target.os_tag == .windows) "-DMUST_IMPLEMENT_CLOCK_GETTIME" else "";
+    const extra_flags = if (target.os_tag == .windows or (target.os_tag == null and builtin.os.tag == .windows)) "-DMUST_IMPLEMENT_CLOCK_GETTIME" else "";
 
     const cflags = if (enable_tls) [_][]const u8{ "-DNDEBUG", "-DNO_CACHING", "-DNO_CGI", "-DUSE_WEBSOCKET", "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1", extra_flags } else [_][]const u8{ "-DNDEBUG", "-DNO_CACHING", "-DNO_CGI", "-DUSE_WEBSOCKET", "-DNO_SSL", extra_flags, "", "" };
 
@@ -79,7 +79,7 @@ fn build_civetweb(b: *Build, optimize: OptimizeMode, target: CrossTarget, is_sta
 
     civetweb.linkLibC();
 
-    if (target.os_tag == .windows) {
+    if (target.os_tag == .windows or (target.os_tag == null and builtin.os.tag == .windows)) {
         civetweb.linkSystemLibrary("ws2_32");
         if (enable_tls) {
             civetweb.linkSystemLibrary("bcrypt");
