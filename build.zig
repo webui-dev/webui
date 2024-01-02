@@ -114,7 +114,6 @@ fn build_examples(b: *Build, optimize: OptimizeMode, target: CrossTarget, webui_
                         log.err("fmt path for examples failed, err is {}", .{err});
                         std.os.exit(1);
                     };
-                    // TODO: fix this
                     exe_run.cwd = cwd;
                 }
 
@@ -123,7 +122,7 @@ fn build_examples(b: *Build, optimize: OptimizeMode, target: CrossTarget, webui_
                     std.os.exit(1);
                 };
 
-                const step_desc = std.fmt.allocPrint(b.allocator, "run_{s}", .{example_name}) catch |err| {
+                const step_desc = std.fmt.allocPrint(b.allocator, "run exmaple {s}", .{example_name}) catch |err| {
                     log.err("fmt step_desc for examples failed, err is {}", .{err});
                     std.os.exit(1);
                 };
