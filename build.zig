@@ -7,6 +7,8 @@ const CrossTarget = std.zig.CrossTarget;
 const Compile = Build.Step.Compile;
 const Module = Build.Module;
 
+const log = std.log.scoped(.WebUI);
+
 const min_zig_string = "0.11.0";
 
 const default_isStatic = true;
@@ -40,7 +42,102 @@ pub fn build(b: *std.Build) void {
 
     webui.installHeader("include/webui.h", "webui.h");
 
+    build_examples(b, optimize, target, webui);
+
     b.installArtifact(webui);
+}
+
+fn build_examples(b: *Build, optimize: OptimizeMode, target: CrossTarget, webui_lib: *Compile) void {
+    var lazy_path = Build.LazyPath{
+        .path = "examples/C",
+    };
+
+    const build_all_step = b.step("build_all", "build all examples");
+
+    const examples_path = lazy_path.getPath(b);
+
+    var iter_dir = if (comptime current_zig.minor == 11)
+        std.fs.openIterableDirAbsolute(examples_path, .{}) catch |err| {
+            log.err("open examples_path failed, err is {}", .{err});
+            std.os.exit(1);
+        }
+    else
+        std.fs.openDirAbsolute(examples_path, .{ .iterate = true }) catch |err| {
+            log.err("open examples_path failed, err is {}", .{err});
+            std.os.exit(1);
+        };
+    defer iter_dir.close();
+
+    var itera = iter_dir.iterate();
+
+    while (itera.next()) |val| {
+        if (val) |entry| {
+            if (entry.kind == .directory) {
+                const example_name = entry.name;
+                const path = std.fmt.allocPrint(b.allocator, "examples/C/{s}/main.c", .{example_name}) catch |err| {
+                    log.err("fmt path for examples failed, err is {}", .{err});
+                    std.os.exit(1);
+                };
+
+                const exe = b.addExecutable(.{
+                    .name = example_name,
+                    .target = target,
+                    .optimize = optimize,
+                });
+
+                exe.addCSourceFile(.{
+                    .file = .{
+                        .path = path,
+                    },
+                    .flags = &.{},
+                });
+
+                exe.linkLibrary(webui_lib);
+
+                const exe_install = b.addInstallArtifact(exe, .{});
+
+                build_all_step.dependOn(&exe_install.step);
+
+                const exe_run = b.addRunArtifact(exe);
+                exe_run.step.dependOn(&exe_install.step);
+
+                if (comptime (current_zig.minor > 11)) {
+                    const cwd = std.fmt.allocPrint(b.allocator, "examples/C/{s}", .{example_name}) catch |err| {
+                        log.err("fmt path for examples failed, err is {}", .{err});
+                        std.os.exit(1);
+                    };
+                    exe_run.setCwd(.{
+                        .path = cwd,
+                    });
+                } else {
+                    const cwd = std.fmt.allocPrint(b.allocator, "{s}/{s}", .{ examples_path, example_name }) catch |err| {
+                        log.err("fmt path for examples failed, err is {}", .{err});
+                        std.os.exit(1);
+                    };
+                    // TODO: fix this
+                    exe_run.cwd = cwd;
+                }
+
+                const step_name = std.fmt.allocPrint(b.allocator, "run_{s}", .{example_name}) catch |err| {
+                    log.err("fmt step_name for examples failed, err is {}", .{err});
+                    std.os.exit(1);
+                };
+
+                const step_desc = std.fmt.allocPrint(b.allocator, "run_{s}", .{example_name}) catch |err| {
+                    log.err("fmt step_desc for examples failed, err is {}", .{err});
+                    std.os.exit(1);
+                };
+
+                const exe_run_step = b.step(step_name, step_desc);
+                exe_run_step.dependOn(&exe_run.step);
+            }
+        } else {
+            break;
+        }
+    } else |err| {
+        log.err("iterate examples_path failed, err is {}", .{err});
+        std.os.exit(1);
+    }
 }
 
 fn build_webui(b: *Build, optimize: OptimizeMode, target: CrossTarget, is_static: bool, enable_tls: bool) *Compile {
