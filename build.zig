@@ -122,7 +122,7 @@ fn build_examples(b: *Build, optimize: OptimizeMode, target: CrossTarget, webui_
                     std.os.exit(1);
                 };
 
-                const step_desc = std.fmt.allocPrint(b.allocator, "run exmaple {s}", .{example_name}) catch |err| {
+                const step_desc = std.fmt.allocPrint(b.allocator, "run example {s}", .{example_name}) catch |err| {
                     log.err("fmt step_desc for examples failed, err is {}", .{err});
                     std.os.exit(1);
                 };
