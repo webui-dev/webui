@@ -20,7 +20,7 @@ import { AsyncFunction, addRefreshableEventListener } from './utils.ts';
 type DataTypes = string | number | boolean | Uint8Array;
 
 class WebuiBridge {
-	// WebUI settings
+	// WebUI Settings
 	#secure: boolean;
 	#token: number;
 	#port: number;
@@ -43,7 +43,7 @@ class WebuiBridge {
 	#allowNavigation = false;
 	#sendQueue: Uint8Array[] = [];
 	#isSending = false;
-	// WebUI const
+	// WebUI Const
 	#WEBUI_SIGNATURE = 221;
 	#CMD_JS = 254;
 	#CMD_JS_QUICK = 253;
@@ -63,6 +63,14 @@ class WebuiBridge {
 	#PROTOCOL_DATA = 8; // Protocol byte position: Data (n Byte)
 	#Token = new Uint32Array(1);
 	#Ping: Boolean = true;
+	// Events
+	#eventsCallback: ((event: number) => void) | null = null;
+	event = {
+		// TODO: Make `event` static and solve the ESBUILD `_WebuiBridge` issue.
+        CONNECTED: 0,
+        DISCONNECTED: 1,
+    };
+	// Constructor
 	constructor({
 		secure,
 		token,
@@ -164,6 +172,7 @@ class WebuiBridge {
 			}
 		}, 1500);
 	}
+	// Methods
 	#close(reason = 0, value = '') {
 		this.#wsStatus = false;
 		this.#closeReason = reason;
@@ -250,6 +259,9 @@ class WebuiBridge {
 			this.#wsStatusOnce = true;
 			if (this.#log) console.log('WebUI -> Connected');
 			this.#clicksListener();
+			if (this.#eventsCallback) {
+				this.#eventsCallback(this.event.CONNECTED);
+			}
 		};
 		this.#ws.onerror = () => {
 			if (this.#log) console.log('WebUI -> Connection Failed');
@@ -268,6 +280,9 @@ class WebuiBridge {
 				} else {
 					this.#closeWindowTimer();
 				}
+			}
+			if (this.#eventsCallback) {
+				this.#eventsCallback(this.event.DISCONNECTED);
 			}
 		};
 		this.#ws.onmessage = async (event) => {
@@ -651,7 +666,7 @@ class WebuiBridge {
 			this.#sendData(packet);
 		});
 	}
-	// -- APIs --------------------------
+	// -- Public APIs --------------------------
 	/**
 	 * Call a backend function
 	 *
@@ -708,6 +723,15 @@ class WebuiBridge {
 	decode(data: string): string {
 		return atob(data);
 	}
+	/**
+	 * Set a callback to receive events like connect/disconnect
+	 *
+	 * @param callback - callback function `myCallback(e)`
+	 * @example - webui.setEventCallback((e) => {if(e == webui.event.CONNECTED){ ... }});
+	 */
+	setEventCallback(callback: (e: number) => void): void {
+        this.#eventsCallback = callback;
+    }
 }
 // Export
 type webui = WebuiBridge;

@@ -103,5 +103,19 @@
 			xmlHttp.send(null);
 			alert(xmlHttp.responseText);
 		}
+
+		document.addEventListener('DOMContentLoaded', function() {
+			// DOM is loaded, and `webui` object should be available.
+			webui.setEventCallback((e) => {
+				if (e == webui.event.CONNECTED) {
+					// Connection to the backend is established
+					console.log('Connected.');
+				} else if (e == webui.event.DISCONNECTED) {
+					// Connection to the backend is lost
+					console.log('Disconnected.');
+				}
+			});
+		});
+
 	</script>
 </html>
