@@ -1,6 +1,6 @@
 <div align="center">
 
-![Logo](https://github.com/webui-dev/webui/assets/34311583/c92e712f-0698-486a-a460-d4acea28a4f8)
+![Logo](https://raw.githubusercontent.com/webui-dev/webui-logo/main/webui_240.png)
 
 # WebUI v2.4.2
 
