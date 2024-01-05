@@ -173,6 +173,8 @@ typedef struct _webui_window_t {
     webui_event_inf_t* events[WEBUI_MAX_IDS];
     size_t events_count;
     bool is_public;
+    bool proxy_set;
+    char *proxy_server;
 }
 _webui_window_t;
 
@@ -1816,6 +1818,46 @@ void webui_set_profile(size_t window, const char* name, const char* path) {
         win->default_profile = true;
     else
         win->default_profile = false;
+}
+
+
+void webui_set_proxy(size_t window, const char* proxy_server) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_proxy([%s])...\n", proxy_server);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mtx_is_exit_now(WEBUI_MUTEX_NONE) || _webui_core.wins[window] == NULL)
+        return;
+    _webui_window_t * win = _webui_core.wins[window];
+
+    // Some wrappers do not guarantee pointers stay valid,
+    // so, let's make our copy.
+
+    char* proxy_server_cpy = NULL;
+    size_t len = _webui_strlen(proxy_server);
+    if (len > 0) {
+        proxy_server_cpy = (char*)_webui_malloc(len);
+        memcpy((char*)proxy_server_cpy, proxy_server, len);
+    }
+
+
+    // Free
+    if (win->proxy_server != NULL)
+        _webui_free_mem((void * ) win->proxy_server);
+
+
+    // Save
+    win->proxy_server = proxy_server_cpy;
+
+    if (proxy_server_cpy == NULL)
+        win->proxy_set = false;
+    else
+        win->proxy_set = true;
 }
 
 const char* webui_get_url(size_t window) {
@@ -4829,7 +4871,7 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
 
     const char* chromium_options[] = {
         "--no-first-run",
-        "--no-proxy-server",
+        // "--no-proxy-server",
         "--safe-mode",
         "--disable-extensions",
         "--disable-background-mode",
@@ -4872,6 +4914,10 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
             // Window Position
             if (win->position_set)
                 c += sprintf(buffer + c, " --window-position=%u,%u", win->x, win->y);
+            if (win->proxy_set)
+                c += sprintf(buffer + c, " --proxy-server=%s", win->proxy_server);
+            else
+                c += sprintf(buffer + c, " %s", "--no-proxy-server");
 
             // URL (END)
             c += sprintf(buffer + c, " %s", "--app=");
