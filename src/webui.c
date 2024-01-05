@@ -1845,18 +1845,20 @@ void webui_set_proxy(size_t window, const char* proxy_server) {
         memcpy((char*)proxy_server_cpy, proxy_server, len);
     }
 
-
     // Free
     if (win->proxy_server != NULL)
-        _webui_free_mem((void * ) win->proxy_server);
-
+        _webui_free_mem((void*)win->proxy_server);
 
     // Save
     win->proxy_server = proxy_server_cpy;
 
-    if (proxy_server_cpy == NULL)
+    // Set
+    if (_webui_is_empty(win->proxy_server))
+        // Disable the proxy because the server
+        // address is an empty string
         win->proxy_set = false;
     else
+        // Enable proxy
         win->proxy_set = true;
 }
 
@@ -4914,6 +4916,7 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
             // Window Position
             if (win->position_set)
                 c += sprintf(buffer + c, " --window-position=%u,%u", win->x, win->y);
+            // Proxy
             if (win->proxy_set)
                 c += sprintf(buffer + c, " --proxy-server=%s", win->proxy_server);
             else
@@ -4939,6 +4942,14 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
                 c += sprintf(buffer + c, " -width %u -height %u", win->width, win->height);
             // Window Position
             // Firefox does not support window positioning.
+            // Proxy
+            if (win->proxy_set) {
+                // Server: `win->proxy_server`
+
+                // TODO: Add proxy feature to Firefox
+                // Method 1: modifying `prefs.js` / user.js
+                // Method 2: use Proxy Auto-Configuration (PAC) file
+            }
 
             // URL (END)
             c += sprintf(buffer + c, " -new-window ");
