@@ -199,7 +199,7 @@ class window {
 
     // Set the web browser proxy to use. Need to be called before `webui_show()`.
     void set_proxy(const std::string_view proxy_server = {""}) const {
-        webui_set_profile(webui_window, proxy_server.data());
+        webui_set_proxy(webui_window, proxy_server.data());
     }
 
     // Get the full current URL
