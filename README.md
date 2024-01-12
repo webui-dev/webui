@@ -183,6 +183,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | V                       | ✔️             | [V-WebUI](https://github.com/webui-dev/v-webui)           |
 | Zig                     | _not complete_ | [Zig-WebUI](https://github.com/webui-dev/zig-webui)       |
 | Odin                    | _not complete_ | [Odin-WebUI](https://github.com/webui-dev/odin-webui)       |
+| Delphi                  | ✔️ | [WebUI4Delphi](https://github.com/salvadordf/WebUI4Delphi)       |
 
 ## Supported Web Browsers
 
