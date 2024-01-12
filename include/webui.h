@@ -16,6 +16,9 @@
 // Max windows, servers and threads
 #define WEBUI_MAX_IDS (256)
 
+// Max windows, servers and threads
+#define WEBUI_MAX_EXTENSION (128)
+
 // Max allowed argument's index
 #define WEBUI_MAX_ARG (16)
 
@@ -216,7 +219,7 @@ WEBUI_EXPORT bool webui_show(size_t window, const char* content);
  * @return Returns True if showing the window is successed.
  *
  * @example webui_show_browser(myWindow, "<html>...</html>", Chrome); |
- * webui_show(myWindow, "index.html", Firefox);
+ * webui_show_browser(myWindow, "index.html", Firefox);
  */
 WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, size_t browser);
 
@@ -432,6 +435,20 @@ WEBUI_EXPORT void webui_set_profile(size_t window, const char* name, const char*
 WEBUI_EXPORT void webui_set_proxy(size_t window, const char* proxy_server);
 
 /**
+ * @brief Set the web browser --load-extension to use. Needs to be called before `webui_show()`.
+ *
+ * @param window The window number
+ * @param extensions The web browser --load-extension
+ * @param num_extensions The number of extensions in the array
+ *
+ * @example
+ * const char* myExtensions[] = {"ext_dir1", "ext_dir2"};
+ * size_t numExtensions = sizeof(myExtensions) / sizeof(myExtensions[0]);
+ * webui_set_extensions(myWindow, myExtensions, numExtensions); 
+ */
+WEBUI_EXPORT void webui_set_extensions(size_t window, const char* extensions[], size_t num_extensions);
+
+/**
  * @brief Get the full current URL.
  *
  * @param window The window number
@@ -533,6 +550,18 @@ WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
  * @example bool ret = webui_set_port(myWindow, 8080);
  */
 WEBUI_EXPORT bool webui_set_port(size_t window, size_t port);
+
+/**
+ * @brief Set a custom web-server websocket port to be used by WebUI.
+ *
+ * @param window The window number
+ * @param port The web-server websocket port WebUI should use
+ *
+ * @return Returns True if the port is free and usable by WebUI
+ *
+ * @example bool ret = webui_set_ws_port(myWindow, 9090);
+ */
+WEBUI_EXPORT bool webui_set_ws_port(size_t window, size_t port);
 
 // -- SSL/TLS -------------------------
 

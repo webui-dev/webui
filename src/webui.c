@@ -138,6 +138,7 @@ typedef struct _webui_window_t {
     bool server_handled;
     bool is_embedded_html;
     size_t custom_server_port;
+    size_t custom_ws_port;
     size_t server_port;
     size_t ws_port;
     char* url;
@@ -175,6 +176,9 @@ typedef struct _webui_window_t {
     bool is_public;
     bool proxy_set;
     char *proxy_server;
+    bool extension_set;
+    char* extensions[WEBUI_MAX_EXTENSION];
+    size_t extensions_count;
 }
 _webui_window_t;
 
@@ -744,11 +748,18 @@ void webui_destroy(size_t window) {
     _webui_free_mem((void * ) win->profile_path);
     _webui_free_mem((void * ) win->profile_name);
     _webui_free_mem((void * ) win->server_root_path);
+    _webui_free_mem((void * ) win->proxy_server);
 
     // Free events
     for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if (win->events[i] != NULL)
             _webui_free_mem((void * ) win->events[i]);
+    }
+
+    // Free extensions
+    for (size_t i = 0; i < win->extensions_count; i++) {
+        if (win->extensions[i] != NULL)
+            _webui_free_mem((void * ) win->extensions[i]);
     }
 
     // Free window struct
@@ -1591,6 +1602,27 @@ bool webui_set_port(size_t window, size_t port) {
     return true;
 }
 
+bool webui_set_ws_port(size_t window, size_t port) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_port([%zu], [%zu])...\n", window, port);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mtx_is_exit_now(WEBUI_MUTEX_NONE) || _webui_core.wins[window] == NULL)
+        return false;
+    _webui_window_t * win = _webui_core.wins[window];
+
+    if (_webui_port_is_used(port))
+        return false;
+
+    win->custom_ws_port = port;
+    return true;
+}
+
 size_t webui_get_child_process_id(size_t window) {
 
     #ifdef WEBUI_LOG
@@ -1860,6 +1892,55 @@ void webui_set_proxy(size_t window, const char* proxy_server) {
     else
         // Enable proxy
         win->proxy_set = true;
+}
+
+
+void webui_set_extensions(size_t window, const char* extensions[], size_t num_extensions) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_extensions()...\n");
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mtx_is_exit_now(WEBUI_MUTEX_NONE) || _webui_core.wins[window] == NULL)
+        return;
+    _webui_window_t * win = _webui_core.wins[window];
+
+    // Some wrappers do not guarantee pointers stay valid,
+    // so, let's make our copy.
+
+    for (size_t i = 0; i < win->extensions_count; i++) {
+        // Free
+        if (win->extensions[i] != NULL)
+            _webui_free_mem((void*)win->extensions[i]);
+    }
+
+    win->extension_set = false;
+    win->extensions_count = 0;
+
+    for (size_t i = 0; i < num_extensions; i++) {
+        char* extension_cpy = NULL;
+        size_t len = _webui_strlen(extensions[i]);
+        if (len > 0) {
+            extension_cpy = (char*)_webui_malloc(len);
+            memcpy((char*)extension_cpy, extensions[i], len);
+        } else { 
+            continue;
+        }
+
+        win->extensions[win->extensions_count] = extension_cpy;
+        win->extensions_count++;
+
+        if (win->extensions_count >= WEBUI_MAX_EXTENSION) {
+            break;
+        }
+    }
+
+    if (win->extensions_count > 0)
+        win->extension_set = true;
 }
 
 const char* webui_get_url(size_t window) {
@@ -3558,15 +3639,17 @@ static const char* _webui_generate_js_bridge(_webui_window_t * win) {
     char* js = (char*)_webui_malloc(len);
     int c = sprintf(
         js,
-        "%s\n document.addEventListener(\"DOMContentLoaded\",function(){ globalThis.webui = "
-        "new WebuiBridge({ secure: %s, token: %" PRIu32 ", port: %zu, winNum: %zu, bindList: %s, log: %s, ",
+        "%s\n addEventListener(\"load\",function(){ globalThis.webui = "
+        "new WebuiBridge({ secure: %s, token: %" PRIu32 ", host: %s, port: %zu, winNum: %zu, bindList: %s, log: %s, ",
         webui_javascript_bridge,
         #ifdef WEBUI_TLS
         "true",
         #else
         "false",
         #endif
-        token, win->ws_port, win->window_number, event_cb_js_array, log
+        token,
+        "\"localhost\"",
+        win->ws_port, win->window_number, event_cb_js_array, log
     );
     // Window Size
     if (win->size_set)
@@ -4875,7 +4958,7 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
         "--no-first-run",
         // "--no-proxy-server",
         "--safe-mode",
-        "--disable-extensions",
+        //"--disable-extensions",
         "--disable-background-mode",
         "--disable-plugins",
         "--disable-plugins-discovery",
@@ -4921,6 +5004,11 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
                 c += sprintf(buffer + c, " --proxy-server=%s", win->proxy_server);
             else
                 c += sprintf(buffer + c, " %s", "--no-proxy-server");
+            // Extension
+            if (win->extension_set)
+                for (size_t i = 0; i < win->extensions_count; i++) {
+                    c += sprintf(buffer + c, " --load-extension=%s", win->extensions[i]);
+                }
 
             // URL (END)
             c += sprintf(buffer + c, " %s", "--app=");
