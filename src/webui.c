@@ -1605,7 +1605,7 @@ bool webui_set_port(size_t window, size_t port) {
 bool webui_set_ws_port(size_t window, size_t port) {
 
     #ifdef WEBUI_LOG
-    printf("[User] webui_set_port([%zu], [%zu])...\n", window, port);
+    printf("[User] webui_set_ws_port([%zu], [%zu])...\n", window, port);
     #endif
 
     // Initialization
@@ -5966,6 +5966,8 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
     // Get network ports
     if (win->custom_server_port > 0)
         win->server_port = win->custom_server_port;
+    if (win->custom_ws_port > 0)
+        win->ws_port = win->custom_ws_port;
     win->server_port = (win->server_port == 0 ? _webui_get_free_port() : win->server_port);
     win->ws_port = (win->ws_port == 0 ? _webui_get_free_port() : win->ws_port);
 
