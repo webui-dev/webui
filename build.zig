@@ -214,7 +214,7 @@ fn build_webui_12(b: *Build, optimize: OptimizeMode, target: Build.ResolvedTarge
     const name = "webui";
     const webui = if (is_static) b.addStaticLibrary(.{ .name = name, .target = target, .optimize = optimize }) else b.addSharedLibrary(.{ .name = name, .target = target, .optimize = optimize });
 
-    const extra_flags = if (target.query.os_tag == .windows or (target.query.os_tag == null and builtin.os.tag == .windows))
+    const extra_flags = if ((target.query.os_tag == .windows or (target.query.os_tag == null and builtin.os.tag == .windows)) and target.query.abi == .msvc)
         "-DMUST_IMPLEMENT_CLOCK_GETTIME"
     else
         "";
@@ -250,6 +250,11 @@ fn build_webui_12(b: *Build, optimize: OptimizeMode, target: Build.ResolvedTarge
     if (enable_tls) {
         webui.linkSystemLibrary("ssl");
         webui.linkSystemLibrary("crypto");
+    }
+    if (target.query.abi == .msvc) {
+        webui.linkSystemLibrary("shell32");
+        webui.linkSystemLibrary("Advapi32");
+        webui.linkSystemLibrary("user32");
     }
 
     return webui;
@@ -295,6 +300,11 @@ fn build_webui_11(b: *Build, optimize: OptimizeMode, target: CrossTarget, is_sta
     if (enable_tls) {
         webui.linkSystemLibrary("ssl");
         webui.linkSystemLibrary("crypto");
+    }
+    if (target.abi == .msvc) {
+        webui.linkSystemLibrary("shell32");
+        webui.linkSystemLibrary("Advapi32");
+        webui.linkSystemLibrary("user32");
     }
 
     return webui;
