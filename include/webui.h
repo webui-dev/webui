@@ -30,6 +30,10 @@
     #endif
 #endif
 
+#if defined(_MSC_VER)
+    #define strdup _strdup
+#endif
+
 // -- C STD ---------------------------
 #include <assert.h>
 #include <ctype.h>
