@@ -7068,7 +7068,7 @@ static WEBUI_THREAD_SERVER_START {
     // win->process_id = 0;
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_server_thread([%zu]) -> Server stoped.\n", win->window_number);
+    printf("[Core]\t\t_webui_server_thread([%zu]) -> Server stopped.\n", win->window_number);
     #endif
 
     // Let the main wait() know that
