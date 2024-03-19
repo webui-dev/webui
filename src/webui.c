@@ -192,7 +192,7 @@ typedef struct _webui_core_t {
     uint16_t run_last_id;
     bool initialized;
     void( * cb[WEBUI_MAX_IDS])(webui_event_t* e);
-    void( * cb_interface[WEBUI_MAX_IDS])(size_t, size_t, char* , size_t, size_t);
+    void( * cb_interface[WEBUI_MAX_IDS])(size_t, size_t, const char* , size_t, size_t);
     char* executable_path;
     void * ptr_list[WEBUI_MAX_IDS * 2];
     size_t ptr_position;
@@ -278,7 +278,7 @@ static void _webui_free_port(size_t port);
 static char* _webui_get_current_path(void);
 static void _webui_ws_send(_webui_window_t * win, char* packet, size_t packets_size);
 static void _webui_window_event(
-    _webui_window_t * win, int event_type, char* element, size_t event_number, char* webui_internal_id
+    _webui_window_t * win, int event_type, const char* element, size_t event_number, char* webui_internal_id
 );
 static int _webui_cmd_sync(_webui_window_t * win, char* cmd, bool show);
 static int _webui_cmd_async(_webui_window_t * win, char* cmd, bool show);
@@ -2422,7 +2422,7 @@ size_t webui_interface_get_size_at(size_t window, size_t event_number, size_t in
     return webui_get_size_at(&e, index);
 }
 
-size_t webui_interface_bind(size_t window, const char* element, void( * func)(size_t, size_t, char* , size_t, size_t)) {
+size_t webui_interface_bind(size_t window, const char* element, void( * func)(size_t, size_t, const char* , size_t, size_t)) {
 
     #ifdef WEBUI_LOG
     printf("[User] webui_interface_bind([%zu], [%s], [0x%p])...\n", window, element, func);
@@ -5886,7 +5886,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
     sprintf(win->url, WEBUI_HTTP_PROTOCOL "localhost:%zu", win->server_port);
 
     // Generate the window URL
-    char* window_url = NULL;
+    const char* window_url = NULL;
     if (type == WEBUI_SHOW_HTML) {
 
         const char* user_html = content;
@@ -5896,8 +5896,9 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
         win->html = (user_html == NULL ? "" : user_html);
 
         // Set window URL
-        window_url = (char*)_webui_malloc(strlen(win->url));
-        strcpy(window_url, win->url);
+        char * url = (char*)_webui_malloc(strlen(win->url));
+        strcpy(url, win->url);
+        window_url = url;
     } else if (type == WEBUI_SHOW_URL) {
 
         const char* user_url = content;
@@ -6027,7 +6028,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
 }
 
 static void _webui_window_event(
-    _webui_window_t * win, int event_type, char* element, size_t event_number, char* webui_internal_id
+    _webui_window_t * win, int event_type, const char* element, size_t event_number, char* webui_internal_id
 ) {
 
     #ifdef WEBUI_LOG
