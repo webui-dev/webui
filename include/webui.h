@@ -144,6 +144,7 @@ typedef struct webui_event_t {
     const char* element; // HTML element ID
     size_t event_number; // Internal WebUI
     size_t bind_id;      // Bind ID
+	size_t magic_cookie; // used for event valid tracking
 } webui_event_t;
 
 // -- Definitions ---------------------
