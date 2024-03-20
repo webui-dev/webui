@@ -467,7 +467,7 @@ class WebuiBridge {
 					) {
 						this.#sendClick(event.target.id);
 					}
-				});
+				}, {passive:true});
 			}
 		});
 	}
