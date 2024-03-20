@@ -6,9 +6,14 @@
 #
 # Special Thanks to Turiiya (https://github.com/ttytm)
 
+Set-StrictMode -version latest
+$ErrorActionPreference="Stop"
+
 $current_location = Get-Location
 $project_root = git rev-parse --show-toplevel
 Set-Location $project_root/bridge
+$silent=$false
+$log_level=$null
 
 # Arguments
 foreach ($opt in $args) {
@@ -22,6 +27,7 @@ foreach ($opt in $args) {
 }
 if ($silent) { $log_level = "--log-level=warning" }
 
+$ErrorActionPreference="SilentlyContinue"
 # Check which python command is available
 $commandResult = python3 --version 2>&1 > $null
 if (!$?) {
@@ -37,6 +43,7 @@ if (!$?) {
 } else {
     $python_cmd = "python3"
 }
+$ErrorActionPreference="Stop"
 
 # Check if node_modules\esbuild exists, if not, install using npm
 if (-not (Test-Path "$project_root\bridge\node_modules\esbuild")) {
