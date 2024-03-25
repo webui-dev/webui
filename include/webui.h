@@ -469,7 +469,7 @@ WEBUI_EXPORT void webui_navigate(size_t window, const char* url);
  * webui_wait();
  * webui_clean();
  */
-WEBUI_EXPORT void webui_clean();
+WEBUI_EXPORT void webui_clean(void);
 
 /**
  * @brief Delete all local web-browser profiles folder. It should called at the
@@ -480,7 +480,7 @@ WEBUI_EXPORT void webui_clean();
  * webui_delete_all_profiles();
  * webui_clean();
  */
-WEBUI_EXPORT void webui_delete_all_profiles();
+WEBUI_EXPORT void webui_delete_all_profiles(void);
 
 /**
  * @brief Delete a specific window web-browser local folder profile.

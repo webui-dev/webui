@@ -836,7 +836,7 @@ void webui_navigate(size_t window, const char* url) {
     _webui_send(win, win->token, 0, WEBUI_CMD_NAVIGATION, url, _webui_strlen(url));
 }
 
-void webui_clean() {
+void webui_clean(void) {
 
     #ifdef WEBUI_LOG
     printf("[User] webui_clean()...\n");
@@ -849,7 +849,7 @@ void webui_clean() {
     _webui_clean();
 }
 
-void webui_delete_all_profiles() {
+void webui_delete_all_profiles(void) {
 
     #ifdef WEBUI_LOG
     printf("[User] webui_delete_all_profiles()...\n");
