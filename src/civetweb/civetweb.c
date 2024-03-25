@@ -8392,6 +8392,7 @@ static const struct {
     {".exe", 4, "application/octet-stream"},
     {".iso", 4, "application/octet-stream"},
     {".js", 3, "application/javascript"},
+    {".mjs", 4, "application/javascript"},
     {".json", 5, "application/json"},
     {".msi", 4, "application/octet-stream"},
     {".pdf", 4, "application/pdf"},
