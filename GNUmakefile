@@ -60,7 +60,7 @@ else ifeq ($(shell uname),Darwin)
 else
 	# Linux
 	PLATFORM := linux
-	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).so
+	LIB_DYN_OUT := lib$(WEBUI_OUT_LIB_NAME).so
 	ifeq ($(CC),clang)
 		LLVM_OPT := llvm-
 	endif
