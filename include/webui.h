@@ -145,9 +145,10 @@ enum webui_events {
 typedef struct webui_event_t {
     size_t window;       // The window object number
     size_t event_type;   // Event type
-    char* element;       // HTML element ID
+    const char* element; // HTML element ID
     size_t event_number; // Internal WebUI
     size_t bind_id;      // Bind ID
+	size_t magic_cookie; // used for event valid tracking
 } webui_event_t;
 
 // -- Definitions ---------------------
@@ -730,7 +731,8 @@ WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
  * @example size_t id = webui_interface_bind(myWindow, "myID", myCallback);
  */
 WEBUI_EXPORT size_t webui_interface_bind(size_t window, const char* element,
-    void (*func)(size_t, size_t, char*, size_t, size_t));
+    void (*func)(size_t window, size_t event_type, const char* element, size_t event_number, size_t bind_id));
+
 
 /**
  * @brief When using `webui_interface_bind()`, you may need this function to easily set a response.
