@@ -23,6 +23,7 @@ class WebuiBridge {
 	// WebUI Settings
 	#secure: boolean;
 	#token: number;
+	#host: number;
 	#port: number;
 	#winNum: number;
 	#bindList: string[] = [];
@@ -74,6 +75,7 @@ class WebuiBridge {
 	constructor({
 		secure,
 		token,
+		host,
 		port,
 		winNum,
 		bindList,
@@ -85,6 +87,7 @@ class WebuiBridge {
 	}: {
 		secure: boolean;
 		token: number;
+		host: number;
 		port: number;
 		winNum: number;
 		bindList: string[];
@@ -97,6 +100,7 @@ class WebuiBridge {
 		// Constructor arguments are injected by webui.c
 		this.#secure = secure;
 		this.#token = token;
+		this.#host = host;
 		this.#port = port;
 		this.#winNum = winNum;
 		this.#bindList = bindList;
@@ -250,7 +254,7 @@ class WebuiBridge {
 		if (this.#bindList.includes(this.#winNum + '/')) {
 			this.#hasEvents = true;
 		}
-		const host = window.location.hostname;
+		const host = this.#host;
 		const url = this.#secure ? ('wss://' + host) : ('ws://' + host);
 		this.#ws = new WebSocket(`${url}:${this.#port}/_webui_ws_connect`);
 		this.#ws.binaryType = 'arraybuffer';
@@ -737,6 +741,8 @@ class WebuiBridge {
 type webui = WebuiBridge;
 export default webui;
 export type { WebuiBridge };
+	
+console.log("======== webui.js ======")
 // Wait for the html to be parsed
 addEventListener('load', () => {
 	document.body.addEventListener('contextmenu', (event) => event.preventDefault());
