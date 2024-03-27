@@ -29,7 +29,7 @@ jobs:
       contents: write
     strategy:
       matrix:
-        compiler: [GCC, MSVC]
+        compiler: [MSVC]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
