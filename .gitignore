@@ -116,3 +116,8 @@ examples/**/text-editor/text-editor
 # Compressed
 *.zip
 *.gz
+
+# CMake
+**/cmake_install.cmake
+**/CMakeCache.txt
+**/CMakeFiles/
