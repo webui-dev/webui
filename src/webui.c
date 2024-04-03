@@ -13,6 +13,11 @@
 
 // -- Third-party ---------------------
 #ifdef WEBUI_TLS
+    #ifdef _WIN32
+        #ifndef WIN32_LEAN_AND_MEAN
+            #define WIN32_LEAN_AND_MEAN
+        #endif
+    #endif
     // OpenSSL
     #include <openssl/bio.h>
     #include <openssl/evp.h>
