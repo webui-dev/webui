@@ -28,7 +28,7 @@ pub fn build_12(b: *Build) void {
 
     const webui = build_webui_12(b, optimize, target, isStatic, enableTLS);
 
-    webui.installHeader("include/webui.h", "webui.h");
+    webui.installHeader(.{ .path = "include/webui.h" }, "webui.h");
 
     build_examples_12(b, optimize, target, webui);
 
