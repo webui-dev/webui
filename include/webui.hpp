@@ -23,11 +23,13 @@ extern "C" {
 
 namespace webui {
 
-static constexpr int DISCONNECTED = 0; // 0. Window disconnection event
-static constexpr int CONNECTED = 1;    // 1. Window connection event
-static constexpr int MOUSE_CLICK = 2;  // 2. Mouse click event
-static constexpr int NAVIGATION = 3;   // 3. Window navigation event
-static constexpr int CALLBACKS = 4;    // 4. Function call event
+enum : int {
+    DISCONNECTED = 0, // 0. Window disconnection event
+    CONNECTED = 1,    // 1. Window connection event
+    MOUSE_CLICK = 2,  // 2. Mouse click event
+    NAVIGATION = 3,   // 3. Window navigation event
+    CALLBACKS = 4    // 4. Function call event
+};
 
 class window {
     private:
