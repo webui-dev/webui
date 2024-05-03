@@ -8,6 +8,7 @@ const OptimizeMode = std.builtin.OptimizeMode;
 const CrossTarget = std.zig.CrossTarget;
 const Compile = Build.Step.Compile;
 const Module = Build.Module;
+const current_version = builtin.zig_version.minor;
 
 const log = std.log.scoped(.WebUI);
 
@@ -15,6 +16,9 @@ const default_isStatic = true;
 const default_enableTLS = false;
 
 pub fn build(b: *Build) void {
+    if (current_version > 11) {
+        return;
+    }
     const isStatic = b.option(bool, "is_static", "whether lib is static") orelse default_isStatic;
     const enableTLS = b.option(bool, "enable_tls", "whether lib enable tls") orelse default_enableTLS;
     const target = b.standardTargetOptions(.{});
