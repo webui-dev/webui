@@ -1,7 +1,7 @@
 /*
   WebUI Bridge Utils
 
-  Copyright (c) 2023 Oculi Julien.
+  Copyright (c) 2024 Oculi Julien.
   Licensed under MIT License.
   All rights reserved.
 */
