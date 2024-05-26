@@ -1,4 +1,4 @@
-name: Zig
+name: Zig Build
 
 on:
   workflow_call:
