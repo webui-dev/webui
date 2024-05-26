@@ -14,6 +14,10 @@ on:
     branches: [main]
     paths-ignore: ['**/*.md']
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name == 'main' && github.sha || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   windows:
     uses: ./.github/workflows/windows.yml
