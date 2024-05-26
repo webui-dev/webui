@@ -14,10 +14,10 @@ jobs:
   setup:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Bundle WebUI Bridge
         run: bridge/build.ps1
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
@@ -32,13 +32,13 @@ jobs:
         compiler: [GCC, MSVC]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache/restore@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
         with:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
           fail-on-cache-miss: true
-      - uses: microsoft/setup-msbuild@v1.1
+      - uses: microsoft/setup-msbuild@v2
       - if: matrix.compiler == 'MSVC'
         uses: ilammy/msvc-dev-cmd@v1
       - name: Build Debug Target
@@ -68,7 +68,7 @@ jobs:
           echo "ARTIFACT=$artifact" >> $GITHUB_ENV
           mv dist/* $artifact/
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT }}
           path: ${{ env.ARTIFACT }}
