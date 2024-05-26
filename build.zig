@@ -17,6 +17,8 @@ const default_enableTLS = false;
 
 pub fn build(b: *Build) void {
     if (current_version > 11) {
+        log.err("unsupported Zig version. For building with 0.12 and later, plaese see `github.com/webui-dev/zig-webui`", .{});
+        std.process.exit(1);
         return;
     }
     const isStatic = b.option(bool, "is_static", "whether lib is static") orelse default_isStatic;
