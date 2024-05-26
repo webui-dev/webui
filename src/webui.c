@@ -98,6 +98,8 @@
 #else
 #define WEBUI_OS "GNU/Linux"
 #endif
+#define MAGIC_COOKIE 0xEBEBBE
+#define INVALID_COOKIE 0xFEEEFE
 
 // Mutex
 #ifdef _WIN32
@@ -197,7 +199,7 @@ typedef struct _webui_core_t {
     uint16_t run_last_id;
     bool initialized;
     void( * cb[WEBUI_MAX_IDS])(webui_event_t* e);
-    void( * cb_interface[WEBUI_MAX_IDS])(size_t, size_t, char* , size_t, size_t);
+    void( * cb_interface[WEBUI_MAX_IDS])(size_t, size_t, const char* , size_t, size_t);
     char* executable_path;
     void * ptr_list[WEBUI_MAX_IDS * 2];
     size_t ptr_position;
@@ -283,7 +285,7 @@ static void _webui_free_port(size_t port);
 static char* _webui_get_current_path(void);
 static void _webui_ws_send(_webui_window_t * win, char* packet, size_t packets_size);
 static void _webui_window_event(
-    _webui_window_t * win, int event_type, char* element, size_t event_number, char* webui_internal_id
+    _webui_window_t * win, int event_type, const char* element, size_t event_number, char* webui_internal_id
 );
 static int _webui_cmd_sync(_webui_window_t * win, char* cmd, bool show);
 static int _webui_cmd_async(_webui_window_t * win, char* cmd, bool show);
@@ -1174,6 +1176,7 @@ size_t webui_bind(size_t window, const char* element, void( * func)(webui_event_
 
 const char* webui_get_string_at(webui_event_t* e, size_t index) {
 
+    assert(e->magic_cookie == MAGIC_COOKIE);
     #ifdef WEBUI_LOG
     printf("[User] webui_get_string_at([%zu])...\n", index);
     #endif
@@ -1257,6 +1260,7 @@ size_t webui_get_size_at(webui_event_t* e, size_t index) {
     printf("[User] webui_get_size_at([%zu])...\n", index);
     #endif
 
+    assert(e->magic_cookie == MAGIC_COOKIE);
     // Initialization
     _webui_init();
 
@@ -1318,6 +1322,7 @@ void webui_return_int(webui_event_t* e, long long int n) {
     printf("[User] webui_return_int([%lld])...\n", n);
     #endif
 
+    assert(e->magic_cookie == MAGIC_COOKIE);
     // Initialization
     _webui_init();
 
@@ -1350,6 +1355,7 @@ void webui_return_string(webui_event_t* e, const char* s) {
     printf("[User] webui_return_string([%s])...\n", s);
     #endif
 
+    assert(e->magic_cookie == MAGIC_COOKIE);
     if (_webui_is_empty(s))
         return;
 
@@ -1385,6 +1391,7 @@ void webui_return_bool(webui_event_t* e, bool b) {
     printf("[User] webui_return_bool([%d])...\n", b);
     #endif
 
+    assert(e->magic_cookie == MAGIC_COOKIE);
     // Initialization
     _webui_init();
 
@@ -2273,6 +2280,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
     printf("[Core]\t\t_webui_interface_bind_handler()...\n");
     #endif
 
+    assert(e->magic_cookie == MAGIC_COOKIE);
     // Initialization
     _webui_init();
 
@@ -2372,6 +2380,7 @@ const char* webui_interface_get_string_at(size_t window, size_t event_number, si
     e.element = NULL;
     e.event_number = event_number;
     e.bind_id = 0;
+    e.magic_cookie = MAGIC_COOKIE;
 
     return webui_get_string_at(&e, index);
 }
@@ -2389,6 +2398,7 @@ long long int webui_interface_get_int_at(size_t window, size_t event_number, siz
     e.element = NULL;
     e.event_number = event_number;
     e.bind_id = 0;
+    e.magic_cookie = MAGIC_COOKIE;
 
     return webui_get_int_at(&e, index);
 }
@@ -2406,6 +2416,7 @@ bool webui_interface_get_bool_at(size_t window, size_t event_number, size_t inde
     e.element = NULL;
     e.event_number = event_number;
     e.bind_id = 0;
+    e.magic_cookie = MAGIC_COOKIE;
 
     return webui_get_bool_at(&e, index);
 }
@@ -2423,11 +2434,12 @@ size_t webui_interface_get_size_at(size_t window, size_t event_number, size_t in
     e.element = NULL;
     e.event_number = event_number;
     e.bind_id = 0;
+    e.magic_cookie = MAGIC_COOKIE;
 
     return webui_get_size_at(&e, index);
 }
 
-size_t webui_interface_bind(size_t window, const char* element, void( * func)(size_t, size_t, char* , size_t, size_t)) {
+size_t webui_interface_bind(size_t window, const char* element, void( * func)(size_t, size_t, const char* , size_t, size_t)) {
 
     #ifdef WEBUI_LOG
     printf("[User] webui_interface_bind([%zu], [%s], [0x%p])...\n", window, element, func);
@@ -2447,6 +2459,7 @@ void webui_interface_set_response(size_t window, size_t event_number, const char
     printf("[User] webui_interface_set_response() -> Response [%s] \n", response);
     #endif
 
+    assert(event_number < WEBUI_MAX_IDS);
     // Initialization
     _webui_init();
 
@@ -5891,7 +5904,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
     sprintf(win->url, WEBUI_HTTP_PROTOCOL "localhost:%zu", win->server_port);
 
     // Generate the window URL
-    char* window_url = NULL;
+    const char* window_url = NULL;
     if (type == WEBUI_SHOW_HTML) {
 
         const char* user_html = content;
@@ -5901,8 +5914,9 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
         win->html = (user_html == NULL ? "" : user_html);
 
         // Set window URL
-        window_url = (char*)_webui_malloc(strlen(win->url));
-        strcpy(window_url, win->url);
+        char * url = (char*)_webui_malloc(strlen(win->url));
+        strcpy(url, win->url);
+        window_url = url;
     } else if (type == WEBUI_SHOW_URL) {
 
         const char* user_url = content;
@@ -6032,7 +6046,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
 }
 
 static void _webui_window_event(
-    _webui_window_t * win, int event_type, char* element, size_t event_number, char* webui_internal_id
+    _webui_window_t * win, int event_type, const char* element, size_t event_number, char* webui_internal_id
 ) {
 
     #ifdef WEBUI_LOG
@@ -6045,6 +6059,7 @@ static void _webui_window_event(
     e.event_type = event_type;
     e.element = element;
     e.event_number = event_number;
+    e.magic_cookie = MAGIC_COOKIE;
 
     // Check for all events-bind functions
     if (!_webui_mtx_is_exit_now(WEBUI_MUTEX_NONE) && win->has_events) {
@@ -6086,6 +6101,7 @@ static void _webui_window_event(
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_window_event() -> Finished.\n");
     #endif
+    e.magic_cookie = INVALID_COOKIE;
 }
 
 static void _webui_ws_send(_webui_window_t * win, char* packet, size_t packets_size) {
@@ -7564,6 +7580,7 @@ static WEBUI_THREAD_RECEIVE {
                             e.event_type = WEBUI_EVENT_CALLBACK;
                             e.element = element;
                             e.event_number = event_num;
+                            e.magic_cookie = MAGIC_COOKIE;
 
                             // Call user function
                             size_t cb_index = _webui_get_cb_index(webui_internal_id);
@@ -7602,7 +7619,8 @@ static WEBUI_THREAD_RECEIVE {
                                 win, win->token, packet_id, WEBUI_CMD_CALL_FUNC,
                                 event_inf->response, _webui_strlen(event_inf->response)
                             );
-
+                            e.magic_cookie = INVALID_COOKIE;
+                            
                             // Free event
                             _webui_free_mem((void * ) event_inf->response);
                         } else {
