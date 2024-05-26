@@ -112,60 +112,58 @@ fn build_examples_11(b: *Build, optimize: OptimizeMode, target: CrossTarget, web
     var itera = iter_dir.iterate();
 
     while (itera.next()) |val| {
-        if (val) |entry| {
-            if (entry.kind == .directory) {
-                const example_name = entry.name;
-                const path = std.fmt.allocPrint(b.allocator, "examples/C/{s}/main.c", .{example_name}) catch |err| {
-                    log.err("fmt path for examples failed, err is {}", .{err});
-                    std.os.exit(1);
-                };
-
-                const exe = b.addExecutable(.{
-                    .name = example_name,
-                    .target = target,
-                    .optimize = optimize,
-                });
-
-                exe.addCSourceFile(.{
-                    .file = .{
-                        .path = path,
-                    },
-                    .flags = &.{},
-                });
-
-                exe.subsystem = .Windows;
-
-                exe.linkLibrary(webui_lib);
-
-                const exe_install = b.addInstallArtifact(exe, .{});
-
-                build_all_step.dependOn(&exe_install.step);
-
-                const exe_run = b.addRunArtifact(exe);
-                exe_run.step.dependOn(&exe_install.step);
-
-                const cwd = std.fmt.allocPrint(b.allocator, "{s}/{s}", .{ examples_path, example_name }) catch |err| {
-                    log.err("fmt path for examples failed, err is {}", .{err});
-                    std.os.exit(1);
-                };
-                exe_run.cwd = cwd;
-
-                const step_name = std.fmt.allocPrint(b.allocator, "run_{s}", .{example_name}) catch |err| {
-                    log.err("fmt step_name for examples failed, err is {}", .{err});
-                    std.os.exit(1);
-                };
-
-                const step_desc = std.fmt.allocPrint(b.allocator, "run example {s}", .{example_name}) catch |err| {
-                    log.err("fmt step_desc for examples failed, err is {}", .{err});
-                    std.os.exit(1);
-                };
-
-                const exe_run_step = b.step(step_name, step_desc);
-                exe_run_step.dependOn(&exe_run.step);
-            }
-        } else {
-            break;
+        const entry = val orelse break;
+        if (entry.kind != .directory) {
+            continue;
         }
+        const example_name = entry.name;
+        const path = std.fmt.allocPrint(b.allocator, "examples/C/{s}/main.c", .{example_name}) catch |err| {
+            log.err("fmt path for examples failed, err is {}", .{err});
+            std.os.exit(1);
+        };
+
+        const exe = b.addExecutable(.{
+            .name = example_name,
+            .target = target,
+            .optimize = optimize,
+        });
+
+        exe.addCSourceFile(.{
+            .file = .{
+                .path = path,
+            },
+            .flags = &.{},
+        });
+
+        exe.subsystem = .Windows;
+
+        exe.linkLibrary(webui_lib);
+
+        const exe_install = b.addInstallArtifact(exe, .{});
+
+        build_all_step.dependOn(&exe_install.step);
+
+        const exe_run = b.addRunArtifact(exe);
+        exe_run.step.dependOn(&exe_install.step);
+
+        const cwd = std.fmt.allocPrint(b.allocator, "{s}/{s}", .{ examples_path, example_name }) catch |err| {
+            log.err("fmt path for examples failed, err is {}", .{err});
+            std.os.exit(1);
+        };
+        exe_run.cwd = cwd;
+
+        const step_name = std.fmt.allocPrint(b.allocator, "run_{s}", .{example_name}) catch |err| {
+            log.err("fmt step_name for examples failed, err is {}", .{err});
+            std.os.exit(1);
+        };
+
+        const step_desc = std.fmt.allocPrint(b.allocator, "run example {s}", .{example_name}) catch |err| {
+            log.err("fmt step_desc for examples failed, err is {}", .{err});
+            std.os.exit(1);
+        };
+
+        const exe_run_step = b.step(step_name, step_desc);
+        exe_run_step.dependOn(&exe_run.step);
     } else |err| {
         log.err("iterate examples_path failed, err is {}", .{err});
         std.os.exit(1);
