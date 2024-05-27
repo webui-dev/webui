@@ -1,8 +1,8 @@
 /*
-  WebUI Library 2.4.2
+  WebUI Library 2.5.0-Beta-1
   http://webui.me
   https://github.com/webui-dev/webui
-  Copyright (c) 2020-2023 Hassan Draga.
+  Copyright (c) 2020-2024 Hassan Draga.
   Licensed under MIT License.
   All rights reserved.
   Canada.
@@ -11,7 +11,7 @@
 #ifndef _WEBUI_H
 #define _WEBUI_H
 
-#define WEBUI_VERSION "2.4.2"
+#define WEBUI_VERSION "2.5.0-Beta-1"
 
 // Max windows, servers and threads
 #define WEBUI_MAX_IDS (256)
@@ -53,13 +53,12 @@
 
 // -- Windows -------------------------
 #ifdef _WIN32
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
     #ifndef WIN32_LEAN_AND_MEAN
         #define WIN32_LEAN_AND_MEAN
     #endif
     #include <windows.h>
-    #include <winsock2.h>
-    #include <ws2tcpip.h>
-
     #include <direct.h>
     #include <io.h>
     #include <shellapi.h>
@@ -223,6 +222,20 @@ WEBUI_EXPORT bool webui_show(size_t window, const char* content);
  * webui_show(myWindow, "index.html", Firefox);
  */
 WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, size_t browser);
+
+/**
+ * @brief Show a WebView window using embedded HTML, or a file. If the window is already
+ * open, it will be refreshed. Note: Win32 need `WebView2Loader.dll`.
+ *
+ * @param window The window number
+ * @param content The HTML, URL, Or a local file
+ *
+ * @return Returns True if showing the WebView window is successed.
+ *
+ * @example webui_show_wv(myWindow, "<html>...</html>"); | webui_show_wv(myWindow,
+ * "index.html"); | webui_show_wv(myWindow, "http://...");
+ */
+WEBUI_EXPORT bool webui_show_wv(size_t window, const char* content);
 
 /**
  * @brief Set the window in Kiosk mode (Full screen)

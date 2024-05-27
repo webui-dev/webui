@@ -1,8 +1,8 @@
 /*
-  WebUI Library 2.4.2
+  WebUI Library 2.5.0-Beta-1
   http://webui.me
   https://github.com/webui-dev/webui
-  Copyright (c) 2020-2023 Hassan Draga.
+  Copyright (c) 2020-2024 Hassan Draga.
   Licensed under MIT License.
   All rights reserved.
   Canada.
