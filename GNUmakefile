@@ -131,7 +131,7 @@ else
 endif
 #	Build macOS WKWebView
 ifeq ($(shell uname),Darwin)
-	@cd "$(BUILD_DIR)/debug" \
+	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI Objective-C WKWebKit ($(CC) $(TARGET)release)..." \
 	&& $(CC) $(TARGET) $(WKWEBKIT_BUILD_FLAGS) -Os
 endif
