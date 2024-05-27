@@ -20,7 +20,6 @@ pub fn build(b: *Build) void {
 
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-
     const is_dynamic = b.option(bool, "dynamic", "build the dynamic library") orelse false;
     const enable_tls = b.option(bool, "enable-tls", "enable TLS support") orelse false;
 
@@ -28,6 +27,11 @@ pub fn build(b: *Build) void {
         log.err("cross compilation is not supported with TLS enabled", .{});
         std.os.exit(1);
     }
+
+    std.debug.print("Building {s} WebUI library{s}...\n", .{
+        if (is_dynamic) "dynamic" else "static",
+        if (enable_tls) " with TLS support" else "",
+    });
 
     const lib = build_lib(b, optimize, target, is_dynamic, enable_tls) catch |err| {
         log.err("failed to build webui library: {}", .{err});
