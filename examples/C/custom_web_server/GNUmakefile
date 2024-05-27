@@ -24,7 +24,6 @@ BUILD_LIB ?=
 # BUILD FLAGS
 STATIC_BUILD_FLAGS = main.c -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
 DYN_BUILD_FLAGS = main.c -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
-WKWEBKIT_LINK_FLAGS := -framework Cocoa -framework WebKit
 
 # Platform conditions
 ifeq ($(OS),Windows_NT)
@@ -45,14 +44,13 @@ else
 	DYN_BUILD_FLAGS += -lpthread -lm
 	STATIC_OUT := main
 	DYN_OUT := main-dyn
-	CONSOLE_APP := 
-	GUI_APP := 
 	ifeq ($(shell uname),Darwin)
 		# MacOS
 		PLATFORM := macos
 		CC = clang
 		COPY_LIB_CMD := @cp "$(LIB_DIR)/$(WEBUI_LIB_NAME).dylib" "$(WEBUI_LIB_NAME).dylib"
 		DYN_BUILD_FLAGS += "./$(WEBUI_LIB_NAME).dylib"
+		WKWEBKIT_LINK_FLAGS := -framework Cocoa -framework WebKit
 	else
 		# Linux
 		PLATFORM := linux
