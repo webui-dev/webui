@@ -101,7 +101,7 @@ endif
 ifeq ($(shell uname),Darwin)
 	@cd "$(BUILD_DIR)/debug" \
 	&& echo "Build WebUI Objective-C WKWebKit ($(CC) $(TARGET)debug)..." \
-	&& $(CC) $(TARGET) $(WKWEBKIT_BUILD_FLAGS) -g -DWEBUI_LOG
+	&& $(CC) $(TARGET) $(WKWEBKIT_BUILD_FLAGS) $(WKWEBKIT_LINK_FLAGS) -g -DWEBUI_LOG
 endif
 #	Static with Debug info
 	@cd "$(BUILD_DIR)/debug" \
@@ -115,7 +115,7 @@ endif
 	&& echo "Build WebUI library ($(CC) $(TARGET)debug dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) -g -fPIC -DWEBUI_LOG \
-	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT)
 ifeq ($(PLATFORM),windows)
 	@cd "$(BUILD_DIR)/debug" && del *.o >nul 2>&1
 else
