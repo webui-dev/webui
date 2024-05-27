@@ -14,9 +14,9 @@
 [![][release-version]](https://github.com/webui-dev/webui/releases/latest)
 [![][license]](https://github.com/webui-dev/webui/blob/main/LICENSE)
 
-> WebUI is not a web-server solution or a framework, but it allows you to use any web browser as a GUI, with your preferred language in the backend and HTML5 in the frontend. All in a lightweight portable lib.
+> Use any web browser or WebView as GUI, with your preferred language in the backend and HTML5 in the frontend, all in a lightweight portable lib.
 
-![Screenshot](webui.png)
+![Screenshot](https://github.com/webui-dev/webui/assets/16948659/39c5b000-83eb-4779-a7ce-9769d3acf204)
 
 </div>
 
@@ -39,12 +39,13 @@
 
 ## Features
 
-- Portable (*Needs only a web browser at runtime*)
+- Portable (*Needs only a web browser or a WebView at runtime*)
 - One header file
 - Lightweight (*Few Kb library*) & Small memory footprint
 - Fast binary communication protocol
 - Multi-platform & Multi-Browser
 - Using private profile for safety
+- Cross-platform WebView
 
 ## Showcase
 
@@ -199,6 +200,14 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | Epic            | ✔️              | ✔️            | _not available_ |
 | Apple Safari    | _not available_ | _coming soon_ | _not available_ |
 | Opera           | _coming soon_   | _coming soon_ | _coming soon_   |
+
+## Supported WebView
+
+| WebView         | Status         |
+| --------------- | --------------- |
+| Windows WebView2 | ✔️ |
+| Linux GTK WebView   | ✔️ |
+| macOS WKWebView  | ✔️ |
 
 ### License
 
