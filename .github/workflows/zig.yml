@@ -19,4 +19,4 @@ jobs:
       - name: Build libarary
         run: zig build
       - name: Build examples
-        run: zig build build_all
+        run: zig build examples
