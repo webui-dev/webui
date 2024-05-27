@@ -38,8 +38,6 @@ ARCH_TARGET ?=
 CIVETWEB_BUILD_FLAGS := -o civetweb.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/civetweb/civetweb.c" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG) -w
 CIVETWEB_DEFINE_FLAGS = -DNDEBUG -DNO_CACHING -DNO_CGI -DUSE_WEBSOCKET $(TLS_CFLAG)
 WEBUI_BUILD_FLAGS := -o webui.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webui.c" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG) -w
-WKWEBKIT_BUILD_FLAGS := -o wkwebview.o -c "$(MAKEFILE_DIR)/src/webview/wkwebview.m"
-WKWEBKIT_LINK_FLAGS := -framework Cocoa -framework WebKit
 
 # OUTPUT FILES
 # The static output is the same for all platforms
@@ -59,8 +57,9 @@ else ifeq ($(shell uname),Darwin)
 	PLATFORM := macos
 	CC = clang
 	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).dylib
-	WEBKIT := -framework Cocoa -framework WebKit
 	WEBKIT_OBJ := wkwebview.o
+	WKWEBKIT_BUILD_FLAGS := -o wkwebview.o -c "$(MAKEFILE_DIR)/src/webview/wkwebview.m"
+	WKWEBKIT_LINK_FLAGS := -framework Cocoa -framework WebKit
 else
 	# Linux
 	PLATFORM := linux
@@ -101,7 +100,7 @@ endif
 ifeq ($(shell uname),Darwin)
 	@cd "$(BUILD_DIR)/debug" \
 	&& echo "Build WebUI Objective-C WKWebKit ($(CC) $(TARGET)debug)..." \
-	&& $(CC) $(TARGET) $(WKWEBKIT_BUILD_FLAGS) $(WKWEBKIT_LINK_FLAGS) -g -DWEBUI_LOG
+	&& $(CC) $(TARGET) $(WKWEBKIT_BUILD_FLAGS) -g -DWEBUI_LOG
 endif
 #	Static with Debug info
 	@cd "$(BUILD_DIR)/debug" \
@@ -115,7 +114,7 @@ endif
 	&& echo "Build WebUI library ($(CC) $(TARGET)debug dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) -g -fPIC -DWEBUI_LOG \
-	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT)
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
 ifeq ($(PLATFORM),windows)
 	@cd "$(BUILD_DIR)/debug" && del *.o >nul 2>&1
 else
