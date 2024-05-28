@@ -77,6 +77,25 @@ jobs:
             compiler=${{ matrix.compiler }}
             make CC=${compiler,,}
           fi
+      - name: Build examples
+        if: matrix.arch == 'x64'
+        run: |
+          examples_base_dir=$(pwd)/examples/C
+          for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
+            echo "> $example"
+            cd $example || (exit_code=1 && continue)
+            if ! make; then
+               echo "Failed to build '$example'"
+               exit_code=1
+               continue
+            fi
+            if [[ ! -e "main" || ! -e "main-dyn" ]] ; then
+              echo "Failed to find executable for '$example'" && find .
+              exit_code=1
+              continue
+            fi
+          done
+          exit $exit_code
       - name: Prepare Artifact
         run: |
           cp -r include dist

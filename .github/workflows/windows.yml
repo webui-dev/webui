@@ -55,6 +55,36 @@ jobs:
           } else {
             mingw32-make
           }
+      - name: Build examples
+        run: |
+          $examples_base_dir = "$(Get-Location)/examples/C/"
+          foreach ($example in Get-ChildItem -Path $examples_base_dir -Directory) {
+              Write-Host "> $example"
+              Set-Location -Path $example.FullName
+              if (!$?) {
+                  $exit_code = 1
+                  continue
+              }
+              if ('${{ matrix.compiler }}' -eq 'MSVC') {
+                  $make_cmd = "nmake"
+              } else {
+                  $make_cmd = "mingw32-make"
+              }
+              $make_output = Invoke-Expression $make_cmd
+              if (!$?) {
+                  Write-Host "Failed to build '$example': $make_output"
+                  $exit_code = 1
+                  continue
+                }
+              Write-Output $make_output
+              if (!(Test-Path "main.exe") -or !(Test-Path "main-dyn.exe")) {
+                  Write-Host "Failed to find executable for '$example'"
+                  Get-ChildItem
+                  $exit_code = 1
+                  continue
+              }
+          }
+          exit $exit_code
       - name: Prepare Artifact
         shell: bash
         run: |
