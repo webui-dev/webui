@@ -149,6 +149,12 @@ typedef struct webui_event_inf_t {
         ICoreWebView2Controller* webviewController;
         ICoreWebView2* webviewWindow;
         HWND hwnd;
+        void* titleChangedHandler;
+        void* titleChangedHandler_lpVtbl;
+        void* createWebViewEnvironmentHandler;
+        void* createWebViewEnvironmentHandler_lpVtbl;
+        void* createWebViewControllerHandler;
+        void* createWebViewControllerHandler_lpVtbl;
         // WebUI Window
         wchar_t* url;
         volatile bool navigate;
@@ -2540,6 +2546,7 @@ void webui_wait(void) {
             if (_webui_core.webview_cacheFolder) {
                 _webui_delete_folder(_webui_core.webview_cacheFolder);
                 _webui_free_mem((void*) _webui_core.webview_cacheFolder);
+                _webui_core.webview_cacheFolder = NULL;
             }   
         }
     #elif __linux__
@@ -3020,7 +3027,6 @@ static void _webui_free_mem(void * ptr) {
             printf("[Core]\t\t_webui_free_mem(0x%p) -> Free %zu bytes\n", ptr, _webui_core.ptr_size[i]);
             #endif
 
-            memset(ptr, 0, _webui_core.ptr_size[i]);
             free(ptr);
 
             _webui_core.ptr_size[i] = 0;
@@ -3063,7 +3069,6 @@ static void _webui_free_all_mem(void) {
             );
             #endif
 
-            memset(ptr, 0, _webui_core.ptr_size[i]);
             free(ptr);
         }
     }
@@ -7623,11 +7628,13 @@ static WEBUI_THREAD_SERVER_START {
     win->html_handled = false;
     win->server_handled = false;
     win->bridge_handled = false;
-    _webui_mutex_is_connected(win, WEBUI_MUTEX_FALSE);
     _webui_free_port(win->server_port);
     _webui_free_port(win->ws_port);
     win->server_port = 0;
     win->ws_port = 0;
+    _webui_free_mem((void*)server_port);
+    _webui_free_mem((void*)ws_port);
+    _webui_mutex_is_connected(win, WEBUI_MUTEX_FALSE);
 
     // Kill Process
     // _webui_kill_pid(win->process_id);
@@ -8796,6 +8803,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         handler->lpVtbl->Release = TitleChanged_Release;
         handler->refCount = 1;
         handler->webView = webView;
+
+        // Save pointers to be freed by `_webui_wv_free()`
+        webView->titleChangedHandler = handler;
+        webView->titleChangedHandler_lpVtbl = handler->lpVtbl;
         return handler;
     };
 
@@ -8813,6 +8824,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         handler->lpVtbl->Invoke = CreateWebViewEnvironmentHandler_Invoke;
         handler->refCount = 1;
         handler->webView = webView;
+
+        // Save pointers to be freed by `_webui_wv_free()`
+        webView->createWebViewEnvironmentHandler = handler;
+        webView->createWebViewEnvironmentHandler_lpVtbl = handler->lpVtbl;
         return handler;
     };
 
@@ -8830,6 +8845,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         handler->lpVtbl->Invoke = CreateWebViewControllerHandler_Invoke;
         handler->refCount = 1;
         handler->webView = webView;
+
+        // Save pointers to be freed by `_webui_wv_free()`
+        webView->createWebViewControllerHandler = handler;
+        webView->createWebViewControllerHandler_lpVtbl = handler->lpVtbl;
         return handler;
     };
 
@@ -9073,6 +9092,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 webView->webviewEnvironment->lpVtbl->Release(webView->webviewEnvironment);
             }
         }
+
+        _webui_free_mem((void*) webView->titleChangedHandler_lpVtbl);
+        _webui_free_mem((void*) webView->titleChangedHandler);
+        _webui_free_mem((void*) webView->createWebViewEnvironmentHandler_lpVtbl);
+        _webui_free_mem((void*) webView->createWebViewEnvironmentHandler);
+        _webui_free_mem((void*) webView->createWebViewControllerHandler_lpVtbl);
+        _webui_free_mem((void*) webView->createWebViewControllerHandler);
+
         _webui_free_mem((void*) webView->url);
         _webui_free_mem((void*) webView);
     };
@@ -9237,6 +9264,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         // Clean
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t[Thread .] _webui_webview_thread() -> Cleaning\n");
+        #endif
         _webui_wv_free(win->webView);
         _webui_free_mem((void*) cacheFolderW);
         win->webView = NULL;
