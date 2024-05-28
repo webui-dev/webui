@@ -310,6 +310,9 @@ _webui_window_t;
 
 // Core
 typedef struct _webui_core_t {
+    struct {
+        bool show_wait_connection;
+    } config;
     volatile size_t servers;
     char* html_elements[WEBUI_MAX_IDS];
     size_t used_ports[WEBUI_MAX_IDS];
@@ -779,16 +782,6 @@ size_t webui_new_window_id(size_t window_number) {
 
     // Generate a random token
     win->token = _webui_generate_random_uint32();
-
-    #ifdef __APPLE__
-    // if (_webui_macos_wv_new(window_number)) {
-    //     if (!_webui_core.is_webview) {
-    //         _webui_core.is_webview = true;
-    //         // Set close callback once
-    //         _webui_macos_wv_set_close_cb(_webui_wv_event_closed);
-    //     }
-    // }
-    #endif
 
     #ifdef WEBUI_LOG
     printf("[User] webui_new_window_id() -> New window #%zu @ 0x%p\n", window_number, win);
@@ -1803,6 +1796,29 @@ bool webui_set_tls_certificate(const char* certificate_pem, const char* private_
     #endif
 
     return false;
+}
+
+void webui_config(webui_configs option, bool status) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_config([%d], [%d])\n", option, status);
+    #endif
+
+    // Initialization
+    _webui_init();
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE))
+        return;
+
+    switch (option) {
+        case show_wait_connection:
+            _webui_core.config.show_wait_connection = status;
+            break;
+        #ifdef WEBUI_LOG
+        default:
+            printf("[User] webui_config -> Unknown option [%d]\n", option);
+            break;
+        #endif
+    }
 }
 
 bool webui_set_port(size_t window, size_t port) {
@@ -6398,8 +6414,8 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
 
         // Run browser
         bool runBrowser = false;
-        if (browser != NoBrowser) {
-            if (!runWebView) {
+        if (!runWebView) {
+            if (browser != NoBrowser) {
                 if (!_webui_browser_start(win, window_url, browser)) {
                     #ifdef WEBUI_LOG
                     printf("[Core]\t\t_webui_show_window() -> App-mode browser failed.\n");
@@ -6477,60 +6493,71 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
         _webui_free_mem((void * ) window_url);
     }
 
-    // Wait for connection
-    if ((_webui_core.is_webview) || (browser != NoBrowser)) {
+    // Wait for window connection
+    if (_webui_core.config.show_wait_connection) {
 
-        size_t timeout = (_webui_core.startup_timeout > 0 ? _webui_core.startup_timeout : WEBUI_DEF_TIMEOUT);
-        _webui_timer_t timer;
-        _webui_timer_start( & timer);
-        for (;;) {
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_show_window() -> Waiting for window connection\n");
+        #endif
 
-            _webui_sleep(10);            
+        if ((_webui_core.is_webview) || (browser != NoBrowser)) {
 
-            // Process WebView if any
-            if (_webui_core.is_webview) {
-                #ifdef _WIN32
-                // ...
-                #elif __linux__
+            size_t timeout = (_webui_core.startup_timeout > 0 ? _webui_core.startup_timeout : WEBUI_DEF_TIMEOUT);
+            _webui_timer_t timer;
+            _webui_timer_start( & timer);
+            for (;;) {
+
+                _webui_sleep(10);            
+
+                // Process WebView if any
                 if (_webui_core.is_webview) {
-                    while (gtk_events_pending()) {
-                        gtk_main_iteration_do(0);
-                    }
-                }
-                #else
-                if (!_webui_core.is_wkwebview_main_run) {
+                    #ifdef _WIN32
+                    // ...
+                    #elif __linux__
                     if (_webui_core.is_webview) {
-                        _webui_macos_wv_process();
+                        while (gtk_events_pending()) {
+                            gtk_main_iteration_do(0);
+                        }
                     }
+                    #else
+                    if (!_webui_core.is_wkwebview_main_run) {
+                        if (_webui_core.is_webview) {
+                            _webui_macos_wv_process();
+                        }
+                    }
+                    #endif
                 }
-                #endif
+
+                // Stop if window is connected
+                if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE))
+                    break;
+                
+                // Stop if timer is finished
+                if (_webui_timer_is_end(&timer, (timeout * 1000)))
+                    break;
             }
+        } else {
 
-            // Stop if window is connected
-            if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE))
-                break;
-            
-            // Stop if timer is finished
-            if (_webui_timer_is_end(&timer, (timeout * 1000)))
-                break;
+            // Wait for server thread to start
+            _webui_timer_t timer;
+            _webui_timer_start(&timer);
+            for (;;) {
+                // Stop if server thread started
+                _webui_sleep(100);
+                if (win->server_running)
+                    break;
+                // Stop if timer is finished
+                if (_webui_timer_is_end(&timer, (1000)))
+                    break;
+            }
         }
-    } else {
 
-        // Wait for server thread to start
-        _webui_timer_t timer;
-        _webui_timer_start(&timer);
-        for (;;) {
-            // Stop if server thread started
-            _webui_sleep(100);
-            if (win->server_running)
-                break;
-            // Stop if timer is finished
-            if (_webui_timer_is_end(&timer, (1000)))
-                break;
-        }
+        // The window is successfully launched and connected.
+        return _webui_mutex_is_connected(win, WEBUI_MUTEX_NONE);
     }
 
-    return _webui_mutex_is_connected(win, WEBUI_MUTEX_NONE);
+    // The window is successfully launched.
+    return true;
 }
 
 static void _webui_window_event(
@@ -6721,6 +6748,9 @@ static void _webui_init(void) {
     _webui_core.startup_timeout = WEBUI_DEF_TIMEOUT;
     _webui_core.executable_path = _webui_get_current_path();
     _webui_core.default_server_root_path = (char*)_webui_malloc(WEBUI_MAX_PATH);
+
+    // Initializing configs
+    _webui_core.config.show_wait_connection = true;
 
     // Initializing server services
     #ifdef WEBUI_TLS
@@ -9125,6 +9155,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         if (SUCCEEDED(hr)) {
 
+            // Let `wait()` use safe main-thread WebView2 loop
+            _webui_core.is_webview = true;
+
             // Success
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
 
@@ -9504,7 +9537,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 return false;
             }
 
-            // Let wait() use main thread WebView loop
+            // Let `wait()` use safe main-thread GTK WebView loop
             _webui_core.is_webview = true;
 
             // Initialize GTK
@@ -9732,15 +9765,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     static bool _webui_wv_show(_webui_window_t* win, char* url) {
 
         #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_wv_show ([%s])\n", url);
+        printf("[Core]\t\t_webui_wv_show([%s])\n", url);
         #endif
 
         // Apple macOS WKWebView
         if (!_webui_core.is_wkwebview_main_run) {
-
-            //
             if (_webui_macos_wv_new(win->window_number)) {
                 if (!_webui_core.is_webview) {
+                    // Let `wait()` use safe main-thread WKWebView loop
                     _webui_core.is_webview = true;
                     // Set close callback once
                     _webui_macos_wv_set_close_cb(_webui_wv_event_closed);

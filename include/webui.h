@@ -140,6 +140,13 @@ enum webui_events {
     WEBUI_EVENT_CALLBACK,         // 4. Function call event
 };
 
+typedef enum {
+    // Control if `webui_show()` and `webui_show_x()` should wait 
+    // for the window to connect before returns or not.
+    // Default: True
+    show_wait_connection = 0,
+} webui_configs;
+
 // -- Structs -------------------------
 typedef struct webui_event_t {
     size_t window;       // The window object number
@@ -550,6 +557,16 @@ WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
  * @example bool ret = webui_set_port(myWindow, 8080);
  */
 WEBUI_EXPORT bool webui_set_port(size_t window, size_t port);
+
+/**
+ * @brief Control the WebUI behaviour. It's better to call at the beginning.
+ *
+ * @param option The desired option from `webui_configs` enum
+ * @param status The status of the option, `true` or `false`
+ *
+ * @example webui_config(show_wait_connection, false);
+ */
+WEBUI_EXPORT void webui_config(webui_configs option, bool status);
 
 // -- SSL/TLS -------------------------
 
