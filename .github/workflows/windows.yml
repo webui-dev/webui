@@ -29,7 +29,11 @@ jobs:
       contents: write
     strategy:
       matrix:
-        compiler: [GCC, MSVC]
+        include:
+          - compiler: GCC
+            make: mingw32-make
+          - compiler: MSVC
+            make: nmake
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -42,19 +46,34 @@ jobs:
       - if: matrix.compiler == 'MSVC'
         uses: ilammy/msvc-dev-cmd@v1
       - name: Build Debug Target
-        run: |
-          if ('${{ matrix.compiler }}' -eq 'MSVC') {
-            nmake debug
-          } else {
-            mingw32-make debug
-          }
+        run: ${{ matrix.make }} debug
       - name: Build Release Target
+        run: ${{ matrix.make }}
+      - name: Build examples
         run: |
-          if ('${{ matrix.compiler }}' -eq 'MSVC') {
-            nmake
-          } else {
-            mingw32-make
+          $examples_base_dir = "$(Get-Location)/examples/C/"
+          foreach ($example in Get-ChildItem -Path $examples_base_dir -Directory) {
+              Write-Host "> $example"
+              Set-Location -Path $example.FullName
+              if (!$?) {
+                  $exit_code = 1
+                  continue
+              }
+              $make_output = Invoke-Expression ${{ matrix.make }}
+              if (!$?) {
+                  Write-Host "Failed to build '$example': $make_output"
+                  $exit_code = 1
+                  continue
+                }
+              Write-Output $make_output
+              if (!(Test-Path "main.exe") -or !(Test-Path "main-dyn.exe")) {
+                  Write-Host "Failed to find executable for '$example'"
+                  Get-ChildItem
+                  $exit_code = 1
+                  continue
+              }
           }
+          exit $exit_code
       - name: Prepare Artifact
         shell: bash
         run: |

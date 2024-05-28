@@ -45,6 +45,24 @@ jobs:
         run: make ARCH_TARGET=${{ matrix.arch }} debug
       - name: Build Release Target
         run: make ARCH_TARGET=${{ matrix.arch }}
+      - name: Build examples
+        run: |
+          examples_base_dir=$(pwd)/examples/C
+          for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
+            echo "> $example"
+            cd $example || (exit_code=1 && continue)
+            if ! make; then
+               echo "Failed to build '$example'"
+               exit_code=1
+               continue
+            fi
+            if [[ ! -e "main" || ! -e "main-dyn" ]] ; then
+              echo "Failed to find executable for '$example'" && find .
+              exit_code=1
+              continue
+            fi
+          done
+          exit $exit_code
       - name: Prepare Artifacts
         run: |
           cp -r include dist
