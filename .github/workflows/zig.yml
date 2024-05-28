@@ -16,7 +16,16 @@ jobs:
         uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.11.0
-      - name: Build libarary
+      - name: Build static library
         run: zig build
+      - name: Build dynamic library
+        if: ${{ !cancelled() }}
+        run: zig build -Ddynamic
+      - name: Build static library with TLS support
+        if: runner.os == 'Linux'
+        run: zig build -Denable-tls
+      - name: Build dynamic library with TLS support
+        if: runner.os == 'Linux'
+        run: zig build -Ddynamic -Denable-tls
       - name: Build examples
         run: zig build examples
