@@ -75,11 +75,19 @@ fn build_lib(b: *Build, optimize: OptimizeMode, target: CrossTarget, is_dynamic:
     webui.addIncludePath(.{ .path = "include" });
     webui.installHeader("include/webui.h", "webui.h");
 
-    if (target.os_tag == .windows or (target.os_tag == null and builtin.os.tag == .windows)) {
+    if (target.isDarwin()) {
+        webui.addCSourceFile(.{
+            .file = .{ .path = "src/webview/wkwebview.m" },
+            .flags = &.{},
+        });
+        webui.linkFramework("Cocoa");
+        webui.linkFramework("WebKit");
+    } else if (target.isWindows()) {
         webui.linkSystemLibrary("ws2_32");
+        webui.linkSystemLibrary("Ole32");
         if (target.abi == .msvc) {
-            webui.linkSystemLibrary("shell32");
             webui.linkSystemLibrary("Advapi32");
+            webui.linkSystemLibrary("Shell32");
             webui.linkSystemLibrary("user32");
         }
         if (enable_tls) {
