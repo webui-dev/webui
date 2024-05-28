@@ -29,7 +29,11 @@ jobs:
       contents: write
     strategy:
       matrix:
-        compiler: [GCC, MSVC]
+        include:
+          - compiler: GCC
+            make: mingw32-make
+          - compiler: MSVC
+            make: nmake
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -42,19 +46,9 @@ jobs:
       - if: matrix.compiler == 'MSVC'
         uses: ilammy/msvc-dev-cmd@v1
       - name: Build Debug Target
-        run: |
-          if ('${{ matrix.compiler }}' -eq 'MSVC') {
-            nmake debug
-          } else {
-            mingw32-make debug
-          }
+        run: ${{ matrix.make }} debug
       - name: Build Release Target
-        run: |
-          if ('${{ matrix.compiler }}' -eq 'MSVC') {
-            nmake
-          } else {
-            mingw32-make
-          }
+        run: ${{ matrix.make }}
       - name: Build examples
         run: |
           $examples_base_dir = "$(Get-Location)/examples/C/"
@@ -65,12 +59,7 @@ jobs:
                   $exit_code = 1
                   continue
               }
-              if ('${{ matrix.compiler }}' -eq 'MSVC') {
-                  $make_cmd = "nmake"
-              } else {
-                  $make_cmd = "mingw32-make"
-              }
-              $make_output = Invoke-Expression $make_cmd
+              $make_output = Invoke-Expression ${{ matrix.make }}
               if (!$?) {
                   Write-Host "Failed to build '$example': $make_output"
                   $exit_code = 1
