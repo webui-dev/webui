@@ -625,6 +625,17 @@ WEBUI_EXPORT bool webui_script(size_t window, const char* script, size_t timeout
 WEBUI_EXPORT void webui_set_runtime(size_t window, size_t runtime);
 
 /**
+ * @brief Get how many arguments there are in an event.
+ *
+ * @param e The event struct
+ *
+ * @return Returns the arguments count.
+ *
+ * @example size_t count = webui_get_count(e);
+ */
+WEBUI_EXPORT size_t webui_get_count(webui_event_t* e);
+
+/**
  * @brief Get an argument as integer at a specific index
  *
  * @param e The event struct
