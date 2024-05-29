@@ -8770,7 +8770,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     ULONG STDMETHODCALLTYPE ReleaseController(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This);
 
     HRESULT STDMETHODCALLTYPE TitleChanged_Invoke(
-        ICoreWebView2DocumentTitleChangedEventHandler* This, ICoreWebView2* sender, void* args) {
+        ICoreWebView2DocumentTitleChangedEventHandler* This, ICoreWebView2* sender, IUnknown* args) {
         TitleChangedHandler* handler = (TitleChangedHandler*)This;
         _webui_wv_win32_t* webView = handler->webView;
         LPWSTR newTitle = NULL;
