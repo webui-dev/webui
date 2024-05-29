@@ -36,11 +36,11 @@ pub fn build(b: *Build) void {
         });
     }
 
-    const lib = build_lib(b, optimize, target, is_dynamic, enable_tls) catch |err| {
+    const lib = build_lib(b, target, optimize, is_dynamic, enable_tls) catch |err| {
         log.err("failed to build webui library: {}", .{err});
         std.os.exit(1);
     };
-    build_examples(b, optimize, target, lib, verbose) catch |err| {
+    build_examples(b, target, optimize, lib) catch |err| {
         log.err("failed to build examples: {}", .{err});
         std.os.exit(1);
     };
@@ -50,7 +50,7 @@ pub fn build(b: *Build) void {
     }
 }
 
-fn build_lib(b: *Build, optimize: OptimizeMode, target: CrossTarget, is_dynamic: bool, enable_tls: bool) !*Compile {
+fn build_lib(b: *Build, target: CrossTarget, optimize: OptimizeMode, is_dynamic: bool, enable_tls: bool) !*Compile {
     // Prepare compiler flags.
     const tls_flags = &[_][]const u8{ "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1" };
 
@@ -110,7 +110,7 @@ fn build_lib(b: *Build, optimize: OptimizeMode, target: CrossTarget, is_dynamic:
     return webui;
 }
 
-fn build_examples(b: *Build, optimize: OptimizeMode, target: CrossTarget, webui_lib: *Compile) !void {
+fn build_examples(b: *Build, target: CrossTarget, optimize: OptimizeMode, webui_lib: *Compile) !void {
     const build_all_step = b.step("examples", "builds the library and its examples");
 
     const examples_path = (Build.LazyPath{ .path = "examples/C" }).getPath(b);
