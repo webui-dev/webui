@@ -22,25 +22,32 @@ pub fn build(b: *Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const is_dynamic = b.option(bool, "dynamic", "build the dynamic library") orelse false;
     const enable_tls = b.option(bool, "enable-tls", "enable TLS support") orelse false;
+    const verbose = b.option(bool, "verbose", "enable verbose output") orelse false;
 
     if (enable_tls and !target.isNative()) {
         log.err("cross compilation is not supported with TLS enabled", .{});
         std.os.exit(1);
     }
 
-    std.debug.print("Building {s} WebUI library{s}...\n", .{
-        if (is_dynamic) "dynamic" else "static",
-        if (enable_tls) " with TLS support" else "",
-    });
+    if (verbose) {
+        std.debug.print("Building {s} WebUI library{s}...\n", .{
+            if (is_dynamic) "dynamic" else "static",
+            if (enable_tls) " with TLS support" else "",
+        });
+    }
 
     const lib = build_lib(b, optimize, target, is_dynamic, enable_tls) catch |err| {
         log.err("failed to build webui library: {}", .{err});
         std.os.exit(1);
     };
-    build_examples(b, optimize, target, lib) catch |err| {
+    build_examples(b, optimize, target, lib, verbose) catch |err| {
         log.err("failed to build examples: {}", .{err});
         std.os.exit(1);
     };
+
+    if (verbose) {
+        std.debug.print("Done.\n", .{});
+    }
 }
 
 fn build_lib(b: *Build, optimize: OptimizeMode, target: CrossTarget, is_dynamic: bool, enable_tls: bool) !*Compile {
@@ -125,13 +132,13 @@ fn build_examples(b: *Build, optimize: OptimizeMode, target: CrossTarget, webui_
 
         const exe_install = b.addInstallArtifact(exe, .{});
         const exe_run = b.addRunArtifact(exe);
-
-        build_all_step.dependOn(&exe_install.step);
-        exe_run.step.dependOn(&exe_install.step);
-        exe_run.cwd = try std.fmt.allocPrint(b.allocator, "{s}/{s}", .{ examples_path, example_name });
-
         const step_name = try std.fmt.allocPrint(b.allocator, "run_{s}", .{example_name});
         const step_desc = try std.fmt.allocPrint(b.allocator, "run example {s}", .{example_name});
+
+        exe_run.cwd = try std.fmt.allocPrint(b.allocator, "{s}/{s}", .{ examples_path, example_name });
+
+        exe_run.step.dependOn(&exe_install.step);
+        build_all_step.dependOn(&exe_install.step);
         b.step(step_name, step_desc).dependOn(&exe_run.step);
     }
 }
