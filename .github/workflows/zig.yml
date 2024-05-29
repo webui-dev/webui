@@ -11,6 +11,10 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        if: runner.os == 'macOS'
+        with:
+          xcode-version: latest-stable
       - uses: actions/checkout@v4
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
