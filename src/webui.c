@@ -1462,6 +1462,32 @@ long long int webui_get_int_at(webui_event_t* e, size_t index) {
     return 0;
 }
 
+double webui_get_float_at(webui_event_t* e, size_t index) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_get_float_at([%zu])\n", index);
+    #endif
+
+    // Initialization & Dereference
+    // are done by webui_get_string()
+
+    if (index > WEBUI_MAX_ARG)
+        return 0.0;
+
+    const char* str = webui_get_string_at(e, index);
+    if (str == NULL)
+        return 0.0;
+
+    size_t len = _webui_strlen(str);
+    if (len > 0 && len <= 20) {
+        // 64-bit max is -9,223,372,036,854,775,808 (20 character)
+        char* endptr;
+        return strtod(str, &endptr);
+    }
+
+    return 0.0;
+}
+
 bool webui_get_bool_at(webui_event_t* e, size_t index) {
 
     #ifdef WEBUI_LOG
@@ -1525,6 +1551,15 @@ long long int webui_get_int(webui_event_t* e) {
     #endif
 
     return webui_get_int_at(e, 0);
+}
+
+double webui_get_float(webui_event_t* e) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_get_float()\n");
+    #endif
+
+    return webui_get_float_at(e, 0);
 }
 
 bool webui_get_bool(webui_event_t* e) {
