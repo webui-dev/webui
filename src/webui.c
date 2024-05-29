@@ -161,10 +161,10 @@ typedef struct webui_event_inf_t {
         volatile bool navigate;
         volatile bool size;
         volatile bool position;
-        volatile unsigned int width;
-        volatile unsigned int height;
-        volatile unsigned int x;
-        volatile unsigned int y;
+        volatile int width;
+        volatile int height;
+        volatile int x;
+        volatile int y;
         volatile bool stop;
     } _webui_wv_win32_t;
 #elif __linux__
@@ -9078,8 +9078,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         webView->url = wURL;
         webView->width = (win->width > 0 ? win->width : 800);
         webView->height = (win->height > 0 ? win->height : 600);
-        webView->x = (win->x > 0 ? win->x : 100);
-        webView->y = (win->y > 0 ? win->y : 100);
+        webView->x = (win->x > 0 ? win->x : ((GetSystemMetrics(SM_CXSCREEN) - 800) / 2));
+        webView->y = (win->y > 0 ? win->y : ((GetSystemMetrics(SM_CYSCREEN) - 600) / 2));
         win->webView = webView;
 
         // Note: To garantee all Microsoft WebView's operations ownership we should
@@ -9236,7 +9236,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         win->webView->hwnd = CreateWindowExA(
             0, wvClass, "", WS_OVERLAPPEDWINDOW,
-            CW_USEDEFAULT, CW_USEDEFAULT, 
+            win->webView->x, win->webView->y, 
             win->webView->width, win->webView->height,
             NULL, NULL, GetModuleHandle(NULL), NULL
         );
