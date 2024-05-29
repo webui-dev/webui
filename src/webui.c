@@ -235,8 +235,6 @@ typedef struct webui_event_inf_t {
     extern void _webui_macos_wv_set_close_cb(void (*cb)(int index));
     extern void _webui_macos_wv_new_thread_safe(int index);
 
-    static void _webui_wv_event_closed(int index);
-
     typedef struct _webui_wv_macos_t {
         // macOS WebView
         int index;
@@ -263,6 +261,7 @@ typedef struct _webui_window_t {
     bool bridge_handled;
     bool server_handled;
     bool is_embedded_html;
+    bool is_closed;
     size_t custom_server_port;
     size_t server_port;
     size_t ws_port;
@@ -359,9 +358,11 @@ typedef struct _webui_core_t {
     uint8_t * ssl_cert;
     uint8_t * ssl_key;
     #endif
+    // WebView
     bool is_webview;
     #ifdef _WIN32
     char* webview_cacheFolder;
+    HMODULE webviewLib;
     #elif __linux__
     bool is_gtk_main_run;
     #else
@@ -509,6 +510,7 @@ static bool _webui_wv_navigate(_webui_wv_win32_t* webView, wchar_t* url);
 static bool _webui_wv_set_position(_webui_wv_win32_t* webView, int x, int y);
 static bool _webui_wv_set_size(_webui_wv_win32_t* webView, int windowWidth, int windowHeight);
 static bool _webui_wv_show(_webui_window_t* win, char* url);
+static void _webui_wv_event_closed(_webui_window_t* win);
 #elif __linux__
 // Linux
 static void _webui_wv_free();
@@ -517,6 +519,7 @@ static bool _webui_wv_navigate(_webui_wv_linux_t* webView, char* url);
 static bool _webui_wv_set_position(_webui_wv_linux_t* webView, int x, int y);
 static bool _webui_wv_set_size(_webui_wv_linux_t* webView, int windowWidth, int windowHeight);
 static bool _webui_wv_show(_webui_window_t* win, char* url);
+static void _webui_wv_event_closed(void *widget, void *arg);
 #else
 // macOS
 static void _webui_wv_free(_webui_wv_macos_t* webView);
@@ -525,6 +528,7 @@ static bool _webui_wv_navigate(_webui_wv_macos_t* webView, char* url);
 static bool _webui_wv_set_position(_webui_wv_macos_t* webView, int x, int y);
 static bool _webui_wv_set_size(_webui_wv_macos_t* webView, int windowWidth, int windowHeight);
 static bool _webui_wv_show(_webui_window_t* win, char* url);
+static void _webui_wv_event_closed(int index);
 #endif
 
 #ifdef WEBUI_TLS
@@ -7515,6 +7519,7 @@ static WEBUI_THREAD_SERVER_START {
                 } else {
 
                     // UI is connected
+                    win->is_closed = false;
 
                     #ifdef WEBUI_LOG
                     printf(
@@ -7535,47 +7540,55 @@ static WEBUI_THREAD_SERVER_START {
                             break;
                         }
 
-                        if (!_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE) && !_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE)) {
+                        if (!_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE)) {
 
                             // The UI is just get disconnected
-                            // probably the user did a refresh
-                            // let's wait for re-connection...
 
                             #ifdef WEBUI_LOG
                             printf(
-                                "[Core]\t\t_webui_server_thread([%zu]) -> Window "
-                                "disconnected\n",
+                                "[Core]\t\t_webui_server_thread([%zu]) -> Window disconnected\n",
                                 win->window_number
                             );
                             #endif
 
-                            do {
-                                #ifdef WEBUI_LOG
-                                printf(
-                                    "[Core]\t\t_webui_server_thread([%zu]) -> Waiting "
-                                    "for reconnection\n",
-                                    win->window_number
-                                );
-                                #endif
+                            if (!win->is_closed) {
 
-                                win->file_handled = false;
+                                // probably the user did a refresh
+                                // let's wait for re-connection...
 
-                                _webui_timer_t timer_3;
-                                _webui_timer_start( & timer_3);
-                                for (;;) {
+                                do {
+                                    #ifdef WEBUI_LOG
+                                    printf(
+                                        "[Core]\t\t_webui_server_thread([%zu]) -> Waiting for reconnection\n",
+                                        win->window_number
+                                    );
+                                    #endif
 
-                                    // Stop if window is re-connected
-                                    _webui_sleep(1);
-                                    if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE))
-                                        break;
+                                    win->file_handled = false;
 
-                                    // Stop if timer is finished
-                                    if (_webui_timer_is_end( & timer_3, 1000))
-                                        break;
+                                    _webui_timer_t timer_3;
+                                    _webui_timer_start( & timer_3);
+                                    for (;;) {
+
+                                        // Stop if window is re-connected
+                                        _webui_sleep(1);
+                                        if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE))
+                                            break;
+
+                                        // Stop if timer is finished
+                                        if (_webui_timer_is_end( & timer_3, 1000))
+                                            break;
+                                    }
+                                } while(win->file_handled && !_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE));
+
+                                if (!_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE)) {
+                                    stop = true;
+                                    break;
                                 }
-                            } while(win->file_handled && !_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE));
+                            }
+                            else {
 
-                            if (!_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE)) {
+                                // Window get closed
                                 stop = true;
                                 break;
                             }
@@ -8957,7 +8970,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     if (win->webView) {
                         win->webView->stop = true;
                         _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);
-                    }
+                    }                    
+                    _webui_wv_event_closed(win);
                 }
                 break;
             case WM_DESTROY:
@@ -8972,6 +8986,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
         return 0;
     };
+
+    // Close Event
+    static void _webui_wv_event_closed(_webui_window_t* win) {
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_wv_event_closed([%zu])\n", win->window_number);
+        #endif
+        win->is_closed = true;
+    }
 
     static bool _webui_wv_show(_webui_window_t* win, char* url) {
 
@@ -9124,13 +9146,13 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         // WebView Dynamic Library
-        static HMODULE webviewLib = NULL;
-        webviewLib = LoadLibraryA("WebView2Loader.dll");
-        
-        if (!webviewLib) {
-            _webui_wv_free(win->webView);
-            win->webView = NULL;
-            WEBUI_THREAD_RETURN
+        if (!_webui_core.webviewLib) {
+            _webui_core.webviewLib = LoadLibraryA("WebView2Loader.dll");
+            if (!_webui_core.webviewLib) {
+                _webui_wv_free(win->webView);
+                win->webView = NULL;
+                WEBUI_THREAD_RETURN
+            }
         }
 
         // Window class
@@ -9169,7 +9191,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         ShowWindow(win->webView->hwnd, SW_SHOW);
         static CreateCoreWebView2EnvironmentWithOptionsFunc createEnv = NULL;
         createEnv = (CreateCoreWebView2EnvironmentWithOptionsFunc)GetProcAddress(
-            webviewLib,
+            _webui_core.webviewLib,
             "CreateCoreWebView2EnvironmentWithOptions"
         );
 
@@ -9306,8 +9328,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wv_event_closed()\n");
         #endif
-        _webui_window_t *win = (_webui_window_t *)arg;
+        _webui_window_t* win = _webui_dereference_win_ptr(arg);
         if (win) {
+            win->is_closed = true;
             if (win->webView) {
                 win->webView->open = false;
             }
@@ -9797,6 +9820,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         printf("[Core]\t\t_webui_wv_event_closed([%d])\n", index);
         #endif
         if (_webui_core.wins[index] != NULL) {
+            _webui_core.wins[index]->is_closed = true;
             if (_webui_core.wins[index]->webView) {
                 // Close window
                 if (_webui_core.wins[index]->connected) {
