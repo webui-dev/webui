@@ -761,6 +761,16 @@ WEBUI_EXPORT size_t webui_get_size(webui_event_t* e);
 WEBUI_EXPORT void webui_return_int(webui_event_t* e, long long int n);
 
 /**
+ * @brief Return the response to JavaScript as float.
+ *
+ * @param e The event struct
+ * @param f The float number to be send to JavaScript
+ *
+ * @example webui_return_float(e, 123.456);
+ */
+WEBUI_EXPORT void webui_return_float(webui_event_t* e, double f);
+
+/**
  * @brief Return the response to JavaScript as string.
  *
  * @param e The event struct
