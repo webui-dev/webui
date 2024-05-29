@@ -5,28 +5,35 @@ const builtin = @import("builtin");
 
 const Build = std.Build;
 const OptimizeMode = std.builtin.OptimizeMode;
-const CrossTarget = std.zig.CrossTarget;
 const Compile = Build.Step.Compile;
 const Module = Build.Module;
 
 const log = std.log.scoped(.WebUI);
 const lib_name = "webui";
+const zig_ver = builtin.zig_version.minor;
 
-pub fn build(b: *Build) void {
-    if (builtin.zig_version.minor > 11) {
-        log.err("unsupported Zig version. For building with 0.12 and later, plaese see `github.com/webui-dev/zig-webui`", .{});
-        std.process.exit(1);
-    }
-
+pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
     const is_dynamic = b.option(bool, "dynamic", "build the dynamic library") orelse false;
     const enable_tls = b.option(bool, "enable-tls", "enable TLS support") orelse false;
     const verbose = b.option(bool, "verbose", "enable verbose output") orelse false;
 
-    if (enable_tls and !target.isNative()) {
-        log.err("cross compilation is not supported with TLS enabled", .{});
-        std.os.exit(1);
+    switch (zig_ver) {
+        11 => {
+            if (enable_tls and !target.isNative()) {
+                log.err("cross compilation is not supported with TLS enabled", .{});
+                std.os.exit(1);
+            }
+        },
+        12, 13 => {
+            if (enable_tls and !target.query.isNative()) {
+                log.err("cross compilation is not supported with TLS enabled", .{});
+                std.process.exit(1);
+            }
+        },
+        else => @compileError("unsupported Zig version!"),
     }
 
     if (verbose) {
@@ -34,31 +41,8 @@ pub fn build(b: *Build) void {
             if (is_dynamic) "dynamic" else "static",
             if (enable_tls) " with TLS support" else "",
         });
+        defer std.debug.print("Done.\n", .{});
     }
-
-    const lib = build_lib(b, target, optimize, is_dynamic, enable_tls) catch |err| {
-        log.err("failed to build webui library: {}", .{err});
-        std.os.exit(1);
-    };
-    build_examples(b, target, optimize, lib) catch |err| {
-        log.err("failed to build examples: {}", .{err});
-        std.os.exit(1);
-    };
-
-    if (verbose) {
-        std.debug.print("Done.\n", .{});
-    }
-}
-
-fn build_lib(b: *Build, target: CrossTarget, optimize: OptimizeMode, is_dynamic: bool, enable_tls: bool) !*Compile {
-    // Prepare compiler flags.
-    const tls_flags = &[_][]const u8{ "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1" };
-
-    var civetweb_flags = std.ArrayList([]const u8).init(std.heap.page_allocator);
-    defer civetweb_flags.deinit();
-    try civetweb_flags.appendSlice(&[_][]const u8{ "-DNDEBUG", "-DNO_CACHING", "-DNO_CGI", "-DUSE_WEBSOCKET" });
-    try civetweb_flags.appendSlice(if (enable_tls) tls_flags else &.{ "-DUSE_WEBSOCKET", "-DNO_SSL" });
-    if (target.isWindows()) try civetweb_flags.append("-DMUST_IMPLEMENT_CLOCK_GETTIME");
 
     const webui = if (is_dynamic) b.addSharedLibrary(.{
         .name = lib_name,
@@ -69,6 +53,27 @@ fn build_lib(b: *Build, target: CrossTarget, optimize: OptimizeMode, is_dynamic:
         .target = target,
         .optimize = optimize,
     });
+    try add_links(webui, enable_tls);
+
+    b.installArtifact(webui);
+
+    build_examples(b, webui) catch |err| {
+        log.err("failed to build examples: {}", .{err});
+        if (zig_ver < 12) std.os.exit(1) else std.process.exit(1);
+    };
+}
+
+fn add_links(webui: *Compile, enable_tls: bool) !void {
+    const webui_target = if (zig_ver < 12) webui.target else webui.rootModuleTarget();
+    const is_windows = if (zig_ver < 12) webui_target.isWindows() else webui_target.os.tag == .windows;
+
+    // Prepare compiler flags.
+    const tls_flags = &[_][]const u8{ "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1" };
+    var civetweb_flags = std.ArrayList([]const u8).init(std.heap.page_allocator);
+    defer civetweb_flags.deinit();
+    try civetweb_flags.appendSlice(&[_][]const u8{ "-DNDEBUG", "-DNO_CACHING", "-DNO_CGI", "-DUSE_WEBSOCKET" });
+    try civetweb_flags.appendSlice(if (enable_tls) tls_flags else &[_][]const u8{ "-DUSE_WEBSOCKET", "-DNO_SSL" });
+    if (is_windows) try civetweb_flags.append("-DMUST_IMPLEMENT_CLOCK_GETTIME");
 
     webui.addCSourceFile(.{
         .file = .{ .path = "src/webui.c" },
@@ -80,19 +85,22 @@ fn build_lib(b: *Build, target: CrossTarget, optimize: OptimizeMode, is_dynamic:
     });
     webui.linkLibC();
     webui.addIncludePath(.{ .path = "include" });
-    webui.installHeader("include/webui.h", "webui.h");
-
-    if (target.isDarwin()) {
+    if (zig_ver < 12) {
+        webui.installHeader("include/webui.h", "webui.h");
+    } else {
+        webui.installHeader(Build.LazyPath{ .path = "include/webui.h" }, "webui.h");
+    }
+    if (webui_target.isDarwin()) {
         webui.addCSourceFile(.{
             .file = .{ .path = "src/webview/wkwebview.m" },
             .flags = &.{},
         });
         webui.linkFramework("Cocoa");
         webui.linkFramework("WebKit");
-    } else if (target.isWindows()) {
+    } else if (is_windows) {
         webui.linkSystemLibrary("ws2_32");
         webui.linkSystemLibrary("Ole32");
-        if (target.abi == .msvc) {
+        if (webui_target.abi == .msvc) {
             webui.linkSystemLibrary("Advapi32");
             webui.linkSystemLibrary("Shell32");
             webui.linkSystemLibrary("user32");
@@ -105,16 +113,18 @@ fn build_lib(b: *Build, target: CrossTarget, optimize: OptimizeMode, is_dynamic:
         webui.linkSystemLibrary("ssl");
         webui.linkSystemLibrary("crypto");
     }
-
-    b.installArtifact(webui);
-    return webui;
 }
 
-fn build_examples(b: *Build, target: CrossTarget, optimize: OptimizeMode, webui_lib: *Compile) !void {
-    const build_all_step = b.step("examples", "builds the library and its examples");
+fn build_examples(b: *Build, webui: *Compile) !void {
+    const build_examples_step = b.step("examples", "builds the library and its examples");
+    const target = if (zig_ver < 12) webui.target else webui.root_module.resolved_target.?;
+    const optimize = if (zig_ver < 12) webui.optimize else webui.root_module.optimize.?;
 
     const examples_path = (Build.LazyPath{ .path = "examples/C" }).getPath(b);
-    var examples_dir = try std.fs.openIterableDirAbsolute(examples_path, .{});
+    var examples_dir = if (zig_ver < 12)
+        try std.fs.openIterableDirAbsolute(examples_path, .{})
+    else
+        try std.fs.openDirAbsolute(examples_path, .{ .iterate = true });
     defer examples_dir.close();
 
     var paths = examples_dir.iterate();
@@ -128,17 +138,18 @@ fn build_examples(b: *Build, target: CrossTarget, optimize: OptimizeMode, webui_
         const path = try std.fmt.allocPrint(b.allocator, "examples/C/{s}/main.c", .{example_name});
 
         exe.addCSourceFile(.{ .file = .{ .path = path }, .flags = &.{} });
-        exe.linkLibrary(webui_lib);
+        exe.linkLibrary(webui);
 
         const exe_install = b.addInstallArtifact(exe, .{});
         const exe_run = b.addRunArtifact(exe);
         const step_name = try std.fmt.allocPrint(b.allocator, "run_{s}", .{example_name});
         const step_desc = try std.fmt.allocPrint(b.allocator, "run example {s}", .{example_name});
 
-        exe_run.cwd = try std.fmt.allocPrint(b.allocator, "{s}/{s}", .{ examples_path, example_name });
+        const cwd = try std.fmt.allocPrint(b.allocator, "{s}/{s}", .{ examples_path, example_name });
+        if (zig_ver < 12) exe_run.cwd = cwd else exe_run.setCwd(.{ .path = cwd });
 
         exe_run.step.dependOn(&exe_install.step);
-        build_all_step.dependOn(&exe_install.step);
+        build_examples_step.dependOn(&exe_install.step);
         b.step(step_name, step_desc).dependOn(&exe_run.step);
     }
 }
