@@ -19,6 +19,9 @@ void my_function_integer(webui_event_t* e) {
 	// JavaScript:
 	// webui.call('MyID_Two', 123, 456, 789, 12345.6789);
 
+	size_t count = webui_get_count(e);
+	printf("my_function_integer: There is %zu arguments in this event\n", count); // 4
+
 	long long number_1 = webui_get_int(e); // Or webui_get_int_at(e, 0);
 	long long number_2 = webui_get_int_at(e, 1);
 	long long number_3 = webui_get_int_at(e, 2);
