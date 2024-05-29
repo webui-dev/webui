@@ -21,15 +21,15 @@ jobs:
         with:
           version: 0.11.0
       - name: Build static library
-        run: zig build
+        run: zig build -Dverbose
       - name: Build dynamic library
         if: ${{ !cancelled() }}
-        run: zig build -Ddynamic
+        run: zig build -Ddynamic -Dverbose
       - name: Build static library with TLS support
         if: runner.os == 'Linux'
-        run: zig build -Denable-tls
+        run: zig build -Denable-tls -Dverbose
       - name: Build dynamic library with TLS support
         if: runner.os == 'Linux'
-        run: zig build -Ddynamic -Denable-tls
+        run: zig build -Ddynamic -Denable-tls -Dverbose
       - name: Build examples
         run: zig build examples
