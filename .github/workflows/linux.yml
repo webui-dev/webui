@@ -121,7 +121,7 @@ jobs:
             now=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
             echo "TAG=nightly" >> $GITHUB_ENV
             echo "BODY=Generated on <samp>$now</samp> from commit ${{ github.sha }}." >> $GITHUB_ENV
-            echo "TITLE=WebUI Development Build" >> $GITHUB_ENV
+            echo "TITLE=WebUI Nightly Development Build" >> $GITHUB_ENV
           fi
       - name: Update Nightly Tag
         if: env.IS_PRERELEASE
