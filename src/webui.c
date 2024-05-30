@@ -136,7 +136,7 @@ typedef pthread_cond_t webui_condition_t;
 #define WEBUI_SCAT(dest, dest_size, src) strcat_s(dest, dest_size, src)
 #define WEBUI_FOPEN(file, filename, mode) fopen_s(&file, filename, mode)
 #else
-#define WEBUI_SPF(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, __VA_ARGS__)
+#define WEBUI_SPF(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, ##__VA_ARGS__)
 #define WEBUI_TOK(str, delim, context) strtok_r(str, delim, context)
 #define WEBUI_SCOPY(dest, dest_size, src) strncpy(dest, src, dest_size)
 #define WEBUI_SCAT(dest, dest_size, src) strncat(dest, src, dest_size)
@@ -9449,7 +9449,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     static bool _webui_wv_navigate(_webui_wv_linux_t* webView, char* url) {
         #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_wv_navigate([%ls])\n", url);
+        printf("[Core]\t\t_webui_wv_navigate([%s])\n", url);
         #endif
         if (webView) {
             if (webView->gtk_win) {
