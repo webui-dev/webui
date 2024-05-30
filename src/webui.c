@@ -133,10 +133,12 @@ typedef pthread_cond_t webui_condition_t;
 #define WEBUI_SPF(buffer, buffer_size, format, ...) sprintf_s(buffer, buffer_size, format, __VA_ARGS__)
 #define WEBUI_TOK(str, delim, context) strtok_s(str, delim, context)
 #define WEBUI_SCOPY(dest, dest_size, src) strcpy_s(dest, dest_size, src)
+#define WEBUI_SCAT(dest, dest_size, src) strcat_s(dest, dest_size, src)
 #else
 #define WEBUI_SPF(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, __VA_ARGS__)
 #define WEBUI_TOK(str, delim, context) strtok_r(str, delim, context)
 #define WEBUI_SCOPY(dest, dest_size, src) strncpy(dest, src, dest_size)
+#define WEBUI_SCAT(dest, dest_size, src) strncat(dest, src, dest_size)
 #endif
 
 // Timer
@@ -1218,7 +1220,7 @@ static void _webui_remove_firefox_profile_ini(const char* path, const char* prof
                 skip = true;
                 continue;
             } else
-                strcat(output, buffer);
+                WEBUI_SCAT(output, sizeof(output), buffer);
         }
     }
 
@@ -3788,7 +3790,7 @@ static const char* _webui_interpret_command(const char* cmd) {
     out = (char*)_webui_malloc(WEBUI_STDOUT_BUF);
     char* line = (char*)_webui_malloc(1024);
     while(fgets(line, 1024, pipe) != NULL)
-        strcat(out, line);
+        WEBUI_SCAT(out, WEBUI_STDOUT_BUF, line);
     WEBUI_PCLOSE(pipe);
 
     // Clean
@@ -4077,15 +4079,15 @@ static const char* _webui_generate_js_bridge(_webui_window_t * win) {
 
     // Generate the cb array
     char* event_cb_js_array = (char*)_webui_malloc(cb_mem_size);
-    strcat(event_cb_js_array, "[");
+    WEBUI_SCAT(event_cb_js_array, cb_mem_size, "[");
     for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if (_webui_core.html_elements[i] != NULL && !_webui_is_empty(_webui_core.html_elements[i])) {
-            strcat(event_cb_js_array, "\"");
-            strcat(event_cb_js_array, _webui_core.html_elements[i]);
-            strcat(event_cb_js_array, "\",");
+            WEBUI_SCAT(event_cb_js_array, cb_mem_size, "\"");
+            WEBUI_SCAT(event_cb_js_array, cb_mem_size, _webui_core.html_elements[i]);
+            WEBUI_SCAT(event_cb_js_array, cb_mem_size, "\",");
         }
     }
-    strcat(event_cb_js_array, "]");
+    WEBUI_SCAT(event_cb_js_array, cb_mem_size, "]");
 
     // Generate the full WebUI Bridge
     #ifdef WEBUI_LOG
@@ -4114,7 +4116,7 @@ static const char* _webui_generate_js_bridge(_webui_window_t * win) {
     if (win->position_set)
         c += WEBUI_SPF(js + c, len, "winX: %u, winY: %u, ", win->x, win->y);
     // Close
-    strcat(js, "}); }); ");
+    WEBUI_SCAT(js, len, "}); }); ");
 
     // Free
     _webui_free_mem((void * ) event_cb_js_array);
