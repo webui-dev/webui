@@ -4102,17 +4102,16 @@ static const char* _webui_generate_js_bridge(_webui_window_t * win) {
     #endif
     size_t len = 256 + cb_mem_size + _webui_strlen((const char* ) webui_javascript_bridge);
     char* js = (char*)_webui_malloc(len);
+    #ifdef WEBUI_TLS
+    const char* TLS = "true";
+    #else
+    const char* TLS = "false";
+    #endif
     int c = WEBUI_SPF(
         js, len,
         "%s\n document.addEventListener(\"DOMContentLoaded\",function(){ globalThis.webui = "
         "new WebuiBridge({ secure: %s, token: %" PRIu32 ", port: %zu, winNum: %zu, bindList: %s, log: %s, ",
-        webui_javascript_bridge,
-        #ifdef WEBUI_TLS
-        "true",
-        #else
-        "false",
-        #endif
-        token, win->ws_port, win->window_number, event_cb_js_array, log
+        webui_javascript_bridge, TLS, token, win->ws_port, win->window_number, event_cb_js_array, log
     );
     // Window Size
     if (win->size_set)
@@ -5506,7 +5505,7 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
             if (!_webui_is_empty(win->profile_name))
                 c = WEBUI_SPF(buffer, len, " -P %s", win->profile_name);
             // Basic
-            c += WEBUI_SPF(buffer + c, len, " -purgecaches", NULL); // `NULL` is for C/C++ IntelliSense.
+            c += WEBUI_SPF(buffer + c, len, " -purgecaches");
             // Kiosk Mode
             if (win->kiosk_mode)
                 c += WEBUI_SPF(buffer + c, len, " %s", "-kiosk");
@@ -5528,7 +5527,7 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
             }
 
             // URL (END)
-            c += WEBUI_SPF(buffer + c, len, " -new-window ", NULL); // `NULL` is for C/C++ IntelliSense.
+            c += WEBUI_SPF(buffer + c, len, " -new-window ");
             return c;
     }
 
