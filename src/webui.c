@@ -128,11 +128,13 @@ typedef pthread_cond_t webui_condition_t;
 #define WEBUI_DISABLE_OPTIMIZATION_END
 #endif
 
-// Sprintf
+// Safe C STD
 #ifdef _WIN32
 #define WEBUI_SPF(buffer, buffer_size, format, ...) sprintf_s(buffer, buffer_size, format, __VA_ARGS__)
+#define WEBUI_TOK(str, delim, context) strtok_s(str, delim, context)
 #else
 #define WEBUI_SPF(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, __VA_ARGS__)
+#define WEBUI_TOK(str, delim, context) strtok_r(str, delim, context)
 #endif
 
 // Timer
@@ -5494,7 +5496,7 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
             if (!_webui_is_empty(win->profile_name))
                 c = WEBUI_SPF(buffer, len, " -P %s", win->profile_name);
             // Basic
-            c += WEBUI_SPF(buffer + c, len, " -purgecaches");
+            c += WEBUI_SPF(buffer + c, len, " -purgecaches", NULL); // `NULL` is for C/C++ IntelliSense.
             // Kiosk Mode
             if (win->kiosk_mode)
                 c += WEBUI_SPF(buffer + c, len, " %s", "-kiosk");
@@ -5516,7 +5518,7 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
             }
 
             // URL (END)
-            c += WEBUI_SPF(buffer + c, len, " -new-window ");
+            c += WEBUI_SPF(buffer + c, len, " -new-window ", NULL); // `NULL` is for C/C++ IntelliSense.
             return c;
     }
 
@@ -8168,7 +8170,8 @@ static WEBUI_THREAD_RECEIVE {
                         char* args_lens = (char*)& packet[WEBUI_PROTOCOL_DATA + element_len + 1];
                         size_t args_len = _webui_strlen(args_lens);
                         char* args_ptr = (char*)& packet[WEBUI_PROTOCOL_DATA + element_len + 1 + args_len + 1];
-                        char* token = strtok(args_lens, ";");
+                        char* context;
+                        char* token = WEBUI_TOK(args_lens, ";", &context);
                         size_t token_num = 0;
                         while(token != NULL && token_num < WEBUI_MAX_ARG + 1) {
 
@@ -8190,7 +8193,7 @@ static WEBUI_THREAD_RECEIVE {
                             #endif
 
                             args_ptr = args_ptr + (arg_len + 1);
-                            token = strtok(NULL, ";");
+                            token = WEBUI_TOK(NULL, ";", &context);
 
                             // Save total found arguments
                             event_inf->count = ++token_num;
