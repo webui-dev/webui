@@ -1361,7 +1361,7 @@ size_t webui_bind(size_t window, const char* element, void( * func)(webui_event_
         return 0;
     _webui_window_t * win = _webui_core.wins[window];
 
-    int len = 0;
+    size_t len = 0;
     if (_webui_is_empty(element))
         win->has_events = true;
     else
@@ -1712,7 +1712,7 @@ void webui_return_string(webui_event_t* e, const char* s) {
         _webui_free_mem((void * ) event_inf->response);
 
     // Copy Str
-    int len = _webui_strlen(s);
+    size_t len = _webui_strlen(s);
     char* buf = (char*)_webui_malloc(len);
     memcpy(buf, s, len);
 
@@ -1873,8 +1873,8 @@ bool webui_set_tls_certificate(const char* certificate_pem, const char* private_
     if (!_webui_is_empty(certificate_pem) && !_webui_is_empty(private_key_pem)) {
 
         // Check size
-        size_t certificate_len = strlen(certificate_pem);
-        size_t private_key_len = strlen(private_key_pem);
+        size_t certificate_len = _webui_strlen(certificate_pem);
+        size_t private_key_len = _webui_strlen(private_key_pem);
         if (certificate_len >= WEBUI_SSL_SIZE || private_key_len >= WEBUI_SSL_SIZE)
             return false;
 
@@ -2000,7 +2000,7 @@ size_t webui_get_child_process_id(size_t window) {
     while((entry = readdir(dir)) != NULL) {
         // Ensure we're looking at a process directory (directories that are just
         // numbers)
-        if (entry->d_type == DT_DIR && strspn(entry->d_name, "0123456789") == strlen(entry->d_name)) {
+        if (entry->d_type == DT_DIR && strspn(entry->d_name, "0123456789") == _webui_strlen(entry->d_name)) {
             char statFilepath[1024];
             WEBUI_SPF(statFilepath, sizeof(statFilepath), "/proc/%s/stat", entry->d_name);
             FILE * f;
@@ -2357,7 +2357,7 @@ char* webui_encode(const char* str) {
     if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE))
         return NULL;
 
-    size_t len = strlen(str);
+    size_t len = _webui_strlen(str);
     if (len < 1)
         return NULL;
 
@@ -2399,7 +2399,7 @@ char* webui_decode(const char* str) {
     if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE))
         return NULL;
 
-    size_t len = strlen(str);
+    size_t len = _webui_strlen(str);
     if (len < 1)
         return NULL;
 
@@ -3148,7 +3148,7 @@ static void _webui_free_mem(void * ptr) {
         }
     }
 
-    for (int i = _webui_core.ptr_position; i >= 0; i--) {
+    for (size_t i = _webui_core.ptr_position; i >= 0; i--) {
 
         if (_webui_core.ptr_list[i] == NULL) {
 
@@ -3669,15 +3669,15 @@ static int _webui_serve_file(_webui_window_t * win, struct mg_connection * conn)
 
         // Get file content from the external end-user files handler
 
-        int length = 0;
-        const void * data = win->files_handler(url, & length);
+        size_t length = 0;
+        const void * data = win->files_handler(url, (int*)&length);
 
         if (data != NULL) {
 
             // File content found (200)
 
             if (length == 0)
-                length = strlen(data);
+                length = _webui_strlen(data);
 
             // Send header
             int header_ret = mg_send_http_ok(
@@ -4626,7 +4626,7 @@ static void _webui_send(_webui_window_t * win, uint32_t token, uint16_t id, uint
 }
 
 static char* _webui_str_dup(const char* src) {
-    size_t len = strlen(src);
+    size_t len = _webui_strlen(src);
     char* dst = (char* ) _webui_malloc(len);
     WEBUI_SCOPY(dst, len, src);
     return dst;
@@ -6440,7 +6440,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
         win->html = (user_html == NULL ? "" : user_html);
 
         // Set window URL
-        size_t len = strlen(win->url);
+        size_t len = _webui_strlen(win->url);
         window_url = (char*)_webui_malloc(len);
         WEBUI_SCOPY(window_url, len, win->url);
     } else if (type == WEBUI_SHOW_URL) {
@@ -6449,7 +6449,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
 
         // Show a window using a specific URL
         win->is_embedded_html = true;
-        size_t bf_len = (64 + strlen(user_url));
+        size_t bf_len = (64 + _webui_strlen(user_url));
         char* refresh = (char*)_webui_malloc(bf_len);
         WEBUI_SPF(refresh, bf_len, "<meta http-equiv=\"refresh\" content=\"0;url=%s\">", user_url);
         win->html = refresh;
@@ -6848,7 +6848,7 @@ static void _webui_init(void) {
 
     // Random
     #ifdef _WIN32
-    srand((size_t) time(NULL));
+    srand((unsigned int) time(NULL));
     #else
     srand(time(NULL));
     #endif
@@ -6896,7 +6896,7 @@ static const char* _webui_url_encode(const char* str) {
     #endif
 
     const char* hex = "0123456789ABCDEF";
-    size_t len = strlen(str);
+    size_t len = _webui_strlen(str);
     char* encoded = (char*)_webui_malloc(4 * len + 1);
     if (!encoded)
         return NULL;
@@ -7021,7 +7021,7 @@ static void _webui_http_send_error_page(struct mg_connection * conn, const char*
     mg_response_header_send(conn);
 
     // Send body
-    mg_write(conn, body, strlen(body));
+    mg_write(conn, body, _webui_strlen(body));
 }
 
 #ifdef WEBUI_LOG
@@ -8503,7 +8503,7 @@ static bool _webui_socket_test_listen_win32(size_t port_num) {
     #endif
 
     WSADATA wsaData;
-    int iResult;
+    size_t iResult;
     SOCKET ListenSocket = INVALID_SOCKET;
     struct addrinfo * result = NULL;
     struct addrinfo hints;
@@ -8538,7 +8538,7 @@ static bool _webui_socket_test_listen_win32(size_t port_num) {
     }
 
     // Setup the TCP listening socket
-    iResult = bind(ListenSocket, result->ai_addr, (size_t) result->ai_addrlen);
+    iResult = bind(ListenSocket, result->ai_addr, (int) result->ai_addrlen);
     if (iResult == SOCKET_ERROR) {
         freeaddrinfo(result);
         closesocket(ListenSocket);
