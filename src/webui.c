@@ -130,7 +130,7 @@ typedef pthread_cond_t webui_condition_t;
 
 // Safe C STD
 #ifdef _WIN32
-#define WEBUI_SPF(buffer, buffer_size, format, ...) sprintf_s(buffer, buffer_size, format, __VA_ARGS__)
+#define WEBUI_SPF(buffer, buffer_size, format, ...) sprintf_s(buffer, buffer_size, format, ##__VA_ARGS__)
 #define WEBUI_TOK(str, delim, context) strtok_s(str, delim, context)
 #define WEBUI_SCOPY(dest, dest_size, src) strcpy_s(dest, dest_size, src)
 #define WEBUI_SCAT(dest, dest_size, src) strcat_s(dest, dest_size, src)
@@ -296,11 +296,11 @@ typedef struct _webui_window_t {
     char* server_root_path;
     bool kiosk_mode;
     bool hide;
-    unsigned int width;
-    unsigned int height;
+    int width;
+    int height;
     bool size_set;
-    unsigned int x;
-    unsigned int y;
+    int x;
+    int y;
     bool position_set;
     size_t process_id;
     #ifdef _WIN32
@@ -8539,7 +8539,7 @@ static bool _webui_socket_test_listen_win32(size_t port_num) {
 
     // Setup the TCP listening socket
     iResult = bind(ListenSocket, result->ai_addr, (int) result->ai_addrlen);
-    if (iResult == SOCKET_ERROR) {
+    if (iResult == (size_t)SOCKET_ERROR) {
         freeaddrinfo(result);
         closesocket(ListenSocket);
         shutdown(ListenSocket, SD_BOTH);
@@ -8783,9 +8783,9 @@ static bool _webui_get_windows_reg_value(HKEY key, LPCWSTR reg, LPCWSTR value_na
         if (RegQueryValueExW(hKey, value_name, NULL, & VALUE_TYPE, VALUE_DATA, & VALUE_SIZE) == ERROR_SUCCESS) {
 
             if (VALUE_TYPE == REG_SZ)
-                WEBUI_SPF(value, sizeof(value), "%S", (LPCWSTR) VALUE_DATA);
+                WEBUI_SPF(value, WEBUI_MAX_PATH, "%S", (LPCWSTR) VALUE_DATA);
             else if (VALUE_TYPE == REG_DWORD)
-                WEBUI_SPF(value, sizeof(value), "%lu", *((DWORD * ) VALUE_DATA));
+                WEBUI_SPF(value, WEBUI_MAX_PATH, "%lu", *((DWORD * ) VALUE_DATA));
 
             RegCloseKey(hKey);
             return true;
@@ -9097,8 +9097,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         webView->url = wURL;
         webView->width = (win->width > 0 ? win->width : 800);
         webView->height = (win->height > 0 ? win->height : 600);
-        webView->x = (win->x > 0 ? win->x : ((GetSystemMetrics(SM_CXSCREEN) - 800) / 2));
-        webView->y = (win->y > 0 ? win->y : ((GetSystemMetrics(SM_CYSCREEN) - 600) / 2));
+        webView->x = (win->x > 0 ? win->x : (int)((GetSystemMetrics(SM_CXSCREEN) - 800) / 2));
+        webView->y = (win->y > 0 ? win->y : (int)((GetSystemMetrics(SM_CYSCREEN) - 600) / 2));
         win->webView = webView;
 
         // Note: To garantee all Microsoft WebView's operations ownership we should
