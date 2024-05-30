@@ -2112,7 +2112,7 @@ void webui_set_size(size_t window, unsigned int width, unsigned int height) {
     }
 }
 
-void webui_set_position(size_t window, int x, int y) {
+void webui_set_position(size_t window, unsigned int x, unsigned int y) {
 
     #ifdef WEBUI_LOG
     printf("[User] webui_set_position(%zu, %u, %u)\n", window, x, y);
