@@ -134,11 +134,13 @@ typedef pthread_cond_t webui_condition_t;
 #define WEBUI_TOK(str, delim, context) strtok_s(str, delim, context)
 #define WEBUI_SCOPY(dest, dest_size, src) strcpy_s(dest, dest_size, src)
 #define WEBUI_SCAT(dest, dest_size, src) strcat_s(dest, dest_size, src)
+#define WEBUI_FOPEN(file, filename, mode) fopen_s(&file, filename, mode)
 #else
 #define WEBUI_SPF(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, __VA_ARGS__)
 #define WEBUI_TOK(str, delim, context) strtok_r(str, delim, context)
 #define WEBUI_SCOPY(dest, dest_size, src) strncpy(dest, src, dest_size)
 #define WEBUI_SCAT(dest, dest_size, src) strncat(dest, src, dest_size)
+#define WEBUI_FOPEN(file, filename, mode) ((file) = fopen(filename, mode))
 #endif
 
 // Timer
@@ -1129,7 +1131,8 @@ static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* pr
     #endif
 
     // Open
-    FILE * file = fopen(full_path, "r");
+    FILE* file;
+    WEBUI_FOPEN(file, full_path, "r");
     if (!file)
         return false;
 
@@ -1186,7 +1189,8 @@ static void _webui_remove_firefox_profile_ini(const char* path, const char* prof
     #endif
 
     // Open
-    FILE * file = fopen(full_path, "r");
+    FILE * file;
+    WEBUI_FOPEN(file, full_path, "r");
     if (!file)
         return;
 
@@ -1231,7 +1235,7 @@ static void _webui_remove_firefox_profile_ini(const char* path, const char* prof
     #endif
 
     // Save
-    file = fopen(full_path, "w");
+    WEBUI_FOPEN(file, full_path, "w");
     if (!file)
         return;
     fputs(output, file);
@@ -1999,7 +2003,8 @@ size_t webui_get_child_process_id(size_t window) {
         if (entry->d_type == DT_DIR && strspn(entry->d_name, "0123456789") == strlen(entry->d_name)) {
             char statFilepath[1024];
             WEBUI_SPF(statFilepath, sizeof(statFilepath), "/proc/%s/stat", entry->d_name);
-            FILE * f = fopen(statFilepath, "r");
+            FILE * f;
+            WEBUI_FOPEN(f, statFilepath, "r");
             if (f) {
                 pid_t pid, ppid;
                 char comm[1024];
@@ -4298,7 +4303,7 @@ static bool _webui_browser_create_new_profile(_webui_window_t * win, size_t brow
             // prefs.js
             FILE * file;
             WEBUI_SPF(buf, sizeof(buf), "%s%sprefs.js", win->profile_path, webui_sep);
-            file = fopen(buf, "a");
+            WEBUI_FOPEN(file, buf, "a");
             if (file == NULL)
                 return false;
             fputs(
@@ -4318,7 +4323,7 @@ static bool _webui_browser_create_new_profile(_webui_window_t * win, size_t brow
                 _webui_cmd_sync(win, buf, false); // Create directory
             }
             WEBUI_SPF(buf, sizeof(buf), "%s%schrome%suserChrome.css", win->profile_path, webui_sep, webui_sep);
-            file = fopen(buf, "a");
+            WEBUI_FOPEN(file, buf, "a");
             if (file == NULL)
                 return false;
             #ifdef _WIN32
@@ -5971,7 +5976,8 @@ static bool _webui_is_process_running(const char* process_name) {
     while((entry = readdir(dir))) {
         if (entry->d_type == DT_DIR && atoi(entry->d_name) > 0) {
             WEBUI_SPF(status_path, sizeof(status_path), "/proc/%s/status", entry->d_name);
-            FILE * status_file = fopen(status_path, "r");
+            FILE * status_file;
+            WEBUI_FOPEN(status_file, status_path, "r");
             if (status_file) {
                 while(fgets(line, sizeof(line), status_file)) {
                     if (strncmp(line, "Name:", 5) == 0) {
