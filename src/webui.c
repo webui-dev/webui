@@ -132,9 +132,11 @@ typedef pthread_cond_t webui_condition_t;
 #ifdef _WIN32
 #define WEBUI_SPF(buffer, buffer_size, format, ...) sprintf_s(buffer, buffer_size, format, __VA_ARGS__)
 #define WEBUI_TOK(str, delim, context) strtok_s(str, delim, context)
+#define WEBUI_SCOPY(dest, dest_size, src) strcpy_s(dest, dest_size, src)
 #else
 #define WEBUI_SPF(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, __VA_ARGS__)
 #define WEBUI_TOK(str, delim, context) strtok_r(str, delim, context)
+#define WEBUI_SCOPY(dest, dest_size, src) strncpy(dest, src, dest_size)
 #endif
 
 // Timer
@@ -3003,7 +3005,7 @@ void webui_interface_set_response(size_t window, size_t event_number, const char
     // Set the response
     size_t len = _webui_strlen(response);
     event_inf->response = (char*)_webui_malloc(len);
-    strcpy(event_inf->response, response);
+    WEBUI_SCOPY(event_inf->response, len, response);
 
     #ifdef WEBUI_LOG
     printf("[User] webui_interface_set_response() -> Internal buffer [%s] \n", event_inf->response);
@@ -4178,7 +4180,7 @@ static bool _webui_browser_create_new_profile(_webui_window_t * win, size_t brow
             _webui_free_mem((void * ) win->profile_path);
         win->profile_path = (char*)_webui_malloc(WEBUI_MAX_PATH);
         win->profile_name = (char*)_webui_malloc(WEBUI_MAX_PATH);
-        strcpy(win->profile_name, WEBUI_PROFILE_NAME);
+        WEBUI_SCOPY(win->profile_name, WEBUI_MAX_PATH, WEBUI_PROFILE_NAME);
     }
 
     #ifdef WEBUI_LOG
@@ -4618,8 +4620,9 @@ static void _webui_send(_webui_window_t * win, uint32_t token, uint16_t id, uint
 }
 
 static char* _webui_str_dup(const char* src) {
-    char* dst = (char* ) _webui_malloc(strlen(src));
-    strcpy(dst, src);
+    size_t len = strlen(src);
+    char* dst = (char* ) _webui_malloc(len);
+    WEBUI_SCOPY(dst, len, src);
     return dst;
 }
 
@@ -5525,7 +5528,7 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_get_browser_args() -> Unknown Browser (%zu)\n", browser);
     #endif
-    strcpy(buffer, "");
+    WEBUI_SCOPY(buffer, len, "");
     return 0;
 }
 
@@ -6430,8 +6433,9 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
         win->html = (user_html == NULL ? "" : user_html);
 
         // Set window URL
-        window_url = (char*)_webui_malloc(strlen(win->url));
-        strcpy(window_url, win->url);
+        size_t len = strlen(win->url);
+        window_url = (char*)_webui_malloc(len);
+        WEBUI_SCOPY(window_url, len, win->url);
     } else if (type == WEBUI_SHOW_URL) {
 
         const char* user_url = content;
@@ -7383,7 +7387,7 @@ static WEBUI_THREAD_SERVER_START {
     char host[16] = {0};
     if (!win->is_public)
         // Private localhost access
-        strcpy(host, "127.0.0.1:");
+        WEBUI_SCOPY(host, sizeof(host), "127.0.0.1:");
 
     #ifdef WEBUI_TLS
     // HTTP Secure Port
