@@ -3188,11 +3188,11 @@ static size_t _webui_round_to_memory_block(size_t size) {
     // we should return the same block
     size--;
 
-    int block_size = 4;
+    size_t block_size = 4;
     while(block_size <= size)
         block_size *= 2;
 
-    return (size_t) block_size;
+    return block_size;
 }
 
 static void * _webui_malloc(size_t size) {
