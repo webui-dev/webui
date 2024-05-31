@@ -117,6 +117,7 @@ typedef pthread_mutex_t webui_mutex_t;
 typedef pthread_cond_t webui_condition_t;
 #endif
 
+// Optimization
 #if defined(__clang__) || defined(__GNUC__)
 #define WEBUI_DISABLE_OPTIMIZATION_START _Pragma("GCC optimize (\"O0\")")
 #define WEBUI_DISABLE_OPTIMIZATION_END
@@ -141,6 +142,17 @@ typedef pthread_cond_t webui_condition_t;
 #define WEBUI_SCOPY(dest, dest_size, src) strncpy(dest, src, dest_size)
 #define WEBUI_SCAT(dest, dest_size, src) strncat(dest, src, dest_size)
 #define WEBUI_FOPEN(file, filename, mode) ((file) = fopen(filename, mode))
+#endif
+
+// Compiler
+#if defined(_MSC_VER)
+    #define WEBUI_COMPILER "MSVC"
+#elif defined(__GNUC__) && !defined(__clang__)
+    #define WEBUI_COMPILER "GCC"
+#elif defined(__clang__)
+    #define WEBUI_COMPILER "Clang"
+#else
+    #define WEBUI_COMPILER "Unknown"
 #endif
 
 // Timer
@@ -6842,6 +6854,7 @@ static void _webui_init(void) {
     printf("[Core]\t\tWebUI v"
         WEBUI_VERSION " ("
         WEBUI_OS ", "
+        WEBUI_COMPILER ", "
         WEBUI_SECURE ")\n");
     printf("[Core]\t\t_webui_init()\n");
     #endif
