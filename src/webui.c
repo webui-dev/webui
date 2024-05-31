@@ -131,16 +131,16 @@ typedef pthread_cond_t webui_condition_t;
 
 // Safe C STD
 #ifdef _WIN32
-#define WEBUI_SPF(buffer, buffer_size, format, ...) sprintf_s(buffer, buffer_size, format, ##__VA_ARGS__)
+#define WEBUI_SPF(buffer, buffer_size, format, ...) snprintf(buffer, (buffer_size - 1), format, ##__VA_ARGS__)
 #define WEBUI_TOK(str, delim, context) strtok_s(str, delim, context)
-#define WEBUI_SCOPY(dest, dest_size, src) strcpy_s(dest, dest_size, src)
-#define WEBUI_SCAT(dest, dest_size, src) strcat_s(dest, dest_size, src)
+#define WEBUI_SCOPY(dest, dest_size, src) strcpy_s(dest, (dest_size + 1), src)
+#define WEBUI_SCAT(dest, dest_size, src) strcat_s(dest, (dest_size + 1), src)
 #define WEBUI_FOPEN(file, filename, mode) fopen_s(&file, filename, mode)
 #else
 #define WEBUI_SPF(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, ##__VA_ARGS__)
 #define WEBUI_TOK(str, delim, context) strtok_r(str, delim, context)
-#define WEBUI_SCOPY(dest, dest_size, src) strncpy(dest, src, dest_size)
-#define WEBUI_SCAT(dest, dest_size, src) strncat(dest, src, dest_size)
+#define WEBUI_SCOPY(dest, dest_size, src) strncpy(dest, src, (dest_size + 1))
+#define WEBUI_SCAT(dest, dest_size, src) strncat(dest, src, (dest_size + 1))
 #define WEBUI_FOPEN(file, filename, mode) ((file) = fopen(filename, mode))
 #endif
 
