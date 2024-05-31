@@ -567,7 +567,7 @@ static WEBUI_THREAD_WEBVIEW;
 #define WEBUI_SCAT(dest, dest_size, src) strcat_s(dest, _webui_mb(dest_size), src)
 #define WEBUI_FOPEN(file, filename, mode) fopen_s(&file, filename, mode)
 #else
-#define WEBUI_SPF(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, ##__VA_ARGS__)
+#define WEBUI_SPF(buffer, buffer_size, format, ...) snprintf(buffer, _webui_mb(buffer_size), format, ##__VA_ARGS__)
 #define WEBUI_TOK(str, delim, context) strtok_r(str, delim, context)
 #define WEBUI_SCOPY(dest, dest_size, src) strncpy(dest, src, _webui_mb(dest_size))
 #define WEBUI_SCAT(dest, dest_size, src) strncat(dest, src, _webui_mb(dest_size))
