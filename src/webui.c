@@ -9734,8 +9734,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         webView->url = url_copy;
         webView->width = (win->width > 0 ? win->width : 800);
         webView->height = (win->height > 0 ? win->height : 600);
-        webView->x = (win->x > 0 ? win->x : -1);
-        webView->y = (win->y > 0 ? win->y : -1);
+        webView->x = (win->x > 0 ? win->x : 0);
+        webView->y = (win->y > 0 ? win->y : 0);
         win->webView = webView;
 
         // New WebView window
