@@ -183,6 +183,8 @@ class window {
     // Get the ID of the last child process spawned by the browser.
     size_t get_child_process_id() const { return webui_get_child_process_id(webui_window); }
 
+    size_t get_best_browser() const { return webui_get_best_browser(webui_window); }
+
     // Set the web-server root folder path for this specific window.
     bool set_root_folder(const std::string_view path) const {
         return webui_set_root_folder(webui_window, path.data());
