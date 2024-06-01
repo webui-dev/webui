@@ -3226,6 +3226,10 @@ static size_t _webui_mb(size_t size) {
     // 55 -> 64
     // ...
 
+    // Make sure we have the null
+    // terminator if it's a string
+    size++;
+
     // If size is negative
     if (size < 4)
         size = 4;
@@ -3246,10 +3250,6 @@ static void * _webui_malloc(size_t size) {
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_malloc([%zu])\n", size);
     #endif
-
-    // Make sure we have the null
-    // terminator if it's a string
-    size++;
 
     size = _webui_mb(size);
 
