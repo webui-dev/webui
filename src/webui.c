@@ -1438,9 +1438,20 @@ size_t webui_bind(size_t window, const char* element, void( * func)(webui_event_
 }
 
 size_t webui_get_best_browser(size_t window) {
-  // This just exposes the existing function
-  _webui_window_t * win = _webui_core.wins[window];
-  return _webui_find_the_best_browser(win);
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_get_best_browser([%zu])\n", window);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui_core.wins[window] == NULL)
+        return 1; // 1. Default recommended web browser
+    _webui_window_t * win = _webui_core.wins[window];
+    
+    return _webui_find_the_best_browser(win);
 }
 
 const char* webui_get_string_at(webui_event_t* e, size_t index) {
