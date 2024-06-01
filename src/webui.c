@@ -3639,16 +3639,13 @@ static char* _webui_get_file_name_from_url(const char* url) {
     return file;
 }
 
-static char* _webui_get_full_path_from_url(_webui_window_t * win, const char* url) {
+static char* _webui_get_full_path_from_url(_webui_window_t * win, const char* file, const char* url) {
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_get_full_path_from_url([%s])\n", url);
     #endif
 
-    // Get file name
-    char* file = _webui_get_file_name_from_url(url);
-
-    if (file == NULL)
+    if (!file || !url)
         return NULL;
 
     size_t url_len = _webui_strlen(url);
@@ -3672,7 +3669,7 @@ static char* _webui_get_full_path_from_url(_webui_window_t * win, const char* ur
     _webui_free_mem((void * ) file);
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_get_file_name_from_url() -> Full path: [%s]\n", full_path);
+    printf("[Core]\t\t_webui_get_full_path_from_url() -> Full path: [%s]\n", full_path);
     #endif
 
     return full_path;
@@ -3731,7 +3728,8 @@ static int _webui_serve_file(_webui_window_t * win, struct mg_connection * conn)
         // Using internal files handler
 
         // Get full path
-        char* full_path = _webui_get_full_path_from_url(win, url);
+        char* file = _webui_get_file_name_from_url(url);
+        char* full_path = _webui_get_full_path_from_url(win, file, url);
 
         if (_webui_file_exist(full_path)) {
 
@@ -3747,6 +3745,7 @@ static int _webui_serve_file(_webui_window_t * win, struct mg_connection * conn)
         }
 
         _webui_free_mem((void * ) full_path);
+        _webui_free_mem((void * ) file);
     }
 
     return http_status_code;
@@ -3936,7 +3935,7 @@ static int _webui_interpret_file(_webui_window_t * win, struct mg_connection * c
         file = _webui_get_file_name_from_url(url);
 
         // Get full path
-        full_path = _webui_get_full_path_from_url(win, url);
+        full_path = _webui_get_full_path_from_url(win, file, url);
     }
 
     // Get file extension
