@@ -12,7 +12,13 @@ const log = std.log.scoped(.WebUI);
 const lib_name = "webui";
 const zig_ver = builtin.zig_version.minor;
 
+const release_zig_version = 12;
+
 pub fn build(b: *Build) !void {
+    if (zig_ver > release_zig_version) {
+        log.info("please use zig-webui to build on nightly zig!", .{});
+        return;
+    }
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
@@ -37,11 +43,11 @@ pub fn build(b: *Build) !void {
     }
 
     if (verbose) {
-        std.debug.print("Building {s} WebUI library{s}...\n", .{
+        log.info("Building {s} WebUI library{s}...", .{
             if (is_dynamic) "dynamic" else "static",
             if (enable_tls) " with TLS support" else "",
         });
-        defer std.debug.print("Done.\n", .{});
+        defer log.info("Done.", .{});
     }
 
     const webui = if (is_dynamic) b.addSharedLibrary(.{
@@ -53,8 +59,11 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    try add_links(webui, enable_tls);
 
+    // link libs
+    try linkLib(b, webui, enable_tls);
+
+    // expose artifact to other packages
     b.installArtifact(webui);
 
     build_examples(b, webui) catch |err| {
@@ -63,18 +72,27 @@ pub fn build(b: *Build) !void {
     };
 }
 
-fn add_links(webui: *Compile, enable_tls: bool) !void {
+fn linkLib(b: *Build, webui: *Compile, enable_tls: bool) !void {
     const webui_target = if (zig_ver < 12) webui.target else webui.rootModuleTarget();
     const is_windows = if (zig_ver < 12) webui_target.isWindows() else webui_target.os.tag == .windows;
 
     // Prepare compiler flags.
     const tls_flags = &[_][]const u8{ "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1" };
+    // when disable tls
+    const no_tls_flags = [_][]const u8{"-DNO_SSL"};
+
     var civetweb_flags = std.ArrayList([]const u8).init(std.heap.page_allocator);
     defer civetweb_flags.deinit();
-    try civetweb_flags.appendSlice(&[_][]const u8{ "-DNDEBUG", "-DNO_CACHING", "-DNO_CGI", "-DUSE_WEBSOCKET" });
-    try civetweb_flags.appendSlice(if (enable_tls) tls_flags else &[_][]const u8{ "-DUSE_WEBSOCKET", "-DNO_SSL" });
-    if (is_windows) try civetweb_flags.append("-DMUST_IMPLEMENT_CLOCK_GETTIME");
 
+    try civetweb_flags.appendSlice(&[_][]const u8{
+        "-DNDEBUG",
+        "-DNO_CACHING",
+        "-DNO_CGI",
+        "-DUSE_WEBSOCKET",
+    });
+    try civetweb_flags.appendSlice(if (enable_tls) tls_flags else &no_tls_flags);
+
+    if (is_windows) try civetweb_flags.append("-DMUST_IMPLEMENT_CLOCK_GETTIME");
     webui.addCSourceFile(.{
         .file = .{ .path = "src/webui.c" },
         .flags = if (enable_tls) tls_flags else &[_][]const u8{"-DNO_SSL"},
@@ -83,18 +101,21 @@ fn add_links(webui: *Compile, enable_tls: bool) !void {
         .file = .{ .path = "src/civetweb/civetweb.c" },
         .flags = civetweb_flags.items,
     });
+
     webui.linkLibC();
     webui.addIncludePath(.{ .path = "include" });
+
     if (zig_ver < 12) {
         webui.installHeader("include/webui.h", "webui.h");
     } else {
-        webui.installHeader(Build.LazyPath{ .path = "include/webui.h" }, "webui.h");
+        webui.installHeader(b.path("include/webui.h"), "webui.h");
     }
     if (webui_target.isDarwin()) {
         webui.addCSourceFile(.{
             .file = .{ .path = "src/webview/wkwebview.m" },
             .flags = &.{},
         });
+
         webui.linkFramework("Cocoa");
         webui.linkFramework("WebKit");
     } else if (is_windows) {
