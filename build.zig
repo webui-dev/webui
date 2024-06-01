@@ -53,7 +53,7 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    try add_links(webui, enable_tls);
+    try addLinkerFlags(b, webui, enable_tls);
 
     b.installArtifact(webui);
 
@@ -63,7 +63,7 @@ pub fn build(b: *Build) !void {
     };
 }
 
-fn add_links(webui: *Compile, enable_tls: bool) !void {
+fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
     const webui_target = if (zig_ver < 12) webui.target else webui.rootModuleTarget();
     const is_windows = if (zig_ver < 12) webui_target.isWindows() else webui_target.os.tag == .windows;
 
@@ -76,23 +76,23 @@ fn add_links(webui: *Compile, enable_tls: bool) !void {
     if (is_windows) try civetweb_flags.append("-DMUST_IMPLEMENT_CLOCK_GETTIME");
 
     webui.addCSourceFile(.{
-        .file = .{ .path = "src/webui.c" },
+        .file = if (zig_ver < 12) .{ .path = "src/webui.c" } else b.path("src/webui.c"),
         .flags = if (enable_tls) tls_flags else &[_][]const u8{"-DNO_SSL"},
     });
     webui.addCSourceFile(.{
-        .file = .{ .path = "src/civetweb/civetweb.c" },
+        .file = if (zig_ver < 12) .{ .path = "src/civetweb/civetweb.c" } else b.path("src/civetweb/civetweb.c"),
         .flags = civetweb_flags.items,
     });
     webui.linkLibC();
-    webui.addIncludePath(.{ .path = "include" });
+    webui.addIncludePath(if (zig_ver < 12) .{ .path = "include" } else b.path("include"));
     if (zig_ver < 12) {
         webui.installHeader("include/webui.h", "webui.h");
     } else {
-        webui.installHeader(Build.LazyPath{ .path = "include/webui.h" }, "webui.h");
+        webui.installHeader(b.path("include/webui.h"), "webui.h");
     }
     if (webui_target.isDarwin()) {
         webui.addCSourceFile(.{
-            .file = .{ .path = "src/webview/wkwebview.m" },
+            .file = if (zig_ver < 12) .{ .path = "src/webview/wkwebview.m" } else b.path("src/webview/wkwebview.m"),
             .flags = &.{},
         });
         webui.linkFramework("Cocoa");
@@ -120,7 +120,7 @@ fn build_examples(b: *Build, webui: *Compile) !void {
     const target = if (zig_ver < 12) webui.target else webui.root_module.resolved_target.?;
     const optimize = if (zig_ver < 12) webui.optimize else webui.root_module.optimize.?;
 
-    const examples_path = (Build.LazyPath{ .path = "examples/C" }).getPath(b);
+    const examples_path = (if (zig_ver < 12) (Build.LazyPath{ .path = "examples/C" }) else b.path("examples/C")).getPath(b);
     var examples_dir = if (zig_ver < 12)
         try std.fs.openIterableDirAbsolute(examples_path, .{})
     else
@@ -137,7 +137,7 @@ fn build_examples(b: *Build, webui: *Compile) !void {
         const exe = b.addExecutable(.{ .name = example_name, .target = target, .optimize = optimize });
         const path = try std.fmt.allocPrint(b.allocator, "examples/C/{s}/main.c", .{example_name});
 
-        exe.addCSourceFile(.{ .file = .{ .path = path }, .flags = &.{} });
+        exe.addCSourceFile(.{ .file = if (zig_ver < 12) .{ .path = path } else b.path(path), .flags = &.{} });
         exe.linkLibrary(webui);
 
         const exe_install = b.addInstallArtifact(exe, .{});
@@ -145,8 +145,8 @@ fn build_examples(b: *Build, webui: *Compile) !void {
         const step_name = try std.fmt.allocPrint(b.allocator, "run_{s}", .{example_name});
         const step_desc = try std.fmt.allocPrint(b.allocator, "run example {s}", .{example_name});
 
-        const cwd = try std.fmt.allocPrint(b.allocator, "{s}/{s}", .{ examples_path, example_name });
-        if (zig_ver < 12) exe_run.cwd = cwd else exe_run.setCwd(.{ .path = cwd });
+        const cwd = try std.fmt.allocPrint(b.allocator, "src/examples/{s}", .{example_name});
+        if (zig_ver < 12) exe_run.cwd = cwd else exe_run.setCwd(b.path(cwd));
 
         exe_run.step.dependOn(&exe_install.step);
         build_examples_step.dependOn(&exe_install.step);
