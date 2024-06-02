@@ -578,7 +578,7 @@ WEBUI_EXPORT bool webui_set_port(size_t window, size_t port);
  *
  * @example webui_config(show_wait_connection, false);
  */
-WEBUI_EXPORT void webui_config(webui_config option, bool status);
+WEBUI_EXPORT void webui_set_config(webui_config option, bool status);
 
 // -- SSL/TLS -------------------------
 
