@@ -65,6 +65,8 @@ class WebuiBridge {
 	#Ping: Boolean = true;
 	// Events
 	#eventsCallback: ((event: number) => void) | null = null;
+	#disableContextMenu = true;
+	#preventContextMenuListener = (event : Event) => event.preventDefault();
 	event = {
 		// TODO: Make `event` static and solve the ESBUILD `_WebuiBridge` issue.
         CONNECTED: 0,
@@ -156,6 +158,7 @@ class WebuiBridge {
 				}
 			});
 		}
+		document.addEventListener('load',this.#handleLoadEvent, {passive:true}); // Wait for the html to be parsed
 		// Prevent F5 refresh
 		document.addEventListener('keydown', (event) => {
 			if (this.#log) return; // Allowed in debug mode
@@ -467,7 +470,7 @@ class WebuiBridge {
 					) {
 						this.#sendClick(event.target.id);
 					}
-				});
+				}, {passive:true});
 			}
 		});
 	}
@@ -732,13 +735,25 @@ class WebuiBridge {
 	setEventCallback(callback: (e: number) => void): void {
         this.#eventsCallback = callback;
     }
+
+	#handleLoadEvent() : void {
+		if(this.#disableContextMenu)
+			this.setContextMenuEnabled(! this.#disableContextMenu);
+		addRefreshableEventListener(document.body, 'input', 'contextmenu', (event) => event.stopPropagation());
+	}
+	/**
+	 * Sets if we should allow the right click menu or not
+	 * @param enabled
+	 */
+	setContextMenuEnabled(enabled : boolean) : void {
+		this.#disableContextMenu = ! enabled;
+		if (enabled)
+			document.removeEventListener('contextmenu',this.#preventContextMenuListener);
+		else
+			document.addEventListener('contextmenu', this.#preventContextMenuListener);
+	}
 }
 // Export
 type webui = WebuiBridge;
 export default webui;
 export type { WebuiBridge };
-// Wait for the html to be parsed
-addEventListener('load', () => {
-	document.body.addEventListener('contextmenu', (event) => event.preventDefault());
-	addRefreshableEventListener(document.body, 'input', 'contextmenu', (event) => event.stopPropagation());
-});
