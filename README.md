@@ -184,6 +184,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | V                       | ✔️             | [V-WebUI](https://github.com/webui-dev/v-webui)           |
 | Zig                     | ✔️             | [Zig-WebUI](https://github.com/webui-dev/zig-webui)       |
 | Odin                    | _not complete_ | [Odin-WebUI](https://github.com/webui-dev/odin-webui)     |
+| Common Lisp             | ✔️             | [cl-webui](https://github.com/garlic0x1/cl-webui)|
 | Delphi                  | ✔️             | [WebUI4Delphi](https://github.com/salvadordf/WebUI4Delphi)|
 | QuickJS                 | ✔️             | [QuickUI](https://github.com/xland/QuickUI)               |
 
