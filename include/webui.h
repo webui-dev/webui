@@ -110,7 +110,7 @@
 #endif
 
 // -- Enums ---------------------------
-enum webui_browsers {
+enum webui_browser {
     NoBrowser = 0,  // 0. No web browser
     AnyBrowser = 1, // 1. Default recommended web browser
     Chrome,         // 2. Google Chrome
@@ -126,13 +126,13 @@ enum webui_browsers {
     ChromiumBased,  // 12. Any Chromium based browser
 };
 
-enum webui_runtimes {
+enum webui_runtime {
     None = 0, // 0. Prevent WebUI from using any runtime for .js and .ts files
     Deno,     // 1. Use Deno runtime for .js and .ts files
     NodeJS,   // 2. Use Nodejs runtime for .js files
 };
 
-enum webui_events {
+enum webui_event {
     WEBUI_EVENT_DISCONNECTED = 0, // 0. Window disconnection event
     WEBUI_EVENT_CONNECTED,        // 1. Window connection event
     WEBUI_EVENT_MOUSE_CLICK,      // 2. Mouse click event
@@ -141,11 +141,11 @@ enum webui_events {
 };
 
 typedef enum {
-    // Control if `webui_show()` and `webui_show_x()` should wait 
+    // Control if `webui_show()` and `webui_show_x()` should wait
     // for the window to connect before returns or not.
     // Default: True
     show_wait_connection = 0,
-} webui_configs;
+} webui_config;
 
 // -- Structs -------------------------
 typedef struct webui_event_t {
@@ -573,12 +573,12 @@ WEBUI_EXPORT bool webui_set_port(size_t window, size_t port);
 /**
  * @brief Control the WebUI behaviour. It's better to call at the beginning.
  *
- * @param option The desired option from `webui_configs` enum
+ * @param option The desired option from `webui_config` enum
  * @param status The status of the option, `true` or `false`
  *
  * @example webui_config(show_wait_connection, false);
  */
-WEBUI_EXPORT void webui_config(webui_configs option, bool status);
+WEBUI_EXPORT void webui_set_config(webui_config option, bool status);
 
 // -- SSL/TLS -------------------------
 

@@ -1946,7 +1946,7 @@ bool webui_set_tls_certificate(const char* certificate_pem, const char* private_
     return false;
 }
 
-void webui_config(webui_configs option, bool status) {
+void webui_set_config(webui_config option, bool status) {
 
     #ifdef WEBUI_LOG
     printf("[User] webui_config([%d], [%d])\n", option, status);
