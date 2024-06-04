@@ -330,6 +330,7 @@ _webui_window_t;
 typedef struct _webui_core_t {
     struct {
         bool show_wait_connection;
+        bool show_auto_js_inject;
     } config;
     volatile size_t servers;
     char* html_elements[WEBUI_MAX_IDS];
@@ -9019,6 +9020,24 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             webView->webviewWindow->lpVtbl->add_DocumentTitleChanged(webView->webviewWindow, 
             (ICoreWebView2DocumentTitleChangedEventHandler*)titleChangedHandler, &token);
             webView->webviewWindow->lpVtbl->Navigate(webView->webviewWindow, webView->url);
+            // Microsoft WebView2 Auto JS Inject
+            if (_webui_core.config.show_auto_js_inject) {
+                // HRESULT AutoInject = webView->webviewWindow->lpVtbl->AddScriptToExecuteOnDocumentCreated(
+                //     webView->webviewWindow, L"var script = document.createElement('script'); "
+                //     "script.src = 'webui.js'; document.head.appendChild(script);", 
+                //     NULL
+                // );
+                // if (FAILED(AutoInject)) {
+                //     #ifdef WEBUI_LOG
+                //     printf("[Core]\t\t[Thread .] _webui_webview_thread() -> Auto Inject creation failed.\n");
+                //     #endif
+                // }
+                // else {
+                //     #ifdef WEBUI_LOG
+                //     printf("[Core]\t\t[Thread .] _webui_webview_thread() -> Auto Inject creation succeeds.\n");
+                //     #endif
+                // }
+            }
         } else return S_FALSE;
         return S_OK;
     };
@@ -9575,6 +9594,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             _webui_wv_event_title), (void *)win, NULL, 0);
         g_signal_connect_data(win->webView->gtk_win, "destroy", G_CALLBACK(
             _webui_wv_event_closed), (void *)win, NULL, 0);
+        
+        // Linux GTK WebView Auto JS Inject
+        if (_webui_core.config.show_auto_js_inject) {
+            // ...
+        }
 
         // Show
         webkit_web_view_load_uri(win->webView->gtk_wv, win->webView->url);
