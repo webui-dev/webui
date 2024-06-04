@@ -1,0 +1,69 @@
+name: 🚀 Feature Request
+description: Suggest an idea for this project.
+labels: [enhancement]
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Feature
+      description: A clear and concise description of the feature you are proposing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Why do you need this feature?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Proposed Solution
+      description: If you can suggest how the addition or change can be implemented, include a prototype/workaround/sketch/reference implementation.
+    validations:
+      required: false
+
+  - type: textarea
+    id: other
+    attributes:
+      label: Other Information
+      description: Any alternative solutions or features you considered, a more detailed explanation, stack traces, related issues, links for context, etc.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: implementation
+    attributes:
+      label: Implementation
+      options:
+        - label: I may be able to implement the feature.
+        - label: It might incur a breaking change.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Please provide the current WebUI version you are using.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment details (OS name and version, etc.)
+      render: shell
+      description: |
+        To fill in this section, you can use on Unix-like systems:
+        ```sh
+        uname -somr
+        ```
+        On Windows you can use:
+        ```sh
+        cmd /c wmic cpu get systemname,caption
+        ```
+    validations:
+      required: true
