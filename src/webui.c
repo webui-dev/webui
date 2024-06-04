@@ -9161,8 +9161,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // process all the WebView's operations in one single thread for each window.
 
         // Initializing
-        // Expecting `_webui_webview_thread` to change
-        // `mutex_is_webview_update` to false when success
+        // Expecting `_webui_webview_thread` to change `mutex_is_webview_update` 
+        // to `false` when initialization is done, and `_webui_core.is_webview`
+        // to `true` if loading the WebView is succeeded.
         _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);
 
         // Win32 WebView thread
@@ -9192,7 +9193,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
         }
 
-        return (_webui_mutex_is_webview_update(win, WEBUI_MUTEX_NONE) == false);
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_wv_show() -> Return [%d]\n", (_webui_core.is_webview == true));
+        #endif
+
+        return (_webui_core.is_webview);
     };
 
     static bool _webui_wv_set_size(_webui_wv_win32_t* webView, int windowWidth, int windowHeight) {
@@ -9277,6 +9282,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         if (win == NULL) {
             _webui_wv_free(win->webView);
             win->webView = NULL;
+            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
             WEBUI_THREAD_RETURN
         }
 
@@ -9286,6 +9292,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             if (!_webui_core.webviewLib) {
                 _webui_wv_free(win->webView);
                 win->webView = NULL;
+                _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
                 WEBUI_THREAD_RETURN
             }
         }
@@ -9306,6 +9313,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         if (!RegisterClassA(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
             _webui_wv_free(win->webView);
             win->webView = NULL;
+            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
             WEBUI_THREAD_RETURN
         }
 
@@ -9319,6 +9327,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         if (!win->webView->hwnd) {
             _webui_wv_free(win->webView);
             win->webView = NULL;
+            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
             WEBUI_THREAD_RETURN
         }
 
@@ -9333,6 +9342,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         if (!createEnv) {
             _webui_wv_free(win->webView);
             win->webView = NULL;
+            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
             WEBUI_THREAD_RETURN
         }
 
@@ -9340,6 +9350,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         if (!environmentHandler) {
             _webui_wv_free(win->webView);
             win->webView = NULL;
+            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
             WEBUI_THREAD_RETURN
         }
 
@@ -9362,10 +9373,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         if (SUCCEEDED(hr)) {
 
+            // Success
             // Let `wait()` use safe main-thread WebView2 loop
             _webui_core.is_webview = true;
-
-            // Success
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
 
             MSG msg;
