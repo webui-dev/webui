@@ -45,6 +45,17 @@
     // ...
 #endif
 
+// -- Disable Non-critical warnings ---
+#ifdef _MSC_VER
+    #pragma warning(push, 0)
+    // Disable spectre warnings
+    #pragma warning(disable: 5045)
+#elif defined(__clang__)
+    // ...
+#elif defined(__GNUC__)
+    // ...
+#endif
+
 // -- Defines -------------------------
 #define WEBUI_SIGNATURE      0xDD    // All packets should start with this 8bit
 #define WEBUI_CMD_JS         0xFE    // Command: JavaScript result in frontend
@@ -1898,7 +1909,8 @@ static bool _webui_check_certificate(const char* certificate_pem, const char* pr
 #endif
 
 bool webui_set_tls_certificate(const char* certificate_pem, const char* private_key_pem) {
-
+    (void)certificate_pem;
+    (void)private_key_pem;
     #ifdef WEBUI_LOG
     printf("[User] webui_set_tls_certificate()\n");
     #endif
@@ -2172,14 +2184,17 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
         return;
     _webui_window_t * win = _webui_core.wins[window];
 
-    if (x < WEBUI_MIN_X || x > WEBUI_MAX_X || y < WEBUI_MIN_Y || y > WEBUI_MAX_Y) {
+    int X = x;
+    int Y = y;
+
+    if (X < WEBUI_MIN_X || X > WEBUI_MAX_X || Y < WEBUI_MIN_Y || Y > WEBUI_MAX_Y) {
 
         win->position_set = false;
         return;
     }
 
-    win->x = x;
-    win->y = y;
+    win->x = X;
+    win->y = Y;
     win->position_set = true;
 
     // Positioning the current window
@@ -2188,7 +2203,7 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
         // web-browser window
         if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE)) {
             char script[128];
-            WEBUI_SPF_STATIC(script, sizeof(script), "window.moveTo(%u, %u);", x, y);
+            WEBUI_SPF_STATIC(script, sizeof(script), "window.moveTo(%u, %u);", X, Y);
             webui_run(window, script);
         }
     }
@@ -2196,8 +2211,8 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
 
         // WebView window
         if (win->webView) {
-            win->webView->x = x;
-            win->webView->y = y;
+            win->webView->x = X;
+            win->webView->y = Y;
             win->webView->position = true;
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);    
         }
@@ -3185,7 +3200,7 @@ static void _webui_free_mem(void * ptr) {
         }
     }
 
-    for (size_t i = _webui_core.ptr_position; i >= 0; i--) {
+    for (int i = _webui_core.ptr_position; i >= 0; i--) {
 
         if (_webui_core.ptr_list[i] == NULL) {
 
@@ -3657,16 +3672,14 @@ static char* _webui_get_file_name_from_url(const char* url) {
     return file;
 }
 
-static char* _webui_get_full_path_from_url(_webui_window_t * win, const char* file, const char* url) {
+static char* _webui_get_full_path(_webui_window_t * win, const char* file) {
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_get_full_path_from_url([%s])\n", url);
+    printf("[Core]\t\t_webui_get_full_path([%s])\n", file);
     #endif
 
-    if (!file || !url)
+    if (!file)
         return NULL;
-
-    size_t url_len = _webui_strlen(url);
 
     // Get full path
     // [current folder][/][file]
@@ -3687,7 +3700,7 @@ static char* _webui_get_full_path_from_url(_webui_window_t * win, const char* fi
     _webui_free_mem((void * ) file);
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_get_full_path_from_url() -> Full path: [%s]\n", full_path);
+    printf("[Core]\t\t_webui_get_full_path() -> Full path: [%s]\n", full_path);
     #endif
 
     return full_path;
@@ -3721,13 +3734,13 @@ static int _webui_serve_file(_webui_window_t * win, struct mg_connection * conn)
                 length = _webui_strlen(data);
 
             // Send header
-            int header_ret = mg_send_http_ok(
+            mg_send_http_ok(
                 conn, // 200
                 mg_get_builtin_mime_type(url), length
             );
 
             // Send body
-            int body_ret = mg_write(conn, data, length);
+            mg_write(conn, data, length);
 
             // Safely free resources if end-user allocated
             // using `webui_malloc()`. Otherwise just do nothing.
@@ -3747,7 +3760,7 @@ static int _webui_serve_file(_webui_window_t * win, struct mg_connection * conn)
 
         // Get full path
         char* file = _webui_get_file_name_from_url(url);
-        char* full_path = _webui_get_full_path_from_url(win, file, url);
+        char* full_path = _webui_get_full_path(win, file);
 
         if (_webui_file_exist(full_path)) {
 
@@ -3879,6 +3892,7 @@ static void _webui_condition_destroy(webui_condition_t * cond) {
 
     #ifdef _WIN32
     // No need
+    (void)cond;
     #else
     pthread_cond_destroy(cond);
     #endif
@@ -3936,7 +3950,6 @@ static int _webui_interpret_file(_webui_window_t * win, struct mg_connection * c
 
     const struct mg_request_info * ri = mg_get_request_info(conn);
     const char* url = ri->local_uri;
-    size_t url_len = _webui_strlen(url);
 
     // Get file full path
     if (index != NULL && !_webui_is_empty(index)) {
@@ -3953,7 +3966,7 @@ static int _webui_interpret_file(_webui_window_t * win, struct mg_connection * c
         file = _webui_get_file_name_from_url(url);
 
         // Get full path
-        full_path = _webui_get_full_path_from_url(win, file, url);
+        full_path = _webui_get_full_path(win, file);
     }
 
     // Get file extension
@@ -7041,13 +7054,13 @@ static void _webui_http_send(struct mg_connection * conn, const char* mime_type,
         return;
 
     // Send header
-    int header_ret = mg_send_http_ok(
+    mg_send_http_ok(
         conn, // 200
         mime_type, len
     );
 
     // Send body
-    int body_ret = mg_write(conn, body, len);
+    mg_write(conn, body, len);
 }
 
 static void _webui_http_send_error_page(struct mg_connection * conn, const char* body, int status) {
@@ -7070,6 +7083,7 @@ static void _webui_http_send_error_page(struct mg_connection * conn, const char*
 
 #ifdef WEBUI_LOG
 static int _webui_http_log(const struct mg_connection * conn, const char* message) {
+    (void)conn;
     printf("[Core]\t\t_webui_http_log()\n");
     printf("[Core]\t\t_webui_http_log() -> Log: %s.\n", message);
     return 1;
@@ -7300,7 +7314,6 @@ static int _webui_http_handler(struct mg_connection * conn, void * _win) {
                 // Serve as a normal text-based file
                 http_status_code = _webui_serve_file(win, conn);
             }
-            // }
         }
     } else {
 
@@ -7316,7 +7329,7 @@ static int _webui_http_handler(struct mg_connection * conn, void * _win) {
 }
 
 static int _webui_ws_connect_handler(const struct mg_connection * conn, void * _win) {
-
+    (void)conn;
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_ws_connect_handler()\n");
     #endif
@@ -7357,7 +7370,7 @@ static void _webui_ws_ready_handler(struct mg_connection * conn, void * _win) {
 }
 
 static int _webui_ws_data_handler(struct mg_connection * conn, int opcode, char* data, size_t datasize, void * _win) {
-
+    (void)conn;
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_ws_data_handler()\n");
     #endif
@@ -8840,6 +8853,9 @@ static bool _webui_get_windows_reg_value(HKEY key, LPCWSTR reg, LPCWSTR value_na
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
+    (void)hinstDLL;
+    (void)fdwReason;
+    (void)lpReserved;
     return true;
 }
 
@@ -8907,6 +8923,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     HRESULT STDMETHODCALLTYPE TitleChanged_Invoke(
         ICoreWebView2DocumentTitleChangedEventHandler* This, ICoreWebView2* sender, IUnknown* args) {
+        (void)args;
         TitleChangedHandler* handler = (TitleChangedHandler*)This;
         _webui_wv_win32_t* webView = handler->webView;
         LPWSTR newTitle = NULL;
@@ -9050,12 +9067,16 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     HRESULT STDMETHODCALLTYPE QueryInterfaceEnvironment(
         ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, REFIID riid, void** ppvObject) {
+        (void)This;
+        (void)riid;
         *ppvObject = NULL;
         return E_NOINTERFACE;
     };
 
     HRESULT STDMETHODCALLTYPE QueryInterfaceController(
         ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, REFIID riid, void** ppvObject) {
+        (void)This;
+        (void)riid;
         *ppvObject = NULL;
         return E_NOINTERFACE;
     };
@@ -9276,6 +9297,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wv_close()\n");
         #endif
+        (void)webView;
         // ...
     }
 
