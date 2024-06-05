@@ -1,5 +1,5 @@
 /*
-  WebUI Library 2.5.0-Beta-1
+  WebUI Library
   http://webui.me
   https://github.com/webui-dev/webui
   Copyright (c) 2020-2024 Hassan Draga.
@@ -11,7 +11,7 @@
 #ifndef _WEBUI_H
 #define _WEBUI_H
 
-#define WEBUI_VERSION "2.5.0-Beta-1"
+#define WEBUI_VERSION "2.5.0-beta.1"
 
 // Max windows, servers and threads
 #define WEBUI_MAX_IDS (256)
