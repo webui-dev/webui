@@ -55,7 +55,8 @@ else
 		# Linux
 		PLATFORM := linux
 		COPY_LIB_CMD := @cp "$(LIB_DIR)/$(WEBUI_LIB_NAME).so" "$(WEBUI_LIB_NAME).so"
-		DYN_BUILD_FLAGS += "./$(WEBUI_LIB_NAME).so"
+		STATIC_BUILD_FLAGS += -ldl
+		DYN_BUILD_FLAGS += -ldl "./$(WEBUI_LIB_NAME).so"
 		STRIP_OPT := --strip-all
 		ifeq ($(CC),clang)
 			LLVM_OPT := llvm-
