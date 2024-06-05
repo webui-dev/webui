@@ -45,7 +45,8 @@ else
 	else
 		# Linux
 		PLATFORM := linux
-		DYN_BUILD_FLAGS += "$(LIB_DIR)/$(WEBUI_LIB_NAME).so"
+		STATIC_BUILD_FLAGS += -ldl
+		DYN_BUILD_FLAGS += -ldl "$(LIB_DIR)/$(WEBUI_LIB_NAME).so"
 		STRIP_OPT := --strip-all
 		ifeq ($(CXX),clang)
 			LLVM_OPT := llvm-
