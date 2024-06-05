@@ -174,10 +174,10 @@ class WebuiBridge {
 	}
 	// Methods
 	#close(reason = 0, value = '') {
-		this.#wsStatus = false;
 		this.#closeReason = reason;
 		this.#closeValue = value;
-		this.#ws.close();
+		if (this.#wsStatus) this.#ws.close();
+		this.#wsStatus = false;
 		if (reason === this.#CMD_NAVIGATION) {
 			if (this.#log) {
 				console.log(`WebUI -> Close -> Navigation to [${value}]`);
@@ -415,7 +415,7 @@ class WebuiBridge {
 						if (!this.#log) globalThis.close();
 						else {
 							console.log(`WebUI -> CMD -> Close`);
-							this.#ws.close();
+							if (this.#wsStatus) this.#ws.close();
 						}
 						break;
 				}
@@ -450,7 +450,7 @@ class WebuiBridge {
 				// let's send a void message to keep WS open
 				this.#sendData(new TextEncoder().encode('ping'));
 			} else {
-				// There is an active communication
+				// There is an active communicationthis.#wsStatus
 				this.#Ping = true;
 			}
 			await new Promise((resolve) => setTimeout(resolve, 20000));
