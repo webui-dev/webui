@@ -4367,6 +4367,7 @@ static bool _webui_browser_create_new_profile(_webui_window_t * win, size_t brow
             );
             fputs("user_pref(\"browser.shell.checkDefaultBrowser\", false); ", file);
             fputs("user_pref(\"browser.tabs.warnOnClose\", false); ", file);
+            fputs("user_pref(\"browser.tabs.inTitlebar\", 0); ", file);
             fclose(file);
 
             // userChrome.css
@@ -4380,99 +4381,10 @@ static bool _webui_browser_create_new_profile(_webui_window_t * win, size_t brow
             WEBUI_FOPEN(file, buf, "a");
             if (file == NULL)
                 return false;
-            #ifdef _WIN32
             fputs(
-                ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) "
-                "{--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!"
-                "important}:root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - "
-                "var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!"
-                "important;height:var(--uc-"
-                "toolbar-height)!important;position:relative}#main-menubar{-moz-"
-                "box-flex:1;background-"
-                "color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-"
-                "clip:padding-box;border-"
-                "right:30px solid transparent;border-image:linear-gradient(to "
-                "left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) "
-                "30px) 20 / "
-                "30px}#toolbar-menubar:not([inactive]) "
-                "{z-index:2}#toolbar-menubar[inactive] > "
-                "#menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-"
-                "window-drag-space-width,"
-                "0px)}#nav-bar{visibility:collapse}@-moz-document "
-                "url(chrome://browser/content/browser.xhtml) "
-                "{:root:not([sizemode=\"fullscreen\"]) > "
-                "head{display: block;position: fixed;width: calc(200vw - "
-                "440px);text-align: left;z-index: "
-                "9;pointer-events: none;}head > *{ display: none }head > "
-                "title{display: -moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: "
-                "hidden;text-overflow: "
-                "ellipsis;}}",
-                file
-            );
-            #elif __APPLE__
-            fputs(
-                // ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"])
-                // "
-                // "{--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!important}
-                // "
-                ":root:not([inFullscreen]) #nav-bar{margin-top:calc(0px - "
-                "var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!"
-                "important;height:var(--uc-"
-                "toolbar-height)!important;position:relative}#main-menubar{-moz-box-"
-                "flex:1;background-"
-                "color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-"
-                "clip:padding-box;border-"
-                "right:30px solid transparent;border-image:linear-gradient(to "
-                "left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) "
-                "30px) 20 / "
-                "30px}#toolbar-menubar:not([inactive]) "
-                "{z-index:2}#toolbar-menubar[inactive] > "
-                "#menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-"
-                "window-drag-space-width,"
-                "0px)}#nav-bar{visibility:collapse}@-moz-document "
-                "url(chrome://browser/content/browser.xhtml) "
-                "{:root:not([sizemode=\"fullscreen\"]) > "
-                "head{display: block;position: fixed;width: calc(200vw - "
-                "440px);text-align: left;z-index: "
-                "9;pointer-events: none;}head > *{ display: none }head > "
-                "title{display: "
-                "-moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: "
-                "hidden;text-overflow: "
-                "ellipsis;}}",
-                file
-            );
-            #else
-            fputs(
-                ":root{--uc-toolbar-height:32px}:root:not([uidensity=\"compact\"]) "
-                "{--uc-toolbar-height:38px}#TabsToolbar{visibility:collapse!"
-                "important}:root:not(["
-                "inFullscreen]) #nav-bar{margin-top:calc(0px - "
-                "var(--uc-toolbar-height))}#toolbar-menubar{min-height:unset!"
-                "important;height:var(--uc-"
-                "toolbar-height)!important;position:relative}#main-menubar{-moz-"
-                "box-flex:1;background-"
-                "color:var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor);background-"
-                "clip:padding-box;border-"
-                "right:30px solid transparent;border-image:linear-gradient(to "
-                "left,transparent,var(--toolbar-bgcolor,--toolbar-non-lwt-bgcolor) "
-                "30px) 20 / "
-                "30px}#toolbar-menubar:not([inactive]) "
-                "{z-index:2}#toolbar-menubar[inactive] > "
-                "#menubar-items{opacity:0;pointer-events:none;margin-left:var(--uc-"
-                "window-drag-space-width,"
-                "0px)}#nav-bar{visibility:collapse}@-moz-document "
-                "url(chrome://browser/content/browser.xhtml) "
-                "{:root:not([sizemode=\"fullscreen\"]) > "
-                "head{display: block;position: fixed;width: calc(200vw - "
-                "440px);text-align: left;z-index: "
-                "9;pointer-events: none;}head > *{ display: none }head > "
-                "title{display: "
-                "-moz-inline-box;padding: 4px;max-width: 50vw;overflow-x: "
-                "hidden;text-overflow: "
-                "ellipsis;}}",
-                file
-            );
-            #endif
+	            "#navigator-toolbox{opacity:0 !important; height:0px !important; max-height:0px !important;"
+	            "width:0px !important; max-width:0px !important;}"
+            , file);
             fclose(file);
         }
 
