@@ -6476,7 +6476,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
 
     // Get network ports
     if (win->custom_server_port > 0) win->server_port = win->custom_server_port;
-    else win->server_port = _webui_get_free_port();
+    else if (win->server_port == 0) win->server_port = _webui_get_free_port();
 
     // Generate the server URL
     win->url = (char*)_webui_malloc(32); // [http][domain][port]
