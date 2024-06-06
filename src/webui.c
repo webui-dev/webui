@@ -288,7 +288,6 @@ typedef struct _webui_window_t {
     bool is_closed;
     size_t custom_server_port;
     size_t server_port;
-    size_t ws_port;
     char* url;
     const char* html;
     const char* icon;
@@ -4167,7 +4166,7 @@ static const char* _webui_generate_js_bridge(_webui_window_t * win) {
         js, len,
         "%s\n document.addEventListener(\"DOMContentLoaded\",function(){ globalThis.webui = "
         "new WebuiBridge({ secure: %s, token: %" PRIu32 ", port: %zu, winNum: %zu, bindList: %s, log: %s, ",
-        webui_javascript_bridge, TLS, token, win->ws_port, win->window_number, event_cb_js_array, log
+        webui_javascript_bridge, TLS, token, win->server_port, win->window_number, event_cb_js_array, log
     );
     // Window Size
     if (win->size_set)
@@ -6476,10 +6475,8 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
         _webui_free_mem((void * ) win->url);
 
     // Get network ports
-    if (win->custom_server_port > 0)
-        win->server_port = win->custom_server_port;
-    win->server_port = (win->server_port == 0 ? _webui_get_free_port() : win->server_port);
-    win->ws_port = (win->ws_port == 0 ? _webui_get_free_port() : win->ws_port);
+    if (win->custom_server_port > 0) win->server_port = win->custom_server_port;
+    else win->server_port = _webui_get_free_port();
 
     // Generate the server URL
     win->url = (char*)_webui_malloc(32); // [http][domain][port]
@@ -6610,9 +6607,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
             _webui_free_mem((void * ) win->html);
             _webui_free_mem((void * ) win->url);
             _webui_free_port(win->server_port);
-            _webui_free_port(win->ws_port);
             win->server_port = 0;
-            win->ws_port = 0;
             return false;
         }
 
@@ -7457,49 +7452,36 @@ static WEBUI_THREAD_SERVER_START {
     // HTTP Secure Port
     char* server_port = (char*)_webui_malloc(64);
     WEBUI_SPF_DYN(server_port, 64, "%s%zus", host, win->server_port);
-
-    // WS Secure Port
-    char* ws_port = (char*)_webui_malloc(64);
-    WEBUI_SPF_DYN(ws_port, 64, "%s%zus", host, win->ws_port);
     #else
     // HTTP Port
     char* server_port = (char*)_webui_malloc(64);
     WEBUI_SPF_DYN(server_port, 64, "%s%zu", host, win->server_port);
-
-    // WS Port
-    char* ws_port = (char*)_webui_malloc(64);
-    WEBUI_SPF_DYN(ws_port, 64, "%s%zu", host, win->ws_port);
     #endif
 
-    // Start HTTP Server
+    // Server Options
     const char* http_options[] = {
-        "listening_ports",
-        server_port,
-        "document_root",
-        win->server_root_path,
-        "access_control_allow_headers",
-        "*",
-        "access_control_allow_methods",
-        "*",
-        "access_control_allow_origin",
-        "*",
+        // HTTP
+        "listening_ports", server_port,
+        "document_root", win->server_root_path,
+        "access_control_allow_headers", "*",
+        "access_control_allow_methods", "*",
+        "access_control_allow_origin", "*",
         #ifdef WEBUI_TLS
-        "authentication_domain",
-        "localhost",
-        "enable_auth_domain_check",
-        "no",
-        "ssl_protocol_version",
-        "4",
-        "ssl_cipher_list",
-        "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS",
-        "strict_transport_security_max_age",
-        WEBUI_SSL_EXPIRE_STR,
+        "authentication_domain", "localhost",
+        "enable_auth_domain_check", "no",
+        "ssl_protocol_version", "4",
+        "ssl_cipher_list", "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS",
+        "strict_transport_security_max_age", WEBUI_SSL_EXPIRE_STR,
         #endif
-        NULL,
-        NULL
+        // WS
+        "websocket_timeout_ms", "3600000",
+        "enable_websocket_ping_pong", "yes",
+        NULL, NULL
     };
+
+    // Server Settings
     struct mg_callbacks http_callbacks;
-    struct mg_context * http_ctx;
+    struct mg_context * http_ctx = NULL;
     memset( & http_callbacks, 0, sizeof(http_callbacks));
     #ifdef WEBUI_TLS
     http_callbacks.init_ssl = _webui_tls_initialization;
@@ -7507,60 +7489,15 @@ static WEBUI_THREAD_SERVER_START {
     #ifdef WEBUI_LOG
     http_callbacks.log_message = _webui_http_log;
     #endif
+
+    // Start Server
     http_ctx = mg_start( & http_callbacks, 0, http_options);
-    mg_set_request_handler(http_ctx, "/", _webui_http_handler, (void * ) win);
+    mg_set_request_handler(http_ctx, "/", _webui_http_handler, (void * ) win);    
 
-    // Start WS Server
-    struct mg_callbacks ws_callbacks = {
-        0
-    };
-    struct mg_init_data ws_mg_start_init_data = {
-        0
-    };
-    #ifdef WEBUI_TLS
-    ws_callbacks.init_ssl = _webui_tls_initialization;
-    #endif
-    ws_mg_start_init_data.callbacks = & ws_callbacks;
-    ws_mg_start_init_data.user_data = (void * ) win;
-    const char* ws_server_options[] = {
-        "listening_ports",
-        ws_port,
-        "document_root",
-        "/_webui_ws_connect",
-        "websocket_timeout_ms",
-        "3600000",
-        "enable_websocket_ping_pong",
-        "yes",
-        #ifdef WEBUI_TLS
-        "authentication_domain",
-        "localhost",
-        "enable_auth_domain_check",
-        "no",
-        "ssl_protocol_version",
-        "4",
-        "ssl_cipher_list",
-        "ECDH+AESGCM+AES256:!aNULL:!MD5:!DSS",
-        "strict_transport_security_max_age",
-        WEBUI_SSL_EXPIRE_STR,
-        #endif
-        NULL,
-        NULL
-    };
-    ws_mg_start_init_data.configuration_options = ws_server_options;
-    struct mg_error_data ws_mg_start_error_data = {
-        0
-    };
-    char ws_errtxtbuf[256] = {
-        0
-    };
-    ws_mg_start_error_data.text = ws_errtxtbuf;
-    ws_mg_start_error_data.text_buffer_size = sizeof(ws_errtxtbuf);
-    struct mg_context * ws_ctx = mg_start2( & ws_mg_start_init_data, & ws_mg_start_error_data);
-
-    if (http_ctx && ws_ctx) {
+    if (http_ctx) {
 
         mg_set_websocket_handler(
-            ws_ctx, "/_webui_ws_connect", _webui_ws_connect_handler, _webui_ws_ready_handler,
+            http_ctx, "/_webui_ws_connect", _webui_ws_connect_handler, _webui_ws_ready_handler,
             _webui_ws_data_handler, _webui_ws_close_handler, (void * ) win
         );
 
@@ -7571,18 +7508,9 @@ static WEBUI_THREAD_SERVER_START {
 
             #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_server_thread([%zu]) -> Listening Success\n", win->window_number);
-            printf(
-                "[Core]\t\t_webui_server_thread([%zu]) -> HTTP Port: %s\n", win->window_number, server_port
-            );
-            printf("[Core]\t\t_webui_server_thread([%zu]) -> WS Port: %s\n", win->window_number, ws_port);
-            printf(
-                "[Core]\t\t_webui_server_thread([%zu]) -> Timeout is %zu seconds\n", win->window_number,
-                _webui_core.startup_timeout
-            );
-            printf(
-                "[Core]\t\t_webui_server_thread([%zu]) -> Root path: %s\n", win->window_number,
-                win->server_root_path
-            );
+            printf("[Core]\t\t_webui_server_thread([%zu]) -> HTTP/WS Port: %s\n", win->window_number, server_port);
+            printf("[Core]\t\t_webui_server_thread([%zu]) -> Timeout is %zu seconds\n", win->window_number,_webui_core.startup_timeout);
+            printf("[Core]\t\t_webui_server_thread([%zu]) -> Root path: %s\n", win->window_number,win->server_root_path);
             #endif
 
             bool stop = false;
@@ -7754,7 +7682,7 @@ static WEBUI_THREAD_SERVER_START {
     } else {
 
         #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_server_thread([%zu]) -> Listening failed\n", win->window_number);
+        if (!http_ctx) printf("[Core]\t\t_webui_server_thread([%zu]) -> Listening failed.\n", win->window_number);
         #endif
 
         // Mutex
@@ -7777,11 +7705,8 @@ static WEBUI_THREAD_SERVER_START {
     win->server_handled = false;
     win->bridge_handled = false;
     _webui_free_port(win->server_port);
-    _webui_free_port(win->ws_port);
     win->server_port = 0;
-    win->ws_port = 0;
     _webui_free_mem((void*)server_port);
-    _webui_free_mem((void*)ws_port);
     _webui_mutex_is_connected(win, WEBUI_MUTEX_FALSE);
 
     // Kill Process
@@ -7799,7 +7724,6 @@ static WEBUI_THREAD_SERVER_START {
     // Stop server services
     // This should be at the
     // end as it may take time
-    mg_stop(ws_ctx);
     mg_stop(http_ctx);
 
     // Fire the mutex condition for wait()
