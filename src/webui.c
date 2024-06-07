@@ -383,6 +383,7 @@ typedef struct _webui_core_t {
     uint8_t * ssl_key;
     #endif
     // WebView
+    bool is_browser_main_run;
     bool is_webview;
     #ifdef _WIN32
     char* webview_cacheFolder;
@@ -2615,8 +2616,10 @@ void webui_wait(void) {
             printf("[Loop] webui_wait() -> Windows web browser loop\n");
             #endif
 
+            _webui_core.is_browser_main_run = true;
             _webui_mutex_lock( & _webui_core.mutex_wait);
             _webui_condition_wait( & _webui_core.condition_wait, & _webui_core.mutex_wait);
+            _webui_core.is_browser_main_run = false;
         }
         else {
             // Windows WebView main loop
@@ -2636,8 +2639,10 @@ void webui_wait(void) {
             printf("[Loop] webui_wait() -> Linux web browser loop\n");
             #endif
 
+            _webui_core.is_browser_main_run = true;
             _webui_mutex_lock( & _webui_core.mutex_wait);
             _webui_condition_wait( & _webui_core.condition_wait, & _webui_core.mutex_wait);
+            _webui_core.is_browser_main_run = false;
         }
         else {
             // Linux WebView main loop
@@ -2668,8 +2673,10 @@ void webui_wait(void) {
             printf("[Loop] webui_wait() -> macOS web browser loop\n");
             #endif
 
+            _webui_core.is_browser_main_run = true;
             _webui_mutex_lock( & _webui_core.mutex_wait);
             _webui_condition_wait( & _webui_core.condition_wait, & _webui_core.mutex_wait);
+            _webui_core.is_browser_main_run = false;
         }
         else {
             // macOS WebView main loop
@@ -2711,7 +2718,8 @@ void webui_wait(void) {
                 _webui_delete_folder(_webui_core.webview_cacheFolder);
                 _webui_free_mem((void*) _webui_core.webview_cacheFolder);
                 _webui_core.webview_cacheFolder = NULL;
-            }   
+            }
+            _webui_sleep(750);
         }
     #elif __linux__
         if (!_webui_core.is_webview) {
@@ -2736,6 +2744,7 @@ void webui_wait(void) {
                 }
             }
             _webui_wv_free();
+            _webui_sleep(750);
         }
     #else
         if (!_webui_core.is_webview) {
@@ -2746,7 +2755,7 @@ void webui_wait(void) {
         else {
             // macOS WebView Clean
 
-            _webui_sleep(500);
+            _webui_sleep(750);
         }
     #endif
 
@@ -9519,6 +9528,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         // Linux GTK WebView
 
+        if (_webui_core.is_browser_main_run)
+            return false;
+
         // Dynamic Load
         if (!libgtk || !libwebkit) {
 
@@ -9861,6 +9873,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #endif
 
         // Apple macOS WKWebView
+
+        if (_webui_core.is_browser_main_run)
+            return false;
+
         if (!_webui_core.is_wkwebview_main_run) {
             if (_webui_macos_wv_new(win->window_number)) {
                 if (!_webui_core.is_webview) {
