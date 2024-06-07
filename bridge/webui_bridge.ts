@@ -176,8 +176,10 @@ class WebuiBridge {
 	#close(reason = 0, value = '') {
 		this.#closeReason = reason;
 		this.#closeValue = value;
-		if (this.#wsStatus) this.#ws.close();
-		this.#wsStatus = false;
+		if (this.#wsStatus) {
+			this.#wsStatus = false;
+			this.#ws.close();
+		}
 		if (reason === this.#CMD_NAVIGATION) {
 			if (this.#log) {
 				console.log(`WebUI -> Close -> Navigation to [${value}]`);
@@ -415,7 +417,10 @@ class WebuiBridge {
 						if (!this.#log) globalThis.close();
 						else {
 							console.log(`WebUI -> CMD -> Close`);
-							if (this.#wsStatus) this.#ws.close();
+							if (this.#wsStatus) {
+								this.#wsStatus = false;
+								this.#ws.close();
+							}
 						}
 						break;
 				}
@@ -450,7 +455,7 @@ class WebuiBridge {
 				// let's send a void message to keep WS open
 				this.#sendData(new TextEncoder().encode('ping'));
 			} else {
-				// There is an active communicationthis.#wsStatus
+				// There is an active communication
 				this.#Ping = true;
 			}
 			await new Promise((resolve) => setTimeout(resolve, 20000));
@@ -732,6 +737,15 @@ class WebuiBridge {
 	setEventCallback(callback: (e: number) => void): void {
         this.#eventsCallback = callback;
     }
+	/**
+	 * Check if UI is connected to the back-end. The connection
+	 * is done by including `webui.js` virtual file in the HTML.
+	 *
+	 * @return - Boolean `true` if connected
+	 */
+	isConnected(): boolean {
+		return (this.#wsStatus);
+	}
 }
 // Export
 type webui = WebuiBridge;

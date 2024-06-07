@@ -7468,14 +7468,12 @@ static WEBUI_THREAD_SERVER_START {
 
                         // At this moment the browser is already started and HTML
                         // is already handled, so, let's wait more time to give
-                        // the WebSocket an extra three seconds to connect.
+                        // the WebSocket an extra seconds to connect.
 
                         do {
                             #ifdef WEBUI_LOG
                             printf(
-                                "[Core]\t\t_webui_server_thread([%zu]) -> Waiting for "
-                                "first "
-                                "connection\n",
+                                "[Core]\t\t_webui_server_thread([%zu]) -> Waiting for first connection\n",
                                 win->window_number
                             );
                             #endif
@@ -7487,7 +7485,7 @@ static WEBUI_THREAD_SERVER_START {
                             for (;;) {
 
                                 // Stop if window is connected
-                                _webui_sleep(1);
+                                _webui_sleep(10);
                                 if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE))
                                     break;
 
@@ -7555,12 +7553,12 @@ static WEBUI_THREAD_SERVER_START {
                                     for (;;) {
 
                                         // Stop if window is re-connected
-                                        _webui_sleep(1);
+                                        _webui_sleep(10);
                                         if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE))
                                             break;
 
                                         // Stop if timer is finished
-                                        if (_webui_timer_is_end( & timer_3, 1000))
+                                        if (_webui_timer_is_end( & timer_3, 3000))
                                             break;
                                     }
                                 } while(win->file_handled && !_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE));
