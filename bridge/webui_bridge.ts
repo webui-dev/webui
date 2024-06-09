@@ -437,7 +437,7 @@ class WebuiBridge {
 						// Get function name
 						const functionName: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
 						// Get the raw data
-						const rawDataIndex: number = 2 + functionName.length + 1;
+						const rawDataIndex: number = this.#PROTOCOL_DATA + 2 + functionName.length + 1;
 						const userRawData = buffer8.subarray(rawDataIndex);
 						if (this.#log) console.log(`WebUI -> CMD -> Send Raw ${buffer8.length} bytes to [${functionName}()]`);
 						// Call the user function, and pass the raw data
