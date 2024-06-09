@@ -25,7 +25,7 @@ pub fn build(b: *Build) !void {
                 std.os.exit(1);
             }
         },
-        12, 13 => {
+        12, 13, 14 => {
             if (enable_tls and !target.query.isNative()) {
                 log.err("cross compilation is not supported with TLS enabled", .{});
                 std.process.exit(1);
