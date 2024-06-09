@@ -47,9 +47,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#if defined(__GNUC__) || defined(__TINYC__)
-    #include <dirent.h>
-#endif
 
 // -- Windows -------------------------
 #ifdef _WIN32
@@ -57,6 +54,9 @@
     #include <ws2tcpip.h>
     #ifndef WIN32_LEAN_AND_MEAN
         #define WIN32_LEAN_AND_MEAN
+    #endif
+    #if defined(__GNUC__) || defined(__TINYC__)
+        #include <dirent.h>
     #endif
     #include <windows.h>
     #include <direct.h>
