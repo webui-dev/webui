@@ -2011,7 +2011,7 @@ void webui_set_event_block(size_t window, bool status) {
 
     // Dereference
     if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui_core.wins[window] == NULL)
-        return false;
+        return;
     _webui_window_t * win = _webui_core.wins[window];
 
     win->ws_block = status;
