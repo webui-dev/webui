@@ -21,6 +21,12 @@ jobs:
         with:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
+      - name: Install OpenSSL
+        run: |
+          choco install openssl -y
+          $openssl_path = (choco info openssl -r | Select-String -Pattern "C:.*OpenSSL.*" -AllMatches).Matches[0].Value
+          Write-Host "OpenSSL path: $openssl_path"
+          echo "OPENSSL_PATH=$openssl_path" >> $GITHUB_ENV
 
   build:
     needs: setup
@@ -32,8 +38,12 @@ jobs:
         include:
           - compiler: GCC
             make: mingw32-make
+            tls_include: "${{ env.OPENSSL_PATH }}\include"
+            tls_lib: "${{ env.OPENSSL_PATH }}\lib"
           - compiler: MSVC
             make: nmake
+            tls_include: "${{ env.OPENSSL_PATH }}\include"
+            tls_lib: "${{ env.OPENSSL_PATH }}\lib"
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +59,10 @@ jobs:
         run: ${{ matrix.make }} debug
       - name: Build Release Target
         run: ${{ matrix.make }}
+      - name: Build TLS Debug Target
+        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ matrix.tls_include }}" WEBUI_TLS_LIB="${{ matrix.tls_lib }}" debug
+      - name: Build TLS Release Target
+        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ matrix.tls_include }}" WEBUI_TLS_LIB="${{ matrix.tls_lib }}"
       - name: Build examples
         run: |
           $examples_base_dir = "$(Get-Location)/examples/C/"
@@ -64,7 +78,7 @@ jobs:
                   Write-Host "Failed to build '$example': $make_output"
                   $exit_code = 1
                   continue
-                }
+              }
               Write-Output $make_output
               if (!(Test-Path "main.exe") -or !(Test-Path "main-dyn.exe")) {
                   Write-Host "Failed to find executable for '$example'"
