@@ -38,12 +38,8 @@ jobs:
         include:
           - compiler: GCC
             make: mingw32-make
-            tls_include: ${{ env.OPENSSL_PATH }}\include
-            tls_lib: ${{ env.OPENSSL_PATH }}\lib
           - compiler: MSVC
             make: nmake
-            tls_include: ${{ env.OPENSSL_PATH }}\include
-            tls_lib: ${{ env.OPENSSL_PATH }}\lib
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -60,9 +56,13 @@ jobs:
       - name: Build Release Target
         run: ${{ matrix.make }}
       - name: Build TLS Debug Target
-        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ matrix.tls_include }}" WEBUI_TLS_LIB="${{ matrix.tls_lib }}" debug
+        env:
+          OPENSSL_PATH: ${{ env.OPENSSL_PATH }}
+        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ env.OPENSSL_PATH }}\include" WEBUI_TLS_LIB="${{ env.OPENSSL_PATH }}\lib" debug
       - name: Build TLS Release Target
-        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ matrix.tls_include }}" WEBUI_TLS_LIB="${{ matrix.tls_lib }}"
+        env:
+          OPENSSL_PATH: ${{ env.OPENSSL_PATH }}
+        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ env.OPENSSL_PATH }}\include" WEBUI_TLS_LIB="${{ env.OPENSSL_PATH }}\lib"
       - name: Build examples
         run: |
           $examples_base_dir = "$(Get-Location)/examples/C/"
