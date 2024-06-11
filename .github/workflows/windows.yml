@@ -22,11 +22,7 @@ jobs:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
       - name: Install OpenSSL
-        run: |
-          choco install openssl -y
-          $openssl_path = (choco info openssl -r | Select-String -Pattern "C:.*OpenSSL.*" -AllMatches).Matches[0].Value
-          Write-Host "OpenSSL path: $openssl_path"
-          echo "OPENSSL_PATH=$openssl_path" >> $GITHUB_ENV
+        run: choco install openssl -y
 
   build:
     needs: setup
@@ -38,8 +34,12 @@ jobs:
         include:
           - compiler: GCC
             make: mingw32-make
+            tls_include: "C:\\Program Files\\OpenSSL\\include"
+            tls_lib: "C:\\Program Files\\OpenSSL\\lib"
           - compiler: MSVC
             make: nmake
+            tls_include: "C:\\Program Files\\OpenSSL\\include"
+            tls_lib: "C:\\Program Files\\OpenSSL\\lib"
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -56,13 +56,9 @@ jobs:
       - name: Build Release Target
         run: ${{ matrix.make }}
       - name: Build TLS Debug Target
-        env:
-          OPENSSL_PATH: ${{ env.OPENSSL_PATH }}
-        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ env.OPENSSL_PATH }}\include" WEBUI_TLS_LIB="${{ env.OPENSSL_PATH }}\lib" debug
+        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ matrix.tls_include }}" WEBUI_TLS_LIB="${{ matrix.tls_lib }}" debug
       - name: Build TLS Release Target
-        env:
-          OPENSSL_PATH: ${{ env.OPENSSL_PATH }}
-        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ env.OPENSSL_PATH }}\include" WEBUI_TLS_LIB="${{ env.OPENSSL_PATH }}\lib"
+        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ matrix.tls_include }}" WEBUI_TLS_LIB="${{ matrix.tls_lib }}"
       - name: Build examples
         run: |
           $examples_base_dir = "$(Get-Location)/examples/C/"
