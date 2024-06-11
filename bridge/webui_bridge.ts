@@ -40,7 +40,7 @@ class WebuiBridge {
 	#hasEvents = false;
 	#callPromiseID = new Uint16Array(1);
 	#callPromiseResolve: (((data: string) => unknown) | undefined)[] = [];
-	#allowNavigation = false;
+	#allowNavigation = true;
 	#sendQueue: Uint8Array[] = [];
 	#isSending = false;
 	// WebUI Const
@@ -126,32 +126,27 @@ class WebuiBridge {
 		}
 		// Connect to the backend application
 		this.#start();
-		// Handle navigation server side
+		// Navigation event listener
 		if ('navigation' in globalThis) {
 			globalThis.navigation.addEventListener('navigate', (event) => {
 				if (!this.#allowNavigation) {
-					event.preventDefault();
-					const url = new URL(event.destination.url);
-					if (this.#hasEvents) {
+					if (this.#hasEvents && this.#wsStatus) {
+						event.preventDefault();
+						const url = new URL(event.destination.url);
 						if (this.#log) console.log(`WebUI -> DOM -> Navigation Event [${url.href}]`);
 						this.#sendEventNavigation(url.href);
-					} else {
-						this.#close(this.#CMD_NAVIGATION, url.href);
 					}
 				}
 			});
 		} else {
-			// Handle all link click to prevent natural navigation
-			// Rebind listener if user inject new html
+			// Click navigation event listener
 			addRefreshableEventListener(document.body, 'a', 'click', (event) => {
 				if (!this.#allowNavigation) {
-					event.preventDefault();
-					const { href } = event.target as HTMLAnchorElement;
-					if (this.#hasEvents) {
+					if (this.#hasEvents && this.#wsStatus) {
+						event.preventDefault();
+						const { href } = event.target as HTMLAnchorElement;
 						if (this.#log) console.log(`WebUI -> DOM -> Navigation Click Event [${href}]`);
 						this.#sendEventNavigation(href);
-					} else {
-						this.#close(this.#CMD_NAVIGATION, href);
 					}
 				}
 			});
@@ -251,6 +246,7 @@ class WebuiBridge {
 		this.#callPromiseID[0] = 0;
 		if (this.#bindList.includes(this.#winNum + '/')) {
 			this.#hasEvents = true;
+			this.#allowNavigation = false;
 		}
 		const host = window.location.hostname;
 		const url = this.#secure ? ('wss://' + host) : ('ws://' + host);
@@ -385,7 +381,6 @@ class WebuiBridge {
 							}
 						}
 						break;
-
 					case this.#CMD_NAVIGATION:
 						// Protocol
 						// 0: [SIGNATURE]
@@ -559,34 +554,28 @@ class WebuiBridge {
 	}
 	#sendEventNavigation(url: string) {
 		if (url !== '') {
-			if (this.#hasEvents) {
+			if (this.#wsStatus) {
 				if (this.#log) console.log(`WebUI -> Send Navigation Event [${url}]`);
-				if (this.#wsStatus && this.#hasEvents) {
-					const packet = Uint8Array.of(
-						// Protocol
-						// 0: [SIGNATURE]
-						// 1: [TOKEN]
-						// 2: [ID]
-						// 3: [CMD]
-						// 4: [URL]
-						this.#WEBUI_SIGNATURE,
-						0,
-						0,
-						0,
-						0, // Token (4 Bytes)
-						0,
-						0, // ID (2 Bytes)
-						this.#CMD_NAVIGATION,
-						...new TextEncoder().encode(url),
-					);
-					this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN);
-					// this.#addID(packet, 0, this.#PROTOCOL_ID)
-					this.#sendData(packet);
-				}
-			} else {
-				if (this.#log) console.log(`WebUI -> Navigation To [${url}]`);
-				this.#allowNavigation = true;
-				globalThis.location.replace(url);
+				const packet = Uint8Array.of(
+					// Protocol
+					// 0: [SIGNATURE]
+					// 1: [TOKEN]
+					// 2: [ID]
+					// 3: [CMD]
+					// 4: [URL]
+					this.#WEBUI_SIGNATURE,
+					0,
+					0,
+					0,
+					0, // Token (4 Bytes)
+					0,
+					0, // ID (2 Bytes)
+					this.#CMD_NAVIGATION,
+					...new TextEncoder().encode(url),
+				);
+				this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN);
+				// this.#addID(packet, 0, this.#PROTOCOL_ID)
+				this.#sendData(packet);
 			}
 		}
 	}
