@@ -38,12 +38,12 @@ jobs:
         include:
           - compiler: GCC
             make: mingw32-make
-            tls_include: "${{ env.OPENSSL_PATH }}\include"
-            tls_lib: "${{ env.OPENSSL_PATH }}\lib"
+            tls_include: "${{ env.OPENSSL_PATH }}\\include"
+            tls_lib: "${{ env.OPENSSL_PATH }}\\lib"
           - compiler: MSVC
             make: nmake
-            tls_include: "${{ env.OPENSSL_PATH }}\include"
-            tls_lib: "${{ env.OPENSSL_PATH }}\lib"
+            tls_include: "${{ env.OPENSSL_PATH }}\\include"
+            tls_lib: "${{ env.OPENSSL_PATH }}\\lib"
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
