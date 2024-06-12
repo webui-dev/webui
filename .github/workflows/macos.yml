@@ -32,8 +32,10 @@ jobs:
       contents: write
     strategy:
       matrix:
-        compiler: [Clang]
+        cc: [clang]
         arch: [x64, arm64]
+    env:
+      ARTIFACT: webui-macos-${{ matrix.cc }}-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
@@ -66,10 +68,7 @@ jobs:
       - name: Prepare Artifacts
         run: |
           cp -r include dist
-          # Add the ARTIFACT name(lowercased) as GitHub environment variable.
-          artifact=webui-$(echo ${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }} | tr '[:upper:]' '[:lower:]')
-          echo "ARTIFACT=$artifact" >> $GITHUB_ENV
-          mv dist/ $artifact
+          mv dist/ "$ARTIFACT"
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -80,7 +79,7 @@ jobs:
           github.event.repository.full_name == 'webui-dev/webui'
           && (github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push'))
         run: |
-          zip -r ${{ env.ARTIFACT }}.zip ${{ env.ARTIFACT }}
+          zip -r "$ARTIFACT.zip" "$ARTIFACT"
           if [ $GITHUB_REF_TYPE == tag ]; then
             echo "TAG=$GITHUB_REF_NAME" >> $GITHUB_ENV
           else

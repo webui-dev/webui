@@ -32,14 +32,18 @@ jobs:
       contents: write
     strategy:
       matrix:
-        compiler: [GCC, Clang]
-        arch: [x64]
         include:
-          - compiler: GCC
+          - cc: gcc
+            arch: x64
+          - cc: gcc
             arch: arm64
-          - compiler: GCC
+          - cc: gcc
             arch: arm
+          - cc: clang
+            arch: x64
       fail-fast: false
+    env:
+      ARTIFACT: webui-linux-${{ matrix.cc }}-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
@@ -49,7 +53,7 @@ jobs:
           fail-on-cache-miss: true
       - name: Setup Libraries
         run: |
-          if [ "${{ matrix.compiler }}" == "Clang" ]; then
+          if [ "${{ matrix.cc }}" == "clang" ]; then
             sudo ln -s llvm-ar-14 /usr/bin/llvm-ar
             sudo ln -s llvm-ranlib-14 /usr/bin/llvm-ranlib
           elif [ "${{ matrix.arch }}" == "arm64" ]; then
@@ -64,8 +68,7 @@ jobs:
           elif [ "${{ matrix.arch }}" == "arm" ]; then
             make CC=arm-linux-gnueabihf-gcc debug
           else
-            compiler=${{ matrix.compiler }}
-            make CC=${compiler,,} debug
+            make CC=${{ matrix.cc }} debug
           fi
       - name: Build Release Target
         run: |
@@ -74,8 +77,7 @@ jobs:
           elif [ "${{ matrix.arch }}" == "arm" ]; then
             make CC=arm-linux-gnueabihf-gcc
           else
-            compiler=${{ matrix.compiler }}
-            make CC=${compiler,,}
+            make CC=${{ matrix.cc }}
           fi
       - name: Build examples
         if: matrix.arch == 'x64'
@@ -99,12 +101,7 @@ jobs:
       - name: Prepare Artifact
         run: |
           cp -r include dist
-          artifact=webui-${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.arch }}
-          # Convert to lowercase (`,,` ^= lowercase shell param)
-          artifact=${artifact,,}
-          # Add the ARTIFACT name as GitHub environment variable.
-          echo "ARTIFACT=$artifact" >> $GITHUB_ENV
-          mv dist/ $artifact
+          mv dist/ "$ARTIFACT"
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -115,7 +112,7 @@ jobs:
           github.event.repository.full_name == 'webui-dev/webui'
           && (github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push'))
         run: |
-          zip -r ${{ env.ARTIFACT }}.zip ${{ env.ARTIFACT }}
+          zip -r "$ARTIFACT.zip" "$ARTIFACT"
           if [ $GITHUB_REF_TYPE == tag ]; then
             echo "TAG=$GITHUB_REF_NAME" >> $GITHUB_ENV
           else
