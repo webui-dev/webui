@@ -11,8 +11,26 @@
 // 64Mb max dynamic memory allocation
 #define WEBUI_MAX_BUF (64000000)
 
+// -- Includes ------------------------
+#include "../bridge/webui_bridge.h" // WebUI Bridge (JavaScript)
+#include "webui.h"                  // WebUI Header
+
+// -- WebView -------------------------
+#ifdef _WIN32
+    #include "webview/WebView2.h"
+#elif __linux__
+    #include <dlfcn.h>
+#else
+    // ...
+#endif
+
 // -- Third-party ---------------------
 #ifdef WEBUI_TLS
+    #ifdef _WIN32
+        #ifndef WIN32_LEAN_AND_MEAN
+            #define WIN32_LEAN_AND_MEAN
+        #endif
+    #endif
     // OpenSSL
     #include <openssl/bio.h>
     #include <openssl/evp.h>
@@ -26,19 +44,6 @@
 #endif
 #define MG_BUF_LEN (WEBUI_MAX_BUF)
 #include "civetweb/civetweb.h"
-
-// -- Includes ------------------------
-#include "../bridge/webui_bridge.h" // WebUI Bridge (JavaScript)
-#include "webui.h"                  // WebUI Header
-
-// -- WebView -------------------------
-#ifdef _WIN32
-    #include "webview/WebView2.h"
-#elif __linux__
-    #include <dlfcn.h>
-#else
-    // ...
-#endif
 
 // -- Disable Non-critical warnings ---
 #ifdef _MSC_VER
