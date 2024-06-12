@@ -21,8 +21,6 @@ jobs:
         with:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
-      - name: Install OpenSSL
-        run: choco install openssl -y
 
   build:
     needs: setup
@@ -31,15 +29,18 @@ jobs:
       contents: write
     strategy:
       matrix:
+        secure: ['', 'tls']
+        cc: ['gcc', 'msvc']
         include:
-          - compiler: GCC
+          - cc: gcc
             make: mingw32-make
-            tls_include: "C:\\Program Files\\OpenSSL\\include"
-            tls_lib: "C:\\Program Files\\OpenSSL\\lib"
-          - compiler: MSVC
+          - cc: gcc
+            make: mingw32-make
+          - cc: msvc
             make: nmake
-            tls_include: "C:\\Program Files\\OpenSSL\\include"
-            tls_lib: "C:\\Program Files\\OpenSSL\\lib"
+        exclude:
+          - cc: msvc
+            secure: tls
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -49,16 +50,18 @@ jobs:
           key: ${{ runner.os }}-${{ github.sha }}-bridge
           fail-on-cache-miss: true
       - uses: microsoft/setup-msbuild@v2
-      - if: matrix.compiler == 'MSVC'
-        uses: ilammy/msvc-dev-cmd@v1
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: matrix.cc == 'msvc'
       - name: Build Debug Target
         run: ${{ matrix.make }} debug
       - name: Build Release Target
         run: ${{ matrix.make }}
       - name: Build TLS Debug Target
-        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ matrix.tls_include }}" WEBUI_TLS_LIB="${{ matrix.tls_lib }}" debug
+        if: matrix.secure == 'tls'
+        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="C:\Program Files\OpenSSL\include" WEBUI_TLS_LIB="C:\Program Files\OpenSSL\lib" debug
       - name: Build TLS Release Target
-        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="${{ matrix.tls_include }}" WEBUI_TLS_LIB="${{ matrix.tls_lib }}"
+        if: matrix.secure == 'tls'
+        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="C:\Program Files\OpenSSL\include" WEBUI_TLS_LIB="C:\Program Files\OpenSSL\lib"
       - name: Build examples
         run: |
           $examples_base_dir = "$(Get-Location)/examples/C/"
@@ -87,15 +90,13 @@ jobs:
       - name: Prepare Artifact
         shell: bash
         run: |
+          artifact=webui-windows-${{ matrix.cc }}-x64
+          if [ "${{ matrix.secure }}" == "tls" ]; then
+            artifact+=-tls
+          fi
           cp -r include dist
-          artifact=webui-${{ runner.os }}-${{ matrix.compiler }}-x64
-          # Convert to lowercase (`,,` ^= lowercase shell param)
-          artifact=${artifact,,}
-          # Create the directory for the artifact
-          mkdir $artifact
-          # Add the ARTIFACT name as GitHub environment variable.
+          mv dist/ $artifact
           echo "ARTIFACT=$artifact" >> $GITHUB_ENV
-          mv dist/* $artifact/
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
