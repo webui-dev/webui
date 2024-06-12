@@ -5472,6 +5472,7 @@ static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* 
         "--disable-sync-preferences",
         "--disable-component-update",
         "--allow-insecure-localhost",
+	"--auto-accept-camera-and-microphone-capture",
     };
 
     int c = 0;
