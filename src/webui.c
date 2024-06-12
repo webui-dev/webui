@@ -495,7 +495,7 @@ static void * _webui_malloc(size_t size);
 static void _webui_sleep(long unsigned int ms);
 static size_t _webui_find_the_best_browser(_webui_window_t * win);
 static bool _webui_is_process_running(const char* process_name);
-static void _webui_panic(void);
+static void _webui_panic(char* msg);
 static void _webui_kill_pid(size_t pid);
 static _webui_window_t * _webui_dereference_win_ptr(void * ptr);
 static int _webui_get_browser_args(_webui_window_t * win, size_t browser, char* buffer, size_t len);
@@ -594,6 +594,9 @@ static WEBUI_THREAD_WEBVIEW;
 #define WEBUI_SCAT_DYN(dest, dest_size, src) strncat(dest, src, _webui_mb(dest_size))
 #define WEBUI_SCAT_STATIC(dest, dest_size, src) strncat(dest, src, dest_size)
 #endif
+
+// Assert
+#define WEBUI_ASSERT(s) _webui_panic(s); assert(0 && s);
 
 // -- Heap ----------------------------
 static _webui_core_t _webui_core;
@@ -873,7 +876,7 @@ size_t webui_get_new_window_id(void) {
     }
 
     // We should never reach here
-    _webui_panic();
+    WEBUI_ASSERT("webui_get_new_window_id() failed");
     return 0;
 }
 
@@ -1964,6 +1967,9 @@ bool webui_set_tls_certificate(const char* certificate_pem, const char* private_
 
         return true;
     }
+    #else
+        WEBUI_ASSERT("SSL/TLS is not available in this library. "
+            "Please use the secure version of WebUI library");
     #endif
 
     return false;
@@ -3277,14 +3283,14 @@ static void _webui_free_all_mem(void) {
     }
 }
 
-static void _webui_panic(void) {
+static void _webui_panic(char* msg) {
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_panic().\n");
+    printf("[Core]\t\t_webui_panic() -> %s.\n", msg);
     #endif
 
+    fprintf(stderr, "WebUI Error: %s.\n", msg);
     webui_exit();
-    exit(EXIT_FAILURE);
 }
 
 static size_t _webui_mb(size_t size) {
@@ -3339,7 +3345,7 @@ static void * _webui_malloc(size_t size) {
 
     if (block == NULL) {
 
-        _webui_panic();
+        WEBUI_ASSERT("malloc() failed");
         return NULL;
     }
 
@@ -6175,15 +6181,14 @@ static int _webui_tls_initialization(void * ssl_ctx, void * ptr) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_tls_initialization() -> PEM_read_bio_X509 failed\n");
         #endif
-        _webui_panic();
+        WEBUI_ASSERT("PEM_read_bio_X509 failed");
         return -1;
     }
     if (SSL_CTX_use_certificate(ctx, cert) <= 0) {
         #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_tls_initialization() -> SSL_CTX_use_certificate "
-            "failed\n");
+        printf("[Core]\t\t_webui_tls_initialization() -> SSL_CTX_use_certificate failed\n");
         #endif
-        _webui_panic();
+        WEBUI_ASSERT("SSL_CTX_use_certificate failed");
         return -1;
     }
     X509_free(cert);
@@ -6194,18 +6199,16 @@ static int _webui_tls_initialization(void * ssl_ctx, void * ptr) {
     EVP_PKEY * private_key = PEM_read_bio_PrivateKey(bio_key, NULL, 0, NULL);
     if (private_key == NULL) {
         #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_tls_initialization() -> PEM_read_bio_PrivateKey "
-            "failed\n");
+        printf("[Core]\t\t_webui_tls_initialization() -> PEM_read_bio_PrivateKey failed\n");
         #endif
-        _webui_panic();
+        WEBUI_ASSERT("PEM_read_bio_PrivateKey failed");
         return -1;
     }
     if (SSL_CTX_use_PrivateKey(ctx, private_key) <= 0) {
         #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_tls_initialization() -> SSL_CTX_use_PrivateKey "
-            "failed\n");
+        printf("[Core]\t\t_webui_tls_initialization() -> SSL_CTX_use_PrivateKey failed\n");
         #endif
-        _webui_panic();
+        WEBUI_ASSERT("SSL_CTX_use_PrivateKey failed");
         return -1;
     }
     EVP_PKEY_free(private_key);
@@ -6398,7 +6401,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
             _webui_free_mem((void * ) root_key);
             _webui_free_mem((void * ) ssl_cert);
             _webui_free_mem((void * ) ssl_key);
-            _webui_panic();
+            WEBUI_ASSERT("Generating self-signed TLS certificate failed");
             return false;
         }
 
@@ -6866,7 +6869,7 @@ static void _webui_init(void) {
     // Initializing server services
     #ifdef WEBUI_TLS
     if (mg_init_library(MG_FEATURES_TLS) != MG_FEATURES_TLS)
-        _webui_panic();
+        WEBUI_ASSERT("mg_init_library() failed");
     #else
     mg_init_library(0);
     #endif
