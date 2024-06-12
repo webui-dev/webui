@@ -37,7 +37,7 @@ jobs:
             make: nmake
       fail-fast: false
     env:
-      ARTIFACT: artifact=webui-windows-${{ matrix.cc }}-x64
+      ARTIFACT: webui-windows-${{ matrix.cc }}-x64
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
