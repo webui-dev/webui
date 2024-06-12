@@ -152,11 +152,11 @@ typedef enum {
     // Control if WebUI should block and process the UI events
     // one a time in a single thread `True`, or process every
     // event in a new non-blocking thread `False`. This updates
-    // all windows. You can use `webui_set_event_block()` for
+    // all windows. You can use `webui_set_event_blocking()` for
     // a specific single window update.
     //
     // Default: False
-    ui_event_block,
+    ui_event_blocking,
 } webui_config;
 
 // -- Structs -------------------------
@@ -596,14 +596,14 @@ WEBUI_EXPORT void webui_set_config(webui_config option, bool status);
  * @brief Control if UI events comming from this window should be processed
  * one a time in a single blocking thread `True`, or process every event in
  * a new non-blocking thread `False`. This update single window. You can use 
- * `webui_set_config(ui_event_block, ...)` to update all windows.
+ * `webui_set_config(ui_event_blocking, ...)` to update all windows.
  *
  * @param window The window number
  * @param status The blocking status `true` or `false`
  *
- * @example webui_set_event_block(myWindow, true);
+ * @example webui_set_event_blocking(myWindow, true);
  */
-WEBUI_EXPORT void webui_set_event_block(size_t window, bool status);
+WEBUI_EXPORT void webui_set_event_blocking(size_t window, bool status);
 
 // -- SSL/TLS -------------------------
 
