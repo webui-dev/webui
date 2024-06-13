@@ -103,8 +103,8 @@ jobs:
             {
               echo "IS_PRERELEASE=true";
               echo "TAG=nightly";
-              echo "TITLE=WebUI Nightly Development Build"
-              echo "BODY=Generated on <samp>$(date -u +'%Y-%m-%d %H:%M:%S UTC')</samp> from commit $GITHUB_SHA."
+              echo "TITLE=WebUI Nightly Build $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+              echo "BODY=Generated from commit $GITHUB_SHA."
             } >> $GITHUB_ENV
           fi
       - name: Update Nightly Tag
