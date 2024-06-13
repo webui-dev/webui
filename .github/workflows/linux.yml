@@ -57,6 +57,7 @@ jobs:
           if [ "${{ matrix.cc }}" == "clang" ]; then
             sudo ln -s llvm-ar-14 /usr/bin/llvm-ar
             sudo ln -s llvm-ranlib-14 /usr/bin/llvm-ranlib
+            sudo ln -s llvm-strip-14 /usr/bin/llvm-strip
           elif [ "${{ matrix.arch }}" == "arm64" ]; then
             sudo apt install gcc-aarch64-linux-gnu
             CC=aarch64-linux-gnu-gcc
@@ -77,7 +78,7 @@ jobs:
           for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
             echo "> $example"
             cd $example || (exit_code=1 && continue)
-            if ! make; then
+            if ! make CC="$CC"; then
                echo "Failed to build '$example'"
                exit_code=1
                continue
