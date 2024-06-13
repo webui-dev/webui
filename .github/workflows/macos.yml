@@ -46,6 +46,7 @@ jobs:
       - name: Build Debug Target
         run: make ARCH_TARGET=${{ matrix.arch }} debug
       - name: Build Release Target
+        if: ${{ !cancelled() }}
         run: make ARCH_TARGET=${{ matrix.arch }}
       - name: Build examples
         run: |
@@ -75,19 +76,18 @@ jobs:
           name: ${{ env.ARTIFACT }}
           path: ${{ env.ARTIFACT }}
       - name: Prepare Release
-        if: >
-          github.event.repository.full_name == 'webui-dev/webui'
-          && (github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push'))
+        if: github.repository_owner == 'webui-dev' && github.ref_name == 'main' && github.event_name == 'push'
         run: |
           zip -r "$ARTIFACT.zip" "$ARTIFACT"
           if [ $GITHUB_REF_TYPE == tag ]; then
             echo "TAG=$GITHUB_REF_NAME" >> $GITHUB_ENV
           else
-            echo "IS_PRERELEASE=true" >> $GITHUB_ENV
-            now=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
-            echo "TAG=nightly" >> $GITHUB_ENV
-            echo "BODY=Generated on <samp>$now</samp> from commit ${{ github.sha }}." >> $GITHUB_ENV
-            echo "TITLE=WebUI Nightly Development Build" >> $GITHUB_ENV
+            {
+              echo "IS_PRERELEASE=true";
+              echo "TAG=nightly";
+              echo "TITLE=WebUI Nightly Build $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+              echo "BODY=Generated from commit $GITHUB_SHA."
+            } >> $GITHUB_ENV
           fi
       - name: Update Nightly Tag
         if: env.IS_PRERELEASE
@@ -97,9 +97,7 @@ jobs:
         with:
           tag_name: nightly
       - name: Release
-        if: >
-          github.event.repository.full_name == 'webui-dev/webui'
-          && (github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push'))
+        if: github.repository_owner == 'webui-dev' && github.ref_name == 'main' && github.event_name == 'push'
         uses: ncipollo/release-action@v1
         with:
           artifacts: ${{ env.ARTIFACT }}.zip
