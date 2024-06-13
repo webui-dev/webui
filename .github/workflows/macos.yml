@@ -34,6 +34,7 @@ jobs:
       matrix:
         cc: [clang]
         arch: [x64, arm64]
+      fail-fast: false
     env:
       ARTIFACT: webui-macos-${{ matrix.cc }}-${{ matrix.arch }}
     steps:
@@ -43,11 +44,19 @@ jobs:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
           fail-on-cache-miss: true
+      - name: Setup OpenSSL
+        run: |
+          echo "OPENSSL_CFLAGS=$(brew --cellar)/openssl@1.1/1.1.1w/include/" >> $GITHUB_ENV
+          echo "OPENSSL_LDFLAGS=$(brew --cellar)/openssl@1.1/1.1.1w/lib/" >> $GITHUB_ENV
       - name: Build Debug Target
         run: make ARCH_TARGET=${{ matrix.arch }} debug
       - name: Build Release Target
         if: ${{ !cancelled() }}
         run: make ARCH_TARGET=${{ matrix.arch }}
+      - name: Build TLS Debug Target
+        run: make WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="$OPENSSL_CFLAGS" WEBUI_TLS_LIB="$OPENSSL_LDFLAGS" debug
+      - name: Build TLS Release Target
+        run: make WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="$OPENSSL_CFLAGS" WEBUI_TLS_LIB="$OPENSSL_LDFLAGS"
       - name: Build examples
         run: |
           examples_base_dir=$(pwd)/examples/C
