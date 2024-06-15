@@ -363,6 +363,7 @@ typedef struct _webui_core_t {
     size_t ptr_size[WEBUI_MAX_IDS * 2];
     size_t current_browser;
     _webui_window_t * wins[WEBUI_MAX_IDS];
+    bool wins_reserved[WEBUI_MAX_IDS];
     size_t last_win_number;
     bool server_handled;
     webui_mutex_t mutex_server_start;
@@ -868,7 +869,8 @@ size_t webui_get_new_window_id(void) {
         return 0;
 
     for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
-        if (_webui_core.wins[i] == NULL) {
+        if (_webui_core.wins[i] == NULL && !_webui_core.wins_reserved[i]) {
+            _webui_core.wins_reserved[i] = true;
             if (i > _webui_core.last_win_number)
                 _webui_core.last_win_number = i;
             return i;
@@ -1004,6 +1006,7 @@ void webui_destroy(size_t window) {
     // Free window struct
     _webui_free_mem((void * ) _webui_core.wins[window]);
     _webui_core.wins[window] = NULL;
+    _webui_core.wins_reserved[window] = false;
 }
 
 bool webui_is_shown(size_t window) {
