@@ -8712,7 +8712,7 @@ open_auth_file(struct mg_connection *conn,
 
 
 /* Parsed Authorization header */
-struct ah {
+struct auth_header {
 	char *user;
 	int type;             /* 1 = basic, 2 = digest */
 	char *plain_password; /* Basic only */
@@ -8720,32 +8720,32 @@ struct ah {
 };
 
 
-/* Return 1 on success. Always initializes the ah structure. */
+/* Return 1 on success. Always initializes the auth_header structure. */
 static int
 parse_auth_header(struct mg_connection *conn,
                   char *buf,
                   size_t buf_size,
-                  struct ah *ah)
+                  struct auth_header *auth_header)
 {
 	char *name, *value, *s;
-	const char *auth_header;
+	const char *ah;
 	uint64_t nonce;
 
-	if (!ah || !conn) {
+	if (!auth_header || !conn) {
 		return 0;
 	}
 
-	(void)memset(ah, 0, sizeof(*ah));
-	auth_header = mg_get_header(conn, "Authorization");
+	(void)memset(auth_header, 0, sizeof(*auth_header));
+	ah = mg_get_header(conn, "Authorization");
 
-	if (auth_header == NULL) {
+	if (ah == NULL) {
 		/* No Authorization header at all */
 		return 0;
 	}
-	if (0 == mg_strncasecmp(auth_header, "Basic ", 6)) {
+	if (0 == mg_strncasecmp(ah, "Basic ", 6)) {
 		/* Basic Auth (we never asked for this, but some client may send it) */
 		char *split;
-		const char *userpw_b64 = auth_header + 6;
+		const char *userpw_b64 = ah + 6;
 		size_t userpw_b64_len = strlen(userpw_b64);
 		size_t buf_len_r = buf_size;
 		if (mg_base64_decode(
@@ -8762,15 +8762,15 @@ parse_auth_header(struct mg_connection *conn,
 		*split = 0;
 
 		/* User name is before ':', Password is after ':'  */
-		ah->user = buf;
-		ah->type = 1;
-		ah->plain_password = split + 1;
+		auth_header->user = buf;
+		auth_header->type = 1;
+		auth_header->plain_password = split + 1;
 
 		return 1;
 
-	} else if (0 == mg_strncasecmp(auth_header, "Digest ", 7)) {
+	} else if (0 == mg_strncasecmp(ah, "Digest ", 7)) {
 		/* Digest Auth ... implemented below */
-		ah->type = 2;
+		auth_header->type = 2;
 
 	} else {
 		/* Unknown or invalid Auth method */
@@ -8778,7 +8778,7 @@ parse_auth_header(struct mg_connection *conn,
 	}
 
 	/* Make modifiable copy of the auth header */
-	(void)mg_strlcpy(buf, auth_header + 7, buf_size);
+	(void)mg_strlcpy(buf, ah + 7, buf_size);
 	s = buf;
 
 	/* Parse authorization header */
@@ -8805,29 +8805,29 @@ parse_auth_header(struct mg_connection *conn,
 		}
 
 		if (!strcmp(name, "username")) {
-			ah->user = value;
+			auth_header->user = value;
 		} else if (!strcmp(name, "cnonce")) {
-			ah->cnonce = value;
+			auth_header->cnonce = value;
 		} else if (!strcmp(name, "response")) {
-			ah->response = value;
+			auth_header->response = value;
 		} else if (!strcmp(name, "uri")) {
-			ah->uri = value;
+			auth_header->uri = value;
 		} else if (!strcmp(name, "qop")) {
-			ah->qop = value;
+			auth_header->qop = value;
 		} else if (!strcmp(name, "nc")) {
-			ah->nc = value;
+			auth_header->nc = value;
 		} else if (!strcmp(name, "nonce")) {
-			ah->nonce = value;
+			auth_header->nonce = value;
 		}
 	}
 
 #if !defined(NO_NONCE_CHECK)
 	/* Read the nonce from the response. */
-	if (ah->nonce == NULL) {
+	if (auth_header->nonce == NULL) {
 		return 0;
 	}
 	s = NULL;
-	nonce = strtoull(ah->nonce, &s, 10);
+	nonce = strtoull(auth_header->nonce, &s, 10);
 	if ((s == NULL) || (*s != 0)) {
 		return 0;
 	}
@@ -8858,7 +8858,7 @@ parse_auth_header(struct mg_connection *conn,
 	(void)nonce;
 #endif
 
-	return (ah->user != NULL);
+	return (auth_header->user != NULL);
 }
 
 
@@ -8890,7 +8890,7 @@ mg_fgets(char *buf, size_t size, struct mg_file *filep)
 #if !defined(NO_FILESYSTEMS)
 struct read_auth_file_struct {
 	struct mg_connection *conn;
-	struct ah ah;
+	struct auth_header auth_header;
 	const char *domain;
 	char buf[256 + 256 + 40];
 	const char *f_user;
@@ -8991,9 +8991,9 @@ read_auth_file(struct mg_file *filep,
 		*(char *)(workdata->f_ha1) = 0;
 		(workdata->f_ha1)++;
 
-		if (!strcmp(workdata->ah.user, workdata->f_user)
+		if (!strcmp(workdata->auth_header.user, workdata->f_user)
 		    && !strcmp(workdata->domain, workdata->f_domain)) {
-			switch (workdata->ah.type) {
+			switch (workdata->auth_header.type) {
 			case 1: /* Basic */
 			{
 				char md5[33];
@@ -9002,7 +9002,7 @@ read_auth_file(struct mg_file *filep,
 				       ":",
 				       workdata->domain,
 				       ":",
-				       workdata->ah.plain_password,
+				       workdata->auth_header.plain_password,
 				       NULL);
 				return 0 == memcmp(workdata->f_ha1, md5, 33);
 			}
@@ -9010,12 +9010,12 @@ read_auth_file(struct mg_file *filep,
 				return check_password_digest(
 				    workdata->conn->request_info.request_method,
 				    workdata->f_ha1,
-				    workdata->ah.uri,
-				    workdata->ah.nonce,
-				    workdata->ah.nc,
-				    workdata->ah.cnonce,
-				    workdata->ah.qop,
-				    workdata->ah.response);
+				    workdata->auth_header.uri,
+				    workdata->auth_header.nonce,
+				    workdata->auth_header.nc,
+				    workdata->auth_header.cnonce,
+				    workdata->auth_header.qop,
+				    workdata->auth_header.response);
 			default: /* None/Other/Unknown */
 				return 0;
 			}
@@ -9040,13 +9040,13 @@ authorize(struct mg_connection *conn, struct mg_file *filep, const char *realm)
 	memset(&workdata, 0, sizeof(workdata));
 	workdata.conn = conn;
 
-	if (!parse_auth_header(conn, buf, sizeof(buf), &workdata.ah)) {
+	if (!parse_auth_header(conn, buf, sizeof(buf), &workdata.auth_header)) {
 		return 0;
 	}
 
 	/* CGI needs it as REMOTE_USER */
 	conn->request_info.remote_user =
-	    mg_strdup_ctx(workdata.ah.user, conn->phys_ctx);
+	    mg_strdup_ctx(workdata.auth_header.user, conn->phys_ctx);
 
 	if (realm) {
 		workdata.domain = realm;
