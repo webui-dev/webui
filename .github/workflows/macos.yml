@@ -85,7 +85,9 @@ jobs:
           name: ${{ env.ARTIFACT }}
           path: ${{ env.ARTIFACT }}
       - name: Prepare Release
-        if: github.repository_owner == 'webui-dev' && github.ref_name == 'main' && github.event_name == 'push'
+        if: >
+          github.repository_owner == 'webui-dev'
+          && (github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push'))
         run: |
           zip -r "$ARTIFACT.zip" "$ARTIFACT"
           if [ $GITHUB_REF_TYPE == tag ]; then
@@ -106,7 +108,9 @@ jobs:
         with:
           tag_name: nightly
       - name: Release
-        if: github.repository_owner == 'webui-dev' && github.ref_name == 'main' && github.event_name == 'push'
+        if: >
+          github.repository_owner == 'webui-dev'
+          && (github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push'))
         uses: ncipollo/release-action@v1
         with:
           artifacts: ${{ env.ARTIFACT }}.zip
