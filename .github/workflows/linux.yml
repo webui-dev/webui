@@ -77,7 +77,7 @@ jobs:
       - name: Build TLS Release Target
         if: matrix.arch == 'x64'
         run: make CC="$CC" WEBUI_USE_TLS=1
-      - name: Build examples
+      - name: Build Examples
         if: matrix.arch == 'x64'
         run: |
           examples_base_dir=$(pwd)/examples/C
@@ -96,6 +96,35 @@ jobs:
             fi
           done
           exit $exit_code
+      - name: Setup Browser
+        if: matrix.arch == 'x64'
+        uses: browser-actions/setup-chrome@v1
+      - name: Setup Tests
+        if: matrix.arch == 'x64'
+        run: |
+          sudo apt update && sudo apt install xvfb
+          cd tests
+          make call_c_from_js.c
+          make fail_test.c
+          ls -1
+      - name: Test Static
+        if: matrix.arch == 'x64'
+        timeout-minutes: 2
+        run: |
+          cd tests
+          call_c_from_js=$(pwd)/call_c_from_js
+          fail_test=$(pwd)/fail_test
+          xvfb-run "$call_c_from_js"
+          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
+      - name: Test Dynamic
+        if: matrix.arch == 'x64'
+        timeout-minutes: 2
+        run: |
+          cd tests
+          call_c_from_js=$(pwd)/call_c_from_js-dyn
+          fail_test=$(pwd)/fail_test-dyn
+          xvfb-run "$call_c_from_js"
+          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
       - name: Prepare Artifact
         run: |
           cp -r include dist

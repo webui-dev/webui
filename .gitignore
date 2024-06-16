@@ -8,6 +8,13 @@ build/
 *.out
 *.def
 
+# All sub-level build binaries
+*/**/*
+!*/**/*/
+!*/**/*.*
+!*makefile
+!Makefile
+
 # Compiled Object files
 *.slo
 *.lo
@@ -107,11 +114,6 @@ Thumbs.db
 
 # User-specific private settings
 *.DotSettings.user
-
-# Example binaries
-examples/**/main
-examples/**/main-dyn
-examples/**/text-editor/text-editor
 
 # Compressed
 *.zip
