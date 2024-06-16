@@ -32,18 +32,11 @@ jobs:
       contents: write
     strategy:
       matrix:
-        include:
-          - cc: gcc
-            arch: x64
-          - cc: gcc
-            arch: arm64
-          - cc: gcc
-            arch: arm
-          - cc: clang
-            arch: x64
+        os: [ubuntu-latest, webui-ubuntu-20-04-arm64]
+        cc: [clang, gcc]
       fail-fast: false
     env:
-      ARTIFACT: webui-linux-${{ matrix.cc }}-${{ matrix.arch }}
+      CC: ${{ matrix.cc }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
@@ -52,20 +45,11 @@ jobs:
           key: ${{ runner.os }}-${{ github.sha }}-bridge
           fail-on-cache-miss: true
       - name: Setup
+        if: matrix.cc == 'clang'
         run: |
-          CC=${{ matrix.cc }}
-          if [ "${{ matrix.cc }}" == "clang" ]; then
-            sudo ln -s llvm-ar-14 /usr/bin/llvm-ar
-            sudo ln -s llvm-ranlib-14 /usr/bin/llvm-ranlib
-            sudo ln -s llvm-strip-14 /usr/bin/llvm-strip
-          elif [ "${{ matrix.arch }}" == "arm64" ]; then
-            sudo apt install gcc-aarch64-linux-gnu
-            CC=aarch64-linux-gnu-gcc
-          elif [ "${{ matrix.arch }}" == "arm" ]; then
-            sudo apt install gcc-arm-linux-gnueabihf
-            CC=arm-linux-gnueabihf-gcc
-          fi
-          echo "CC=$CC" >> $GITHUB_ENV
+          sudo ln -s llvm-ar-14 /usr/bin/llvm-ar
+          sudo ln -s llvm-ranlib-14 /usr/bin/llvm-ranlib
+          sudo ln -s llvm-strip-14 /usr/bin/llvm-strip
       - name: Build Debug Target
         run: make debug
       - name: Build Release Target
@@ -78,7 +62,6 @@ jobs:
         if: matrix.arch == 'x64'
         run: make WEBUI_USE_TLS=1
       - name: Build Examples
-        if: matrix.arch == 'x64'
         run: |
           examples_base_dir=$(pwd)/examples/C
           for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
@@ -132,8 +115,15 @@ jobs:
           xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
       - name: Prepare Artifact
         run: |
+          artifact=webui-linux-${{ matrix.cc }}
+          if [[ ${{ matrix.os }} == *'arm64' ]]; then
+            artifact+=-arm64
+          else
+            artifact+=-x64
+          fi
           cp -r include dist
-          mv dist/ "$ARTIFACT"
+          mv dist/ "$artifact"
+          echo "ARTIFACT=$artifact" >> $GITHUB_ENV
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
