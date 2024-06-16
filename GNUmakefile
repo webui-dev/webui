@@ -25,10 +25,13 @@ MAKEFILE_DIR := $(dir $(MAKEFILE_PATH))
 BUILD_DIR := $(MAKEFILE_DIR)/dist
 
 # ARGS
-# Set a compiler when running on Linux via `make CC=gcc` / `make CC=clang`
-CC = gcc
-ifneq ($(filter $(CC),gcc clang aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc musl-gcc),$(CC))
-$(error Invalid compiler specified: `$(CC)`)
+CC ?= gcc
+ifeq ($(CC), cc)
+	ifeq ($(shell uname),Darwin)
+		CC = clang
+	else
+		CC = gcc
+	endif
 endif
 
 # Allow to add arch-target for macOS CI cross compilation
