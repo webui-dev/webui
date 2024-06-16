@@ -104,21 +104,27 @@ jobs:
         run: |
           sudo apt update && sudo apt install xvfb
           cd tests
-          make
+          make call_c_from_js.c
+          make fail_test.c
+          ls -1
       - name: Test Static
         if: matrix.arch == 'x64'
         timeout-minutes: 2
         run: |
           cd tests
-          test_path=$(pwd)/call_c_from_js
-          xvfb-run "$test_path"
+          call_c_from_js=$(pwd)/call_c_from_js
+          fail_test=$(pwd)/fail_test
+          xvfb-run "$call_c_from_js"
+          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
       - name: Test Dynamic
         if: matrix.arch == 'x64'
         timeout-minutes: 2
         run: |
           cd tests
-          test_path=$(pwd)/call_c_from_js-dyn
-          xvfb-run "$test_path"
+          call_c_from_js=$(pwd)/call_c_from_js-dyn
+          fail_test=$(pwd)/fail_test-dyn
+          xvfb-run "$call_c_from_js"
+          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
       - name: Prepare Artifact
         run: |
           cp -r include dist
