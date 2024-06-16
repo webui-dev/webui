@@ -6,7 +6,7 @@ body:
   - type: textarea
     id: description
     attributes:
-      label: Describe the Feature
+      label: Description
       description: A clear and concise description of the feature you are proposing.
     validations:
       required: true
@@ -54,12 +54,12 @@ body:
   - type: textarea
     id: environment
     attributes:
-      label: Environment details (OS name and version, etc.)
+      label: Environment Details (OS name, version, etc.)
       render: shell
       description: |
         To fill in this section, you can use on Unix-like systems:
         ```sh
-        uname -somr
+        uname -somr && cc --version | head -n 1
         ```
         On Windows you can use:
         ```sh
