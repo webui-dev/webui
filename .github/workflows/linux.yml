@@ -115,6 +115,9 @@ jobs:
           call_c_from_js=$(pwd)/call_c_from_js
           fail_test=$(pwd)/fail_test
           xvfb-run "$call_c_from_js"
+          # Run again and capture its output.
+          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
           xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
       - name: Test Dynamic
         if: matrix.arch == 'x64'
@@ -124,6 +127,8 @@ jobs:
           call_c_from_js=$(pwd)/call_c_from_js-dyn
           fail_test=$(pwd)/fail_test-dyn
           xvfb-run "$call_c_from_js"
+          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
           xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
       - name: Prepare Artifact
         run: |
