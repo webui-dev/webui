@@ -4,26 +4,37 @@
 
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJECT_DIR := $(dir $(MAKEFILE_PATH))/../
-TARGET := $(firstword $(MAKECMDGOALS))
+
+TEST_SRC := $(firstword $(MAKECMDGOALS))
+TEST_OUT = $(patsubst %.c,%,$(TEST_SRC))
+
 LIB_DIR := $(PROJECT_DIR)/dist
-ifeq ($(TARGET), debug)
+ifeq ($(WEBUI_DEBUG), 1)
 LIB_DIR := $(LIB_DIR)/debug
 endif
+
 INCLUDE_DIR := $(PROJECT_DIR)/include
 WEBUI_LIB_NAME = webui-2
+
 ifeq ($(WEBUI_USE_TLS), 1)
 WEBUI_LIB_NAME = webui-2-secure
 endif
 
-# ARGS
-# Set a compiler when running on Linux via `make CC=gcc` / `make CC=clang`
-CC = gcc
 # Build the WebUI library if running via `make BUILD_LIB=true`
+CC ?= gcc
 BUILD_LIB ?=
 
+ifeq ($(CC), cc)
+	ifeq ($(shell uname),Darwin)
+		CC = clang
+	else
+		CC = gcc
+	endif
+endif
+
 # BUILD FLAGS
-STATIC_BUILD_FLAGS = call_c_from_js.c -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
-DYN_BUILD_FLAGS = call_c_from_js.c -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
+STATIC_BUILD_FLAGS = $(TEST_SRC) -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
+DYN_BUILD_FLAGS = $(TEST_SRC) -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
 
 # Platform conditions
 ifeq ($(OS),Windows_NT)
@@ -33,8 +44,8 @@ ifeq ($(OS),Windows_NT)
 	STATIC_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)-static -lws2_32 -Wall -luser32 -static
 	COPY_LIB_CMD := @copy "$(LIB_DIR)\$(WEBUI_LIB_NAME).dll" "$(WEBUI_LIB_NAME).dll"
 	DYN_BUILD_FLAGS += "$(WEBUI_LIB_NAME).dll" -lws2_32 -Wall -luser32
-	STATIC_OUT := call_c_from_js.exe
-	DYN_OUT := call_c_from_js-dyn.exe
+	STATIC_OUT := $(TEST_OUT).exe
+	DYN_OUT := $(TEST_OUT)-dyn.exe
 	LWS2_OPT := -lws2_32 -lOle32
 	STRIP_OPT := --strip-all
 	CONSOLE_APP := -Wl,-subsystem=console
@@ -42,12 +53,11 @@ ifeq ($(OS),Windows_NT)
 else
 	STATIC_BUILD_FLAGS += -lpthread -lm -l$(WEBUI_LIB_NAME)-static
 	DYN_BUILD_FLAGS += -lpthread -lm
-	STATIC_OUT := call_c_from_js
-	DYN_OUT := call_c_from_js-dyn
+	STATIC_OUT := $(TEST_OUT)
+	DYN_OUT := $(TEST_OUT)-dyn
 	ifeq ($(shell uname),Darwin)
 		# MacOS
 		PLATFORM := macos
-		CC = clang
 		COPY_LIB_CMD := @cp "$(LIB_DIR)/$(WEBUI_LIB_NAME).dylib" "$(WEBUI_LIB_NAME).dylib"
 		DYN_BUILD_FLAGS += "./$(WEBUI_LIB_NAME).dylib"
 		WKWEBKIT_LINK_FLAGS := -framework Cocoa -framework WebKit
@@ -66,19 +76,23 @@ endif
 
 # == 2.TARGETS ================================================================
 
+*.c: all
+
+.PHONY: all
 all: release
 
-debug: --validate-args
+.PHONY: debug
+debug:
 ifeq ($(BUILD_LIB),true)
 	@cd "$(PROJECT_DIR)" && $(MAKE) debug
 endif
 #	Static with Debug info
 ifneq ($(WEBUI_USE_TLS), 1)
-	@echo "Build C Example ($(CC) debug static)..."
+	@echo "Building '$(TEST_SRC)' ($(CC) debug static)..."
 	@$(CC) -g $(CONSOLE_APP) $(STATIC_BUILD_FLAGS) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) -o $(STATIC_OUT)
 endif
 #	Dynamic with Debug info
-	@echo "Build C Example ($(CC) debug dynamic)..."
+	@echo "Building '$(TEST_SRC)' ($(CC) debug dynamic)..."
 	$(COPY_LIB_CMD)
 	@$(CC) -g $(CONSOLE_APP) $(DYN_BUILD_FLAGS) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) -o $(DYN_OUT)
 #	Clean
@@ -90,18 +104,19 @@ else
 endif
 	@echo "Done."
 
-release: --validate-args
+.PHONY: .release
+release:
 ifeq ($(BUILD_LIB),true)
 	@cd "$(PROJECT_DIR)" && $(MAKE)
 endif
 #	Static Release
 ifneq ($(WEBUI_USE_TLS), 1)
-	@echo "Build C Example ($(CC) release static)..."
+	@echo "Building '$(TEST_SRC)' ($(CC) static)..."
 	@$(CC) -Os $(GUI_APP) $(STATIC_BUILD_FLAGS) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) -o $(STATIC_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(STATIC_OUT)
 endif
 #	Dynamic Release
-	@echo "Build C Example ($(CC) release dynamic)..."
+	@echo "Building '$(TEST_SRC)' ($(CC) dynamic)..."
 	$(COPY_LIB_CMD)
 	@$(CC) $(GUI_APP) $(DYN_BUILD_FLAGS) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) -o $(DYN_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(DYN_OUT)
@@ -118,15 +133,13 @@ clean: --clean-$(PLATFORM)
 
 # INTERNAL TARGETS
 
---validate-args:
-ifneq ($(filter $(CC),gcc clang aarch64-linux-gnu-gcc arm-linux-gnueabihf-gcc musl-gcc),$(CC))
-$(error Invalid compiler specified: `$(CC)`)
-endif
-
+.PHONY: --clean-linux
 --clean-linux: --clean-unix
 
---clean-macos: --clean-unix
+.PHONY: --clean-macos
+--clean-macos: clean-unix
 
+.PHONY: --clean-unix
 --clean-unix:
 	- rm -f *.o
 	- rm -f *.a
@@ -134,6 +147,7 @@ endif
 	- rm -f *.dylib
 	- rm -rf *.dSYM
 
+.PHONY: --clean-windows
 --clean-windows:
 	- del *.o >nul 2>&1
 	- del *.dll >nul 2>&1
