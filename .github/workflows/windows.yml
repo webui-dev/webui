@@ -38,6 +38,8 @@ jobs:
       fail-fast: false
     env:
       ARTIFACT: webui-windows-${{ matrix.cc }}-x64
+      WEBUI_TLS_INCLUDE: "C:\\Program Files\\OpenSSL\\include"
+      WEBUI_TLS_LIB: "C:\\Program Files\\OpenSSL\\lib"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
@@ -54,9 +56,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: ${{ matrix.make }}
       - name: Build TLS Debug Target
-        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="C:\Program Files\OpenSSL\include" WEBUI_TLS_LIB="C:\Program Files\OpenSSL\lib" debug
+        run: ${{ matrix.make }} WEBUI_USE_TLS=1 debug
       - name: Build TLS Release Target
-        run: ${{ matrix.make }} WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="C:\Program Files\OpenSSL\include" WEBUI_TLS_LIB="C:\Program Files\OpenSSL\lib"
+        run: ${{ matrix.make }} WEBUI_USE_TLS=1
       - name: Build examples
         run: |
           $examples_base_dir = "$(Get-Location)/examples/C/"
