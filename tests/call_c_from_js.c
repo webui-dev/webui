@@ -12,6 +12,7 @@ const char *doc =
     "      await webui.assert_float(1.0, 2.3, 3.45);"
     "      await webui.assert_string('foo', 'bar', 'baz');"
     "      await webui.assert_bool(true, false, true);"
+    "      await webui.assert_cprint();"
     "      await webui.assert_close();"
     "    }, 500)"
     "  </script>"
@@ -80,6 +81,14 @@ void assert_bool(webui_event_t *e) {
 	assert(b3 == true);
 }
 
+void assert_cprint(webui_event_t *e) {
+	size_t count = webui_get_count(e);
+	assert(count == 0);
+
+	// The print should be confirmed by checking the program's terminal output.
+	printf("Hello from the backend!\n");
+}
+
 void assert_close(webui_event_t *e) {
 	// Closing often leads to a seqfault at the moment. Therefore, just a sysexit for now.
 	// webui_close(e->window);
@@ -93,7 +102,9 @@ int main() {
 	webui_bind(w, "assert_float", assert_float);
 	webui_bind(w, "assert_string", assert_string);
 	webui_bind(w, "assert_bool", assert_bool);
+	webui_bind(w, "assert_cprint", assert_cprint);
 	webui_bind(w, "assert_close", assert_close);
+
 	webui_show(w, doc);
 	webui_wait();
 	webui_clean();
