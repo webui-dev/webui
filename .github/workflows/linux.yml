@@ -32,8 +32,8 @@ jobs:
       contents: write
     strategy:
       matrix:
-        os: [ubuntu-latest, buildjet-2vcpu-ubuntu-2204-arm]
-        cc: [clang, gcc]
+        os: [ubuntu-latest, webui-ubuntu-20-04-arm64]
+        cc: [gcc]
       fail-fast: false
     env:
       CC: ${{ matrix.cc }}
@@ -114,7 +114,7 @@ jobs:
       - name: Prepare Artifact
         run: |
           artifact=webui-linux-${{ matrix.cc }}
-          if [[ ${{ matrix.os }} == *'arm' ]]; then
+          if [[ ${{ matrix.os }} == *'arm'* ]]; then
             artifact+=-arm64
           else
             artifact+=-x64
