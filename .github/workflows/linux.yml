@@ -55,7 +55,7 @@ jobs:
       - name: Build Release Target
         if: ${{ !cancelled() }}
         run: |
-          cc --version
+          uname -somr && cc --version
           find $(which gcc)*
           gcc --version
           make
