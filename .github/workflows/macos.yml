@@ -46,17 +46,17 @@ jobs:
           fail-on-cache-miss: true
       - name: Setup OpenSSL
         run: |
-          echo "OPENSSL_CFLAGS=$(brew --cellar)/openssl@1.1/1.1.1w/include/" >> $GITHUB_ENV
-          echo "OPENSSL_LDFLAGS=$(brew --cellar)/openssl@1.1/1.1.1w/lib/" >> $GITHUB_ENV
+          echo "WEBUI_TLS_INCLUDE=$(brew --cellar)/openssl@1.1/1.1.1w/include/" >> $GITHUB_ENV
+          echo "WEBUI_TLS_LIB=$(brew --cellar)/openssl@1.1/1.1.1w/lib/" >> $GITHUB_ENV
       - name: Build Debug Target
         run: make ARCH_TARGET=${{ matrix.arch }} debug
       - name: Build Release Target
         if: ${{ !cancelled() }}
         run: make ARCH_TARGET=${{ matrix.arch }}
       - name: Build TLS Debug Target
-        run: make WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="$OPENSSL_CFLAGS" WEBUI_TLS_LIB="$OPENSSL_LDFLAGS" debug
+        run: make WEBUI_USE_TLS=1 debug
       - name: Build TLS Release Target
-        run: make WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="$OPENSSL_CFLAGS" WEBUI_TLS_LIB="$OPENSSL_LDFLAGS"
+        run: make WEBUI_USE_TLS=1
       - name: Build examples
         run: |
           examples_base_dir=$(pwd)/examples/C

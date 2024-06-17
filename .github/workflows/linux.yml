@@ -67,16 +67,16 @@ jobs:
           fi
           echo "CC=$CC" >> $GITHUB_ENV
       - name: Build Debug Target
-        run: make CC="$CC" debug
+        run: make debug
       - name: Build Release Target
         if: ${{ !cancelled() }}
-        run: make CC="$CC"
+        run: make
       - name: Build TLS Debug Target
         if: matrix.arch == 'x64'
-        run: make CC="$CC" WEBUI_USE_TLS=1 debug
+        run: make WEBUI_USE_TLS=1 debug
       - name: Build TLS Release Target
         if: matrix.arch == 'x64'
-        run: make CC="$CC" WEBUI_USE_TLS=1
+        run: make WEBUI_USE_TLS=1
       - name: Build Examples
         if: matrix.arch == 'x64'
         run: |
@@ -84,7 +84,7 @@ jobs:
           for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
             echo "> $example"
             cd $example || (exit_code=1 && continue)
-            if ! make CC="$CC"; then
+            if ! make; then
                echo "Failed to build '$example'"
                exit_code=1
                continue
