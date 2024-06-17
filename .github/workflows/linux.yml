@@ -32,7 +32,7 @@ jobs:
       contents: write
     strategy:
       matrix:
-        os: [ubuntu-latest, webui-ubuntu-20-04-arm64]
+        os: [ubuntu-latest, buildjet-2vcpu-ubuntu-2204-arm]
         cc: [clang, gcc]
       fail-fast: false
     env:
@@ -54,7 +54,11 @@ jobs:
         run: make debug
       - name: Build Release Target
         if: ${{ !cancelled() }}
-        run: make
+        run: |
+          cc --version
+          find $(which gcc)*
+          gcc --version
+          make
       - name: Build TLS Debug Target
         run: make WEBUI_USE_TLS=1 debug
       - name: Build TLS Release Target
@@ -110,7 +114,7 @@ jobs:
       - name: Prepare Artifact
         run: |
           artifact=webui-linux-${{ matrix.cc }}
-          if [[ ${{ matrix.os }} == *'arm64' ]]; then
+          if [[ ${{ matrix.os }} == *'arm' ]]; then
             artifact+=-arm64
           else
             artifact+=-x64
