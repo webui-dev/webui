@@ -6555,6 +6555,11 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
                     #endif
                     runBrowser = true;
                 }
+            } else {
+                #ifdef WEBUI_LOG
+                printf("[Core]\t\t_webui_show_window() -> Starting server only mode (NoBrowser).\n");
+                #endif
+                runBrowser = true;
             }
         }
 
