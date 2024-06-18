@@ -4041,19 +4041,19 @@ static int _webui_interpret_file(_webui_window_t * win, struct mg_connection * c
             if (_webui_deno_exist(win)) {
 
                 // Set command
-                // [disable coloring][file]
-                size_t bf_len = (64 + _webui_strlen(full_path));
+                // [disable coloring][cmd][file][query]
+                size_t bf_len = (128 + _webui_strlen(full_path) + _webui_strlen(query));
                 char* cmd = (char*)_webui_malloc(bf_len);
                 #ifdef _WIN32
                 WEBUI_SPF_DYN(
                     cmd, bf_len,
-                    "Set NO_COLOR=1 & Set DENO_NO_UPDATE_CHECK=1 & deno run --quiet --allow-all --unstable \"%s\" \"%s\"",
+                    "Set NO_COLOR=1 & Set DENO_NO_UPDATE_CHECK=1 & deno run --quiet --allow-all --unstable-ffi --allow-ffi \"%s\" \"%s\"",
                     full_path, query
                 );
                 #else
                 WEBUI_SPF_DYN(
                     cmd, bf_len,
-                    "NO_COLOR=1; DENO_NO_UPDATE_CHECK=1; deno run --quiet --allow-all --unstable \"%s\" \"%s\"",
+                    "NO_COLOR=1; DENO_NO_UPDATE_CHECK=1; deno run --quiet --allow-all --unstable-ffi --allow-ffi \"%s\" \"%s\"",
                     full_path, query
                 );
                 #endif
