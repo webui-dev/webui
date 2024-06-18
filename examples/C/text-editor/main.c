@@ -2,7 +2,7 @@
 
 #include "webui.h"
 
-void Close(webui_event_t* e) {
+void close_app(webui_event_t* e) {
 	printf("Exit.\n");
 
 	// Close all opened windows
@@ -18,7 +18,7 @@ int main() {
 	webui_set_root_folder(MainWindow, "ui");
 
 	// Bind HTML elements with the specified ID to C functions
-	webui_bind(MainWindow, "__close-btn", Close);
+	webui_bind(MainWindow, "close_app", close_app);
 
 	// Show the window, preferably in a chromium based browser
 	if (!webui_show_browser(MainWindow, "index.html", ChromiumBased))
