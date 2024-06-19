@@ -60,7 +60,9 @@ jobs:
         run: |
           CC=${{ matrix.cc }}
           if [ "${{ matrix.arch }}" == "arm64" ]; then
-            CC=gcc
+            sudo apt update
+            sudo apt install -y gcc-aarch64-linux-gnu
+            CC=aarch64-linux-gnu-gcc
           elif [ "${{ matrix.arch }}" == "arm" ]; then
             sudo apt update
             sudo apt install -y gcc-arm-linux-gnueabi
