@@ -10,7 +10,7 @@ void my_function_exit(webui_event_t* e) {
 
 void my_function_count(webui_event_t* e) {
 
-	// This function gets called every time the user clicks on "MyButton1"
+	// This function gets called every time the user clicks on "my_function_count"
 
 	// Create a buffer to hold the response
 	char response[64];
@@ -80,11 +80,11 @@ int main() {
 	                      "    <br>"
 	                      "    <h1 id=\"count\">0</h1>"
 	                      "    <br>"
-	                      "    <button id=\"MyButton1\">Manual Count</button>"
+	                      "    <button OnClick=\"my_function_count();\">Manual Count</button>"
 	                      "    <br>"
 	                      "    <button id=\"MyTest\" OnClick=\"AutoTest();\">Auto Count (Every 10ms)</button>"
 	                      "    <br>"
-	                      "    <button id=\"MyButton2\">Exit</button>"
+	                      "    <button OnClick=\"my_function_exit();\">Exit</button>"
 	                      "    <script>"
 	                      "      let count = 0;"
 	                      "      function GetCount() {"
@@ -95,7 +95,7 @@ int main() {
 	                      "        count = number;"
 	                      "      }"
 	                      "      function AutoTest(number) {"
-	                      "        setInterval(function(){ webui.call('MyButton1'); }, 10);"
+	                      "        setInterval(function(){ my_function_count(); }, 10);"
 	                      "      }"
 	                      "    </script>"
 	                      "  </body>"
@@ -105,8 +105,8 @@ int main() {
 	size_t my_window = webui_new_window();
 
 	// Bind HTML elements with C functions
-	webui_bind(my_window, "MyButton1", my_function_count);
-	webui_bind(my_window, "MyButton2", my_function_exit);
+	webui_bind(my_window, "my_function_count", my_function_count);
+	webui_bind(my_window, "my_function_exit", my_function_exit);
 
 	// Show the window
 	webui_show(my_window, my_html); // webui_show_browser(my_window, my_html, Chrome);
