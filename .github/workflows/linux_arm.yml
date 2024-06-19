@@ -1,0 +1,179 @@
+# http://webui.me
+# https://github.com/webui-dev/webui
+# Copyright (c) 2020-2024 Hassan Draga.
+# Licensed under MIT License.
+# All rights reserved.
+#
+# Special Thanks to Turiiya (https://github.com/ttytm)
+
+name: Linux ARM
+on:
+  workflow_call:
+
+jobs:
+  setup:
+    runs-on: buildjet-2vcpu-ubuntu-2204-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check CPU Architecture
+        run: |
+          ARCH=$(uname -m)
+          if [[ "$ARCH" != "arm"* && "$ARCH" != "aarch64" ]]; then
+            echo "Expected ARM-based CPU architecture. Detected: $ARCH"
+            exit 1
+          else
+            echo "ARM CPU Detected: $ARCH"
+          fi
+      - name: Bundle WebUI Bridge
+        run: |
+          npm i -g esbuild
+          chmod +x bridge/build.sh
+          bridge/build.sh
+      - uses: actions/cache@v4
+        with:
+          path: bridge/webui_bridge.h
+          key: ${{ runner.os }}-${{ github.sha }}-bridge
+
+  build:
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - cc: gcc
+            arch: arm
+          - cc: gcc
+            arch: arm64
+      fail-fast: false
+    env:
+      ARTIFACT: webui-linux-${{ matrix.cc }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: bridge/webui_bridge.h
+          key: ${{ runner.os }}-${{ github.sha }}-bridge
+          fail-on-cache-miss: true
+      - name: Setup
+        run: |
+          CC=${{ matrix.cc }}
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
+            CC=gcc
+          elif [ "${{ matrix.arch }}" == "arm" ]; then
+            sudo apt update
+            sudo apt install -y gcc-arm-linux-gnueabi
+            CC=arm-linux-gnueabi-gcc
+            wget https://www.openssl.org/source/openssl-1.1.1.tar.gz
+            tar -xzf openssl-1.1.1.tar.gz
+            cd openssl-1.1.1
+            ./Configure linux-generic32 --prefix=/usr/arm-linux-gnueabi --cross-compile-prefix=arm-linux-gnueabi-
+            make
+            sudo make install
+          fi
+          echo "CC=$CC" >> $GITHUB_ENV
+      - name: Build Debug Target
+        run: make debug
+      - name: Build Release Target
+        if: ${{ !cancelled() }}
+        run: make
+      - name: Build TLS Debug Target
+        run: make WEBUI_USE_TLS=1 debug WEBUI_TLS_INCLUDE="/usr/arm-linux-gnueabi/include" WEBUI_TLS_LIB="/usr/arm-linux-gnueabi/lib"
+      - name: Build TLS Release Target WEBUI_TLS_INCLUDE="/usr/arm-linux-gnueabi/include" WEBUI_TLS_LIB="/usr/arm-linux-gnueabi/lib"
+        run: make WEBUI_USE_TLS=1
+      - name: Build Examples
+        if: matrix.cc == 'arm64'
+        run: |
+          examples_base_dir=$(pwd)/examples/C
+          for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
+            echo "> $example"
+            cd $example || (exit_code=1 && continue)
+            if ! make; then
+               echo "Failed to build '$example'"
+               exit_code=1
+               continue
+            fi
+            if [[ ! -e "main" || ! -e "main-dyn" ]] ; then
+              echo "Failed to find executable for '$example'" && find .
+              exit_code=1
+              continue
+            fi
+          done
+          exit $exit_code
+      - name: Setup Browser
+        if: matrix.cc == 'arm64'
+        uses: browser-actions/setup-chrome@v1
+      - name: Setup Tests
+        if: matrix.cc == 'arm64'
+        run: |
+          sudo apt update && sudo apt install xvfb
+          cd tests
+          make call_c_from_js.c
+          make fail_test.c
+          ls -1
+      - name: Test Static
+        if: matrix.cc == 'arm64'
+        timeout-minutes: 2
+        run: |
+          cd tests
+          call_c_from_js=$(pwd)/call_c_from_js
+          fail_test=$(pwd)/fail_test
+          xvfb-run "$call_c_from_js"
+          # Run again and capture its output.
+          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
+          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
+      - name: Test Dynamic
+        if: matrix.cc == 'arm64'
+        timeout-minutes: 2
+        run: |
+          cd tests
+          call_c_from_js=$(pwd)/call_c_from_js-dyn
+          fail_test=$(pwd)/fail_test-dyn
+          xvfb-run "$call_c_from_js"
+          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
+          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
+      - name: Prepare Artifact
+        run: |
+          cp -r include dist
+          mv dist/ "$ARTIFACT"
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT }}
+      - name: Prepare Release
+        if: github.repository_owner == 'webui-dev' && github.ref_name == 'main' && github.event_name == 'push'
+        run: |
+          zip -r "$ARTIFACT.zip" "$ARTIFACT"
+          if [ $GITHUB_REF_TYPE == tag ]; then
+            echo "TAG=$GITHUB_REF_NAME" >> $GITHUB_ENV
+          else
+            {
+              echo "IS_PRERELEASE=true";
+              echo "TAG=nightly";
+              echo "TITLE=WebUI Nightly Build $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+              echo "BODY=Generated from commit $GITHUB_SHA."
+            } >> $GITHUB_ENV
+          fi
+      - name: Update Nightly Tag
+        if: env.IS_PRERELEASE
+        uses: richardsimko/update-tag@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: nightly
+      - name: Release
+        if: >
+          github.repository_owner == 'webui-dev'
+          && (github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push'))
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ${{ env.ARTIFACT }}.zip
+          tag: ${{ env.TAG }}
+          body: ${{ env.BODY }}
+          name: ${{ env.TITLE }}
+          prerelease: ${{ env.IS_PRERELEASE }}
+          allowUpdates: true
