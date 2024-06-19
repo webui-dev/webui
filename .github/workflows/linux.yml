@@ -35,10 +35,6 @@ jobs:
         include:
           - cc: gcc
             arch: x64
-          - cc: gcc
-            arch: arm64
-          - cc: gcc
-            arch: arm
           - cc: clang
             arch: x64
       fail-fast: false
@@ -58,12 +54,6 @@ jobs:
             sudo ln -s llvm-ar-14 /usr/bin/llvm-ar
             sudo ln -s llvm-ranlib-14 /usr/bin/llvm-ranlib
             sudo ln -s llvm-strip-14 /usr/bin/llvm-strip
-          elif [ "${{ matrix.arch }}" == "arm64" ]; then
-            sudo apt install gcc-aarch64-linux-gnu
-            CC=aarch64-linux-gnu-gcc
-          elif [ "${{ matrix.arch }}" == "arm" ]; then
-            sudo apt install gcc-arm-linux-gnueabihf
-            CC=arm-linux-gnueabihf-gcc
           fi
           echo "CC=$CC" >> $GITHUB_ENV
       - name: Build Debug Target
@@ -72,13 +62,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: make
       - name: Build TLS Debug Target
-        if: matrix.arch == 'x64'
         run: make WEBUI_USE_TLS=1 debug
       - name: Build TLS Release Target
-        if: matrix.arch == 'x64'
         run: make WEBUI_USE_TLS=1
       - name: Build Examples
-        if: matrix.arch == 'x64'
         run: |
           examples_base_dir=$(pwd)/examples/C
           for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
@@ -97,10 +84,8 @@ jobs:
           done
           exit $exit_code
       - name: Setup Browser
-        if: matrix.arch == 'x64'
         uses: browser-actions/setup-chrome@v1
       - name: Setup Tests
-        if: matrix.arch == 'x64'
         run: |
           sudo apt update && sudo apt install xvfb
           cd tests
@@ -108,7 +93,6 @@ jobs:
           make fail_test.c
           ls -1
       - name: Test Static
-        if: matrix.arch == 'x64'
         timeout-minutes: 2
         run: |
           cd tests
@@ -120,7 +104,6 @@ jobs:
           [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
           xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
       - name: Test Dynamic
-        if: matrix.arch == 'x64'
         timeout-minutes: 2
         run: |
           cd tests
