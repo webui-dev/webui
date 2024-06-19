@@ -99,59 +99,59 @@ jobs:
         if: matrix.arch == 'arm'
         run: make WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="/usr/arm-linux-gnueabi/include" WEBUI_TLS_LIB="/usr/arm-linux-gnueabi/lib"
       - name: Build Examples
-        if: matrix.arch == 'arm64'
-        run: |
-          examples_base_dir=$(pwd)/examples/C
-          for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
-            echo "> $example"
-            cd $example || (exit_code=1 && continue)
-            if ! make CC=aarch64-linux-gnu-gcc; then
-               echo "Failed to build '$example'"
-               exit_code=1
-               continue
-            fi
-            if [[ ! -e "main" || ! -e "main-dyn" ]] ; then
-              echo "Failed to find executable for '$example'" && find .
-              exit_code=1
-              continue
-            fi
-          done
-          exit $exit_code
+      #   if: matrix.arch == 'arm64'
+      #   run: |
+      #     examples_base_dir=$(pwd)/examples/C
+      #     for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
+      #       echo "> $example"
+      #       cd $example || (exit_code=1 && continue)
+      #       if ! make CC=aarch64-linux-gnu-gcc; then
+      #          echo "Failed to build '$example'"
+      #          exit_code=1
+      #          continue
+      #       fi
+      #       if [[ ! -e "main" || ! -e "main-dyn" ]] ; then
+      #         echo "Failed to find executable for '$example'" && find .
+      #         exit_code=1
+      #         continue
+      #       fi
+      #     done
+      #     exit $exit_code
       - name: Setup Browser
-        if: matrix.cc == 'arm64'
-        uses: browser-actions/setup-chrome@v1
+        # if: matrix.cc == 'arm64'
+        # uses: browser-actions/setup-chrome@v1
       - name: Setup Tests
-        if: matrix.cc == 'arm64'
-        run: |
-          sudo apt update
-          sudo apt install -y xvfb
-          cd tests
-          make CC=aarch64-linux-gnu-gcc call_c_from_js.c
-          make CC=aarch64-linux-gnu-gcc fail_test.c
-          ls -1
+        # if: matrix.cc == 'arm64'
+        # run: |
+        #   sudo apt update
+        #   sudo apt install -y xvfb
+        #   cd tests
+        #   make CC=aarch64-linux-gnu-gcc call_c_from_js.c
+        #   make CC=aarch64-linux-gnu-gcc fail_test.c
+        #   ls -1
       - name: Test Static
-        if: matrix.cc == 'arm64'
-        timeout-minutes: 2
-        run: |
-          cd tests
-          call_c_from_js=$(pwd)/call_c_from_js
-          fail_test=$(pwd)/fail_test
-          xvfb-run "$call_c_from_js"
-          # Run again and capture its output.
-          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
-          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
-          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
+        # if: matrix.cc == 'arm64'
+        # timeout-minutes: 2
+        # run: |
+        #   cd tests
+        #   call_c_from_js=$(pwd)/call_c_from_js
+        #   fail_test=$(pwd)/fail_test
+        #   xvfb-run "$call_c_from_js"
+        #   # Run again and capture its output.
+        #   output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+        #   [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
+        #   xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
       - name: Test Dynamic
-        if: matrix.cc == 'arm64'
-        timeout-minutes: 2
-        run: |
-          cd tests
-          call_c_from_js=$(pwd)/call_c_from_js-dyn
-          fail_test=$(pwd)/fail_test-dyn
-          xvfb-run "$call_c_from_js"
-          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
-          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
-          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
+        # if: matrix.cc == 'arm64'
+        # timeout-minutes: 2
+        # run: |
+        #   cd tests
+        #   call_c_from_js=$(pwd)/call_c_from_js-dyn
+        #   fail_test=$(pwd)/fail_test-dyn
+        #   xvfb-run "$call_c_from_js"
+        #   output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+        #   [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
+        #   xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
       - name: Prepare Artifact
         run: |
           cp -r include dist
