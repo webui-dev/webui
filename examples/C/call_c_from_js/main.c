@@ -5,7 +5,7 @@
 void my_function_string(webui_event_t* e) {
 
 	// JavaScript:
-	// webui.call('MyID_One', 'Hello', 'World`);
+	// my_function_string('Hello', 'World`);
 
 	const char* str_1 = webui_get_string(e); // Or webui_get_string_at(e, 0);
 	const char* str_2 = webui_get_string_at(e, 1);
@@ -17,7 +17,7 @@ void my_function_string(webui_event_t* e) {
 void my_function_integer(webui_event_t* e) {
 
 	// JavaScript:
-	// webui.call('MyID_Two', 123, 456, 789, 12345.6789);
+	// my_function_integer(123, 456, 789, 12345.6789);
 
 	size_t count = webui_get_count(e);
 	printf("my_function_integer: There is %zu arguments in this event\n", count); // 4
@@ -38,7 +38,7 @@ void my_function_integer(webui_event_t* e) {
 void my_function_boolean(webui_event_t* e) {
 
 	// JavaScript:
-	// webui.call('MyID_Three', true, false);
+	// my_function_boolean(true, false);
 
 	bool status_1 = webui_get_bool(e); // Or webui_get_bool_at(e, 0);
 	bool status_2 = webui_get_bool_at(e, 1);
@@ -50,7 +50,7 @@ void my_function_boolean(webui_event_t* e) {
 void my_function_raw_binary(webui_event_t* e) {
 
 	// JavaScript:
-	// webui.call('MyID_RawBinary', new Uint8Array([0x41]), new Uint8Array([0x42, 0x43]));
+	// my_function_raw_binary(new Uint8Array([0x41]), new Uint8Array([0x42, 0x43]));
 
 	const unsigned char* raw_1 = (const unsigned char*)webui_get_string(e); // Or webui_get_string_at(e, 0);
 	const unsigned char* raw_2 = (const unsigned char*)webui_get_string_at(e, 1);
@@ -77,7 +77,7 @@ void my_function_raw_binary(webui_event_t* e) {
 void my_function_with_response(webui_event_t* e) {
 
 	// JavaScript:
-	// webui.call('MyID_Four', number, 2).then(...)
+	// my_function_with_response(number, 2).then(...)
 
 	long long number = webui_get_int(e); // Or webui_get_int_at(e, 0);
 	long long times = webui_get_int_at(e, 1);
@@ -129,13 +129,13 @@ int main() {
 	    "  <body>"
 	    "    <h1>WebUI - Call C from JavaScript</h1>"
 	    "    <p>Call C functions with arguments (<em>See the logs in your terminal</em>)</p>"
-	    "    <button onclick=\"webui.call('MyID_One', 'Hello', 'World');\">Call my_function_string()</button>"
+	    "    <button onclick=\"my_function_string('Hello', 'World');\">Call my_function_string()</button>"
 	    "    <br>"
-	    "    <button onclick=\"webui.call('MyID_Two', 123, 456, 789, 12345.6789);\">Call my_function_integer()</button>"
+	    "    <button onclick=\"my_function_integer(123, 456, 789, 12345.6789);\">Call my_function_integer()</button>"
 	    "    <br>"
-	    "    <button onclick=\"webui.call('MyID_Three', true, false);\">Call my_function_boolean()</button>"
+	    "    <button onclick=\"my_function_boolean(true, false);\">Call my_function_boolean()</button>"
 	    "    <br>"
-	    "    <button onclick=\"webui.call('MyID_RawBinary', new Uint8Array([0x41,0x42,0x43]), big_arr);\"> "
+	    "    <button onclick=\"my_function_raw_binary(new Uint8Array([0x41,0x42,0x43]), big_arr);\"> "
 	    "     Call my_function_raw_binary()</button>"
 	    "    <br>"
 	    "    <p>Call a C function that returns a response</p>"
@@ -149,7 +149,7 @@ int main() {
 	    "      function MyJS() {"
 	    "        const MyInput = document.getElementById('MyInputID');"
 	    "        const number = MyInput.value;"
-	    "        webui.call('MyID_Four', number, 2).then((response) => {"
+	    "        my_function_with_response(number, 2).then((response) => {"
 	    "            MyInput.value = response;"
 	    "        });"
 	    "      }"
@@ -161,11 +161,11 @@ int main() {
 	size_t my_window = webui_new_window();
 
 	// Bind HTML elements with C functions
-	webui_bind(my_window, "MyID_One", my_function_string);
-	webui_bind(my_window, "MyID_Two", my_function_integer);
-	webui_bind(my_window, "MyID_Three", my_function_boolean);
-	webui_bind(my_window, "MyID_Four", my_function_with_response);
-	webui_bind(my_window, "MyID_RawBinary", my_function_raw_binary);
+	webui_bind(my_window, "my_function_string", my_function_string);
+	webui_bind(my_window, "my_function_integer", my_function_integer);
+	webui_bind(my_window, "my_function_boolean", my_function_boolean);
+	webui_bind(my_window, "my_function_with_response", my_function_with_response);
+	webui_bind(my_window, "my_function_raw_binary", my_function_raw_binary);
 
 	// Show the window
 	webui_show(my_window, my_html); // webui_show_browser(my_window, my_html, Chrome);
