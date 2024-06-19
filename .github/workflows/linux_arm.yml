@@ -63,6 +63,14 @@ jobs:
             sudo apt update
             sudo apt install -y gcc-aarch64-linux-gnu
             CC=aarch64-linux-gnu-gcc
+            wget https://github.com/openssl/openssl/releases/download/openssl-3.3.1/openssl-3.3.1.tar.gz
+            tar -xzf openssl-3.3.1.tar.gz
+            cd openssl-3.3.1
+            ./Configure linux-generic64 --prefix=/usr/aarch64-linux-gnu --cross-compile-prefix=aarch64-linux-gnu- --release -latomic
+            make
+            sudo make install
+            cd ..
+            sudo rm -rf openssl-3.3.1
           elif [ "${{ matrix.arch }}" == "arm" ]; then
             sudo apt update
             sudo apt install -y gcc-arm-linux-gnueabi
@@ -73,6 +81,8 @@ jobs:
             ./Configure linux-generic32 --prefix=/usr/arm-linux-gnueabi --cross-compile-prefix=arm-linux-gnueabi- --release -latomic
             make
             sudo make install
+            cd ..
+            sudo rm -rf openssl-3.3.1
           fi
           echo "CC=$CC" >> $GITHUB_ENV
       - name: Build Debug Target
@@ -80,12 +90,20 @@ jobs:
       - name: Build Release Target
         if: ${{ !cancelled() }}
         run: make
-      - name: Build TLS Debug Target
+      - name: Build TLS Debug ARM64 Target 
+        if: matrix.arch == 'arm64'
+        run: make WEBUI_USE_TLS=1 debug WEBUI_TLS_INCLUDE="/usr/aarch64-linux-gnu/include" WEBUI_TLS_LIB="/usr/aarch64-linux-gnu/lib"
+      - name: Build TLS Debug ARM Target
+        if: matrix.arch == 'arm'
         run: make WEBUI_USE_TLS=1 debug WEBUI_TLS_INCLUDE="/usr/arm-linux-gnueabi/include" WEBUI_TLS_LIB="/usr/arm-linux-gnueabi/lib"
-      - name: Build TLS Release Target WEBUI_TLS_INCLUDE="/usr/arm-linux-gnueabi/include" WEBUI_TLS_LIB="/usr/arm-linux-gnueabi/lib"
-        run: make WEBUI_USE_TLS=1
+      - name: Build TLS Release ARM64 Target
+        if: matrix.arch == 'arm64'
+        run: make WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="/usr/aarch64-linux-gnu/include" WEBUI_TLS_LIB="/usr/aarch64-linux-gnu/lib"
+      - name: Build TLS Release ARM Target
+        if: matrix.arch == 'arm'
+        run: make WEBUI_USE_TLS=1 WEBUI_TLS_INCLUDE="/usr/arm-linux-gnueabi/include" WEBUI_TLS_LIB="/usr/arm-linux-gnueabi/lib"
       - name: Build Examples
-        if: matrix.cc == 'arm64'
+        if: matrix.arch == 'arm64'
         run: |
           examples_base_dir=$(pwd)/examples/C
           for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
