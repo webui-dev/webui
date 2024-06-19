@@ -65,10 +65,10 @@ jobs:
             sudo apt update
             sudo apt install -y gcc-arm-linux-gnueabi
             CC=arm-linux-gnueabi-gcc
-            wget https://www.openssl.org/source/openssl-1.1.1.tar.gz
-            tar -xzf openssl-1.1.1.tar.gz
-            cd openssl-1.1.1
-            ./Configure linux-generic32 --prefix=/usr/arm-linux-gnueabi --cross-compile-prefix=arm-linux-gnueabi-
+            wget https://github.com/openssl/openssl/releases/download/openssl-3.3.1/openssl-3.3.1.tar.gz
+            tar -xzf openssl-3.3.1.tar.gz
+            cd openssl-3.3.1
+            ./Configure linux-generic32 --prefix=/usr/arm-linux-gnueabi --cross-compile-prefix=arm-linux-gnueabi- --release -latomic
             make
             sudo make install
           fi
