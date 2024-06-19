@@ -69,8 +69,6 @@ jobs:
             ./Configure linux-generic64 --prefix=/usr/aarch64-linux-gnu --cross-compile-prefix=aarch64-linux-gnu- --release -latomic
             make
             sudo make install
-            cd ..
-            sudo rm -rf openssl-3.3.1
           elif [ "${{ matrix.arch }}" == "arm" ]; then
             sudo apt update
             sudo apt install -y gcc-arm-linux-gnueabi
@@ -81,8 +79,6 @@ jobs:
             ./Configure linux-generic32 --prefix=/usr/arm-linux-gnueabi --cross-compile-prefix=arm-linux-gnueabi- --release -latomic
             make
             sudo make install
-            cd ..
-            sudo rm -rf openssl-3.3.1
           fi
           echo "CC=$CC" >> $GITHUB_ENV
       - name: Build Debug Target
@@ -109,7 +105,7 @@ jobs:
           for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
             echo "> $example"
             cd $example || (exit_code=1 && continue)
-            if ! make; then
+            if ! make CC=aarch64-linux-gnu-gcc; then
                echo "Failed to build '$example'"
                exit_code=1
                continue
@@ -127,10 +123,11 @@ jobs:
       - name: Setup Tests
         if: matrix.cc == 'arm64'
         run: |
-          sudo apt update && sudo apt install xvfb
+          sudo apt update
+          sudo apt install -y xvfb
           cd tests
-          make call_c_from_js.c
-          make fail_test.c
+          make CC=aarch64-linux-gnu-gcc call_c_from_js.c
+          make CC=aarch64-linux-gnu-gcc fail_test.c
           ls -1
       - name: Test Static
         if: matrix.cc == 'arm64'
