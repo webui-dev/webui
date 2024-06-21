@@ -184,7 +184,7 @@ WEBUI_EXPORT size_t webui_new_window(void);
  *
  * @param window_number The window number (should be > 0, and < WEBUI_MAX_IDS)
  *
- * @return Returns the window number.
+ * @return Returns the same window number if success.
  *
  * @example size_t myWindow = webui_new_window_id(123);
  */
@@ -269,7 +269,7 @@ WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, size_t 
 WEBUI_EXPORT bool webui_show_wv(size_t window, const char* content);
 
 /**
- * @brief Set the window in Kiosk mode (Full screen)
+ * @brief Set the window in Kiosk mode (Full screen).
  *
  * @param window The window number
  * @param status True or False
@@ -337,8 +337,6 @@ WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
  * @param handler The handler function: `void myHandler(const char* filename,
  * int* length)`
  *
- * @return Returns a unique bind ID.
- *
  * @example webui_set_file_handler(myWindow, myHandlerFunction);
  */
 WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(const char* filename, int* length));
@@ -353,7 +351,7 @@ WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(c
 WEBUI_EXPORT bool webui_is_shown(size_t window);
 
 /**
- * @brief Set the maximum time in seconds to wait for the browser to start.
+ * @brief Set the maximum time in seconds to wait for the window to connect. This effect `show()` and `wait()`.
  *
  * @param second The timeout in seconds
  *
@@ -373,22 +371,24 @@ WEBUI_EXPORT void webui_set_timeout(size_t second);
 WEBUI_EXPORT void webui_set_icon(size_t window, const char* icon, const char* icon_type);
 
 /**
- * @brief Base64 encoding. Use this to safely send text based data to the UI. If
- * it fails it will return NULL.
+ * @brief Encode text to Base64. The returned buffer need to be freed.
  *
  * @param str The string to encode (Should be null terminated)
  *
- * @example webui_encode("Hello");
+ * @return Returns the base64 encoded string
+ * 
+ * @example char* base64 = webui_encode("Foo Bar");
  */
 WEBUI_EXPORT char* webui_encode(const char* str);
 
 /**
- * @brief Base64 decoding. Use this to safely decode received Base64 text from
- * the UI. If it fails it will return NULL.
+ * @brief Decode a Base64 encoded text. The returned buffer need to be freed.
  *
  * @param str The string to decode (Should be null terminated)
+ * 
+ * @return Returns the base64 decoded string
  *
- * @example webui_decode("SGVsbG8=");
+ * @example char* str = webui_decode("SGVsbG8=");
  */
 WEBUI_EXPORT char* webui_decode(const char* str);
 
@@ -470,7 +470,7 @@ WEBUI_EXPORT void webui_set_position(size_t window, unsigned int x, unsigned int
 WEBUI_EXPORT void webui_set_profile(size_t window, const char* name, const char* path);
 
 /**
- * @brief Set the web browser proxy_server to use. Need to be called before `webui_show()`.
+ * @brief Set the web browser proxy server to use. Need to be called before `webui_show()`.
  *
  * @param window The window number
  * @param proxy_server The web browser proxy_server
@@ -480,7 +480,7 @@ WEBUI_EXPORT void webui_set_profile(size_t window, const char* name, const char*
 WEBUI_EXPORT void webui_set_proxy(size_t window, const char* proxy_server);
 
 /**
- * @brief Get the full current URL.
+ * @brief Get current URL of a running window.
  *
  * @param window The window number
  *
@@ -491,7 +491,7 @@ WEBUI_EXPORT void webui_set_proxy(size_t window, const char* proxy_server);
 WEBUI_EXPORT const char* webui_get_url(size_t window);
 
 /**
- * @brief Allow a specific window address to be accessible from a public network
+ * @brief Allow a specific window address to be accessible from a public network.
  *
  * @param window The window number
  * @param status True or False
@@ -501,7 +501,7 @@ WEBUI_EXPORT const char* webui_get_url(size_t window);
 WEBUI_EXPORT void webui_set_public(size_t window, bool status);
 
 /**
- * @brief Navigate to a specific URL
+ * @brief Navigate to a specific URL.
  *
  * @param window The window number
  * @param url Full HTTP URL
@@ -520,7 +520,7 @@ WEBUI_EXPORT void webui_navigate(size_t window, const char* url);
 WEBUI_EXPORT void webui_clean(void);
 
 /**
- * @brief Delete all local web-browser profiles folder. It should called at the
+ * @brief Delete all local web-browser profiles folder. It should be called at the
  * end.
  *
  * @example
@@ -569,9 +569,9 @@ WEBUI_EXPORT size_t webui_get_parent_process_id(size_t window);
 WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
 
 /**
- * @brief Set a custom web-server network port to be used by WebUI.
+ * @brief Set a custom web-server/websocket network port to be used by WebUI.
  * This can be useful to determine the HTTP link of `webui.js` in case
- * you are trying to use WebUI with an external web-server like NGNIX
+ * you are trying to use WebUI with an external web-server like NGNIX.
  *
  * @param window The window number
  * @param port The web-server network port WebUI should use
@@ -655,7 +655,7 @@ WEBUI_EXPORT bool webui_script(size_t window, const char* script, size_t timeout
  * @brief Chose between Deno and Nodejs as runtime for .js and .ts files.
  *
  * @param window The window number
- * @param runtime Deno | Nodejs
+ * @param runtime Deno | Nodejs | None
  *
  * @example webui_set_runtime(myWindow, Deno);
  */
@@ -673,7 +673,7 @@ WEBUI_EXPORT void webui_set_runtime(size_t window, size_t runtime);
 WEBUI_EXPORT size_t webui_get_count(webui_event_t* e);
 
 /**
- * @brief Get an argument as integer at a specific index
+ * @brief Get an argument as integer at a specific index.
  *
  * @param e The event struct
  * @param index The argument position starting from 0
@@ -685,7 +685,7 @@ WEBUI_EXPORT size_t webui_get_count(webui_event_t* e);
 WEBUI_EXPORT long long int webui_get_int_at(webui_event_t* e, size_t index);
 
 /**
- * @brief Get the first argument as integer
+ * @brief Get the first argument as integer.
  *
  * @param e The event struct
  *
@@ -696,7 +696,7 @@ WEBUI_EXPORT long long int webui_get_int_at(webui_event_t* e, size_t index);
 WEBUI_EXPORT long long int webui_get_int(webui_event_t* e);
 
 /**
- * @brief Get an argument as float at a specific index
+ * @brief Get an argument as float at a specific index.
  *
  * @param e The event struct
  * @param index The argument position starting from 0
@@ -708,7 +708,7 @@ WEBUI_EXPORT long long int webui_get_int(webui_event_t* e);
 WEBUI_EXPORT double webui_get_float_at(webui_event_t* e, size_t index);
 
 /**
- * @brief Get the first argument as float
+ * @brief Get the first argument as float.
  *
  * @param e The event struct
  *
@@ -719,7 +719,7 @@ WEBUI_EXPORT double webui_get_float_at(webui_event_t* e, size_t index);
 WEBUI_EXPORT double webui_get_float(webui_event_t* e);
 
 /**
- * @brief Get an argument as string at a specific index
+ * @brief Get an argument as string at a specific index.
  *
  * @param e The event struct
  * @param index The argument position starting from 0
@@ -731,7 +731,7 @@ WEBUI_EXPORT double webui_get_float(webui_event_t* e);
 WEBUI_EXPORT const char* webui_get_string_at(webui_event_t* e, size_t index);
 
 /**
- * @brief Get the first argument as string
+ * @brief Get the first argument as string.
  *
  * @param e The event struct
  *
@@ -742,7 +742,7 @@ WEBUI_EXPORT const char* webui_get_string_at(webui_event_t* e, size_t index);
 WEBUI_EXPORT const char* webui_get_string(webui_event_t* e);
 
 /**
- * @brief Get an argument as boolean at a specific index
+ * @brief Get an argument as boolean at a specific index.
  *
  * @param e The event struct
  * @param index The argument position starting from 0
@@ -754,7 +754,7 @@ WEBUI_EXPORT const char* webui_get_string(webui_event_t* e);
 WEBUI_EXPORT bool webui_get_bool_at(webui_event_t* e, size_t index);
 
 /**
- * @brief Get the first argument as boolean
+ * @brief Get the first argument as boolean.
  *
  * @param e The event struct
  *
@@ -765,7 +765,7 @@ WEBUI_EXPORT bool webui_get_bool_at(webui_event_t* e, size_t index);
 WEBUI_EXPORT bool webui_get_bool(webui_event_t* e);
 
 /**
- * @brief Get the size in bytes of an argument at a specific index
+ * @brief Get the size in bytes of an argument at a specific index.
  *
  * @param e The event struct
  * @param index The argument position starting from 0
@@ -777,7 +777,7 @@ WEBUI_EXPORT bool webui_get_bool(webui_event_t* e);
 WEBUI_EXPORT size_t webui_get_size_at(webui_event_t* e, size_t index);
 
 /**
- * @brief Get size in bytes of the first argument
+ * @brief Get size in bytes of the first argument.
  *
  * @param e The event struct
  *
@@ -875,7 +875,7 @@ WEBUI_EXPORT bool webui_interface_is_app_running(void);
 WEBUI_EXPORT size_t webui_interface_get_window_id(size_t window);
 
 /**
- * @brief Get an argument as string at a specific index
+ * @brief Get an argument as string at a specific index.
  *
  * @param window The window number
  * @param event_number The event number
@@ -888,7 +888,7 @@ WEBUI_EXPORT size_t webui_interface_get_window_id(size_t window);
 WEBUI_EXPORT const char* webui_interface_get_string_at(size_t window, size_t event_number, size_t index);
 
 /**
- * @brief Get an argument as integer at a specific index
+ * @brief Get an argument as integer at a specific index.
  *
  * @param window The window number
  * @param event_number The event number
@@ -901,7 +901,7 @@ WEBUI_EXPORT const char* webui_interface_get_string_at(size_t window, size_t eve
 WEBUI_EXPORT long long int webui_interface_get_int_at(size_t window, size_t event_number, size_t index);
 
 /**
- * @brief Get an argument as boolean at a specific index
+ * @brief Get an argument as boolean at a specific index.
  *
  * @param window The window number
  * @param event_number The event number
@@ -914,7 +914,7 @@ WEBUI_EXPORT long long int webui_interface_get_int_at(size_t window, size_t even
 WEBUI_EXPORT bool webui_interface_get_bool_at(size_t window, size_t event_number, size_t index);
 
 /**
- * @brief Get the size in bytes of an argument at a specific index
+ * @brief Get the size in bytes of an argument at a specific index.
  *
  * @param window The window number
  * @param event_number The event number
