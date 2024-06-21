@@ -9,7 +9,7 @@
 void my_function_string(webui::window::event* e) {
 
 	// JavaScript:
-	// webui.call('MyID_One', 'Hello', 'World`);
+	// my_function_string('Hello', 'World`);
 
 	std::string str_1 = e->get_string(); // Or e->get_string(0);
 	std::string str_2 = e->get_string(1);
@@ -21,7 +21,7 @@ void my_function_string(webui::window::event* e) {
 void my_function_integer(webui::window::event* e) {
 
 	// JavaScript:
-	// webui.call('MyID_Two', 123, 456, 789);
+	// my_function_integer(123, 456, 789);
 
 	long long number_1 = e->get_int(); // Or e->get_int(0);
 	long long number_2 = e->get_int(1);
@@ -35,7 +35,7 @@ void my_function_integer(webui::window::event* e) {
 void my_function_boolean(webui::window::event* e) {
 
 	// JavaScript:
-	// webui.call('MyID_Three', true, false);
+	// my_function_boolean(true, false);
 
 	bool status_1 = e->get_bool(); // Or e->get_bool(0);
 	bool status_2 = e->get_bool(1);
@@ -47,7 +47,7 @@ void my_function_boolean(webui::window::event* e) {
 void my_function_with_response(webui::window::event* e) {
 
 	// JavaScript:
-	// webui.call('MyID_Four', number, 2).then(...)
+	// my_function_with_response(number, 2).then(...)
 
 	long long number = e->get_int(0);
 	long long times = e->get_int(1);
@@ -86,11 +86,11 @@ int main() {
         <body>
           <h1>WebUI - Call C++ from JavaScript</h1>
           <p>Call C++ functions with arguments (<em>See the logs in your terminal</em>)</p>
-          <button onclick="webui.call('MyID_One', 'Hello', 'World');">Call my_function_string()</button>
+          <button onclick="my_function_string('Hello', 'World');">Call my_function_string()</button>
           <br>
-          <button onclick="webui.call('MyID_Two', 123, 456, 789);">Call my_function_integer()</button>
+          <button onclick="my_function_integer(123, 456, 789);">Call my_function_integer()</button>
           <br>
-          <button onclick="webui.call('MyID_Three', true, false);">Call my_function_boolean()</button>
+          <button onclick="my_function_boolean(true, false);">Call my_function_boolean()</button>
           <br>
           <p>Call a C++ function that returns a response</p>
           <button onclick="MyJS();">Call my_function_with_response()</button>
@@ -99,7 +99,7 @@ int main() {
             function MyJS() {
               const MyInput = document.getElementById('MyInputID');
               const number = MyInput.value;
-              webui.call('MyID_Four', number, 2).then((response) => {
+              my_function_with_response(number, 2).then((response) => {
                 MyInput.value = response;
               });
             }
@@ -112,10 +112,10 @@ int main() {
 	webui::window my_window;
 
 	// Bind HTML elements with C++ functions
-	my_window.bind("MyID_One", my_function_string);
-	my_window.bind("MyID_Two", my_function_integer);
-	my_window.bind("MyID_Three", my_function_boolean);
-	my_window.bind("MyID_Four", my_function_with_response);
+	my_window.bind("my_function_string", my_function_string);
+	my_window.bind("my_function_integer", my_function_integer);
+	my_window.bind("my_function_boolean", my_function_boolean);
+	my_window.bind("my_function_with_response", my_function_with_response);
 
 	// Show the window
 	my_window.show(my_html); // webui_show_browser(my_window, my_html, Chrome);

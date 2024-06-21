@@ -17,8 +17,6 @@ void my_function_exit(webui::window::event* e) {
 
 void my_function_count(webui::window::event* e) {
 
-	// This function gets called every time the user clicks on "MyButton1"
-
 	// Create a buffer to hold the response
 	char response[64];
 
@@ -78,11 +76,11 @@ int main() {
           <br>
           <h1 id="count">0</h1>
           <br>
-          <button id="MyButton1">Manual Count</button>
+          <button id="my_function_count">Manual Count</button>
           <br>
           <button id="MyTest" onclick="AutoTest();">Auto Count (Every 10ms)</button>
           <br>
-          <button id="MyButton2">Exit</button>
+          <button id="Exit">Exit</button>
           <script>
             let count = 0;
             function GetCount() {
@@ -94,7 +92,7 @@ int main() {
             }
             function AutoTest(number) {
               setInterval(function() {
-                webui.call('MyButton1');
+                my_function_count();
               }, 10);
             }
           </script>
@@ -106,8 +104,8 @@ int main() {
 	webui::window my_window;
 
 	// Bind HTML elements with C++ functions
-	my_window.bind("MyButton1", my_function_count);
-	my_window.bind("MyButton2", my_function_exit);
+	my_window.bind("my_function_count", my_function_count);
+	my_window.bind("Exit", my_function_exit);
 
 	// Show the window
 	my_window.show(my_html); // my_window.show_browser(my_html, Chrome);
