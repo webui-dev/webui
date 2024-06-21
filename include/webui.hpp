@@ -88,8 +88,14 @@ class window {
             static webui::window& get_window(const size_t index) { return *window_list[index]; }
         };
 
+        // Get how many arguments there are in an event.
+        size_t get_count(size_t index = 0) { return webui_get_count(this); }
+
         // Get an argument as integer at a specific index.
         long long int get_int(size_t index = 0) { return webui_get_int_at(this, index); }
+
+        // Get an argument as string at a specific index.
+        double get_float(size_t index = 0) { return webui_get_float_at(this, index); }
 
         // Get the size in bytes of an argument at a specific index.
         size_t get_size(size_t index = 0) { return webui_get_size_at(this, index); }
@@ -107,6 +113,9 @@ class window {
 
         // Return the response to JavaScript as integer.
         void return_int(long long int n) { webui_return_int(this, n); }
+
+        // Return the response to JavaScript as integer.
+        void return_float(double f) { webui_return_float(this, f); }
 
         // Return the response to JavaScript as string.
         void return_string(const std::string_view s) { webui_return_string(this, s.data()); }
@@ -130,8 +139,8 @@ class window {
         event::handler::add(id, this, func);
     }
 
-    // Show a window using a embedded HTML, or a file. If the window is already opened then it will be
-    // refreshed.
+    // Show a window using a embedded HTML, or a file. If the window is already opened
+    // then it will be refreshed.
     bool show(const std::string_view content) const { return webui_show(webui_window, content.data()); }
 
     // Same as show(). But with a specific web browser.
@@ -167,8 +176,8 @@ class window {
     // Set window size
     void set_size(unsigned int width, unsigned int height) const { webui_set_size(webui_window, width, height); }
 
-    // Set a custom web-server network port to be used by WebUI. This can be useful to determine the HTTP link of `webui.js`
-    // in case you are trying to use WebUI with an external web-server like NGNIX
+    // Set a custom web-server network port to be used by WebUI. This can be useful to determine the HTTP 
+    // link of `webui.js` in case you are trying to use WebUI with an external web-server like NGNIX
     void set_port(size_t port) const { webui_set_port(webui_window, port); }
 
     // Set window position
@@ -211,6 +220,18 @@ class window {
 
     // Navigate to a specific URL.
     void navigate(const std::string_view url) const { webui_navigate(webui_window, url.data()); }
+
+    // Control if UI events coming from this window should be processed one at a time in a 
+    // single blocking thread `True`, or process every event in a new non-blocking thread `False`.
+    void set_event_blocking(bool status) const { webui_set_event_blocking(webui_window, status); }
+
+    // Show a WebView window using embedded HTML, or a file. If the window is already open, it will be refreshed.
+    bool show_wv(const std::string_view content) const {
+        return webui_show_wv(webui_window, content.data());
+    }
+
+    // Allow a specific window address to be accessible from a public network.
+    void set_public(bool status) const { webui_set_public(webui_window, status); }
 
     // -- JavaScript ----------------------
 
@@ -260,6 +281,16 @@ inline void clean() { webui_clean(); }
 
 // Delete all local web-browser profiles folder. It should called at the end.
 inline void delete_all_profiles() { webui_delete_all_profiles(); }
+
+// Get a free window number that can be used with `webui_new_window_id()`.
+inline size_t get_new_window_id() { return webui_get_new_window_id(); }
+
+// Control the WebUI behaviour. Should be called at the beginning.
+inline void set_config(webui_config option, bool status) { webui_set_config(option, status); }
+
+// Check if the app is still running.
+inline bool is_app_running() { return webui_interface_is_app_running(); }
+
 } // namespace webui
 
 #endif /* _WEBUI_HPP */
