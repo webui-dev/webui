@@ -917,6 +917,39 @@ void webui_set_high_contrast_support(size_t window, bool status) {
     win->disable_high_contrast_support = !status;
 }
 
+bool webui_user_prefers_high_contrast() {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_high_contrast_support()\n");
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    #ifdef _WIN32
+        char high_contrast_flags_as_char[WEBUI_MAX_PATH];
+
+        _webui_get_windows_reg_value(
+            HKEY_CURRENT_USER,
+            L"Control Panel\\Accessibility\\"
+            L"HighContrast",
+            L"Flags", high_contrast_flags_as_char
+        );
+
+        int high_contrast_flags = atoi(high_contrast_flags_as_char);
+
+        bool is_enabled = (high_contrast_flags & 0x01) == 1;
+
+        #ifdef WEBUI_LOG
+        printf("[User] webui_set_high_contrast_support() -> %d", is_enabled);
+        #endif
+
+        return is_enabled;
+    #else
+        return false;
+    #endif
+}
+
 void webui_close(size_t window) {
 
     #ifdef WEBUI_LOG
