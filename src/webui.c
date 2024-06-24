@@ -926,6 +926,8 @@ bool webui_user_prefers_high_contrast() {
     // Initialization
     _webui_init();
 
+    bool is_enabled = false;
+
     #ifdef _WIN32
         char high_contrast_flags_as_char[WEBUI_MAX_PATH];
 
@@ -938,16 +940,25 @@ bool webui_user_prefers_high_contrast() {
 
         int high_contrast_flags = atoi(high_contrast_flags_as_char);
 
-        bool is_enabled = (high_contrast_flags & 0x01) == 1;
+        is_enabled = (high_contrast_flags & 0x01) == 1;
 
-        #ifdef WEBUI_LOG
-        printf("[User] webui_set_high_contrast_support() -> %d", is_enabled);
-        #endif
+    #elif __linux__
+        FILE* process_output;
+        char buf[100];
 
-        return is_enabled;
-    #else
-        return false;
+        process_output = popen("gsettings get org.gnome.desktop.a11y.interface high-contrast", "r");
+        if (process_output != NULL && fgets(buf, sizeof(buf), process_output) != NULL) { // Running the command is not failed and fgets works correctly
+            is_enabled = strstr(buf, "true") != NULL;
+        }
+
+        pclose(process_output);
     #endif
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_high_contrast_support() -> %d", is_enabled);
+    #endif
+
+    return is_enabled;
 }
 
 void webui_close(size_t window) {
