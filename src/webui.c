@@ -4519,6 +4519,9 @@ static bool _webui_folder_exist(char* folder) {
     printf("[Core]\t\t_webui_folder_exist([%s])\n", folder);
     #endif
 
+    if (_webui_file_exist(folder))
+        return false; // It's a file not a folder
+
     #if defined(_MSC_VER)
     if (GetFileAttributesA(folder) != INVALID_FILE_ATTRIBUTES)
         return true;
@@ -7219,67 +7222,29 @@ static int _webui_http_handler(struct mg_connection * conn, void * _win) {
                 }
             } else {
 
-                // Serve as index local file
+                // Looking for index file and redirect
 
-                if (win->html_handled) {
+                const char* index_files[] = {"index.ts", "index.js", "index.html", "index.htm"};
 
-                    // index local file already handled.
-                    // Forbidden 403
-
-                    #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_http_handler() -> Index local file Already Handled (403)\n");
-                    #endif
-
-                    _webui_http_send_error_page(conn, webui_html_served, 403);
-
-                    http_status_code = 403;
-                } else {
-
-                    win->html_handled = true;
-
-                    #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_http_handler() -> Local Index File\n");
-                    #endif
-
-                    // Set full path
-                    // [Path][Sep][File Name]
-                    size_t bf_len = (_webui_strlen(win->server_root_path) + 1 + 8);
-                    char* index = (char*)_webui_malloc(bf_len);
-
-                    // Index.ts
-                    WEBUI_SPF_DYN(index, bf_len, "%s%sindex.ts", win->server_root_path, webui_sep);
-                    if (_webui_file_exist(index)) {
-
-                        // TypeScript Index
-                        if (win->runtime != None)
-                            http_status_code = _webui_interpret_file(win, conn, index);
-                        else
-                            http_status_code = _webui_serve_file(win, conn);
-
-                        _webui_free_mem((void * ) index);
-                        return 0;
+                // [Path][Sep][File Name]
+                size_t bf_len = (_webui_strlen(win->server_root_path) + 1 + 24);
+                char* index_path = (char*)_webui_malloc(bf_len);
+                for (int i = 0; i < (sizeof(index_files) / sizeof(index_files[0])); i++) {
+                    WEBUI_SPF_DYN(index_path, bf_len, "%s%s%s", win->server_root_path, webui_sep, index_files[i]);
+                    if (_webui_file_exist(index_path)) {
+                        #ifdef WEBUI_LOG
+                        printf("[Core]\t\t_webui_http_handler() -> 302 Redirecting to [%s]\n", index_files[i]);
+                        #endif
+                        mg_send_http_redirect(conn, index_files[i], 302);
+                        _webui_free_mem((void*)index_path);
+                        return 302;
                     }
-
-                    // Index.js
-                    WEBUI_SPF_DYN(index, bf_len, "%s%sindex.js", win->server_root_path, webui_sep);
-                    if (_webui_file_exist(index)) {
-
-                        // JavaScript Index
-                        if (win->runtime != None)
-                            http_status_code = _webui_interpret_file(win, conn, index);
-                        else
-                            http_status_code = _webui_serve_file(win, conn);
-
-                        _webui_free_mem((void * ) index);
-                        return 0;
-                    }
-
-                    _webui_free_mem((void * ) index);
-
-                    // Index.html
-                    // Serve as a normal HTML text-based file
-                    http_status_code = _webui_serve_file(win, conn);
                 }
+
+                // No index file is found in this folder
+                _webui_free_mem((void*)index_path);
+                _webui_http_send_error_page(conn, webui_html_res_not_available, 404);
+                http_status_code = 404;
             }
         } else if (strcmp(url, "/favicon.ico") == 0 || strcmp(url, "/favicon.svg") == 0) {
 
@@ -7317,34 +7282,77 @@ static int _webui_http_handler(struct mg_connection * conn, void * _win) {
             }
         } else {
 
-            // [/file]
+            // [/file] or [/folder]
 
-            bool html = false;
-            const char* extension = _webui_get_extension(url);
-            if (strcmp(extension, "html") == 0 || strcmp(extension, "htm") == 0)
-                html = true;
+            // [Path][Sep][folder]
+            char* folder_path = _webui_get_full_path(win, url);
 
-            if (html)
-                win->html_handled = true;
+            if (_webui_folder_exist(folder_path)) {
 
-            if (win->runtime != None) {
+                // [/folder]
+                
+                // Looking for index file and redirect
 
-                #ifdef WEBUI_LOG
-                printf(
-                    "[Core]\t\t_webui_http_handler() -> Trying to interpret locaLfile (Runtime = %zu)\n",
-                    win->runtime
-                );
-                #endif
+                const char* index_files[] = {"index.ts", "index.js", "index.html", "index.htm"};
 
-                http_status_code = _webui_interpret_file(win, conn, NULL);
-            } else {
+                // [Path][Sep][File Name]
+                size_t bf_len = (_webui_strlen(folder_path) + 1 + 24);
+                char* index_path = (char*)_webui_malloc(bf_len);
+                for (int i = 0; i < (sizeof(index_files) / sizeof(index_files[0])); i++) {
+                    WEBUI_SPF_DYN(index_path, bf_len, "%s%s%s", folder_path, webui_sep, index_files[i]);
+                    if (_webui_file_exist(index_path)) {
+                        // [URL][/][Index Name]
+                        size_t redirect_len = (_webui_strlen(url) + 1 + 24);
+                        char* redirect_url = (char*)_webui_malloc(bf_len);
+                        WEBUI_SPF_DYN(redirect_url, redirect_len, "%s%s%s", url, "/", index_files[i]);
+                        #ifdef WEBUI_LOG
+                        printf("[Core]\t\t_webui_http_handler() -> 302 Redirecting to [%s]\n", redirect_url);
+                        #endif
+                        mg_send_http_redirect(conn, redirect_url, 302);
+                        _webui_free_mem((void*)redirect_url);
+                        _webui_free_mem((void*)folder_path);
+                        _webui_free_mem((void*)index_path);
+                        return 302;
+                    }
+                }
 
-                #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_http_handler() -> Text based local file\n");
-                #endif
+                // No index file is found in this folder
+                _webui_free_mem((void*)folder_path);
+                _webui_free_mem((void*)index_path);
+                _webui_http_send_error_page(conn, webui_html_res_not_available, 404);
+                http_status_code = 404;
+            }
+            else {
 
-                // Serve as a normal text-based file
-                http_status_code = _webui_serve_file(win, conn);
+                // [/file]
+
+                bool html = false;
+                const char* extension = _webui_get_extension(url);
+                if (strcmp(extension, "html") == 0 || strcmp(extension, "htm") == 0)
+                    html = true;
+
+                if (html)
+                    win->html_handled = true;
+
+                if (win->runtime != None) {
+
+                    #ifdef WEBUI_LOG
+                    printf(
+                        "[Core]\t\t_webui_http_handler() -> Trying to interpret locaLfile (Runtime = %zu)\n",
+                        win->runtime
+                    );
+                    #endif
+
+                    http_status_code = _webui_interpret_file(win, conn, NULL);
+                } else {
+
+                    #ifdef WEBUI_LOG
+                    printf("[Core]\t\t_webui_http_handler() -> Text based local file\n");
+                    #endif
+
+                    // Serve as a normal text-based file
+                    http_status_code = _webui_serve_file(win, conn);
+                }
             }
         }
     } else {
