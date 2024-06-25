@@ -917,6 +917,15 @@ void webui_set_high_contrast(size_t window, bool status) {
     win->disable_browser_high_contrast = !status;
 }
 
+bool webui_browser_exist(size_t browser) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_browser_exist([%zu])\n", browser);
+    #endif
+
+    return _webui_browser_exist(NULL, browser);
+}
+
 bool webui_is_high_contrast() {
 
     #ifdef WEBUI_LOG
@@ -4805,8 +4814,10 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Google Chrome
 
         static bool ChromeExist = false;
-        if (ChromeExist && !_webui_is_empty(win->browser_path))
-            return true;
+        if(win) {
+            if (ChromeExist && !_webui_is_empty(win->browser_path))
+                return true;
+        }
 
         #ifdef _WIN32
 
@@ -4827,7 +4838,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_is_google_chrome_folder(browser_folder)) {
 
                 // Google Chrome Found (multi-user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\\chrome.exe\"", browser_folder);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\\chrome.exe\"", browser_folder);
                 ChromeExist = true;
                 return true;
             }
@@ -4845,7 +4856,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_is_google_chrome_folder(browser_folder)) {
 
                 // Google Chrome Found (one user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\\chrome.exe\"", browser_folder);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\\chrome.exe\"", browser_folder);
                 ChromeExist = true;
                 return true;
             }
@@ -4858,7 +4869,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Google Chrome on macOS
         if (_webui_cmd_sync(win, "open -R -a \"Google Chrome\"", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Google Chrome.app\" --args");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Google Chrome.app\" --args");
             ChromeExist = true;
             return true;
         } else
@@ -4868,12 +4879,12 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Google Chrome on Linux
         if (_webui_cmd_sync(win, "google-chrome --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "google-chrome");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "google-chrome");
             ChromeExist = true;
             return true;
         } else if (_webui_cmd_sync(win, "google-chrome-stable --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "google-chrome-stable");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "google-chrome-stable");
             ChromeExist = true;
             return true;
         } else
@@ -4885,8 +4896,10 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Edge
 
         static bool EdgeExist = false;
-        if (EdgeExist && !_webui_is_empty(win->browser_path))
-            return true;
+        if(win) {
+            if (EdgeExist && !_webui_is_empty(win->browser_path))
+                return true;
+        }
 
         #ifdef _WIN32
 
@@ -4906,7 +4919,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Edge Found (multi-user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 EdgeExist = true;
                 return true;
             }
@@ -4924,7 +4937,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Edge Found (one user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 EdgeExist = true;
                 return true;
             }
@@ -4937,7 +4950,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Edge on macOS
         if (_webui_cmd_sync(win, "open -R -a \"Microsoft Edge\"", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Microsoft Edge.app\" --args");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Microsoft Edge.app\" --args");
             EdgeExist = true;
             return true;
         } else
@@ -4948,17 +4961,17 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Edge on Linux
         if (_webui_cmd_sync(win, "microsoft-edge-stable --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "microsoft-edge-stable");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "microsoft-edge-stable");
             EdgeExist = true;
             return true;
         } else if (_webui_cmd_sync(win, "microsoft-edge-beta --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "microsoft-edge-beta");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "microsoft-edge-beta");
             EdgeExist = true;
             return true;
         } else if (_webui_cmd_sync(win, "microsoft-edge-dev --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "microsoft-edge-dev");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "microsoft-edge-dev");
             EdgeExist = true;
             return true;
         } else
@@ -4970,8 +4983,10 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Epic Privacy Browser
 
         static bool EpicExist = false;
-        if (EpicExist && !_webui_is_empty(win->browser_path))
-            return true;
+        if(win) {
+            if (EpicExist && !_webui_is_empty(win->browser_path))
+                return true;
+        }
 
         #ifdef _WIN32
 
@@ -4991,7 +5006,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Epic Found (one user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 EpicExist = true;
                 return true;
             }
@@ -5009,7 +5024,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Epic Found (multi-user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 EpicExist = true;
                 return true;
             }
@@ -5022,7 +5037,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Epic on macOS
         if (_webui_cmd_sync(win, "open -R -a \"Epic\"", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Epic.app\" --args");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Epic.app\" --args");
             EpicExist = true;
             return true;
         } else
@@ -5032,7 +5047,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Epic on Linux
         if (_webui_cmd_sync(win, "epic --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "epic");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "epic");
             EpicExist = true;
             return true;
         } else
@@ -5043,8 +5058,10 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Vivaldi Browser
 
         static bool VivaldiExist = false;
-        if (VivaldiExist && !_webui_is_empty(win->browser_path))
-            return true;
+        if(win) {
+            if (VivaldiExist && !_webui_is_empty(win->browser_path))
+                return true;
+        }
 
         #ifdef _WIN32
 
@@ -5064,7 +5081,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Vivaldi Found (multi-user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 VivaldiExist = true;
                 return true;
             }
@@ -5082,7 +5099,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Vivaldi Found (one user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 VivaldiExist = true;
                 return true;
             }
@@ -5095,7 +5112,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Vivaldi on macOS
         if (_webui_cmd_sync(win, "open -R -a \"Vivaldi\"", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Vivaldi.app\" --args");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Vivaldi.app\" --args");
             VivaldiExist = true;
             return true;
         } else
@@ -5105,17 +5122,17 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Vivaldi on Linux
         if (_webui_cmd_sync(win, "vivaldi --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "vivaldi");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "vivaldi");
             VivaldiExist = true;
             return true;
         } else if (_webui_cmd_sync(win, "vivaldi-stable --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "vivaldi-stable");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "vivaldi-stable");
             VivaldiExist = true;
             return true;
         } else if (_webui_cmd_sync(win, "vivaldi-snapshot --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "vivaldi-snapshot");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "vivaldi-snapshot");
             VivaldiExist = true;
             return true;
         } else
@@ -5126,8 +5143,10 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Brave Browser
 
         static bool BraveExist = false;
-        if (BraveExist && !_webui_is_empty(win->browser_path))
-            return true;
+        if(win) {
+            if (BraveExist && !_webui_is_empty(win->browser_path))
+                return true;
+        }
 
         #ifdef _WIN32
 
@@ -5147,7 +5166,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Brave Found (multi-user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 BraveExist = true;
                 return true;
             }
@@ -5165,7 +5184,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Brave Found (one user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 BraveExist = true;
                 return true;
             }
@@ -5178,7 +5197,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Brave on macOS
         if (_webui_cmd_sync(win, "open -R -a \"Brave Browser\"", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Brave Browser.app\" --args");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Brave Browser.app\" --args");
             BraveExist = true;
             return true;
         } else
@@ -5188,7 +5207,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Brave on Linux
         if (_webui_cmd_sync(win, "brave --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "brave");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "brave");
             BraveExist = true;
             return true;
         } else
@@ -5199,8 +5218,10 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Firefox
 
         static bool FirefoxExist = false;
-        if (FirefoxExist && !_webui_is_empty(win->browser_path))
-            return true;
+        if(win) {
+            if (FirefoxExist && !_webui_is_empty(win->browser_path))
+                return true;
+        }
 
         #ifdef _WIN32
 
@@ -5220,7 +5241,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Firefox Found (multi-user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 FirefoxExist = true;
                 return true;
             }
@@ -5238,7 +5259,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Firefox Found (one user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 FirefoxExist = true;
                 return true;
             }
@@ -5251,7 +5272,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Firefox on macOS
         if (_webui_cmd_sync(win, "open -R -a \"Firefox\"", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Firefox.app\" --args");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Firefox.app\" --args");
             FirefoxExist = true;
             return true;
         } else
@@ -5262,7 +5283,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
 
         if (_webui_cmd_sync(win, "firefox -v", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "firefox");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "firefox");
             FirefoxExist = true;
             return true;
         } else
@@ -5275,8 +5296,10 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Yandex Browser
 
         static bool YandexExist = false;
-        if (YandexExist && !_webui_is_empty(win->browser_path))
-            return true;
+        if(win) {
+            if (YandexExist && !_webui_is_empty(win->browser_path))
+                return true;
+        }
 
         #ifdef _WIN32
 
@@ -5296,7 +5319,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Yandex Found (one user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 YandexExist = true;
                 return true;
             }
@@ -5314,7 +5337,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (_webui_file_exist(browser_fullpath)) {
 
                 // Yandex Found (multi-user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", browser_fullpath);
                 YandexExist = true;
                 return true;
             }
@@ -5327,7 +5350,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Yandex on macOS
         if (_webui_cmd_sync(win, "open -R -a \"Yandex\"", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Yandex.app\" --args");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Yandex.app\" --args");
             YandexExist = true;
             return true;
         } else
@@ -5337,7 +5360,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Yandex on Linux
         if (_webui_cmd_sync(win, "yandex-browser --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "yandex-browser");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "yandex-browser");
             YandexExist = true;
             return true;
         } else
@@ -5348,8 +5371,10 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // The Chromium Projects
 
         static bool ChromiumExist = false;
-        if (ChromiumExist && !_webui_is_empty(win->browser_path))
-            return true;
+        if(win) {
+            if (ChromiumExist && !_webui_is_empty(win->browser_path))
+                return true;
+        }
 
         #ifdef _WIN32
 
@@ -5369,7 +5394,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (!_webui_is_google_chrome_folder(browser_folder)) {
 
                 // Chromium Found (one user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\\chrome.exe\"", browser_folder);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\\chrome.exe\"", browser_folder);
                 ChromiumExist = true;
                 return true;
             }
@@ -5387,7 +5412,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
             if (!_webui_is_google_chrome_folder(browser_folder)) {
 
                 // Chromium Found (multi-user)
-                WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\\chrome.exe\"", browser_folder);
+                if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\\chrome.exe\"", browser_folder);
                 ChromiumExist = true;
                 return true;
             }
@@ -5400,7 +5425,7 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Chromium on macOS
         if (_webui_cmd_sync(win, "open -R -a \"Chromium\"", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Chromium.app\" --args");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "open --new -a \"Chromium.app\" --args");
             ChromiumExist = true;
             return true;
         } else
@@ -5410,12 +5435,12 @@ static bool _webui_browser_exist(_webui_window_t * win, size_t browser) {
         // Chromium on Linux
         if (_webui_cmd_sync(win, "chromium-browser --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "chromium-browser");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "chromium-browser");
             ChromiumExist = true;
             return true;
         } else if (_webui_cmd_sync(win, "chromium --version", false) == 0) {
 
-            WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "chromium");
+            if(win) WEBUI_SPF_DYN(win->browser_path, WEBUI_MAX_PATH, "chromium");
             ChromiumExist = true;
             return true;
         } else
