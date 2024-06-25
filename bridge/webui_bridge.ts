@@ -592,9 +592,11 @@ class WebuiBridge {
 			if (bind.trim()) {
 				const fn = bind.replace(`${this.#winNum}/`, '');
 				if (fn.trim()) {
-					this[fn] = (...args: DataTypes[]) => this.call(fn, ...args);
-					if (typeof (window as any)[fn] === 'undefined') {
-						(window as any)[fn] = (...args: string[]) => this.call(fn, ...args);
+					if (fn !== '_webui_core_api') {
+						this[fn] = (...args: DataTypes[]) => this.call(fn, ...args);
+						if (typeof (window as any)[fn] === 'undefined') {
+							(window as any)[fn] = (...args: string[]) => this.call(fn, ...args);
+						}
 					}
 				}
 			}
@@ -659,6 +661,9 @@ class WebuiBridge {
 			this.#callPromiseResolve[callId] = resolve;
 			this.#sendData(packet);
 		});
+	}
+	async callCore(fn: string, ...args: DataTypes[]): Promise<DataTypes> {
+		return this.call('__webui_core_api__', fn, ...args);
 	}
 	// -- Public APIs --------------------------
 	/**
@@ -734,6 +739,17 @@ class WebuiBridge {
 	 */
 	isConnected(): boolean {
 		return (this.#wsStatus);
+	}
+	/**
+	 * Get OS high contrast preference.
+	 *
+	 * @return - Boolean `True` if OS is using high contrast theme
+	 */
+	async isHighContrast(): Promise<boolean> {
+		// Call a core function and wait for response
+		const response = await this.callCore("high_contrast") as boolean;
+		if (this.#log) console.log(`Core Response: [${response}]`);
+		return response;
 	}
 }
 // Export
