@@ -279,23 +279,24 @@ WEBUI_EXPORT bool webui_show_wv(size_t window, const char* content);
 WEBUI_EXPORT void webui_set_kiosk(size_t window, bool status);
 
 /**
- * @brief Set the window high contrast support. It would be useful when default high contrast support of browser is not working fine or you want to build better high contrast theme by CSS.
+ * @brief Set the window with high-contrast support. Useful when you want to 
+ * build a better high-contrast theme with CSS.
  *
  * @param window The window number
  * @param status True or False
  *
- * @example webui_set_high_contrast_support(myWindow, true);
+ * @example webui_set_high_contrast(myWindow, true);
  */
-WEBUI_EXPORT void webui_set_high_contrast_support(size_t window, bool status);
+WEBUI_EXPORT void webui_set_high_contrast(size_t window, bool status);
 
 /**
- * @brief Get user high contrast preference.
+ * @brief Get OS high contrast preference.
  *
- * @return Returns True if user is using high contrast theme
+ * @return Returns True if OS is using high contrast theme
  *
- * @example webui_user_prefers_high_contrast();
+ * @example bool hc = webui_is_high_contrast();
  */
-bool webui_user_prefers_high_contrast();
+WEBUI_EXPORT bool webui_is_high_contrast();
 
 /**
  * @brief Wait until all opened windows get closed.
