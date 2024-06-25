@@ -4,13 +4,13 @@
 # == 1. VARIABLES =============================================================
 
 WEBUI_OUT_LIB_NAME = webui-2
-TLS_CFLAG = /D NO_SSL
+TLS_CFLAG = /DNO_SSL
 
 # TLS Enabled
 !IF "$(WEBUI_USE_TLS)" == "1"
 
 WEBUI_OUT_LIB_NAME = webui-2-secure
-TLS_CFLAG = /D WEBUI_TLS /D NO_SSL_DL /D OPENSSL_API_1_1
+TLS_CFLAG = /DWEBUI_TLS /DNO_SSL_DL /DOPENSSL_API_1_1
 TLS_LDFLAG_DYNAMIC = libssl.lib libcrypto.lib
 
 !IF "$(WEBUI_TLS_INCLUDE)" != ""
