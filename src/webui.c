@@ -7532,7 +7532,7 @@ static WEBUI_THREAD_SERVER_START {
     #ifdef _WIN32
     HANDLE monitor_thread = NULL;
     #else
-    pthread_t monitor_thread = NULL;
+    pthread_t monitor_thread;
     #endif
 
     // Initialization
