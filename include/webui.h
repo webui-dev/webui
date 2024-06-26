@@ -83,6 +83,7 @@
     #include <signal.h>
     #include <sys/socket.h>
     #include <sys/time.h>
+    #include <sys/inotify.h>
     #include <unistd.h>
     #define WEBUI_GET_CURRENT_DIR getcwd
     #define WEBUI_FILE_EXIST      access
@@ -103,6 +104,8 @@
     #include <sys/sysctl.h>
     #include <sys/syslimits.h>
     #include <sys/time.h>
+    #include <sys/types.h>
+    #include <sys/event.h>
     #include <unistd.h>
     #define WEBUI_GET_CURRENT_DIR getcwd
     #define WEBUI_FILE_EXIST      access
@@ -157,6 +160,11 @@ typedef enum {
     //
     // Default: False
     ui_event_blocking,
+    // Automatically refresh the window UI when any file in the
+    // root folder gets changed.
+    //
+    // Default: False
+    folder_monitor,
 } webui_config;
 
 // -- Structs -------------------------
@@ -617,7 +625,7 @@ WEBUI_EXPORT bool webui_set_port(size_t window, size_t port);
  * @param option The desired option from `webui_config` enum
  * @param status The status of the option, `true` or `false`
  *
- * @example webui_config(show_wait_connection, false);
+ * @example webui_set_config(show_wait_connection, false);
  */
 WEBUI_EXPORT void webui_set_config(webui_config option, bool status);
 

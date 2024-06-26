@@ -344,6 +344,7 @@ typedef struct _webui_core_t {
         bool show_wait_connection;
         bool show_auto_js_inject;
         bool ws_block;
+        bool folder_monitor;
     } config;
     volatile size_t servers;
     char* html_elements[WEBUI_MAX_IDS];
@@ -421,6 +422,12 @@ typedef struct _webui_recv_arg_t {
 }
 _webui_recv_arg_t;
 
+typedef struct _webui_monitor_arg_t {
+    size_t win_num;
+    const char *path;
+}
+_webui_monitor_arg_t;
+
 typedef struct _webui_cmd_async_t {
     _webui_window_t * win;
     char* cmd;
@@ -439,6 +446,7 @@ static bool _webui_str_to_wide(const char *s, wchar_t **w);
 #define WEBUI_THREAD_SERVER_START DWORD WINAPI _webui_server_thread(LPVOID arg)
 #define WEBUI_THREAD_RECEIVE DWORD WINAPI _webui_process_thread(LPVOID _arg)
 #define WEBUI_THREAD_WEBVIEW DWORD WINAPI _webui_webview_thread(LPVOID arg)
+#define WEBUI_THREAD_MONITOR DWORD WINAPI _webui_folder_monitor_thread(LPVOID arg)
 #define WEBUI_THREAD_RETURN return 0;
 #else
 static const char* webui_sep = "/";
@@ -446,6 +454,7 @@ static void * _webui_run_browser_task(void * _arg);
 #define WEBUI_THREAD_SERVER_START void * _webui_server_thread(void * arg)
 #define WEBUI_THREAD_RECEIVE void * _webui_process_thread(void * _arg)
 #define WEBUI_THREAD_WEBVIEW void * _webui_webview_thread(void * arg)
+#define WEBUI_THREAD_MONITOR void * _webui_folder_monitor_thread(void * arg)
 #define WEBUI_THREAD_RETURN pthread_exit(NULL);
 #endif
 static void _webui_init(void);
@@ -576,6 +585,7 @@ static int _webui_http_log(const struct mg_connection * conn, const char* messag
 static WEBUI_THREAD_SERVER_START;
 static WEBUI_THREAD_RECEIVE;
 static WEBUI_THREAD_WEBVIEW;
+static WEBUI_THREAD_MONITOR;
 
 // Safe C STD
 #ifdef _WIN32
@@ -2076,6 +2086,9 @@ void webui_set_config(webui_config option, bool status) {
     switch (option) {
         case show_wait_connection:
             _webui_core.config.show_wait_connection = status;
+            break;
+        case folder_monitor:
+            _webui_core.config.folder_monitor = status;
             break;
         case ui_event_blocking:
             _webui_core.config.ws_block = status;
@@ -7514,6 +7527,13 @@ static WEBUI_THREAD_SERVER_START {
     printf("[Core]\t\t_webui_server_thread([%zu]) -> URL: [%s]\n", win->window_number, win->url);
     #endif
 
+    // Folder monitor thread
+    #ifdef _WIN32
+    HANDLE monitor_thread = NULL;
+    #else
+    pthread_t monitor_thread = NULL;
+    #endif
+
     // Initialization
     _webui_core.servers++;
     win->server_running = true;
@@ -7672,6 +7692,21 @@ static WEBUI_THREAD_SERVER_START {
                     );
                     #endif
 
+                    if (_webui_core.config.folder_monitor && !monitor_thread) {
+                        // Folder monitor thread
+                        _webui_monitor_arg_t* arg = (_webui_monitor_arg_t * ) _webui_malloc(sizeof(_webui_monitor_arg_t));
+                        arg->win_num = win->window_number;
+                        arg->path = win->server_root_path;
+                        #ifdef _WIN32
+                        monitor_thread = CreateThread(NULL, 0, _webui_folder_monitor_thread, (void*)arg, 0, NULL);
+                        if (monitor_thread != NULL)
+                            CloseHandle(monitor_thread);
+                        #else
+                        pthread_create(&monitor_thread, NULL, &_webui_folder_monitor_thread, (void*)win);
+                        pthread_detach(monitor_thread);
+                        #endif
+                    }
+
                     while(!stop) {
 
                         // Wait forever for disconnection
@@ -7779,6 +7814,15 @@ static WEBUI_THREAD_SERVER_START {
         win->webView->stop = true;
         _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);    
     }
+
+    // Clean monitor thread
+    #ifdef _WIN32
+    TerminateThread(monitor_thread, 0);
+    CloseHandle(monitor_thread);
+    #else
+    pthread_cancel(monitor_thread);
+    pthread_join(monitor_thread, NULL);
+    #endif
 
     // Clean
     win->server_running = false;
@@ -8418,8 +8462,7 @@ static void _webui_process(_webui_window_t * win, void * ptr, size_t len, size_t
 
             #ifdef WEBUI_LOG
             printf(
-                "[Core]\t\t_webui_process(%zu) -> WebSocket "
-                "connected\n",
+                "[Core]\t\t_webui_process(%zu) -> WebSocket connected\n",
                 recvNum
             );
             #endif
@@ -10207,6 +10250,135 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         WEBUI_THREAD_RETURN
     }
 #endif
+
+static WEBUI_THREAD_MONITOR {
+
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread()\n");
+    #endif
+
+    // Get arguments
+    _webui_monitor_arg_t* args = (_webui_monitor_arg_t*)arg;
+
+    #ifdef _WIN32
+        // Windows
+        HANDLE hDir = CreateFile(
+            args->path, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL
+        );
+        if (hDir == INVALID_HANDLE_VALUE) {
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Failed to open folder: %s\n", args->path);
+            #endif
+            WEBUI_THREAD_RETURN
+        }
+        char buffer[1024];
+        DWORD bytesReturned;
+        while (!_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE)) {
+            if (ReadDirectoryChangesW(
+                    hDir, buffer, sizeof(buffer), TRUE,
+                    FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES |
+                    FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE, &bytesReturned, NULL, NULL
+                ))
+            {
+                #ifdef WEBUI_LOG
+                printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Folder updated\n");
+                #endif
+                webui_run(args->win_num, "location.reload();");
+            } else {
+                #ifdef WEBUI_LOG
+                printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Failed to read folder changes\n");
+                #endif
+                break;
+            }
+        }
+        CloseHandle(hDir);
+    #elif __linux__
+        // Linux
+        int fd = inotify_init();
+        if (fd < 0) {
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> inotify_init error\n");
+            #endif
+            WEBUI_THREAD_RETURN
+        }
+        int wd = inotify_add_watch(fd, args->path, IN_MODIFY | IN_CREATE | IN_DELETE);
+        if (wd < 0) {
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> inotify_add_watch error\n");
+            #endif
+            close(fd);
+            WEBUI_THREAD_RETURN
+        }
+        char buffer[1024];
+        while (!_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE)) {
+            int length = read(fd, buffer, sizeof(buffer));
+            if (length < 0) {
+                #ifdef WEBUI_LOG
+                printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> read error\n");
+                #endif
+                break;
+            }
+            int i = 0;
+            while (i < length) {
+                struct inotify_event *event = (struct inotify_event *)&buffer[i];
+                if (event->len) {
+                    if (event->mask & (IN_CREATE | IN_DELETE | IN_MODIFY)) {
+                        #ifdef WEBUI_LOG
+                        printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Folder updated\n");
+                        #endif
+                        webui_run(args->win_num, "location.reload();");
+                    }
+                }
+                i += sizeof(struct inotify_event) + event->len;
+            }
+        }
+        inotify_rm_watch(fd, wd);
+        close(fd);
+    #else
+        // macOS
+        int kq = kqueue();
+        if (kq == -1) {
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> kqueue error\n");
+            #endif
+            WEBUI_THREAD_RETURN
+        }
+        int fd = open(args->path, O_RDONLY);
+        if (fd == -1) {
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> open error\n");
+            #endif
+            close(kq);
+            WEBUI_THREAD_RETURN
+        }
+        struct kevent change;
+        EV_SET(&change, fd, EVFILT_VNODE, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_WRITE, 0, NULL);
+        while (!_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE)) {
+            struct kevent event;
+            int nev = kevent(kq, &change, 1, &event, 1, NULL);
+            if (nev == -1) {
+                #ifdef WEBUI_LOG
+                printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> kevent error\n");
+                #endif
+                break;
+            } else if (nev > 0) {
+                if (event.fflags & NOTE_WRITE) {
+                    #ifdef WEBUI_LOG
+                    printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Folder updated\n");
+                    #endif
+                    webui_run(args->win_num, "location.reload();");
+                }
+            }
+        }
+        close(fd);
+        close(kq);
+    #endif
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Exit\n");
+    #endif
+    WEBUI_THREAD_RETURN
+}
 
 static void _webui_bridge_api_handler(webui_event_t* e) {
 
