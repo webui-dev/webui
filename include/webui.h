@@ -135,6 +135,7 @@ enum webui_runtime {
     None = 0, // 0. Prevent WebUI from using any runtime for .js and .ts files
     Deno,     // 1. Use Deno runtime for .js and .ts files
     NodeJS,   // 2. Use Nodejs runtime for .js files
+    Bun,      // 3. Use Bun runtime for .js and .ts files
 };
 
 enum webui_event {
@@ -223,13 +224,13 @@ WEBUI_EXPORT size_t webui_get_new_window_id(void);
 WEBUI_EXPORT size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t* e));
 
 /**
- * @brief Get the recommended web browser ID to use. If you 
+ * @brief Get the recommended web browser ID to use. If you
  * are already using one, this function will return the same ID.
- * 
+ *
  * @param window The window number
- * 
+ *
  * @return Returns a web browser ID.
- * 
+ *
  * @example size_t browserID = webui_get_best_browser(myWindow);
  */
 WEBUI_EXPORT size_t webui_get_best_browser(size_t window);
@@ -287,7 +288,7 @@ WEBUI_EXPORT bool webui_show_wv(size_t window, const char* content);
 WEBUI_EXPORT void webui_set_kiosk(size_t window, bool status);
 
 /**
- * @brief Set the window with high-contrast support. Useful when you want to 
+ * @brief Set the window with high-contrast support. Useful when you want to
  * build a better high-contrast theme with CSS.
  *
  * @param window The window number
@@ -413,7 +414,7 @@ WEBUI_EXPORT void webui_set_icon(size_t window, const char* icon, const char* ic
  * @param str The string to encode (Should be null terminated)
  *
  * @return Returns the base64 encoded string
- * 
+ *
  * @example char* base64 = webui_encode("Foo Bar");
  */
 WEBUI_EXPORT char* webui_encode(const char* str);
@@ -422,7 +423,7 @@ WEBUI_EXPORT char* webui_encode(const char* str);
  * @brief Decode a Base64 encoded text. The returned buffer need to be freed.
  *
  * @param str The string to decode (Should be null terminated)
- * 
+ *
  * @return Returns the base64 decoded string
  *
  * @example char* str = webui_decode("SGVsbG8=");
@@ -512,7 +513,7 @@ WEBUI_EXPORT void webui_set_profile(size_t window, const char* name, const char*
  * @param window The window number
  * @param proxy_server The web browser proxy_server
  *
- * @example webui_set_proxy(myWindow, "http://127.0.0.1:8888"); 
+ * @example webui_set_proxy(myWindow, "http://127.0.0.1:8888");
  */
 WEBUI_EXPORT void webui_set_proxy(size_t window, const char* proxy_server);
 
@@ -632,7 +633,7 @@ WEBUI_EXPORT void webui_set_config(webui_config option, bool status);
 /**
  * @brief Control if UI events comming from this window should be processed
  * one a time in a single blocking thread `True`, or process every event in
- * a new non-blocking thread `False`. This update single window. You can use 
+ * a new non-blocking thread `False`. This update single window. You can use
  * `webui_set_config(ui_event_blocking, ...)` to update all windows.
  *
  * @param window The window number
