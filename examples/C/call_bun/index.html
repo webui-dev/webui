@@ -1,0 +1,23 @@
+<html>
+  <head>
+    <script src="webui.js"></script>
+    <script>
+			function call_bun_file() {
+				webui.setLogging(true);
+        try {
+          // Simple HTTP
+          var xmlHttp = new XMLHttpRequest();
+          xmlHttp.open("GET", "bun_test.ts?foo=60&bar=40", false);
+          xmlHttp.send(null);
+          alert(xmlHttp.responseText);
+        } catch (err) {
+          alert(err);
+        }
+      }
+    </script>
+  </head>
+  <body>
+    Hello Bun !
+    <button onclick="call_bun_file()">call bun_test.ts (Local file)</button>
+  </body>
+</html>

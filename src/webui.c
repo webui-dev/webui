@@ -220,17 +220,17 @@ typedef struct webui_event_inf_t {
     gtk_window_move_func gtk_window_move = NULL;
     gtk_window_close_func gtk_window_close = NULL;
     gtk_window_resize_func gtk_window_resize = NULL;
-    gtk_window_set_position_func gtk_window_set_position = NULL;    
+    gtk_window_set_position_func gtk_window_set_position = NULL;
     g_signal_connect_data_func g_signal_connect_data = NULL;
     g_idle_add_func g_idle_add = NULL;
     // WebKit Symbol Addresses
-    typedef void *(*webkit_web_view_new_func)(void);    
+    typedef void *(*webkit_web_view_new_func)(void);
     typedef void (*webkit_web_view_load_uri_func)(void *, const char *);
     typedef const char *(*webkit_web_view_get_title_func)(void *);
     webkit_web_view_new_func webkit_web_view_new = NULL;
     webkit_web_view_load_uri_func webkit_web_view_load_uri = NULL;
     webkit_web_view_get_title_func webkit_web_view_get_title = NULL;
-    
+
     typedef struct _webui_wv_linux_t {
         // Linux WebView
         void* gtk_win;
@@ -629,6 +629,12 @@ static const char* webui_deno_not_found = "<html><head><title>Deno Not Found</ti
 "</style></head><body><h2>&#9888; Deno Not Found</h2><p>Deno is not found on this system.<br>Please download it from <a "
 "href=\"https://github.com/denoland/deno/releases\">https://github.com/denoland/deno/releases</a></p><br><a href=\""
 "https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
+static const char* webui_bun_not_found = "<html><head><title>Bun Not Found</title><script src=\"/webui.js\"></script>"
+"<style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:"
+"linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}"
+"</style></head><body><h2>&#9888; Deno Not Found</h2><p>Bun is not found on this system.<br>Please download it from <a "
+"href=\"https://github.com/oven-sh/bun/releases\">https://github.com/oven-sh/bun/releases</a></p><br><a href=\""
+"https://www.webui.me\"><small>WebUI v" WEBUI_VERSION "<small></a></body></html>";
 static const char* webui_nodejs_not_found = "<html><head><title>Node.js Not Found</title><script src=\"/webui.js\"></script>"
 "<style>body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:"
 "linear-gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style>"
@@ -865,7 +871,7 @@ size_t webui_new_window_id(size_t window_number) {
 
     #ifdef WEBUI_LOG
     printf("[User] webui_new_window_id() -> New window #%zu @ 0x%p\n", window_number, win);
-    printf("[User] webui_new_window_id() -> New window Token 0x%08X (%" PRIu32 ")\n", 
+    printf("[User] webui_new_window_id() -> New window Token 0x%08X (%" PRIu32 ")\n",
         win->token, win->token);
     #endif
 
@@ -1024,7 +1030,7 @@ void webui_close(size_t window) {
         // Stop WebView thread if any
         if (win->webView) {
             win->webView->stop = true;
-            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);    
+            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);
         }
     }
 }
@@ -1572,7 +1578,7 @@ size_t webui_get_best_browser(size_t window) {
     if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui_core.wins[window] == NULL)
         return 1; // 1. Default recommended web browser
     _webui_window_t * win = _webui_core.wins[window];
-    
+
     return _webui_find_the_best_browser(win);
 }
 
@@ -2300,7 +2306,7 @@ void webui_set_size(size_t window, unsigned int width, unsigned int height) {
             win->webView->width = width;
             win->webView->height = height;
             win->webView->size = true;
-            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);    
+            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);
         }
     }
 }
@@ -2349,7 +2355,7 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
             win->webView->x = X;
             win->webView->y = Y;
             win->webView->position = true;
-            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);    
+            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);
         }
     }
 }
@@ -2669,17 +2675,17 @@ void webui_exit(void) {
 
                     // Send the packet
                     _webui_send(
-                        _webui_core.wins[i], _webui_core.wins[i]->token, 0, 
+                        _webui_core.wins[i], _webui_core.wins[i]->token, 0,
                         WEBUI_CMD_CLOSE, NULL, 0
-                    );                          
+                    );
                 }
                 else {
 
                     // Stop WebView thread if any
                     if (_webui_core.wins[i]->webView) {
                         _webui_core.wins[i]->webView->stop = true;
-                        _webui_mutex_is_webview_update(_webui_core.wins[i], WEBUI_MUTEX_TRUE);    
-                    }        
+                        _webui_mutex_is_webview_update(_webui_core.wins[i], WEBUI_MUTEX_TRUE);
+                    }
                 }
             }
         }
@@ -2724,7 +2730,7 @@ void webui_wait(void) {
         }
 
         #ifdef WEBUI_LOG
-        printf("[Loop] webui_wait() -> Waiting (Timeout in %zu seconds)\n", 
+        printf("[Loop] webui_wait() -> Waiting (Timeout in %zu seconds)\n",
             _webui_core.startup_timeout);
         #endif
 
@@ -2793,7 +2799,7 @@ void webui_wait(void) {
                 while (gtk_events_pending()) {
                     gtk_main_iteration_do(0);
                 }
-                
+
                 if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE))
                     break;
             }
@@ -2932,7 +2938,7 @@ void webui_set_runtime(size_t window, size_t runtime) {
         return;
     _webui_window_t * win = _webui_core.wins[window];
 
-    if (runtime != Deno && runtime != NodeJS)
+    if (runtime != Deno && runtime != NodeJS && runtime != Bun)
         win->runtime = None;
     else
         win->runtime = runtime;
@@ -2998,7 +3004,7 @@ bool webui_set_default_root_folder(const char* path) {
     // for non-running windows.
     for (size_t i = 1; i <= _webui_core.last_win_number; i++) {
         if (_webui_core.wins[i] != NULL) {
-            WEBUI_SPF_DYN(_webui_core.wins[i]->server_root_path, WEBUI_MAX_PATH, 
+            WEBUI_SPF_DYN(_webui_core.wins[i]->server_root_path, WEBUI_MAX_PATH,
                 "%s", _webui_core.default_server_root_path);
         }
     }
@@ -3963,6 +3969,26 @@ static bool _webui_nodejs_exist(_webui_window_t * win) {
         return false;
 }
 
+static bool _webui_bun_exist(_webui_window_t * win) {
+
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_bun_exist()\n");
+    #endif
+
+    static bool found = false;
+
+    if (found)
+        return true;
+
+    if (_webui_cmd_sync(win, "bun -v", false) == 0) {
+
+        found = true;
+        return true;
+    } else
+        return false;
+}
+
+
 static const char* _webui_interpret_command(const char* cmd) {
 
     #ifdef WEBUI_LOG
@@ -4182,6 +4208,44 @@ static int _webui_interpret_file(_webui_window_t * win, struct mg_connection * c
 
                 interpret_http_stat = 500;
             }
+        } else if (win->runtime == Bun) {
+
+            // Use Bun
+
+            if (_webui_bun_exist(win)) {
+
+                // Set command
+                // [bun][file][query]
+                size_t bf_len = (17 +  _webui_strlen(full_path) + _webui_strlen(query));
+                char* cmd = (char*)_webui_malloc(bf_len);
+                WEBUI_SPF_DYN(cmd, bf_len, "bun \"%s\" \"%s\"", full_path, query);
+
+                // Run command
+                const char* out = _webui_interpret_command(cmd);
+
+                if (out != NULL) {
+
+                    // Send Bun output
+                    _webui_http_send(
+                        conn, // 200
+                        "text/plain", out
+                    );
+                } else {
+
+                    // Bun interpretation failed.
+                    // Serve as a normal text-based file
+                    mg_send_file(conn, full_path);
+                }
+
+                _webui_free_mem((void * ) cmd);
+                _webui_free_mem((void * ) out);
+            } else {
+
+                // Bun not installed
+                _webui_http_send_error_page(conn, webui_bun_not_found, 500);
+
+                interpret_http_stat = 500;
+            }
         } else if (win->runtime == NodeJS) {
 
             // Use Nodejs
@@ -4190,7 +4254,7 @@ static int _webui_interpret_file(_webui_window_t * win, struct mg_connection * c
 
                 // Set command
                 // [node][file]
-                size_t bf_len = (16 + _webui_strlen(full_path));
+                size_t bf_len = (16 + _webui_strlen(full_path) + _webui_strlen(query));
                 char* cmd = (char*)_webui_malloc(bf_len);
                 WEBUI_SPF_DYN(cmd, bf_len, "node \"%s\" \"%s\"", full_path, query);
 
@@ -4596,7 +4660,7 @@ static void _webui_delete_folder(char* folder) {
         #else
         system(command);
         #endif
-        
+
         if (!_webui_folder_exist(folder))
             break;
         _webui_sleep(500);
@@ -5483,7 +5547,7 @@ static void _webui_clean(void) {
     _webui_mutex_is_exit_now(WEBUI_MUTEX_TRUE);
 
     // Let's give other threads more time to safely exit
-    // and finish cleaning up.    
+    // and finish cleaning up.
     // _webui_sleep(500);
 
     // Clean all servers services
@@ -6607,7 +6671,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
         const char* file_url_encoded = _webui_url_encode(user_file);
         size_t bf_len = (64 + _webui_strlen(file_url_encoded));
         char* url_encoded = (char*)_webui_malloc(bf_len); // [http][domain][port] [file_encoded]
-        WEBUI_SPF_DYN(url_encoded, bf_len, WEBUI_HTTP_PROTOCOL "localhost:%zu/%s", 
+        WEBUI_SPF_DYN(url_encoded, bf_len, WEBUI_HTTP_PROTOCOL "localhost:%zu/%s",
             win->server_port, file_url_encoded);
         _webui_free_mem((void * ) file_url_encoded);
         _webui_free_mem((void * ) user_file);
@@ -6624,7 +6688,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
         // Prioritize the server thread if we
         // knows that there is UIs running
         if (_webui_core.ui) {
-            
+
             // New server thread
             #ifdef _WIN32
             HANDLE thread = CreateThread(NULL, 0, _webui_server_thread, (void * ) win, 0, NULL);
@@ -6636,7 +6700,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
             pthread_create( & thread, NULL, & _webui_server_thread, (void * ) win);
             pthread_detach(thread);
             win->server_thread = thread;
-            #endif 
+            #endif
         }
 
         // New WebView
@@ -6758,7 +6822,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
             _webui_timer_start( & timer);
             for (;;) {
 
-                _webui_sleep(10);            
+                _webui_sleep(10);
 
                 // Process WebView if any
                 if (_webui_core.is_webview) {
@@ -6782,7 +6846,7 @@ static bool _webui_show_window(_webui_window_t * win, const char* content, int t
                 // Stop if window is connected
                 if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE))
                     break;
-                
+
                 // Stop if timer is finished
                 if (_webui_timer_is_end(&timer, (timeout * 1000)))
                     break;
@@ -7341,7 +7405,7 @@ static int _webui_http_handler(struct mg_connection * conn, void * _win) {
             if (_webui_folder_exist(folder_path)) {
 
                 // [/folder]
-                
+
                 // Looking for index file and redirect
 
                 const char* index_files[] = {"index.ts", "index.js", "index.html", "index.htm"};
@@ -7596,7 +7660,7 @@ static WEBUI_THREAD_SERVER_START {
 
     // Start Server
     http_ctx = mg_start( & http_callbacks, 0, http_options);
-    mg_set_request_handler(http_ctx, "/", _webui_http_handler, (void * ) win);    
+    mg_set_request_handler(http_ctx, "/", _webui_http_handler, (void * ) win);
 
     if (http_ctx) {
 
@@ -7814,7 +7878,7 @@ static WEBUI_THREAD_SERVER_START {
     // Clean WebView
     if (win->webView) {
         win->webView->stop = true;
-        _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);    
+        _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);
     }
 
     // Clean monitor thread
@@ -8873,7 +8937,7 @@ static int _webui_system_win32(_webui_window_t * win, char* cmd, bool show) {
     if (win) {
         win->process_id = (size_t)pi.dwProcessId;
     }
-    
+
     SetFocus(pi.hProcess);
     // EnumWindows(_webui_enum_windows_proc_win32, (LPARAM)(pi.dwProcessId));
     // AssignProcessToJobObject(JobObject, pi.hProcess);
@@ -8957,26 +9021,26 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     } TitleChangedHandler;
 
     HRESULT STDMETHODCALLTYPE CreateWebViewEnvironmentHandler_Invoke(
-        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, 
-        HRESULT result, 
+        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This,
+        HRESULT result,
         ICoreWebView2Environment* env
     );
 
     HRESULT STDMETHODCALLTYPE CreateWebViewControllerHandler_Invoke(
-        ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, 
-        HRESULT result, 
+        ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This,
+        HRESULT result,
         ICoreWebView2Controller* controller
     );
 
     HRESULT STDMETHODCALLTYPE QueryInterfaceEnvironment(
-        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, 
-        REFIID riid, 
+        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This,
+        REFIID riid,
         void** ppvObject
     );
 
     HRESULT STDMETHODCALLTYPE QueryInterfaceController(
-        ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, 
-        REFIID riid, 
+        ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This,
+        REFIID riid,
         void** ppvObject
     );
 
@@ -9073,7 +9137,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     };
 
     HRESULT STDMETHODCALLTYPE CreateWebViewEnvironmentHandler_Invoke(
-        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, HRESULT result, 
+        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, HRESULT result,
         ICoreWebView2Environment* env
     ) {
         CreateWebViewEnvironmentHandler* handler = (CreateWebViewEnvironmentHandler*)This;
@@ -9081,7 +9145,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         if (SUCCEEDED(result)) {
             CreateWebViewControllerHandler* controllerHandler = CreateControllerHandler(webView);
             if (controllerHandler) {
-                env->lpVtbl->CreateCoreWebView2Controller(env, webView->hwnd, 
+                env->lpVtbl->CreateCoreWebView2Controller(env, webView->hwnd,
                 (ICoreWebView2CreateCoreWebView2ControllerCompletedHandler*)controllerHandler);
             }
         }
@@ -9089,13 +9153,13 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     };
 
     HRESULT STDMETHODCALLTYPE CreateWebViewControllerHandler_Invoke(
-        ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, HRESULT result, 
+        ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, HRESULT result,
         ICoreWebView2Controller* controller) {
         CreateWebViewControllerHandler* handler = (CreateWebViewControllerHandler*)This;
         _webui_wv_win32_t* webView = handler->webView;
         if (SUCCEEDED(result) && controller != NULL) {
             webView->webviewController = controller;
-            webView->webviewController->lpVtbl->get_CoreWebView2(webView->webviewController, 
+            webView->webviewController->lpVtbl->get_CoreWebView2(webView->webviewController,
             &webView->webviewWindow);
             webView->webviewController->lpVtbl->AddRef(webView->webviewController);
             ICoreWebView2Settings* settings;
@@ -9107,14 +9171,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             webView->webviewController->lpVtbl->put_Bounds(webView->webviewController, bounds);
             TitleChangedHandler* titleChangedHandler = CreateTitleChangedHandler(webView);
             EventRegistrationToken token;
-            webView->webviewWindow->lpVtbl->add_DocumentTitleChanged(webView->webviewWindow, 
+            webView->webviewWindow->lpVtbl->add_DocumentTitleChanged(webView->webviewWindow,
             (ICoreWebView2DocumentTitleChangedEventHandler*)titleChangedHandler, &token);
             webView->webviewWindow->lpVtbl->Navigate(webView->webviewWindow, webView->url);
             // Microsoft WebView2 Auto JS Inject
             if (_webui_core.config.show_auto_js_inject) {
                 // HRESULT AutoInject = webView->webviewWindow->lpVtbl->AddScriptToExecuteOnDocumentCreated(
                 //     webView->webviewWindow, L"var script = document.createElement('script'); "
-                //     "script.src = 'webui.js'; document.head.appendChild(script);", 
+                //     "script.src = 'webui.js'; document.head.appendChild(script);",
                 //     NULL
                 // );
                 // if (FAILED(AutoInject)) {
@@ -9199,7 +9263,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     if (win->webView) {
                         win->webView->stop = true;
                         _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);
-                    }                    
+                    }
                     _webui_wv_event_closed(win);
                 }
                 break;
@@ -9255,7 +9319,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // process all the WebView's operations in one single thread for each window.
 
         // Initializing
-        // Expecting `_webui_webview_thread` to change `mutex_is_webview_update` 
+        // Expecting `_webui_webview_thread` to change `mutex_is_webview_update`
         // to `false` when initialization is done, and `_webui_core.is_webview`
         // to `true` if loading the WebView is succeeded.
         _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);
@@ -9270,7 +9334,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         pthread_create(&thread, NULL, &_webui_webview_thread, (void*)win);
         pthread_detach(thread);
         #endif
-        
+
         // Wait for WebView thread to start
         _webui_timer_t timer;
         _webui_timer_start(&timer);
@@ -9414,7 +9478,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         win->webView->hwnd = CreateWindowExA(
             0, wvClass, "", WS_OVERLAPPEDWINDOW,
-            win->webView->x, win->webView->y, 
+            win->webView->x, win->webView->y,
             win->webView->width, win->webView->height,
             NULL, NULL, GetModuleHandle(NULL), NULL
         );
@@ -9453,7 +9517,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         if (!_webui_core.webview_cacheFolder) {
             const char* temp = _webui_get_temp_path();
             _webui_core.webview_cacheFolder = (char*)_webui_malloc(WEBUI_MAX_PATH);
-            WEBUI_SPF_DYN(_webui_core.webview_cacheFolder, WEBUI_MAX_PATH, 
+            WEBUI_SPF_DYN(_webui_core.webview_cacheFolder, WEBUI_MAX_PATH,
                 "%s%s.WebUI%sWebUIWebViewCache_%"PRIu32, temp, webui_sep, webui_sep,
                 _webui_generate_random_uint32());
         }
@@ -9462,7 +9526,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         wchar_t* cacheFolderW = NULL;
         _webui_str_to_wide(_webui_core.webview_cacheFolder, &cacheFolderW);
 
-        HRESULT hr = createEnv(NULL, cacheFolderW, NULL, 
+        HRESULT hr = createEnv(NULL, cacheFolderW, NULL,
             (ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*)environmentHandler
         );
 
@@ -9599,7 +9663,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             if (webView->gtk_win) {
                 // Note:
                 // This API does not work under Wayland, and it has been removed
-                // in GTK v4, alongside all the APIs that relies on a global 
+                // in GTK v4, alongside all the APIs that relies on a global
                 // coordinates system. So, `gtk_window_move` may have no effect.
                 gtk_window_move(webView->gtk_win, webView->x, webView->y);
                 return true;
@@ -9699,7 +9763,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             _webui_wv_event_title), (void *)win, NULL, 0);
         g_signal_connect_data(win->webView->gtk_win, "destroy", G_CALLBACK(
             _webui_wv_event_closed), (void *)win, NULL, 0);
-        
+
         // Linux GTK WebView Auto JS Inject
         if (_webui_core.config.show_auto_js_inject) {
             // ...
@@ -9764,7 +9828,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libgtk = dlopen(gtk_libs[i], RTLD_LAZY);
                 if (libgtk) {
                     #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_wv_show() -> GTK loaded [%s]\n", 
+                    printf("[Core]\t\t_webui_wv_show() -> GTK loaded [%s]\n",
                     gtk_libs[i]);
                     #endif
                     break;
@@ -9775,14 +9839,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 _webui_wv_free();
                 return false;
             }
-    
+
             // WebView Dynamic Load
             const char *webkit_libs[] = WEBKIT_RUNTIME_ARR;
             for (size_t i = 0; i < (sizeof(webkit_libs) / sizeof(webkit_libs[0])); ++i) {
                 libwebkit = dlopen(webkit_libs[i], RTLD_LAZY);
                 if (libwebkit) {
                     #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_wv_show() -> WebKit loaded [%s]\n", 
+                    printf("[Core]\t\t_webui_wv_show() -> WebKit loaded [%s]\n",
                     webkit_libs[i]);
                     #endif
                     break;
@@ -9823,7 +9887,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libgtk, "g_signal_connect_data");
             g_idle_add = (g_idle_add_func)dlsym(
                 libgtk, "g_idle_add");
-            
+
             // WebView Symbol Addresses
             webkit_web_view_new = (webkit_web_view_new_func)dlsym(
                 libwebkit, "webkit_web_view_new");
@@ -9910,14 +9974,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         // Initializing
-        // Expecting `_webui_webview_thread` to change `mutex_is_webview_update` 
+        // Expecting `_webui_webview_thread` to change `mutex_is_webview_update`
         // to `false` when initialization is done, and `_webui_core.is_webview`
         // to `true` if loading the WebView is succeeded.
         _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);
 
         // Wait for WebView thread to get
         // started by `_webui_wv_create()`
-        
+
         _webui_timer_t timer;
         _webui_timer_start(&timer);
         for (;;) {
@@ -10075,14 +10139,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 // Close window
                 if (_webui_core.wins[index]->connected) {
                     _webui_send(
-                        _webui_core.wins[index], _webui_core.wins[index]->token, 0, 
+                        _webui_core.wins[index], _webui_core.wins[index]->token, 0,
                         WEBUI_CMD_CLOSE, NULL, 0
                     );
                 }
                 // Stop WebView thread if any
                 if (_webui_core.wins[index]->webView) {
                     _webui_core.wins[index]->webView->stop = true;
-                    _webui_mutex_is_webview_update(_webui_core.wins[index], WEBUI_MUTEX_TRUE);    
+                    _webui_mutex_is_webview_update(_webui_core.wins[index], WEBUI_MUTEX_TRUE);
                 }
             }
         }
@@ -10155,7 +10219,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         pthread_create(&thread, NULL, &_webui_webview_thread, (void*)win);
         pthread_detach(thread);
         #endif
-        
+
         // Wait for WebView thread to start
         _webui_timer_t timer;
         _webui_timer_start(&timer);
@@ -10236,7 +10300,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // not fire the close event.
         if (win->connected) {
             _webui_send(
-                win, win->token, 0, 
+                win, win->token, 0,
                 WEBUI_CMD_CLOSE, NULL, 0
             );
         }
