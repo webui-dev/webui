@@ -24,7 +24,6 @@ class WebuiBridge {
 	#secure: boolean;
 	#token: number;
 	#port: number;
-	#winNum: number;
 	#bindList: string[] = [];
 	#log: boolean;
 	#winX: number;
@@ -34,6 +33,7 @@ class WebuiBridge {
 	// Internals
 	#ws: WebSocket;
 	#wsStatus = false;
+	#TokenAccepted = false;
 	#wsStatusOnce = false;
 	#closeReason = 0;
 	#closeValue: string;
@@ -54,6 +54,7 @@ class WebuiBridge {
 	#CMD_SEND_RAW = 248;
 	#CMD_NEW_ID = 247;
 	#CMD_MULTI = 246;
+	#CMD_CHECK_TK = 245;
 	#MULTI_CHUNK_SIZE = 65500;
 	#PROTOCOL_SIZE = 8; // Protocol header size in bytes
 	#PROTOCOL_SIGN = 0; // Protocol byte position: Signature (1 Byte)
@@ -75,7 +76,6 @@ class WebuiBridge {
 		secure,
 		token,
 		port,
-		winNum,
 		bindList,
 		log = false,
 		winX,
@@ -86,7 +86,6 @@ class WebuiBridge {
 		secure: boolean;
 		token: number;
 		port: number;
-		winNum: number;
 		bindList: string[];
 		log?: boolean;
 		winX: number;
@@ -98,7 +97,6 @@ class WebuiBridge {
 		this.#secure = secure;
 		this.#token = token;
 		this.#port = port;
-		this.#winNum = winNum;
 		this.#bindList = bindList;
 		this.#log = log;
 		this.#winX = winX;
@@ -113,11 +111,11 @@ class WebuiBridge {
 		}
 		// Positioning the current window
 		if (this.#winX !== undefined && this.#winY !== undefined) {
-			window.moveTo(this.#winX, this.#winY);
+			// window.moveTo(this.#winX, this.#winY);
 		}
 		// Resize the current window
 		if (this.#winW !== undefined && this.#winH !== undefined) {
-			window.resizeTo(this.#winW, this.#winH);
+			// window.resizeTo(this.#winW, this.#winH);
 		}
 		// WebSocket
 		if (!('WebSocket' in window)) {
@@ -172,7 +170,6 @@ class WebuiBridge {
 		this.#closeReason = reason;
 		this.#closeValue = value;
 		if (this.#wsStatus) {
-			this.#wsStatus = false;
 			this.#ws.close();
 		}
 		if (reason === this.#CMD_NAVIGATION) {
@@ -244,7 +241,7 @@ class WebuiBridge {
 		this.#generateCallObjects();
 		this.#keepAlive();
 		this.#callPromiseID[0] = 0;
-		if (this.#bindList.includes(this.#winNum + '/')) {
+		if (this.#bindList.includes('')) {
 			this.#hasEvents = true;
 			this.#allowNavigation = false;
 		}
@@ -256,10 +253,8 @@ class WebuiBridge {
 			this.#wsStatus = true;
 			this.#wsStatusOnce = true;
 			if (this.#log) console.log('WebUI -> Connected');
+			this.#checkToken();
 			this.#clicksListener();
-			if (this.#eventsCallback) {
-				this.#eventsCallback(this.event.CONNECTED);
-			}
 		};
 		this.#ws.onerror = () => {
 			if (this.#log) console.log('WebUI -> Connection Failed');
@@ -267,6 +262,7 @@ class WebuiBridge {
 		};
 		this.#ws.onclose = (event) => {
 			this.#wsStatus = false;
+			this.#TokenAccepted = false;
 			if (this.#closeReason === this.#CMD_NAVIGATION) {
 				if (this.#log) {
 					console.log(`WebUI -> Connection closed du to Navigation to [${this.#closeValue}]`);
@@ -414,8 +410,28 @@ class WebuiBridge {
 							console.log(`WebUI -> CMD -> Close`);
 							if (this.#wsStatus) {
 								this.#wsStatus = false;
+								this.#TokenAccepted = false;
 								this.#ws.close();
 							}
+						}
+						break;
+					case this.#CMD_CHECK_TK:
+						// Protocol
+						// 0: [SIGNATURE]
+						// 1: [TOKEN]
+						// 2: [ID]
+						// 3: [CMD]
+						// 4: [Status]
+						const status = (buffer8[this.#PROTOCOL_DATA] == 0 ? false : true);
+						if (status) {
+							if (this.#log) console.log(`WebUI -> CMD -> Token Accepted`);
+							this.#TokenAccepted = true;
+							if (this.#eventsCallback) {
+								this.#eventsCallback(this.event.CONNECTED);
+							}
+						}
+						else {
+							if (this.#log) console.log(`WebUI -> CMD -> Token Not Accepted`);
 						}
 						break;
 				}
@@ -463,7 +479,7 @@ class WebuiBridge {
 					if (!(event.target instanceof HTMLElement)) return;
 					if (
 						this.#hasEvents ||
-						(event.target.id !== '' && this.#bindList.includes(this.#winNum + '/' + event.target?.id))
+						(event.target.id !== '' && this.#bindList.includes(event.target?.id))
 					) {
 						this.#sendClick(event.target.id);
 					}
@@ -552,6 +568,31 @@ class WebuiBridge {
 			if (this.#log) console.log(`WebUI -> Send Click [${elem}]`);
 		}
 	}
+	#checkToken() {
+		if (this.#wsStatus) {
+			// Protocol
+			// 0: [SIGNATURE]
+			// 1: [TOKEN]
+			// 2: [ID]
+			// 3: [CMD]
+			const packet =
+				Uint8Array.of(
+					this.#WEBUI_SIGNATURE,
+					0,
+					0,
+					0,
+					0, // Token (4 Bytes)
+					0,
+					0, // ID (2 Bytes)
+					this.#CMD_CHECK_TK,
+					0,
+				);
+			this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN);
+			// this.#addID(packet, 0, this.#PROTOCOL_ID)
+			this.#sendData(packet);
+			if (this.#log) console.log(`WebUI -> Send Check Token [${this.#token}]`);
+		}
+	}
 	#sendEventNavigation(url: string) {
 		if (url !== '') {
 			if (this.#wsStatus) {
@@ -590,7 +631,7 @@ class WebuiBridge {
 	#generateCallObjects() {
 		for (const bind of this.#bindList) {
 			if (bind.trim()) {
-				const fn = bind.replace(`${this.#winNum}/`, '');
+				const fn = bind;
 				if (fn.trim()) {
 					if (fn !== '_webui_core_api') {
 						this[fn] = (...args: DataTypes[]) => this.call(fn, ...args);
@@ -680,7 +721,7 @@ class WebuiBridge {
 		if (!this.#wsStatus) return Promise.reject(new Error('WebSocket is not connected'));
 
 		// Check binding list
-		if (!this.#hasEvents && !this.#bindList.includes(`${this.#winNum}/${fn}`))
+		if (!this.#hasEvents && !this.#bindList.includes(`${fn}`))
 			return Promise.reject(new ReferenceError(`No binding was found for "${fn}"`));
 
 		// Call backend and wait for response
@@ -738,7 +779,7 @@ class WebuiBridge {
 	 * @return - Boolean `true` if connected
 	 */
 	isConnected(): boolean {
-		return (this.#wsStatus);
+		return (this.#wsStatus && this.#TokenAccepted);
 	}
 	/**
 	 * Get OS high contrast preference.
