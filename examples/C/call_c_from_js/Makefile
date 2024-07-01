@@ -32,7 +32,6 @@ debug:
 	@- del *.ilk >nul 2>&1
 	@- del *.lib >nul 2>&1
 	@- del *.obj >nul 2>&1
-	@- del *.pdb >nul 2>&1
 	@echo Done.
 
 release:

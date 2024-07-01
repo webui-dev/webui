@@ -54,10 +54,8 @@ debug:
 	@cl /Zi $(WEBUI_BUILD_FLAGS) /D WEBUI_LOG
 	@link $(LIB_DYN_OUT)
 #	Clean
-	@- del *.pdb >nul 2>&1
 	@- del *.obj >nul 2>&1
 	@- del *.ilk >nul 2>&1
-	@- del *.pdb >nul 2>&1
 	@- del *.exp >nul 2>&1
 	@echo Done.
 
@@ -78,7 +76,6 @@ release:
 	@- del *.pdb >nul 2>&1
 	@- del *.obj >nul 2>&1
 	@- del *.ilk >nul 2>&1
-	@- del *.pdb >nul 2>&1
 	@- del *.exp >nul 2>&1
 	@- echo Done.
 
@@ -87,7 +84,6 @@ clean:
 	@- del *.pdb >nul 2>&1
 	@- del *.obj >nul 2>&1
 	@- del *.ilk >nul 2>&1
-	@- del *.pdb >nul 2>&1
 	@- del *.exp >nul 2>&1
 	@- del *.dll >nul 2>&1
 	@- del *.lib >nul 2>&1
