@@ -8029,14 +8029,13 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
         }
         else {
             // Register
-            size_t new_client_id = 0;
-            if (_webui_client_save(win, client, &new_client_id)) {
+            if (_webui_client_save(win, client, &client_id)) {
                 // Status
                 _webui_mutex_is_connected(win, WEBUI_MUTEX_TRUE); // server thread
                 #ifdef WEBUI_LOG
                 printf(
                     "[Core]\t\t_webui_receive(%zu) -> Client #%zu connected\n",
-                    recvNum, new_client_id
+                    recvNum, client_id
                 );
                 #endif
             }
