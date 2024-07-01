@@ -48,6 +48,7 @@ build/
 *.recipe
 *.idb
 *.iobj
+*.pdb
 
 # Visual Studio for Mac
 .idea/
