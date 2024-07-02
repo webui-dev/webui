@@ -3343,6 +3343,29 @@ long long int webui_interface_get_int_at(size_t window, size_t event_number, siz
     return webui_get_int_at(&e, index);
 }
 
+double webui_interface_get_float_at(size_t window, size_t event_number, size_t index) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_interface_get_float_at([%zu], [%zu], [%zu])\n", window, event_number, index);
+    #endif
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return ((double)(0.0));
+    _webui_window_t* win = _webui.wins[window];
+
+    // New Event
+    webui_event_t e;
+    e.window = window;
+    e.event_type = 0;
+    e.element = NULL;
+    e.event_number = event_number;
+    e.bind_id = 0;
+    e.client_id = win->events[event_number]->client_id;
+
+    return webui_get_float_at(&e, index);
+}
+
 bool webui_interface_get_bool_at(size_t window, size_t event_number, size_t index) {
 
     #ifdef WEBUI_LOG

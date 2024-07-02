@@ -1034,6 +1034,19 @@ WEBUI_EXPORT const char* webui_interface_get_string_at(size_t window, size_t eve
 WEBUI_EXPORT long long int webui_interface_get_int_at(size_t window, size_t event_number, size_t index);
 
 /**
+ * @brief Get an argument as float at a specific index.
+ *
+ * @param window The window number
+ * @param event_number The event number
+ * @param index The argument position
+ *
+ * @return Returns argument as float
+ *
+ * @example double myFloat = webui_interface_get_int_at(myWindow, e->event_number, 0);
+ */
+WEBUI_EXPORT double webui_interface_get_float_at(size_t window, size_t event_number, size_t index);
+
+/**
  * @brief Get an argument as boolean at a specific index.
  *
  * @param window The window number
