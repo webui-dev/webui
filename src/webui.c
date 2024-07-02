@@ -308,7 +308,7 @@ typedef struct _webui_window_t {
     // Window
     uint32_t token;
     size_t window_number;
-    char* html_elements[WEBUI_MAX_IDS];
+    const char* html_elements[WEBUI_MAX_IDS];
     bool has_all_events;
     void(*cb[WEBUI_MAX_IDS])(webui_event_t* e);
     void(*cb_interface[WEBUI_MAX_IDS])(size_t, size_t, char* , size_t, size_t);
@@ -476,7 +476,7 @@ static void * _webui_run_browser_task(void * _arg);
 #endif
 static void _webui_init(void);
 static bool _webui_show(_webui_window_t* win, struct mg_connection* client, const char* content, size_t browser);
-static bool _webui_get_cb_index(_webui_window_t* win, char* element, size_t* id);
+static bool _webui_get_cb_index(_webui_window_t* win, const char* element, size_t* id);
 static size_t _webui_get_free_port(void);
 static void _webui_free_port(size_t port);
 static char* _webui_get_current_path(void);
@@ -491,7 +491,7 @@ static int _webui_run_browser(_webui_window_t* win, char* cmd);
 static void _webui_clean(void);
 static bool _webui_browser_exist(_webui_window_t* win, size_t browser);
 static const char* _webui_get_temp_path();
-static bool _webui_folder_exist(char* folder);
+static bool _webui_folder_exist(const char* folder);
 static void _webui_delete_folder(char* folder);
 static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t browser);
 static bool _webui_browser_start_chrome(_webui_window_t* win, const char* address);
@@ -512,7 +512,7 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win, struct mg_con
 static void _webui_free_mem(void * ptr);
 static size_t _webui_mb(size_t size);
 static bool _webui_file_exist_mg(_webui_window_t* win, struct mg_connection* client);
-static bool _webui_file_exist(char* path);
+static bool _webui_file_exist(const char* path);
 static void _webui_free_all_mem(void);
 static bool _webui_show_window(_webui_window_t* win, struct mg_connection* client,
     const char* content, int type, size_t browser);
@@ -571,7 +571,7 @@ static bool _webui_port_is_used(size_t port_num);
 static char* _webui_str_dup(const char* src);
 static void _webui_bridge_api_handler(webui_event_t* e);
 static void _webui_generate_cookie(char* cookie, size_t length);
-static bool _webui_check_auth_cookie(_webui_window_t *win, char* full_cookies);
+static bool _webui_check_auth_cookie(_webui_window_t *win, const char* full_cookies);
 // WebView
 #ifdef _WIN32
 // Microsoft Windows
@@ -1684,7 +1684,7 @@ size_t webui_bind(size_t window, const char* element, void(*func)(webui_event_t*
     if (_webui_is_empty(element)) {
         win->has_all_events = true;
         size_t index = (exist ? cb_index : _webui.cb_count++);
-        win->html_elements[index] = (const char*)"";
+        win->html_elements[index] = "";
         win->cb[index] = func;
         #ifdef WEBUI_LOG
         printf("[User] webui_bind() -> Save bind (all events) at %zu\n", index);
@@ -1693,7 +1693,7 @@ size_t webui_bind(size_t window, const char* element, void(*func)(webui_event_t*
     }
 
     // New bind
-    char* element_cpy = _webui_str_dup(element);
+    const char* element_cpy = (const char*)_webui_str_dup(element);
     size_t index = (exist ? cb_index : _webui.cb_count++);
     win->html_elements[index] = element_cpy;
     win->cb[index] = func;
@@ -3328,7 +3328,7 @@ long long int webui_interface_get_int_at(size_t window, size_t event_number, siz
 
     // Dereference
     if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
-        return NULL;
+        return 0;
     _webui_window_t* win = _webui.wins[window];
 
     // New Event
@@ -3351,7 +3351,7 @@ bool webui_interface_get_bool_at(size_t window, size_t event_number, size_t inde
 
     // Dereference
     if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
-        return NULL;
+        return false;
     _webui_window_t* win = _webui.wins[window];
 
     // New Event
@@ -3374,7 +3374,7 @@ size_t webui_interface_get_size_at(size_t window, size_t event_number, size_t in
 
     // Dereference
     if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
-        return NULL;
+        return 0;
     _webui_window_t* win = _webui.wins[window];
 
     // New Event
@@ -3864,7 +3864,7 @@ static bool _webui_open_url_native(const char* url) {
     #endif
 }
 
-static bool _webui_file_exist(char* path) {
+static bool _webui_file_exist(const char* path) {
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_file_exist([%s])\n", path);
@@ -4757,7 +4757,7 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
     return false;
 }
 
-static bool _webui_folder_exist(char* folder) {
+static bool _webui_folder_exist(const char* folder) {
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_folder_exist([%s])\n", folder);
@@ -7279,7 +7279,7 @@ static const char* _webui_url_encode(const char* str) {
     return (const char*)encoded;
 }
 
-static bool _webui_get_cb_index(_webui_window_t* win, char* element, size_t* id) {
+static bool _webui_get_cb_index(_webui_window_t* win, const char* element, size_t* id) {
 
     _webui_mutex_lock(&_webui.mutex_bridge);
 
@@ -7486,7 +7486,7 @@ static void _webui_generate_cookie(char* cookie, size_t length) {
     cookie[length - 1] = '\0';
 }
 
-static bool _webui_check_auth_cookie(_webui_window_t *win, char* full_cookies) {
+static bool _webui_check_auth_cookie(_webui_window_t *win, const char* full_cookies) {
     if (_webui_is_empty(full_cookies))
         return false;
     char auth_cookie[WEBUI_AUTH_COOKIE * 2];
@@ -7603,7 +7603,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                 // [Path][Sep][File Name]
                 size_t bf_len = (_webui_strlen(win->server_root_path) + 1 + 24);
                 char* index_path = (char*)_webui_malloc(bf_len);
-                for (int i = 0; i < (sizeof(index_files) / sizeof(index_files[0])); i++) {
+                for (size_t i = 0; i < (sizeof(index_files) / sizeof(index_files[0])); i++) {
                     WEBUI_SN_PRINTF_DYN(index_path, bf_len, "%s%s%s", win->server_root_path, webui_sep, index_files[i]);
                     if (_webui_file_exist(index_path)) {
                         #ifdef WEBUI_LOG
@@ -7671,7 +7671,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                 // [Path][Sep][File Name]
                 size_t bf_len = (_webui_strlen(folder_path) + 1 + 24);
                 char* index_path = (char*)_webui_malloc(bf_len);
-                for (int i = 0; i < (sizeof(index_files) / sizeof(index_files[0])); i++) {
+                for (size_t i = 0; i < (sizeof(index_files) / sizeof(index_files[0])); i++) {
                     WEBUI_SN_PRINTF_DYN(index_path, bf_len, "%s%s%s", folder_path, webui_sep, index_files[i]);
                     if (_webui_file_exist(index_path)) {
                         // [URL][/][Index Name]
@@ -7706,7 +7706,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                     const char* index_extensions[] = {
                         "js", "ts"
                     };
-                    for (int i = 0; i < (sizeof(index_extensions) / sizeof(index_extensions[0])); i++) {
+                    for (size_t i = 0; i < (sizeof(index_extensions) / sizeof(index_extensions[0])); i++) {
                         if (strcmp(extension, index_extensions[i]) == 0) {
                             script = true;
                             break;
@@ -7855,7 +7855,7 @@ static void _webui_ws_close_handler(const struct mg_connection* client, void * _
     if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || win == NULL || !_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE))
         return;
 
-    _webui_receive(win, client, WEBUI_WS_CLOSE, NULL, 0);
+    _webui_receive(win, (struct mg_connection*)client, WEBUI_WS_CLOSE, NULL, 0);
 }
 
 static WEBUI_THREAD_SERVER_START {
