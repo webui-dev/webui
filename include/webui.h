@@ -285,6 +285,18 @@ WEBUI_EXPORT bool webui_show_client(webui_event_t* e, const char* content);
 WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, size_t browser);
 
 /**
+ * @brief Start only the web server and return the URL. This is useful for web app.
+ *
+ * @param window The window number
+ * @param path The local root folder full path
+ *
+ * @return Returns the url of this window server.
+ *
+ * @example const char* url = webui_start_server(myWindow, "/full/root/path");
+ */
+WEBUI_EXPORT const char* webui_start_server(size_t window, const char* path);
+
+/**
  * @brief Show a WebView window using embedded HTML, or a file. If the window is already
  * open, it will be refreshed. Note: Win32 need `WebView2Loader.dll`.
  *
@@ -420,7 +432,8 @@ WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(c
 WEBUI_EXPORT bool webui_is_shown(size_t window);
 
 /**
- * @brief Set the maximum time in seconds to wait for the window to connect. This effect `show()` and `wait()`.
+ * @brief Set the maximum time in seconds to wait for the window to connect.
+ * This effect `show()` and `wait()`. Value of `0` means wait forever.
  *
  * @param second The timeout in seconds
  *
