@@ -2612,6 +2612,18 @@ void webui_set_proxy(size_t window, const char* proxy_server) {
         win->proxy_set = true;
 }
 
+void webui_open_url(const char* url) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_open_url([%s])\n", url);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    _webui_open_url_native(url);
+}
+
 const char* webui_get_url(size_t window) {
 
     #ifdef WEBUI_LOG
@@ -7495,6 +7507,8 @@ static void _webui_http_send_file(
 
     // Send body
     mg_send_file_body(client, path);
+
+    fclose(file);
 }
 
 static void _webui_http_send(
