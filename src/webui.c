@@ -89,6 +89,7 @@
 #define WEBUI_STDOUT_BUF     (10240) // Command STDOUT output buffer size
 #define WEBUI_DEFAULT_PATH   "."     // Default root path
 #define WEBUI_DEF_TIMEOUT    (15)    // Default startup timeout in seconds
+#define WEBUI_RELOAD_TIMEOUT (500)   // Default reload page timeout in milliseconds
 #define WEBUI_MAX_TIMEOUT    (60)    // Maximum startup timeout in seconds the user can set
 #define WEBUI_MIN_WIDTH      (100)   // Minimal window width
 #define WEBUI_MIN_HEIGHT     (100)   // Minimal window height
@@ -99,8 +100,8 @@
 #define WEBUI_MAX_X          (3000)  // Maximal window X (4K Monitor)
 #define WEBUI_MAX_Y          (1800)  // Maximal window Y (4K Monitor)
 #define WEBUI_PROFILE_NAME   "WebUI" // Default browser profile name (Used only for Firefox)
-#define WEBUI_AUTH_COOKIE    (32)    // Authentification Cookie Len
-#define WEBUI_BROWSERS_COUNT (16)    // Total supported browser (enum webui_browser) 
+#define WEBUI_COOKIES_LEN    (32)    // Authentification cookies len
+#define WEBUI_COOKIES_BUF    (64)    // Authentification cookies buffer size
 
 #ifdef WEBUI_TLS
 #define WEBUI_SECURE         "TLS-Encryption"
@@ -171,9 +172,7 @@ typedef struct webui_event_inf_t {
     char* event_data[WEBUI_MAX_ARG + 1]; // Event data (string | num | bool | raw)
     size_t event_size[WEBUI_MAX_ARG + 1]; // Event data size (in bytes)
     char* response; // Event response (string)
-    size_t count;
-    struct mg_connection* client;
-    size_t client_id;
+    size_t count; // Event arguments count
 } webui_event_inf_t;
 
 // WebView
@@ -289,9 +288,7 @@ typedef struct webui_event_inf_t {
 // Window
 typedef struct _webui_window_t {
     // Client
-    struct mg_connection* clients[WEBUI_MAX_IDS];
     size_t clients_count;
-    bool clients_token_check[WEBUI_MAX_IDS];
     // Server
     bool wait; // Let server thread wait more time for websocket
     bool server_running; // Slow check
@@ -362,9 +359,12 @@ typedef struct _webui_core_t {
         bool ws_block;
         bool folder_monitor;
         bool multi_client;
+        bool use_cookies;
     } config;
-    bool auth_cookie_set[WEBUI_BROWSERS_COUNT];
-    char auth_cookie[WEBUI_BROWSERS_COUNT][WEBUI_AUTH_COOKIE * 2];
+    struct mg_connection* clients[WEBUI_MAX_IDS];
+    bool clients_token_check[WEBUI_MAX_IDS];
+    char* cookies[WEBUI_MAX_IDS];
+    bool cookies_single_set[WEBUI_MAX_IDS];
     size_t servers;
     size_t used_ports[WEBUI_MAX_IDS];
     size_t startup_timeout;
@@ -435,7 +435,7 @@ typedef struct _webui_recv_arg_t {
     size_t recvNum;
     int event_type;
     struct mg_connection* client;
-    size_t client_id;
+    size_t connection_id;
 }
 _webui_recv_arg_t;
 
@@ -481,9 +481,10 @@ static size_t _webui_get_free_port(void);
 static void _webui_free_port(size_t port);
 static char* _webui_get_current_path(void);
 static void _webui_send_client_ws(_webui_window_t* win, struct mg_connection* client,
-    size_t client_id, char* packet, size_t packets_size);
+    size_t connection_id, char* packet, size_t packets_size);
 static void _webui_window_event(
-    _webui_window_t* win, size_t client_id, int event_type, char* element, size_t event_number
+    _webui_window_t* win, size_t connection_id, int event_type, char* element, size_t event_number,
+    size_t client_id, char* cookies
 );
 static int _webui_cmd_sync(_webui_window_t* win, char* cmd, bool show);
 static int _webui_cmd_async(_webui_window_t* win, char* cmd, bool show);
@@ -551,11 +552,11 @@ static void _webui_ws_ready_handler(struct mg_connection* client, void * _win);
 static int _webui_ws_data_handler(struct mg_connection* client, int opcode, char* data, size_t datasize, void * _win);
 static void _webui_ws_close_handler(const struct mg_connection* client, void * _win);
 static void _webui_receive(_webui_window_t* win, struct mg_connection* client, int event_type, void * data, size_t len);
-static void _webui_ws_process(_webui_window_t* win, struct mg_connection* client, size_t client_id, 
+static void _webui_ws_process(_webui_window_t* win, struct mg_connection* client, size_t connection_id, 
     void* ptr, size_t len, size_t recvNum, int event_type);
-static bool _webui_client_save(_webui_window_t* win, struct mg_connection* client, size_t* client_id);
-static bool _webui_client_get_id(_webui_window_t* win, struct mg_connection* client, size_t* client_id);
-static void _webui_client_remove(_webui_window_t* win, struct mg_connection* client);
+static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* client, size_t* connection_id);
+static bool _webui_connection_get_id(_webui_window_t* win, struct mg_connection* client, size_t* connection_id);
+static void _webui_connection_remove(_webui_window_t* win, struct mg_connection* client);
 static void _webui_remove_firefox_profile_ini(const char* path, const char* profile_name);
 static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* profile_name);
 static void _webui_send_client(_webui_window_t* win, struct mg_connection *client, 
@@ -570,8 +571,19 @@ static bool _webui_is_valid_url(const char* url);
 static bool _webui_port_is_used(size_t port_num);
 static char* _webui_str_dup(const char* src);
 static void _webui_bridge_api_handler(webui_event_t* e);
-static void _webui_generate_cookie(char* cookie, size_t length);
-static bool _webui_check_auth_cookie(_webui_window_t *win, const char* full_cookies);
+// static size_t _webui_hash_djb2(const char* s);
+static size_t _webui_new_event_inf(_webui_window_t* win, webui_event_inf_t** event_inf);
+static void _webui_free_event_inf(_webui_window_t* win, size_t event_num);
+static const char* _webui_get_cookies_full(const struct mg_connection* client);
+static void _webui_get_cookies(const struct mg_connection* client, char* buffer);
+static bool _webui_client_cookies_save(_webui_window_t* win, const char* cookies, size_t* client_id);
+static bool _webui_client_cookies_get_id(_webui_window_t* win, const char* cookies, size_t* client_id);
+// static void _webui_client_cookies_free_all(_webui_window_t* win);
+// static void _webui_client_cookies_free(_webui_window_t* win, struct mg_connection* client);
+static size_t _webui_client_get_id(_webui_window_t* win, struct mg_connection* client);
+static void _webui_generate_cookies(char* cookies, size_t length);
+static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client, size_t client_id);
+static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* client, char* index, size_t client_id);
 // WebView
 #ifdef _WIN32
 // Microsoft Windows
@@ -685,7 +697,7 @@ void webui_run_client(webui_event_t* e, const char* script) {
     // [Script]
 
     // Send the packet to single client
-    _webui_send_client(win, win->clients[e->client_id], 0, WEBUI_CMD_JS_QUICK, script, js_len);
+    _webui_send_client(win, _webui.clients[e->connection_id], 0, WEBUI_CMD_JS_QUICK, script, js_len);
 }
 
 void webui_run(size_t window, const char* script) {
@@ -781,7 +793,7 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
     // [Script]
 
     // Send the packet
-    _webui_send_client(win, win->clients[e->client_id], run_id, WEBUI_CMD_JS, script, js_len);
+    _webui_send_client(win, _webui.clients[e->connection_id], run_id, WEBUI_CMD_JS, script, js_len);
 
     bool js_status = false;
 
@@ -861,7 +873,7 @@ bool webui_script(size_t window, const char* script, size_t timeout,
     // Event
     webui_event_t e;
     e.window = window;
-    e.client_id = 0; // Single client
+    e.connection_id = 0; // Single client
 
     return webui_script_client(&e, script, timeout, buffer, buffer_length);
 }
@@ -1070,14 +1082,17 @@ void webui_close_client(webui_event_t* e) {
         return;
     _webui_window_t* win = _webui.wins[e->window];
 
+    // Remove cookies
+    // _webui_client_cookies_free(win, _webui.clients[e->connection_id]);
+
     // Packet Protocol Format:
     // [...]
     // [CMD]
     // Send the packet
-    _webui_send_client(win, win->clients[e->client_id], 0, WEBUI_CMD_CLOSE, NULL, 0);
+    _webui_send_client(win, _webui.clients[e->connection_id], 0, WEBUI_CMD_CLOSE, NULL, 0);
 
     // Forced close
-    mg_close_connection(win->clients[e->client_id]);
+    mg_close_connection(_webui.clients[e->connection_id]);
 }
 
 void webui_close(size_t window) {
@@ -1267,7 +1282,7 @@ void webui_navigate_client(webui_event_t* e, const char* url) {
         // [URL]
 
         // Send the packet
-        _webui_send_client(win, win->clients[e->client_id], 0, WEBUI_CMD_NAVIGATION, 
+        _webui_send_client(win, _webui.clients[e->connection_id], 0, WEBUI_CMD_NAVIGATION, 
             url, _webui_strlen(url));
     }
 }
@@ -1540,12 +1555,15 @@ void webui_delete_profile(size_t window) {
     }
 }
 
-const char* webui_start_server(size_t window, const char* path) {
+const char* webui_start_server(size_t window, const char* content) {
 
     #ifdef WEBUI_LOG
     printf("[User] webui_start_server([%zu])\n", window);
     #endif
 
+    if (_webui_is_empty(content))
+        return "";
+    
     // Initialization
     _webui_init();
 
@@ -1555,17 +1573,14 @@ const char* webui_start_server(size_t window, const char* path) {
     _webui_window_t* win = _webui.wins[window];
 
     // Check
-    if (win->server_running || _webui_is_empty(path) ||
-        (_webui_strlen(path) > WEBUI_MAX_PATH) ||
-        !_webui_folder_exist((char*)path)) {
+    if (win->server_running)
         return "";
-    }
 
     // Make `wait()` waits forever
     webui_set_timeout(0);
 
     // Start the window without any GUI
-    if (webui_show_browser(window, path, NoBrowser)) {
+    if (webui_show_browser(window, content, NoBrowser)) {
         return webui_get_url(window);
     }
 
@@ -1589,7 +1604,7 @@ bool webui_show_client(webui_event_t* e, const char* content) {
     // Show the window using WebView or using any browser
     win->allow_webview = true;
     // Single client
-    return _webui_show(win, win->clients[e->client_id], content, AnyBrowser);
+    return _webui_show(win, _webui.clients[e->connection_id], content, AnyBrowser);
 }
 
 bool webui_show(size_t window, const char* content) {
@@ -2239,6 +2254,9 @@ void webui_set_config(webui_config option, bool status) {
         case multi_client:
             _webui.config.multi_client = status;
             break;
+        case use_cookies:
+            _webui.config.use_cookies = status;
+            break;
         case ui_event_blocking:
             _webui.config.ws_block = status;
             // Update all created windows
@@ -2677,7 +2695,7 @@ void webui_send_raw_client(webui_event_t* e, const char* function, const void* r
     // [Function, Null, RawData]
 
     // Send the packet
-    _webui_send_client(win, win->clients[e->client_id], 0, 
+    _webui_send_client(win, _webui.clients[e->connection_id], 0, 
         WEBUI_CMD_SEND_RAW, (const char*)buf, data_len);
     _webui_free_mem((void*)buf);
 }
@@ -3296,14 +3314,10 @@ const char* webui_interface_get_string_at(size_t window, size_t event_number, si
         return NULL;
     _webui_window_t* win = _webui.wins[window];
 
-    // New Event
+    // New Event (Wrapper)
     webui_event_t e;
     e.window = window;
-    e.event_type = 0;
-    e.element = NULL;
     e.event_number = event_number;
-    e.bind_id = 0;
-    e.client_id = win->events[event_number]->client_id;
 
     return webui_get_string_at(&e, index);
 }
@@ -3319,14 +3333,10 @@ long long int webui_interface_get_int_at(size_t window, size_t event_number, siz
         return 0;
     _webui_window_t* win = _webui.wins[window];
 
-    // New Event
+    // New Event (Wrapper)
     webui_event_t e;
     e.window = window;
-    e.event_type = 0;
-    e.element = NULL;
     e.event_number = event_number;
-    e.bind_id = 0;
-    e.client_id = win->events[event_number]->client_id;
 
     return webui_get_int_at(&e, index);
 }
@@ -3342,14 +3352,10 @@ double webui_interface_get_float_at(size_t window, size_t event_number, size_t i
         return ((double)(0.0));
     _webui_window_t* win = _webui.wins[window];
 
-    // New Event
+    // New Event (Wrapper)
     webui_event_t e;
     e.window = window;
-    e.event_type = 0;
-    e.element = NULL;
     e.event_number = event_number;
-    e.bind_id = 0;
-    e.client_id = win->events[event_number]->client_id;
 
     return webui_get_float_at(&e, index);
 }
@@ -3365,14 +3371,10 @@ bool webui_interface_get_bool_at(size_t window, size_t event_number, size_t inde
         return false;
     _webui_window_t* win = _webui.wins[window];
 
-    // New Event
+    // New Event (Wrapper)
     webui_event_t e;
     e.window = window;
-    e.event_type = 0;
-    e.element = NULL;
     e.event_number = event_number;
-    e.bind_id = 0;
-    e.client_id = win->events[event_number]->client_id;
 
     return webui_get_bool_at(&e, index);
 }
@@ -3388,14 +3390,10 @@ size_t webui_interface_get_size_at(size_t window, size_t event_number, size_t in
         return 0;
     _webui_window_t* win = _webui.wins[window];
 
-    // New Event
+    // New Event (Wrapper)
     webui_event_t e;
     e.window = window;
-    e.event_type = 0;
-    e.element = NULL;
     e.event_number = event_number;
-    e.bind_id = 0;
-    e.client_id = win->events[event_number]->client_id;
 
     return webui_get_size_at(&e, index);
 }
@@ -4084,7 +4082,28 @@ static char* _webui_get_full_path(_webui_window_t* win, const char* file) {
     return full_path;
 }
 
-static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client) {
+static size_t _webui_new_event_inf(_webui_window_t* win, webui_event_inf_t** event_inf) {
+    (*event_inf) = (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
+    if (win->events_count > WEBUI_MAX_ARG)
+        win->events_count = 0;
+    size_t event_num = win->events_count++;
+    win->events[event_num] = (*event_inf);
+    return event_num;
+}
+
+static void _webui_free_event_inf(_webui_window_t* win, size_t event_num) {
+    webui_event_inf_t* event_inf = win->events[event_num];
+    for (size_t i = 0; i < (WEBUI_MAX_ARG + 1); i++) {
+        if (event_inf->event_data[i] != NULL)
+            webui_free((void*)event_inf->event_data[i]);
+    }
+    if (event_inf->response != NULL)
+        webui_free((void*)event_inf->response);
+    webui_free((void*)event_inf);
+    win->events[event_num] = NULL;
+}
+
+static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client, size_t client_id) {
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_serve_file()\n");
@@ -4099,24 +4118,40 @@ static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client)
 
     if (win->files_handler != NULL) {
 
-        // Get file content from the external end-user files handler
-
+        // Get file content from the external files handler
         size_t length = 0;
-        const void * data = win->files_handler(url, (int*)&length);
 
-        if (data != NULL) {
+        // This is a breaking changes, should be
+        // added in the next major WebUI version.
+        // 
+        // New Event (HTTP)
+        // webui_event_t e;
+        // e.window = win->window_number;
+        // e.event_type = WEBUI_EVENT_HTTP_GET;
+        // e.element = "";
+        // e.event_number = 0;
+        // e.bind_id = 0;
+        // e.connection_id = 0;
+        // e.client_id = client_id;
+        // e.cookies = "";
+
+        // Files handler callback
+        const void * callback_resp = win->files_handler(url, (int*)&length);
+
+        if (callback_resp != NULL) {
 
             // File content found (200)
 
             if (length == 0)
-                length = _webui_strlen(data);
+                length = _webui_strlen(callback_resp);
 
             // Send user data (200)
-            _webui_http_send(win, client, mg_get_builtin_mime_type(url), data, length, false);
+            _webui_http_send(win, client, mg_get_builtin_mime_type(url), 
+                callback_resp, length, false);
             
             // Safely free resources if end-user allocated
             // using `webui_malloc()`. Otherwise just do nothing.
-            webui_free((void*)data);
+            webui_free((void*)callback_resp);
 
             http_status_code = 200;
         }
@@ -4306,7 +4341,7 @@ static void _webui_mutex_destroy(webui_mutex_t* mutex) {
     #endif
 }
 
-static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* client, char* index) {
+static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* client, char* index, size_t client_id) {
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_interpret_file()\n");
@@ -4454,7 +4489,7 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* cli
         // Unknown file extension
 
         // Serve as a normal text-based file
-        interpret_http_stat = _webui_serve_file(win, client);
+        interpret_http_stat = _webui_serve_file(win, client, client_id);
     }
 
     _webui_free_mem((void*)file);
@@ -4871,20 +4906,20 @@ static void _webui_send_all(_webui_window_t* win, uint16_t id, uint8_t cmd, cons
 
     // Send the WebSocket packet to a all connected clients if
     // `multi_client` mode is enabled, if not then send packet
-    // to the only single connected client `win->clients[0]`.
+    // to the only single connected client `_webui.clients[0]`.
     
     // Send the packet
     if (_webui.config.multi_client) {
         // Loop trough all connected clients
         for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-            if ((win->clients[i] != NULL) && (win->clients_token_check[i])) {
-                _webui_send_client(win, win->clients[i], 0, cmd, data, len);
+            if ((_webui.clients[i] != NULL) && (_webui.clients_token_check[i])) {
+                _webui_send_client(win, _webui.clients[i], 0, cmd, data, len);
             }
         }
     } else {
         // Single client
-        if ((win->clients[0] != NULL) && (win->clients_token_check[0])) {
-            _webui_send_client(win, win->clients[0], 0, cmd, data, len);
+        if ((_webui.clients[0] != NULL) && (_webui.clients_token_check[0])) {
+            _webui_send_client(win, _webui.clients[0], 0, cmd, data, len);
         }
     }
 }
@@ -4897,10 +4932,10 @@ static void _webui_send_client(
     printf("[Core]\t\t_webui_send_client()\n");
     #endif
 
-    size_t client_id = 0;
-    if (!_webui_client_get_id(win, client, &client_id))
+    size_t connection_id = 0;
+    if (!_webui_connection_get_id(win, client, &connection_id))
         return;
-    if ((win->clients[client_id] == NULL) || (!win->clients_token_check[client_id]))
+    if ((_webui.clients[connection_id] == NULL) || (!_webui.clients_token_check[connection_id]))
         return;
 
     #ifdef WEBUI_LOG
@@ -4946,7 +4981,7 @@ static void _webui_send_client(
     }
 
     // Send packet
-    _webui_send_client_ws(win, client, client_id, packet, packet_len);
+    _webui_send_client_ws(win, client, connection_id, packet, packet_len);
 
     // Free
     _webui_free_mem((void*)packet);
@@ -6982,23 +7017,25 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
     }
 
     // Wait for window connection
-    if (_webui.config.show_wait_connection) {
+    if ((browser != NoBrowser) && _webui.config.show_wait_connection) {
 
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_show_window() -> Waiting for window connection\n");
         #endif
 
-        if ((_webui.is_webview) || (browser != NoBrowser)) {
+        size_t timeout = (_webui.startup_timeout > 0 ? 
+            _webui.startup_timeout : WEBUI_DEF_TIMEOUT
+        );
 
-            size_t timeout = (_webui.startup_timeout > 0 ? 
-                _webui.startup_timeout : WEBUI_DEF_TIMEOUT);
+        if (_webui.is_webview) {
+
             _webui_timer_t timer;
             _webui_timer_start(&timer);
             for (;;) {
 
                 _webui_sleep(10);
 
-                // Process WebView if any
+                // Process WebView rendering if any
                 if (_webui.is_webview) {
                     #ifdef _WIN32
                     // ...
@@ -7031,12 +7068,15 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
             _webui_timer_t timer;
             _webui_timer_start(&timer);
             for (;;) {
-                // Stop if server thread started
-                _webui_sleep(100);
-                if (win->server_running)
+
+                _webui_sleep(10);
+
+                // Stop if window is connected
+                if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE))
                     break;
+                
                 // Stop if timer is finished
-                if (_webui_timer_is_end(&timer, (1000)))
+                if (_webui_timer_is_end(&timer, (timeout * 1000)))
                     break;
             }
         }
@@ -7050,21 +7090,23 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
 }
 
 static void _webui_window_event(
-    _webui_window_t* win, size_t client_id, int event_type,
-    char* element, size_t event_number) {
+    _webui_window_t* win, size_t connection_id, int event_type, char* element,
+    size_t event_number, size_t client_id, char* cookies) {
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_window_event([%zu], [%zu], [%s])\n", 
-        win->window_number, client_id, element);
+        win->window_number, connection_id, element);
     #endif
 
-    // New Event
+    // New Event (General)
     webui_event_t e;
     e.window = win->window_number;
     e.event_type = event_type;
     e.element = element;
     e.event_number = event_number;
+    e.connection_id = connection_id;
     e.client_id = client_id;
+    e.cookies = cookies;
 
     // Check for all events-bind functions
     if (!_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) && win->has_all_events) {
@@ -7104,11 +7146,11 @@ static void _webui_window_event(
 }
 
 static void _webui_send_client_ws(_webui_window_t* win, struct mg_connection* client,
-    size_t client_id, char* packet, size_t packets_size) {
+    size_t connection_id, char* packet, size_t packets_size) {
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_send_client_ws()\n");
-    printf("[Core]\t\t_webui_send_client_ws() -> Client #%zu\n", client_id);
+    printf("[Core]\t\t_webui_send_client_ws() -> Client #%zu\n", connection_id);
     printf("[Core]\t\t_webui_send_client_ws() -> Packet size: %zu bytes \n", packets_size);
     printf("[Core]\t\t_webui_send_client_ws() -> Packet hex : [ ");
         _webui_print_hex(packet, packets_size);
@@ -7238,6 +7280,7 @@ static void _webui_init(void) {
 
     // Initializing configs
     _webui.config.show_wait_connection = true;
+    _webui.config.use_cookies = true;
 
     // Initializing server services
     #ifdef WEBUI_TLS
@@ -7353,22 +7396,41 @@ static void _webui_http_send_header(
 
     const char* no_cache = "no-cache, no-store, must-revalidate, private, max-age=0";
     const char* with_cache = "public, max-age=31536000";
-    const char* cache_header = (cache? with_cache : no_cache);
+    const char* cache_header = (cache ? with_cache : no_cache);
 
-    // Authentification Cookies
-    bool set_cookie = false;
-    if (!_webui.config.multi_client) {
-        // Separated cookie for each browser
-        if (!_webui.auth_cookie_set[win->current_browser]) {
-            // This is the first UI access.
-            // Let's set the auth cookie and process the request.
-            set_cookie = true;
-            _webui.auth_cookie_set[win->current_browser] = true;
-            _webui_generate_cookie(_webui.auth_cookie[win->current_browser], WEBUI_AUTH_COOKIE);
-            #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_http_send() -> New auth cookie [%s]\n",
-                _webui.auth_cookie[win->current_browser]);
-            #endif
+    // Cookies
+    bool set_cookies = false;
+    size_t new_client_id = 0;
+    if (_webui.config.use_cookies) {
+        // Cookies config is enabled
+        char cookies[WEBUI_COOKIES_BUF] = {0};
+        _webui_get_cookies(client, cookies);
+        bool client_found = false;
+        if (!_webui_is_empty(cookies)) {
+            size_t client_id = 0;
+            if (_webui_client_cookies_get_id(win, cookies, &client_id)) {
+                client_found = true;
+            }
+        }
+        if (!client_found) {
+            // Browser does not have cookies yet, let's set a new cookies
+            char* new_auth_cookies[WEBUI_COOKIES_BUF];
+            _webui_generate_cookies(new_auth_cookies, WEBUI_COOKIES_LEN);
+            if (_webui_client_cookies_save(win, new_auth_cookies, &new_client_id)) {
+                set_cookies = true;
+                _webui.cookies_single_set[win->window_number] = true;
+                #ifdef WEBUI_LOG
+                printf("[Core]\t\t_webui_http_send() -> New auth cookies [%s]\n",
+                    _webui.cookies[new_client_id]
+                );
+                #endif
+            }
+            else {
+                // Cookies list is full
+                #ifdef WEBUI_LOG
+                printf("[Core]\t\t_webui_http_send() -> Cookies list is full\n");
+                #endif
+            }
         }
     }
 
@@ -7376,8 +7438,8 @@ static void _webui_http_send_header(
     size_t buffer_len = (128 + body_len);
     char* buffer = (char*)_webui_malloc(buffer_len);
     int to_send = 0;
-    if (set_cookie) {
-        // Header with auth cookie
+    if (set_cookies) {
+        // Header with auth cookies
         to_send = WEBUI_SN_PRINTF_DYN(buffer, buffer_len,
             "HTTP/1.1 200 OK\r\n"
             "Set-Cookie: webui_auth=%s; Path=/; HttpOnly\r\n"
@@ -7385,12 +7447,12 @@ static void _webui_http_send_header(
             "Content-Type: %s\r\n"
             "Content-Length: %zu\r\n"
             "Connection: close\r\n\r\n",
-            _webui.auth_cookie[win->current_browser],
+            _webui.cookies[new_client_id],
             cache_header, mime_type, body_len
         );
     }
     else {
-        // Header without auth cookie
+        // Header without auth cookies
         to_send = WEBUI_SN_PRINTF_DYN(buffer, buffer_len,
             "HTTP/1.1 200 OK\r\n"
             "Cache-Control: %s\r\n"
@@ -7486,23 +7548,132 @@ static int _webui_http_log(const struct mg_connection* client, const char* messa
 }
 #endif
 
-static void _webui_generate_cookie(char* cookie, size_t length) {
+// static size_t _webui_hash_djb2(const char* s) {
+//     // DJB2 Algorithm
+//     size_t hash = 5381;
+//     int c;
+//     while ((c = *s++)) {
+//         // hash * 33 + c
+//         hash = ((hash << 5) + hash) + c;
+//     }
+//     return hash;
+// }
+
+static void _webui_generate_cookies(char* cookies, size_t length) {
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_generate_cookies()\n");
+    #endif
     const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     size_t charset_size = sizeof(charset) - 1;
     for (size_t i = 0; i < length - 1; i++) {
         uint32_t random_value = _webui_generate_random_uint32();
         int key = random_value % charset_size;
-        cookie[i] = charset[key];
+        cookies[i] = charset[key];
     }
-    cookie[length - 1] = '\0';
+    cookies[length - 1] = '\0';
 }
 
-static bool _webui_check_auth_cookie(_webui_window_t *win, const char* full_cookies) {
-    if (_webui_is_empty(full_cookies))
-        return false;
-    char auth_cookie[WEBUI_AUTH_COOKIE * 2];
-    WEBUI_SN_PRINTF_STATIC(auth_cookie, sizeof(auth_cookie), "webui_auth=%s", _webui.auth_cookie[win->current_browser]);
-    return (strstr(full_cookies, auth_cookie) != NULL);
+static bool _webui_client_cookies_save(_webui_window_t* win, const char* cookies, size_t* client_id) {
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_client_cookies_save()\n");
+    #endif
+    // [win number][_][cookies]
+    char win_cookies[WEBUI_COOKIES_BUF];
+    WEBUI_SN_PRINTF_STATIC(win_cookies, sizeof(win_cookies), "%zu_%s", win->window_number, cookies);
+    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+        if (_webui.cookies[i] == NULL) {
+            _webui.cookies[i] = _webui_str_dup(win_cookies);
+            *client_id = i;
+            return true;
+        }
+    }
+    // List is full
+    return false;
+}
+
+static bool _webui_client_cookies_get_id(_webui_window_t* win, const char* cookies, size_t* client_id) {
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_client_cookies_get_id()\n");
+    #endif
+    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+        if (_webui.cookies[i] != NULL) {
+            if (strcmp(_webui.cookies[i], cookies) == 0) {
+                *client_id = i;
+                return true;
+            }
+        }
+    }
+    // Not found
+    return false;
+}
+
+static size_t _webui_client_get_id(_webui_window_t* win, struct mg_connection* client) {
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_client_get_id()\n");
+    #endif
+    size_t client_id = 0;
+    if (_webui.config.use_cookies) {
+        char cookies[WEBUI_COOKIES_BUF] = {0};
+        _webui_get_cookies(client, cookies);
+        _webui_client_cookies_get_id(win, cookies, &client_id);
+    }
+    return client_id;
+}
+
+// static void _webui_client_cookies_free_all(_webui_window_t* win) {
+//     #ifdef WEBUI_LOG
+//     printf("[Core]\t\t_webui_client_cookies_free_all()\n");
+//     #endif
+//     // [win number]
+//     char win_num[24];
+//     WEBUI_SN_PRINTF_STATIC(win_num, sizeof(win_num), "%zu_", win->window_number);
+//     size_t len = strlen(win_num);
+//     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+//         if (_webui.cookies[i] != NULL) {
+//             // [{win_number}_{cookies}]
+//             if (strncmp(_webui.cookies[i], win_num, len) == 0) {
+//                 _webui_free_mem((void*)_webui.cookies[i]);
+//                 _webui.cookies[i] = NULL;
+//             }
+//         }
+//     }
+//     // Single
+//     _webui.cookies_single_set[win->window_number] = false;
+// }
+
+// static void _webui_client_cookies_free(_webui_window_t* win, struct mg_connection* client) {
+//     #ifdef WEBUI_LOG
+//     printf("[Core]\t\t_webui_client_cookies_free()\n");
+//     #endif
+//     char cookies[WEBUI_COOKIES_BUF] = {0};
+//     _webui_get_cookies(client, cookies);
+//     if (cookies != NULL) {
+//         size_t client_id = 0;
+//         if (_webui_client_cookies_get_id(win, cookies, &client_id)) {
+//             _webui_free_mem((void*)_webui.cookies[client_id]);
+//             _webui.cookies[client_id] = NULL;
+//         }
+//     }
+// }
+
+static const char* _webui_get_cookies_full(const struct mg_connection* client) {
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_get_cookies_full()\n");
+    #endif
+    const char* header = mg_get_header(client, "Cookie");
+    if (header != NULL)
+        return header;
+    return "";
+}
+
+static void _webui_get_cookies(const struct mg_connection* client, char* buffer) {
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_get_cookies()\n");
+    #endif
+    const char* header = mg_get_header(client, "Cookie");
+    if (!_webui_is_empty(header)) {
+        mg_get_cookie(header, "webui_auth", buffer, WEBUI_COOKIES_BUF);
+    }
 }
 
 static int _webui_http_handler(struct mg_connection* client, void * _win) {
@@ -7530,41 +7701,50 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
 
         // GET
 
-        // Authorization
-        if (!_webui.config.multi_client) {
-            if (_webui.auth_cookie_set[win->current_browser]) {
-                // This is not the first UI access. And multi-client is disabled.
-                // Let's check the cookies to get authorization. This is to prevent
-                // non-authorized requests.
-                const char* Cookie = mg_get_header(client, "Cookie");
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_http_handler() -> GET [%s]\n", url);
+        #endif
+
+        // Cookies
+        size_t client_id = 0;
+        bool client_found = false;
+        if (_webui.config.use_cookies) {
+            // Cookies config is enabled
+            char cookies[WEBUI_COOKIES_BUF] = {0};
+            _webui_get_cookies(client, cookies);
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_http_handler() -> Client cookies [%s]\n", cookies);
+            #endif
+            // Get client ID based on `webui_auth` cookies
+            if (_webui_client_cookies_get_id(win, cookies, &client_id)) {
                 #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_http_handler() -> Browser ID [%d]\n", win->current_browser);
-                printf("[Core]\t\t_webui_http_handler() -> Auth cookie [%s]\n", _webui.auth_cookie[win->current_browser]);
-                printf("[Core]\t\t_webui_http_handler() -> Client cookie [%s]\n", Cookie);
+                printf("[Core]\t\t_webui_http_handler() -> Client ID found [%zu]\n", client_id);
                 #endif
-                if (!_webui_check_auth_cookie(win, Cookie)) {
-                    // Invalid auth cookie
+                client_found = true;
+            }
+            #ifdef WEBUI_LOG
+            else {
+                printf("[Core]\t\t_webui_http_handler() -> Client ID not found\n");
+            }
+            #endif
+        }
+        
+        // Single client authorisation
+        if (!_webui.config.multi_client) {
+            if (!client_found) {
+                if ((_webui.cookies_single_set[win->window_number])) {
                     #ifdef WEBUI_LOG
                     printf("[Core]\t\t_webui_http_handler() -> 403 Forbidden\n");
                     #endif
                     _webui_http_send_error(client, webui_html_served, 403);
                     _webui_mutex_unlock(&_webui.mutex_http_handler);
-                    return 403;
+                    return 403;                    
                 }
-                else {
-                    #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_http_handler() -> Authentication OK\n");
-                    #endif
-                }
-            }
+            } else _webui.cookies_single_set[win->window_number] = true;
         }
 
         // Let the server thread waits more time for `webui.js`
         win->wait = true;
-
-        #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_http_handler() -> GET [%s]\n", url);
-        #endif
 
         if (strcmp(url, "/webui.js") == 0) {
 
@@ -7615,7 +7795,9 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                 size_t bf_len = (_webui_strlen(win->server_root_path) + 1 + 24);
                 char* index_path = (char*)_webui_malloc(bf_len);
                 for (size_t i = 0; i < (sizeof(index_files) / sizeof(index_files[0])); i++) {
-                    WEBUI_SN_PRINTF_DYN(index_path, bf_len, "%s%s%s", win->server_root_path, webui_sep, index_files[i]);
+                    WEBUI_SN_PRINTF_DYN(index_path, bf_len, "%s%s%s",
+                        win->server_root_path, webui_sep, index_files[i]
+                    );
                     if (_webui_file_exist(index_path)) {
                         #ifdef WEBUI_LOG
                         printf("[Core]\t\t_webui_http_handler() -> 302 Redirecting to [%s]\n", index_files[i]);
@@ -7647,7 +7829,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
             else if (_webui_file_exist_mg(win, client)) {
 
                 // Local icon file
-                http_status_code = _webui_serve_file(win, client);
+                http_status_code = _webui_serve_file(win, client, client_id);
             }
             else {
 
@@ -7733,7 +7915,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
 
                     // Serve as a script file to be interpreted by
                     // an external interpreter (Deno, Nodejs)
-                    http_status_code = _webui_interpret_file(win, client, NULL);
+                    http_status_code = _webui_interpret_file(win, client, NULL, client_id);
                 }
                 else {
 
@@ -7742,7 +7924,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                     #endif
 
                     // Serve as a normal text-based file
-                    http_status_code = _webui_serve_file(win, client);
+                    http_status_code = _webui_serve_file(win, client, client_id);
                 }
             }
 
@@ -7774,34 +7956,62 @@ static int _webui_ws_connect_handler(const struct mg_connection* client, void * 
     _webui_window_t* win = _webui_dereference_win_ptr(_win);
     if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || win == NULL)
         return 1;
-
-    // Authorization
-    if (_webui.auth_cookie_set[win->current_browser]) {
-        const char* Cookie = mg_get_header(client, "Cookie");
-        #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_ws_connect_handler() -> Browser ID [%d]\n",
-            win->current_browser);
-        printf("[Core]\t\t_webui_ws_connect_handler() -> Auth cookie [%s]\n",
-            _webui.auth_cookie[win->current_browser]);
-        printf("[Core]\t\t_webui_ws_connect_handler() -> Client cookie [%s]\n",
-            Cookie);
-        #endif
-        if (!_webui_check_auth_cookie(win, Cookie)) {
-            // Invalid auth cookie
+    
+    // Check connection status
+    if (!_webui.config.multi_client) {
+        if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE)) {
+            // Multi-client is disabled, and the single client already connected.
             #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_ws_connect_handler() -> Single client already connected\n");
             printf("[Core]\t\t_webui_ws_connect_handler() -> Non-authorized connection\n");
             #endif
             // Block handshake
             return 1;
         }
+    }
+    
+    // Cookies
+    size_t client_id = 0;
+    bool client_found = false;
+    if (_webui.config.use_cookies) {
+        // Cookies config is enabled
+        char cookies[WEBUI_COOKIES_BUF] = {0};
+        _webui_get_cookies(client, cookies);
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_ws_connect_handler() -> Client cookies [%s]\n", cookies);
+        #endif
+        // Get client ID based on `webui_auth` cookies
+        if (_webui_client_cookies_get_id(win, cookies, &client_id)) {
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_ws_connect_handler() -> Client ID found [%zu]\n", client_id);
+            #endif
+            client_found = true;
+        }
         #ifdef WEBUI_LOG
         else {
-            printf("[Core]\t\t_webui_ws_connect_handler() -> Connection authentication OK\n");
+            printf("[Core]\t\t_webui_ws_connect_handler() -> Client ID not found\n");
         }
         #endif
     }
+    
+    // Single client authorisation
+    if (!_webui.config.multi_client) {
+        if (!client_found) {
+            if ((_webui.cookies_single_set[win->window_number])) {
+                #ifdef WEBUI_LOG
+                printf("[Core]\t\t_webui_ws_connect_handler() -> 403 Forbidden\n");
+                #endif
+                // Block handshake
+                return 1;
+            }
+        }
+    }
+    
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_ws_connect_handler() -> Connection authentication OK\n");
+    #endif
 
-    // OK
+    // OK. Process handshake
     return 0;
 }
 
@@ -8123,7 +8333,7 @@ static WEBUI_THREAD_SERVER_START {
                                             break;
 
                                         // Stop if timer is finished
-                                        if (_webui_timer_is_end(&timer_3, 3000))
+                                        if (_webui_timer_is_end(&timer_3, WEBUI_RELOAD_TIMEOUT))
                                             break;
                                     }
                                 } while(win->wait && !_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE));
@@ -8204,6 +8414,7 @@ static WEBUI_THREAD_SERVER_START {
     _webui_free_port(win->server_port);
     win->server_port = 0;
     _webui_free_mem((void*)server_port);
+    // _webui_client_cookies_free_all(win);
 
     // Kill Process
     // _webui_kill_pid(win->process_id);
@@ -8252,15 +8463,15 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
     static size_t multi_receive = 0;
     static void * multi_buf = NULL;
 
-    // Get client id
-    size_t client_id = 0;
+    // Get connection id
+    size_t connection_id = 0;
     if (event_type != WEBUI_WS_OPEN) {
-        if (!_webui_client_get_id(win, client, &client_id)) {
-            // Failed to find client ID
+        if (!_webui_connection_get_id(win, client, &connection_id)) {
+            // Failed to find connection ID
             #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_receive() -> Failed to find client ID\n");
+            printf("[Core]\t\t_webui_receive() -> Failed to find connection ID\n");
             #endif
-            _webui_client_remove(win, client);
+            _webui_connection_remove(win, client);
             return;
         }
     }
@@ -8277,38 +8488,37 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
         } else authorization = true;
         if (!authorization) {
             #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_receive(%zu) -> Client not authorized to register\n",
+            printf("[Core]\t\t_webui_receive(%zu) -> Connection not authorized to register\n",
                 recvNum);
             #endif
-            _webui_client_remove(win, client);
+            _webui_connection_remove(win, client);
             return;
         }
         else {
             // Register
-            if (_webui_client_save(win, client, &client_id)) {
-                // Status
-                _webui_mutex_is_connected(win, WEBUI_MUTEX_TRUE); // server thread
+            if (_webui_connection_save(win, client, &connection_id)) {
+                // Update window connection status
+                _webui_mutex_is_connected(win, WEBUI_MUTEX_TRUE);
                 #ifdef WEBUI_LOG
                 printf(
-                    "[Core]\t\t_webui_receive(%zu) -> Client #%zu connected\n",
-                    recvNum, client_id
+                    "[Core]\t\t_webui_receive(%zu) -> Connection #%zu registered\n",
+                    recvNum, connection_id
                 );
                 #endif
             }
             else {
-                // Failed to register this client
-                _webui_client_remove(win, client);
+                // Connection failed to register
+                _webui_connection_remove(win, client);
                 return;
             }
         }
     } else if (event_type == WEBUI_WS_CLOSE) {
         // Connection close
-        // Remove client
-        _webui_client_remove(win, client);
+        _webui_connection_remove(win, client);
         #ifdef WEBUI_LOG
         printf(
-            "[Core]\t\t_webui_receive(%zu) -> Client #%zu Closed\n",
-            recvNum, client_id
+            "[Core]\t\t_webui_receive(%zu) -> Connection #%zu Closed\n",
+            recvNum, connection_id
         );
         #endif
     }
@@ -8401,7 +8611,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
     // Process
     if (win->ws_block) {
         // Process the packet in this current thread
-        _webui_ws_process(win, client, client_id, arg_ptr, arg_len, ++recvNum, event_type);
+        _webui_ws_process(win, client, connection_id, arg_ptr, arg_len, ++recvNum, event_type);
         _webui_free_mem((void*)arg_ptr);
     }
     else {
@@ -8413,7 +8623,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
         arg->recvNum = ++recvNum;
         arg->event_type = event_type;
         arg->client = client;
-        arg->client_id = client_id;
+        arg->connection_id = connection_id;
         #ifdef _WIN32
         HANDLE thread = CreateThread(NULL, 0, _webui_ws_process_thread, (void*)arg, 0, NULL);
         if (thread != NULL)
@@ -8426,7 +8636,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
     }
 }
 
-static bool _webui_client_save(_webui_window_t* win, struct mg_connection* client, size_t* client_id) {
+static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* client, size_t* connection_id) {
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_client_save([%zu])\n", win->window_number);
     #endif
@@ -8434,16 +8644,16 @@ static bool _webui_client_save(_webui_window_t* win, struct mg_connection* clien
     // Save new ws client
     _webui_mutex_lock(&_webui.mutex_client);
     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-        if (win->clients[i] == NULL) {
+        if (_webui.clients[i] == NULL) {
             #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_client_save() -> Registering client #%zu \n", i);
             #endif
             // Save
-            win->clients[i] = client;
-            win->clients_token_check[i] = false;
+            _webui.clients[i] = client;
+            _webui.clients_token_check[i] = false;
             win->clients_count++;
             _webui_mutex_unlock(&_webui.mutex_client);
-            *client_id = i;
+            *connection_id = i;
             return true;
         }
     }
@@ -8456,7 +8666,7 @@ static bool _webui_client_save(_webui_window_t* win, struct mg_connection* clien
     return false;
 }
 
-static void _webui_client_remove(_webui_window_t* win, struct mg_connection* client) {
+static void _webui_connection_remove(_webui_window_t* win, struct mg_connection* client) {
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_client_remove([%zu])\n", win->window_number);
     #endif
@@ -8465,19 +8675,19 @@ static void _webui_client_remove(_webui_window_t* win, struct mg_connection* cli
 
     // Remove a ws client
     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-        if (win->clients[i] == client) {
+        if (_webui.clients[i] == client) {
             #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_client_remove() -> Removing client #%zu \n", i);
             #endif
             // Reset Token
             if (!_webui.config.multi_client) {
-                if (win->clients_token_check[i]) {
+                if (_webui.clients_token_check[i]) {
                     win->token = 0;
                 }
             }
             // Clear
-            win->clients[i] = NULL;
-            win->clients_token_check[i] = false;
+            _webui.clients[i] = NULL;
+            _webui.clients_token_check[i] = false;
             if (win->clients_count > 0)
                 win->clients_count--;
             // Close
@@ -8495,7 +8705,7 @@ static void _webui_client_remove(_webui_window_t* win, struct mg_connection* cli
     mg_close_connection(client);
 }
 
-static bool _webui_client_get_id(_webui_window_t* win, struct mg_connection* client, size_t* client_id) {
+static bool _webui_connection_get_id(_webui_window_t* win, struct mg_connection* client, size_t* connection_id) {
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_client_get_id([%zu], [%p])\n", win->window_number, client);
     #endif
@@ -8503,8 +8713,8 @@ static bool _webui_client_get_id(_webui_window_t* win, struct mg_connection* cli
     // Find a ws client
     _webui_mutex_lock(&_webui.mutex_client);
     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-        if (win->clients[i] == client) {
-            *client_id = i;
+        if (_webui.clients[i] == client) {
+            *connection_id = i;
             _webui_mutex_unlock(&_webui.mutex_client);
             return true;
         }
@@ -8519,7 +8729,7 @@ static bool _webui_client_get_id(_webui_window_t* win, struct mg_connection* cli
 }
 
 static void _webui_ws_process(
-    _webui_window_t* win, struct mg_connection* client, size_t client_id, 
+    _webui_window_t* win, struct mg_connection* client, size_t connection_id, 
     void* ptr, size_t len, size_t recvNum, int event_type) {
     
     #ifdef WEBUI_LOG
@@ -8608,25 +8818,25 @@ static void _webui_ws_process(
                         );
                         #endif
 
-                        // New event inf
-                        webui_event_inf_t* event_inf = (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
-                        event_inf->client = client;
-                        event_inf->client_id = client_id;
-                        if (win->events_count > WEBUI_MAX_ARG)
-                            win->events_count = 0;
-                        size_t event_num = win->events_count++;
-                        win->events[event_num] = event_inf;
+                        // New event inf (Click)
+                        // webui_event_inf_t* event_inf = NULL;
+                        // size_t event_num = _webui_new_event_inf(win, &event_inf);
+
+                        // Set arguments
+                        // ...
 
                         _webui_window_event(
                             win, // Event -> Window
-                            client_id, // Event -> Client Unique ID
+                            connection_id, // Event -> Client Unique ID
                             WEBUI_EVENT_MOUSE_CLICK, // Event -> Type of this event
                             element, // Event -> HTML Element
-                            event_num // Event -> Event Number
+                            0, // Event -> Event Number
+                            _webui_client_get_id(win, client), // Event -> Client ID
+                            _webui_get_cookies_full(client) // Event -> Full cookies
                         );
 
                         // Free event
-                        _webui_free_mem((void*)event_inf);
+                        // _webui_free_event_inf(win, event_num);
                     } else if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_JS) {
 
                         // JS Result
@@ -8736,14 +8946,9 @@ static void _webui_ws_process(
                             );
                             #endif
 
-                            // New event inf
-                            webui_event_inf_t* event_inf = (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
-                            event_inf->client = client;
-                            event_inf->client_id = client_id;
-                            if (win->events_count > WEBUI_MAX_ARG)
-                                win->events_count = 0;
-                            size_t event_num = win->events_count++;
-                            win->events[event_num] = event_inf;
+                            // New event inf (Navigation)
+                            webui_event_inf_t* event_inf = NULL;
+                            size_t event_num = _webui_new_event_inf(win, &event_inf);
 
                             // Set arguments
                             event_inf->event_data[0] = url;
@@ -8751,14 +8956,16 @@ static void _webui_ws_process(
 
                             _webui_window_event(
                                 win, // Event -> Window
-                                client_id, // Event -> Client Unique ID
+                                connection_id, // Event -> Client Unique ID
                                 WEBUI_EVENT_NAVIGATION, // Event -> Type of this event
                                 "", // Event -> HTML Element
-                                event_num // Event -> Event Number
+                                event_num, // Event -> Event Number
+                                _webui_client_get_id(win, client), // Event -> Client ID
+                                _webui_get_cookies_full(client) // Event -> Full cookies
                             );
 
                             // Free event
-                            _webui_free_mem((void*)event_inf);
+                            _webui_free_event_inf(win, event_num);
                         }
                     } else if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_CALL_FUNC) {
 
@@ -8787,14 +8994,9 @@ static void _webui_ws_process(
                         );
                         #endif
 
-                        // New event inf
-                        webui_event_inf_t* event_inf = (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
-                        event_inf->client = client;
-                        event_inf->client_id = client_id;
-                        if (win->events_count > WEBUI_MAX_ARG)
-                            win->events_count = 0;
-                        size_t event_num = win->events_count++;
-                        win->events[event_num] = event_inf;
+                        // New event inf (Function Call)
+                        webui_event_inf_t* event_inf = NULL;
+                        size_t event_num = _webui_new_event_inf(win, &event_inf);
 
                         // Loop trough args
                         size_t data_size_expected = 0;
@@ -8846,13 +9048,15 @@ static void _webui_ws_process(
                             );
                             #endif
 
-                            // Create new event
+                            // Create new event (Function Call)
                             webui_event_t e;
                             e.window = win->window_number;
                             e.event_type = WEBUI_EVENT_CALLBACK;
                             e.element = element;
                             e.event_number = event_num;
-                            e.client_id = client_id;
+                            e.connection_id = connection_id;
+                            e.client_id = _webui_client_get_id(win, client);
+                            e.cookies = _webui_get_cookies_full(client); // Full cookies
 
                             // Call user function
                             size_t cb_index = 0;
@@ -8893,7 +9097,7 @@ static void _webui_ws_process(
                             );
 
                             // Free event
-                            _webui_free_mem((void*)event_inf->response);
+                            _webui_free_event_inf(win, event_num);
                         } else {
 
                             // WebSocket/Civetweb did not send all the data as expected.
@@ -8936,9 +9140,9 @@ static void _webui_ws_process(
 
                         unsigned char status = 0x00;
 
-                        size_t client_id = 0;
-                        if (_webui_client_get_id(win, client, &client_id)) {
-                            win->clients_token_check[client_id] = true;
+                        size_t connection_id = 0;
+                        if (_webui_connection_get_id(win, client, &connection_id)) {
+                            _webui.clients_token_check[connection_id] = true;
                             status = 0x01;
                             #ifdef WEBUI_LOG
                             printf(
@@ -8965,6 +9169,32 @@ static void _webui_ws_process(
                         _webui_send_client(
                             win, client, packet_id, WEBUI_CMD_CHECK_TK, &status, 1
                         );
+
+                        if (status == 0x01) {
+                            // New Event
+                            if (win->has_all_events) {
+
+                                // New event inf (Connected)
+                                // webui_event_inf_t* event_inf = NULL;
+                                // size_t event_num = _webui_new_event_inf(win, &event_inf);
+
+                                // Set arguments
+                                // ...
+
+                                _webui_window_event(
+                                    win, // Event -> Window
+                                    connection_id, // Event -> Client Unique ID
+                                    WEBUI_EVENT_CONNECTED, // Event -> Type of this event
+                                    "", // Event -> HTML Element
+                                    0, // Event -> Event Number
+                                    _webui_client_get_id(win, client), // Event -> Client ID
+                                    _webui_get_cookies_full(client) // Event -> Full cookies
+                                );
+
+                                // Free event
+                                // _webui_free_event_inf(win, event_num);
+                            }
+                        }
                     }
                     #ifdef WEBUI_LOG
                     else {
@@ -9001,7 +9231,7 @@ static void _webui_ws_process(
                 #endif
 
                 // Forced close
-                _webui_client_remove(win, client);
+                _webui_connection_remove(win, client);
             }
         } else if (event_type == WEBUI_WS_OPEN) {
 
@@ -9014,32 +9244,31 @@ static void _webui_ws_process(
             );
             #endif
 
+            /*
             // New Event
             if (win->has_all_events) {
 
-                // New event inf
-                webui_event_inf_t* event_inf = (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
-                event_inf->client = client;
-                event_inf->client_id = client_id;
-                if (win->events_count > WEBUI_MAX_ARG)
-                    win->events_count = 0;
-                size_t event_num = win->events_count++;
-                win->events[event_num] = event_inf;
+                // New event inf (Connected)
+                // webui_event_inf_t* event_inf = NULL;
+                // size_t event_num = _webui_new_event_inf(win, &event_inf);
 
                 // Set arguments
                 // ...
 
                 _webui_window_event(
                     win, // Event -> Window
-                    client_id, // Event -> Client Unique ID
+                    connection_id, // Event -> Client Unique ID
                     WEBUI_EVENT_CONNECTED, // Event -> Type of this event
                     "", // Event -> HTML Element
-                    0 // Event -> Event Number
+                    0, // Event -> Event Number
+                    _webui_client_get_id(win, client), // Event -> Client ID
+                    _webui_get_cookies_full(client) // Event -> Full cookies
                 );
 
                 // Free event
-                _webui_free_mem((void*)event_inf);
+                // _webui_free_event_inf(win, event_num);
             }
+            */
         } else if (event_type == WEBUI_WS_CLOSE) {
 
             // Connection close
@@ -9054,28 +9283,25 @@ static void _webui_ws_process(
             // Events
             if (win->has_all_events) {
 
-                // New event inf
-                webui_event_inf_t* event_inf = (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
-                event_inf->client = client;
-                event_inf->client_id = client_id;
-                if (win->events_count > WEBUI_MAX_ARG)
-                    win->events_count = 0;
-                size_t event_num = win->events_count++;
-                win->events[event_num] = event_inf;
+                // New event inf (Disconnected)
+                // webui_event_inf_t* event_inf = NULL;
+                // size_t event_num = _webui_new_event_inf(win, &event_inf);
 
                 // Set arguments
                 // ...
 
                 _webui_window_event(
                     win, // Event -> Window
-                    client_id, // Event -> Client Unique ID
+                    connection_id, // Event -> Client Unique ID
                     WEBUI_EVENT_DISCONNECTED, // Event -> Type of this event
                     "", // Event -> HTML Element
-                    0 // Event -> Event Number
+                    0, // Event -> Event Number
+                    _webui_client_get_id(win, client), // Event -> Client ID
+                    _webui_get_cookies_full(client) // Event -> Full cookies
                 );
 
                 // Free event
-                _webui_free_mem((void*)event_inf);
+                // _webui_free_event_inf(win, event_num);
             }
         }
         #ifdef WEBUI_LOG
@@ -9103,7 +9329,7 @@ static WEBUI_THREAD_RECEIVE {
     _webui_recv_arg_t* arg = (_webui_recv_arg_t* ) _arg;
 
     // Process
-    _webui_ws_process(arg->win, arg->client, arg->client_id, arg->ptr, arg->len, arg->recvNum, arg->event_type);
+    _webui_ws_process(arg->win, arg->client, arg->connection_id, arg->ptr, arg->len, arg->recvNum, arg->event_type);
 
     // Free
     _webui_free_mem((void*)arg->ptr);
@@ -10087,7 +10313,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wv_event_title()\n");
         #endif
-        _webui_window_t *win = (_webui_window_t *)arg;
+        _webui_window_t* win = (_webui_window_t *)arg;
         webkit_web_view_get_title_func webkit_web_view_get_title = (
             webkit_web_view_get_title_func)dlsym(libwebkit, "webkit_web_view_get_title");
         const char *title = webkit_web_view_get_title(web_view);
