@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title>WebUI - Web App Multi-Client Example</title>
+		<style>
+			body {
+				font-family: 'Arial', sans-serif;
+				color: white;
+				background: linear-gradient(to right, #507d91, #1c596f, #022737);
+				text-align: center;
+				font-size: 18px;
+			}
+			button,
+			input {
+				padding: 10px;
+				border-radius: 3px;
+				border: 1px solid #ccc;
+				box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+				transition: 0.2s;
+			}
+			button {
+				background: #3498db;
+				color: #fff;
+				cursor: pointer;
+				font-size: 16px;
+			}
+			h1 {
+				text-shadow: -7px 10px 7px rgb(67 57 57 / 76%);
+			}
+			button:hover {
+				background: #c9913d;
+			}
+			input:focus {
+				outline: none;
+				border-color: #3498db;
+			}
+
+			a:link {
+				color: #fd5723;
+			}
+			a:active {
+				color: #fd5723;
+			}
+			a:visited {
+				color: #fd5723;
+			}
+			a:hover {
+				color: #f0bcac;
+			}
+			span {
+				color:#d69d48;
+				font-size: larger;
+			}
+		</style>
+	</head>
+	<body>
+		<h3>Web App Multi-Client Example</h3>
+		<br />
+		<span id="status">Connecting...</span>
+		<br />
+		<br />
+		You are user numer <span id="userNumber">0</span>
+		<br />
+		<br />
+		Your connection numer is <span id="connectionNumber">0</span>
+		<br />
+		<br />
+		There is <span id="userCount">0</span> users connected, and <span id="tabCount">0</span> tab opened.
+		<br />
+		<br />
+		Current user input: <input id="privateInput"></input> <button OnClick="save(document.getElementById('privateInput').value)">Save</button> <a href="">Reload This Page</a>
+		<br />
+		<br />
+		All users input: <input id="publicInput"></input> <button OnClick="saveAll(document.getElementById('publicInput').value);">Update All Users</button>
+		<br />
+		<br />
+		<a href="" target="_blank">Open New Tab</a>
+		<br />
+		<br />
+		<button OnClick="exit();">Exit</button>
+		<br />
+		<br />
+		<br />
+		Note: <br /><em>Copy URL, and open it in a private window, or another web browser to create new users.</em>
+	</body>
+
+	<!-- Connect this window to the background app -->
+	<script src="/webui.js"></script>
+
+	<script>
+		// JavaScript Example
+		/*
+		document.addEventListener('DOMContentLoaded', function() {
+			// DOM is loaded. Check if `webui` object is available
+			if (typeof webui !== 'undefined') {
+				// Set events callback
+				webui.setEventCallback((e) => {
+					if (e == webui.event.CONNECTED) {
+						// Connection to the backend is established
+						console.log('Connected.');
+						webuiTest();
+					} else if (e == webui.event.DISCONNECTED) {
+						// Connection to the backend is lost
+						console.log('Disconnected.');
+					}
+				});
+			} else {
+				// The virtual file `webui.js` is not included
+				alert('Please add webui.js to your HTML.');
+			}
+		});
+
+		function webuiTest() {
+			// Call a backend function
+			if (webui.isConnected()) {
+
+				// When you bind a func in the backend
+				// webui will create the `func` object
+				// in three places:
+				//
+				// Global   : func(...)
+				// Property : webui.func(...)
+				// Method   : webui.call('func', ...)
+				//
+				// [!] Note: Objects creation fails when
+				// a similar object already exist.
+
+				const foo = 'Hello';
+				const bar = 123456;
+
+				// Calling as global object
+				myBackendFunction(foo, bar).then((response) => {
+					// Do something with `response`
+				});
+				
+				// Calling as property of `webui.` object
+				webui.myBackendFunction(foo, bar).then((response) => {
+					// Do something with `response`
+				});
+				
+				// Calling using the method `webui.call()`
+				webui.call('myBackendFunction', foo, bar).then((response) => {
+					// Do something with `response`
+				});
+				
+				// Using await
+				// const response = await myBackendFunction(foo, bar);
+				// const response = await webui.myBackendFunction(foo, bar);
+				// const response = await webui.call('myBackendFunction', foo, bar);
+			}
+		}
+		*/
+	</script>
+</html>
