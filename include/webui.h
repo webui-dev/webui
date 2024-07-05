@@ -172,6 +172,12 @@ typedef enum {
     //
     // Default: False
     multi_client,
+    // Allow multiple clients to connect to the same window,
+    // This is helpful for web apps (non-desktop software),
+    // Please see the documentation for more details.
+    //
+    // Default: False
+    use_cookies,
 } webui_config;
 
 // -- Structs -------------------------
@@ -181,7 +187,9 @@ typedef struct webui_event_t {
     char* element;          // HTML element ID
     size_t event_number;    // Internal WebUI
     size_t bind_id;         // Bind ID
-    size_t client_id;       // Client unique ID
+    size_t client_id;       // Client's unique ID
+    size_t connection_id;   // Client's connection ID
+    char* cookies;          // Client's full cookies
 } webui_event_t;
 
 // -- Definitions ---------------------
@@ -285,16 +293,17 @@ WEBUI_EXPORT bool webui_show_client(webui_event_t* e, const char* content);
 WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, size_t browser);
 
 /**
- * @brief Start only the web server and return the URL. This is useful for web app.
+ * @brief Same as `webui_show()`. But start only the web server and return the URL.
+ * No window will be shown.
  *
  * @param window The window number
- * @param path The local root folder full path
+ * @param content The HTML, Or a local file
  *
  * @return Returns the url of this window server.
  *
  * @example const char* url = webui_start_server(myWindow, "/full/root/path");
  */
-WEBUI_EXPORT const char* webui_start_server(size_t window, const char* path);
+WEBUI_EXPORT const char* webui_start_server(size_t window, const char* content);
 
 /**
  * @brief Show a WebView window using embedded HTML, or a file. If the window is already
