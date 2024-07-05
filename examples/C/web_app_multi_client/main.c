@@ -107,7 +107,7 @@ int main() {
 	// Bind HTML with a C functions
 	webui_bind(win, "save", save);
 	webui_bind(win, "saveAll", saveAll);
-	webui_bind(win, "exit", exit);
+	webui_bind(win, "exit_app", exit_app);
 
 	// Bind all events
 	webui_bind(win, "", events);
