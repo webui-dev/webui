@@ -7426,7 +7426,7 @@ static void _webui_http_send_header(
         }
         if (!client_found) {
             // Browser does not have cookies yet, let's set a new cookies
-            char* new_auth_cookies[WEBUI_COOKIES_BUF];
+            char new_auth_cookies[WEBUI_COOKIES_BUF];
             _webui_generate_cookies(new_auth_cookies, WEBUI_COOKIES_LEN);
             if (_webui_client_cookies_save(win, new_auth_cookies, &new_client_id)) {
                 set_cookies = true;
