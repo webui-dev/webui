@@ -40,6 +40,7 @@ jobs:
       fail-fast: false
     env:
       ARTIFACT: webui-linux-${{ matrix.cc }}-${{ matrix.arch }}
+      CC: ${{ matrix.cc }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
@@ -49,13 +50,11 @@ jobs:
           fail-on-cache-miss: true
       - name: Setup
         run: |
-          CC=${{ matrix.cc }}
-          if [ "${{ matrix.cc }}" == "clang" ]; then
+          if [ "$CC" == "clang" ]; then
             sudo ln -s llvm-ar-14 /usr/bin/llvm-ar
             sudo ln -s llvm-ranlib-14 /usr/bin/llvm-ranlib
             sudo ln -s llvm-strip-14 /usr/bin/llvm-strip
           fi
-          echo "CC=$CC" >> $GITHUB_ENV
       - name: Build Debug Target
         run: make debug
       - name: Build Release Target
@@ -157,3 +156,95 @@ jobs:
           name: ${{ env.TITLE }}
           prerelease: ${{ env.IS_PRERELEASE }}
           allowUpdates: true
+
+  build-ubuntu-24:
+    needs: setup
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - cc: gcc
+            arch: x64
+          - cc: clang
+            arch: x64
+      fail-fast: false
+    env:
+      ARTIFACT: webui-linux-${{ matrix.cc }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache/restore@v4
+        with:
+          path: bridge/webui_bridge.h
+          key: ${{ runner.os }}-${{ github.sha }}-bridge
+          fail-on-cache-miss: true
+      - name: Setup
+        run: |
+          CC="${{ matrix.cc }}"
+          if [ "$CC" == "clang" ]; then
+            sudo ln -s llvm-ar-16 /usr/bin/llvm-ar
+            sudo ln -s llvm-ranlib-16 /usr/bin/llvm-ranlib
+            sudo ln -s llvm-strip-16 /usr/bin/llvm-strip
+          else
+            sudo apt -qq install gcc-14
+            CC+="-14"
+          fi
+          echo "CC=$CC" >> $GITHUB_ENV
+      - name: Build Debug Target
+        run: make debug
+      - name: Build Release Target
+        if: ${{ !cancelled() }}
+        run: make
+      - name: Build TLS Debug Target
+        run: make WEBUI_USE_TLS=1 debug
+      - name: Build TLS Release Target
+        run: make WEBUI_USE_TLS=1
+      - name: Build Examples
+        run: |
+          examples_base_dir=$(pwd)/examples/C
+          for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
+            echo "> $example"
+            cd $example || (exit_code=1 && continue)
+            if ! make; then
+               echo "Failed to build '$example'"
+               exit_code=1
+               continue
+            fi
+            if [[ ! -e "main" || ! -e "main-dyn" ]] ; then
+              echo "Failed to find executable for '$example'" && find .
+              exit_code=1
+              continue
+            fi
+          done
+          exit $exit_code
+      - name: Setup Browser
+        uses: browser-actions/setup-chrome@v1
+      - name: Setup Tests
+        run: |
+          sudo apt update && sudo apt install xvfb
+          cd tests
+          make call_c_from_js.c
+          make fail_test.c
+          ls -1
+      - name: Test Static
+        timeout-minutes: 2
+        run: |
+          cd tests
+          call_c_from_js=$(pwd)/call_c_from_js
+          fail_test=$(pwd)/fail_test
+          xvfb-run "$call_c_from_js"
+          # Run again and capture its output.
+          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
+          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
+      - name: Test Dynamic
+        timeout-minutes: 2
+        run: |
+          cd tests
+          call_c_from_js=$(pwd)/call_c_from_js-dyn
+          fail_test=$(pwd)/fail_test-dyn
+          xvfb-run "$call_c_from_js"
+          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
+          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
