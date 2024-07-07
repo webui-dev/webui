@@ -21,7 +21,7 @@ int main() {
 	webui_bind(MainWindow, "close_app", close_app);
 
 	// Show the window, preferably in a chromium based browser
-	if (!webui_show_browser(MainWindow, "index.html", ChromiumBased))
+	if (!webui_show_browser(MainWindow, "index.html", AnyBrowser))
 		webui_show(MainWindow, "index.html");
 
 	// Wait until all windows get closed
