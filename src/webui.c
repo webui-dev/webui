@@ -4844,8 +4844,9 @@ static bool _webui_folder_exist(const char* folder) {
     printf("[Core]\t\t_webui_folder_exist([%s])\n", folder);
     #endif
 
-    #if defined(_MSC_VER)
-    if (GetFileAttributesA(folder) != INVALID_FILE_ATTRIBUTES)
+    #if defined(_WIN32)
+    DWORD attributes = GetFileAttributesA(folder);
+    if ((attributes != INVALID_FILE_ATTRIBUTES) && (attributes & FILE_ATTRIBUTE_DIRECTORY))
         return true;
     #else
     DIR * dir = opendir(folder);
