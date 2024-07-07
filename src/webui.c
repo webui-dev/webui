@@ -3913,7 +3913,7 @@ static bool _webui_file_exist(const char* path) {
     if (path[0] == '~') {
         const char* home = getenv("HOME");
         if (home) {
-            WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s/%s", home,&path[1]);
+            WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s/%s", home, &path[1]);
         } else {
             // If for some reason HOME isn't set
             // fall back to the original path.
@@ -4723,24 +4723,38 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
         return true;
     } else if (browser == Firefox) {
 
-        // Firefox (We need to create a folder)
+        // Firefox (We need to create the profile folder)
 
         #ifdef _WIN32
         // Windows
         const char* path_ini = "%APPDATA%\\Mozilla\\Firefox\\profiles.ini";
         #elif __linux__
         // Linux
+        bool snap = false;
         const char* path_ini = "";
         if (_webui_file_exist("~/.mozilla/firefox/profiles.ini"))
             path_ini = "~/.mozilla/firefox/profiles.ini";
-        else if (_webui_file_exist("~/snap/firefox/common/.mozilla/firefox/profiles.ini"))
+        else if (_webui_file_exist("~/snap/firefox/common/.mozilla/firefox/profiles.ini")) {
             path_ini = "~/snap/firefox/common/.mozilla/firefox/profiles.ini";
-        else
+            snap = true;
+        }
+        else return false;
+        // Firefox linux snap version
+        // ~/snap/firefox/common/.mozilla/firefox/WebUIFirefoxProfile
+        char snap_path[WEBUI_MAX_PATH];
+        const char* home = getenv("HOME");
+        if (home) {
+            WEBUI_SN_PRINTF_STATIC(snap_path, sizeof(snap_path), "%s/snap/firefox/common/.mozilla/firefox", home);
+            temp = snap_path;
+        } else {
+            // Failed to get HOME
             return false;
+        }
         #else
         // macOS
         const char* path_ini = "~/Library/Application Support/Firefox/profiles.ini";
         #endif
+
         if (!win->custom_profile){
             if(!win->disable_browser_high_contrast)
                 WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIFirefoxProfile", temp, os_sep, os_sep);
@@ -4751,9 +4765,7 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
         if (!_webui_folder_exist(win->profile_path) ||
             !_webui_is_firefox_ini_profile_exist(path_ini, win->profile_name)) {
 
-            char buf[2048] = {
-                0
-            };
+            char buf[2048] = {0};
 
             // There is a possibility that the profile name
             // does not exist in the INI file. or folder does not exist.
