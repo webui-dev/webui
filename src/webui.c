@@ -158,7 +158,7 @@ typedef pthread_cond_t webui_condition_t;
 
 // Verbose Log
 #ifdef WEBUI_LOG
-    // #define WEBUI_LOG_VERBOSE
+    #define WEBUI_LOG_VERBOSE
 #endif
 
 // Timer
@@ -289,6 +289,8 @@ typedef struct webui_event_inf_t {
 typedef struct _webui_window_t {
     // Client
     size_t clients_count;
+    struct mg_connection* single_client; // Single client
+    bool single_client_token_check;
     // Server
     bool wait; // Let server thread wait more time for websocket
     bool server_running; // Slow check
@@ -304,7 +306,7 @@ typedef struct _webui_window_t {
     #endif
     // Window
     uint32_t token;
-    size_t window_number;
+    size_t num; // Window number
     const char* html_elements[WEBUI_MAX_IDS];
     bool has_all_events;
     void(*cb[WEBUI_MAX_IDS])(webui_event_t* e);
@@ -362,6 +364,7 @@ typedef struct _webui_core_t {
         bool use_cookies;
     } config;
     struct mg_connection* clients[WEBUI_MAX_IDS];
+    size_t clients_win_num[WEBUI_MAX_IDS];
     bool clients_token_check[WEBUI_MAX_IDS];
     char* cookies[WEBUI_MAX_IDS];
     bool cookies_single_set[WEBUI_MAX_IDS];
@@ -383,7 +386,6 @@ typedef struct _webui_core_t {
     size_t current_browser;
     _webui_window_t* wins[WEBUI_MAX_IDS];
     bool wins_reserved[WEBUI_MAX_IDS];
-    size_t last_win_number;
     webui_mutex_t mutex_server_start;
     webui_mutex_t mutex_send;
     webui_mutex_t mutex_receive;
@@ -439,12 +441,6 @@ typedef struct _webui_recv_arg_t {
 }
 _webui_recv_arg_t;
 
-typedef struct _webui_monitor_arg_t {
-    size_t win_num;
-    const char *path;
-}
-_webui_monitor_arg_t;
-
 typedef struct _webui_cmd_async_t {
     _webui_window_t* win;
     char* cmd;
@@ -453,7 +449,7 @@ _webui_cmd_async_t;
 
 // -- Definitions ---------------------
 #ifdef _WIN32
-static const char* webui_sep = "\\";
+static const char* os_sep = "\\";
 static DWORD WINAPI _webui_run_browser_task(LPVOID _arg);
 static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show);
 static int _webui_system_win32_out(const char* cmd, char ** output, bool show);
@@ -466,7 +462,7 @@ static bool _webui_str_to_wide(const char *s, wchar_t **w);
 #define WEBUI_THREAD_MONITOR DWORD WINAPI _webui_folder_monitor_thread(LPVOID arg)
 #define WEBUI_THREAD_RETURN return 0;
 #else
-static const char* webui_sep = "/";
+static const char* os_sep = "/";
 static void * _webui_run_browser_task(void * _arg);
 #define WEBUI_THREAD_SERVER_START void * _webui_server_thread(void * arg)
 #define WEBUI_THREAD_RECEIVE void * _webui_ws_process_thread(void * _arg)
@@ -696,7 +692,7 @@ void webui_run_client(webui_event_t* e, const char* script) {
     // [CMD]
     // [Script]
 
-    // Send the packet to single client
+    // Send the packet to a single client
     _webui_send_client(win, _webui.clients[e->connection_id], 0, WEBUI_CMD_JS_QUICK, script, js_len);
 }
 
@@ -792,7 +788,7 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
     // [CMD]
     // [Script]
 
-    // Send the packet
+    // Send the packet to a single client
     _webui_send_client(win, _webui.clients[e->connection_id], run_id, WEBUI_CMD_JS, script, js_len);
 
     bool js_status = false;
@@ -900,10 +896,10 @@ size_t webui_new_window(void) {
     return webui_new_window_id(webui_get_new_window_id());
 }
 
-size_t webui_new_window_id(size_t window_number) {
+size_t webui_new_window_id(size_t num) {
 
     #ifdef WEBUI_LOG
-    printf("[User] webui_new_window_id([%zu])\n", window_number);
+    printf("[User] webui_new_window_id([%zu])\n", num);
     #endif
 
     // Initialization
@@ -912,20 +908,20 @@ size_t webui_new_window_id(size_t window_number) {
         return 0;
 
     // Check window ID
-    if (window_number < 1 || window_number > WEBUI_MAX_IDS)
+    if (num < 1 || num > WEBUI_MAX_IDS)
         return 0;
 
     // Destroy the window if already exist
-    if (_webui.wins[window_number] != NULL)
-        webui_destroy(window_number);
+    if (_webui.wins[num] != NULL)
+        webui_destroy(num);
 
     // Create a new window
     _webui_window_t* win = (_webui_window_t* ) _webui_malloc(sizeof(_webui_window_t));
-    _webui.wins[window_number] = win;
+    _webui.wins[num] = win;
 
     // Initialisation
     win->ws_block = _webui.config.ws_block;
-    win->window_number = window_number;
+    win->num = num;
     win->browser_path = (char*)_webui_malloc(WEBUI_MAX_PATH);
     win->server_root_path = (char*)_webui_malloc(WEBUI_MAX_PATH);
     if (_webui_is_empty(_webui.default_server_root_path))
@@ -933,18 +929,14 @@ size_t webui_new_window_id(size_t window_number) {
     else
         WEBUI_SN_PRINTF_DYN(win->server_root_path, WEBUI_MAX_PATH, "%s", _webui.default_server_root_path);
 
-    // Save window ID
-    if (window_number > _webui.last_win_number)
-        _webui.last_win_number = window_number;
-
     // Auto bind JavaScript-Bridge Core API Handler
-    webui_bind(window_number, "__webui_core_api__", _webui_bridge_api_handler);
+    webui_bind(num, "__webui_core_api__", _webui_bridge_api_handler);
 
     #ifdef WEBUI_LOG
-    printf("[User] webui_new_window_id() -> New window #%zu @ 0x%p\n", window_number, win);
+    printf("[User] webui_new_window_id() -> New window #%zu @ 0x%p\n", num, win);
     #endif
 
-    return window_number;
+    return num;
 }
 
 size_t webui_get_new_window_id(void) {
@@ -961,8 +953,6 @@ size_t webui_get_new_window_id(void) {
     for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if (_webui.wins[i] == NULL && !_webui.wins_reserved[i]) {
             _webui.wins_reserved[i] = true;
-            if (i > _webui.last_win_number)
-                _webui.last_win_number = i;
             return i;
         }
     }
@@ -1088,7 +1078,8 @@ void webui_close_client(webui_event_t* e) {
     // Packet Protocol Format:
     // [...]
     // [CMD]
-    // Send the packet
+
+    // Send the packet to a single client
     _webui_send_client(win, _webui.clients[e->connection_id], 0, WEBUI_CMD_CLOSE, NULL, 0);
 
     // Forced close
@@ -1281,9 +1272,10 @@ void webui_navigate_client(webui_event_t* e, const char* url) {
         // [CMD]
         // [URL]
 
-        // Send the packet
-        _webui_send_client(win, _webui.clients[e->connection_id], 0, WEBUI_CMD_NAVIGATION, 
-            url, _webui_strlen(url));
+        // Send the packet to a single client
+        _webui_send_client(win, _webui.clients[e->connection_id], 
+            0, WEBUI_CMD_NAVIGATION, url, _webui_strlen(url)
+        );
     }
 }
 
@@ -1355,8 +1347,8 @@ void webui_delete_all_profiles(void) {
     // Initialization
     _webui_init();
 
-    // Loop trough windows
-    for (size_t i = 1; i <= _webui.last_win_number; i++) {
+    // Loop trough all windows
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if (_webui.wins[i] != NULL) {
             webui_delete_profile(i);
         }
@@ -1380,7 +1372,7 @@ static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* pr
     if (path[0] == '~') {
         const char* home = getenv("HOME");
         if (home) {
-            WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s/%s", home,&path[1]);
+            WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s/%s", home, &path[1]);
         } else {
             // If for some reason HOME isn't set
             // fall back to the original path.
@@ -1459,28 +1451,19 @@ static void _webui_remove_firefox_profile_ini(const char* path, const char* prof
     if (!file)
         return;
 
-    char buffer[4096] = {
-        0x00
-    };
-    char output[4096] = {
-        0x00
-    };
+    char buffer[4096] = {0};
+    char output[4096] = {0};
+    char target[128] = {0};
 
-    char target[128] = {
-        0x00
-    };
     WEBUI_SN_PRINTF_STATIC(target, sizeof(target), "Name=%s", profile_name);
 
     bool skip = false;
     while(fgets(buffer, sizeof(buffer), file)) {
-
         if (strncmp(buffer, "[Profile", 8) == 0) {
             if (skip)
                 skip = false;
         }
-
         if (!skip) {
-
             if (strstr(buffer, target) != NULL) {
 
                 #ifdef WEBUI_LOG
@@ -1603,7 +1586,8 @@ bool webui_show_client(webui_event_t* e, const char* content) {
 
     // Show the window using WebView or using any browser
     win->allow_webview = true;
-    // Single client
+
+    // Show for single a client
     return _webui_show(win, _webui.clients[e->connection_id], content, AnyBrowser);
 }
 
@@ -1623,7 +1607,8 @@ bool webui_show(size_t window, const char* content) {
 
     // Show the window using WebView or using any browser
     win->allow_webview = true;
-    // All clients
+
+    // Show for all connected clients
     return _webui_show(win, NULL, content, AnyBrowser);
 }
 
@@ -1643,6 +1628,8 @@ bool webui_show_wv(size_t window, const char* content) {
 
     // Show the window using WebView only
     win->allow_webview = true;
+
+    // Show for all connected clients
     return _webui_show(win, NULL, content, NoBrowser);
 }
 
@@ -1662,6 +1649,8 @@ bool webui_show_browser(size_t window, const char* content, size_t browser) {
 
     // Show the window using a specific browser only
     win->allow_webview = (browser == WebView ? true : false);
+
+    // Show for all connected clients
     return _webui_show(win, NULL, content, browser);
 }
 
@@ -2260,7 +2249,7 @@ void webui_set_config(webui_config option, bool status) {
         case ui_event_blocking:
             _webui.config.ws_block = status;
             // Update all created windows
-            for (size_t i = 1; i <= _webui.last_win_number; i++) {
+            for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
                 if (_webui.wins[i] != NULL) {
                     _webui.wins[i]->ws_block = status;
                 }
@@ -2706,9 +2695,11 @@ void webui_send_raw_client(webui_event_t* e, const char* function, const void* r
     // [CMD]
     // [Function, Null, RawData]
 
-    // Send the packet
-    _webui_send_client(win, _webui.clients[e->connection_id], 0, 
-        WEBUI_CMD_SEND_RAW, (const char*)buf, data_len);
+    // Send the packet to single a client
+    _webui_send_client(win, _webui.clients[e->connection_id], 
+        0, WEBUI_CMD_SEND_RAW, (const char*)buf, data_len
+    );
+
     _webui_free_mem((void*)buf);
 }
 
@@ -2883,7 +2874,7 @@ void webui_exit(void) {
         return;
 
     // Close all windows
-    for (size_t i = 1; i <= _webui.last_win_number; i++) {
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if (_webui.wins[i] != NULL) {
             if (_webui_mutex_is_connected(_webui.wins[i], WEBUI_MUTEX_NONE)) {
 
@@ -3094,21 +3085,25 @@ void webui_wait(void) {
         else {
             // Linux WebView Clean
 
-            // Process last drawing events if any
-            while (gtk_events_pending()) {
-                gtk_main_iteration_do(0);
-            }
-            // Close all windows if any
-            for (size_t i = 1; i <= _webui.last_win_number; i++) {
+            // Close all GTK windows if any
+            for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
                 if (_webui.wins[i] != NULL) {
                     if (_webui.wins[i]->webView) {
                         _webui.wins[i]->webView->stop = true;
                         _webui_mutex_is_webview_update(_webui.wins[i], WEBUI_MUTEX_TRUE);
                     }
                 }
+                // Process drawing events if any
+                while (gtk_events_pending()) {
+                    gtk_main_iteration_do(0);
+                }
+            }
+            _webui_sleep(750);
+            // Process drawing events if any
+            while (gtk_events_pending()) {
+                gtk_main_iteration_do(0);
             }
             _webui_wv_free();
-            _webui_sleep(750);
         }
     #else
         if (!_webui.is_webview) {
@@ -3181,8 +3176,21 @@ bool webui_set_root_folder(size_t window, const char* path) {
         return false;
     _webui_window_t* win = _webui.wins[window];
 
-    if (win->server_running || _webui_is_empty(path) || (_webui_strlen(path) > WEBUI_MAX_PATH) ||
-        !_webui_folder_exist((char*)path)) {
+    // Fix path
+    char full_path[WEBUI_MAX_PATH] = {0};
+    #if defined(_WIN32)
+    // ...
+    #else
+    if ((path[0] != '.') && (path[0] != '/')) {
+        WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "./%s", path);
+        path = full_path;
+    }
+    #endif
+    
+    if (win->server_running || 
+        _webui_is_empty(path) || 
+        (_webui_strlen(path) > WEBUI_MAX_PATH) ||
+        !_webui_folder_exist(path)) {
 
         WEBUI_SN_PRINTF_DYN(win->server_root_path, WEBUI_MAX_PATH, "%s", WEBUI_DEFAULT_PATH);
         #ifdef WEBUI_LOG
@@ -3225,7 +3233,7 @@ bool webui_set_default_root_folder(const char* path) {
 
     // Update all windows. This will works only
     // for non-running windows.
-    for (size_t i = 1; i <= _webui.last_win_number; i++) {
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if (_webui.wins[i] != NULL) {
             WEBUI_SN_PRINTF_DYN(_webui.wins[i]->server_root_path, WEBUI_MAX_PATH, 
                 "%s", _webui.default_server_root_path);
@@ -3506,7 +3514,7 @@ size_t webui_interface_get_window_id(size_t window) {
         return 0;
     _webui_window_t* win = _webui.wins[window];
 
-    return win->window_number;
+    return win->num;
 }
 
 // -- Core's Functions ----------------
@@ -3841,7 +3849,7 @@ static bool _webui_file_exist_mg(_webui_window_t* win, struct mg_connection* cli
     // [current folder][/][file]
     size_t bf_len = (_webui_strlen(win->server_root_path) + 1 + _webui_strlen(file));
     full_path = (char*)_webui_malloc(bf_len);
-    WEBUI_SN_PRINTF_DYN(full_path, bf_len, "%s%s%s", win->server_root_path, webui_sep, file);
+    WEBUI_SN_PRINTF_DYN(full_path, bf_len, "%s%s%s", win->server_root_path, os_sep, file);
 
     bool exist = _webui_file_exist(full_path);
 
@@ -3900,7 +3908,7 @@ static bool _webui_file_exist(const char* path) {
     char full_path[WEBUI_MAX_PATH];
     ExpandEnvironmentStringsA(path, full_path, sizeof(full_path));
     #else
-    // Linux&macOS
+    // Linux / macOS
     char full_path[WEBUI_MAX_PATH];
     if (path[0] == '~') {
         const char* home = getenv("HOME");
@@ -4068,18 +4076,21 @@ static char* _webui_get_full_path(_webui_window_t* win, const char* file) {
 
     if (!file)
         return NULL;
+    
+    if (file[0] == '/')
+        file++;
 
     // Get full path
     // [current folder][/][file]
     size_t bf_len = (_webui_strlen(win->server_root_path) + 1 + _webui_strlen(file));
     char* full_path = (char*)_webui_malloc(bf_len);
-    WEBUI_SN_PRINTF_DYN(full_path, bf_len, "%s%s%s", win->server_root_path, webui_sep, file);
+    WEBUI_SN_PRINTF_DYN(full_path, bf_len, "%s%s%s", win->server_root_path, os_sep, file);
 
     #ifdef _WIN32
     // Replace `/` by `\`
-    for (int i = 0;full_path[i] != '\0'; i++) {
+    for (int i = 0; full_path[i] != '\0'; i++) {
         if (full_path[i] == '/') {
-            full_path[i] = * webui_sep;
+            full_path[i] = *os_sep;
         }
     }
     #endif
@@ -4138,7 +4149,7 @@ static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client,
         // 
         // New Event (HTTP)
         // webui_event_t e;
-        // e.window = win->window_number;
+        // e.window = win->num;
         // e.event_type = WEBUI_EVENT_HTTP_GET;
         // e.element = "";
         // e.event_number = 0;
@@ -4493,7 +4504,7 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* cli
         } else {
 
             // Unknown runtime
-            // Serve as a normal text-based file
+            // Serve as a normal text-based file 200
             _webui_http_send_file(win, client, mg_get_builtin_mime_type(url), full_path, false);
         }
     } else {
@@ -4578,7 +4589,7 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win, struct mg_con
         js, len,
         "%s\n document.addEventListener(\"DOMContentLoaded\",function(){ globalThis.webui = "
         "new WebuiBridge({ secure: %s, token: %" PRIu32 ", port: %zu, winNum: %zu, bindList: %s, log: %s, ",
-        webui_javascript_bridge, TLS, token, win->server_port, win->window_number, event_cb_js_array, log
+        webui_javascript_bridge, TLS, token, win->server_port, win->num, event_cb_js_array, log
     );
     // Window Size
     if (win->size_set)
@@ -4672,43 +4683,43 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
 
         // Google Chrome
         if (!win->custom_profile)
-            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIChromeProfile", temp, webui_sep, webui_sep);
+            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIChromeProfile", temp, os_sep, os_sep);
         return true;
     } else if (browser == Edge) {
 
         // Edge
         if (!win->custom_profile)
-            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIEdgeProfile", temp, webui_sep, webui_sep);
+            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIEdgeProfile", temp, os_sep, os_sep);
         return true;
     } else if (browser == Epic) {
 
         // Epic
         if (!win->custom_profile)
-            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIEpicProfile", temp, webui_sep, webui_sep);
+            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIEpicProfile", temp, os_sep, os_sep);
         return true;
     } else if (browser == Vivaldi) {
 
         // Vivaldi
         if (!win->custom_profile)
-            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIVivaldiProfile", temp, webui_sep, webui_sep);
+            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIVivaldiProfile", temp, os_sep, os_sep);
         return true;
     } else if (browser == Brave) {
 
         // Brave
         if (!win->custom_profile)
-            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIBraveProfile", temp, webui_sep, webui_sep);
+            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIBraveProfile", temp, os_sep, os_sep);
         return true;
     } else if (browser == Yandex) {
 
         // Yandex
         if (!win->custom_profile)
-            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIYandexProfile", temp, webui_sep, webui_sep);
+            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIYandexProfile", temp, os_sep, os_sep);
         return true;
     } else if (browser == Chromium) {
 
         // Chromium
         if (!win->custom_profile)
-            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIChromiumProfile", temp, webui_sep, webui_sep);
+            WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIChromiumProfile", temp, os_sep, os_sep);
         return true;
     } else if (browser == Firefox) {
 
@@ -4732,9 +4743,9 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
         #endif
         if (!win->custom_profile){
             if(!win->disable_browser_high_contrast)
-                WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIFirefoxProfile", temp, webui_sep, webui_sep);
+                WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIFirefoxProfile", temp, os_sep, os_sep);
             else
-                WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIFirefoxProfile-NoHC", temp, webui_sep, webui_sep);
+                WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIFirefoxProfile-NoHC", temp, os_sep, os_sep);
         }
 
         if (!_webui_folder_exist(win->profile_path) ||
@@ -4774,7 +4785,7 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
 
             // prefs.js
             FILE * file;
-            WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "%s%sprefs.js", win->profile_path, webui_sep);
+            WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "%s%sprefs.js", win->profile_path, os_sep);
             WEBUI_FILE_OPEN(file, buf, "a");
             if (file == NULL)
                 return false;
@@ -4792,13 +4803,13 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
             fclose(file);
 
             // userChrome.css
-            WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "\"%s%schrome%s\"", win->profile_path, webui_sep, webui_sep);
+            WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "\"%s%schrome%s\"", win->profile_path, os_sep, os_sep);
             if (!_webui_folder_exist(buf)) {
 
-                WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "mkdir \"%s%schrome%s\"", win->profile_path, webui_sep, webui_sep);
+                WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "mkdir \"%s%schrome%s\"", win->profile_path, os_sep, os_sep);
                 _webui_cmd_sync(win, buf, false); // Create directory
             }
-            WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "%s%schrome%suserChrome.css", win->profile_path, webui_sep, webui_sep);
+            WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "%s%schrome%suserChrome.css", win->profile_path, os_sep, os_sep);
             WEBUI_FILE_OPEN(file, buf, "a");
             if (file == NULL)
                 return false;
@@ -4820,9 +4831,6 @@ static bool _webui_folder_exist(const char* folder) {
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_folder_exist([%s])\n", folder);
     #endif
-
-    if (_webui_file_exist(folder))
-        return false; // It's a file not a folder
 
     #if defined(_MSC_VER)
     if (GetFileAttributesA(folder) != INVALID_FILE_ATTRIBUTES)
@@ -4918,20 +4926,20 @@ static void _webui_send_all(_webui_window_t* win, uint16_t id, uint8_t cmd, cons
 
     // Send the WebSocket packet to a all connected clients if
     // `multi_client` mode is enabled, if not then send packet
-    // to the only single connected client `_webui.clients[0]`.
+    // to the only single connected client.
     
     // Send the packet
     if (_webui.config.multi_client) {
-        // Loop trough all connected clients
+        // Loop trough all connected clients in this window
         for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-            if ((_webui.clients[i] != NULL) && (_webui.clients_token_check[i])) {
+            if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
                 _webui_send_client(win, _webui.clients[i], 0, cmd, data, len);
             }
         }
     } else {
         // Single client
-        if ((_webui.clients[0] != NULL) && (_webui.clients_token_check[0])) {
-            _webui_send_client(win, _webui.clients[0], 0, cmd, data, len);
+        if ((win->single_client != NULL) && (win->single_client_token_check)) {
+            _webui_send_client(win, win->single_client, 0, cmd, data, len);
         }
     }
 }
@@ -6531,7 +6539,7 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
         printf("[Core]\t\t_webui_show() -> Folder: [%s]\n", content_cpy);
         #endif
         // Set root folder
-        if (!webui_set_root_folder(win->window_number, content_cpy)) {
+        if (!webui_set_root_folder(win->num, content_cpy)) {
             #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_show() -> Failed to set folder root path\n");
             #endif
@@ -7010,14 +7018,14 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
 
         // Send the packet
         if (client) {
-            // Update single packet
+            // Update single client
             _webui_send_client(
                 win, client, 0, WEBUI_CMD_NAVIGATION, 
                 (const char*)window_url, _webui_strlen(window_url)
             );
         }
         else {
-            // Update all windows
+            // Update all clients
             _webui_send_all(
                 win, 0, WEBUI_CMD_NAVIGATION, 
                 (const char*)window_url, _webui_strlen(window_url)
@@ -7107,12 +7115,12 @@ static void _webui_window_event(
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_window_event([%zu], [%zu], [%s])\n", 
-        win->window_number, connection_id, element);
+        win->num, connection_id, element);
     #endif
 
     // New Event (General)
     webui_event_t e;
-    e.window = win->window_number;
+    e.window = win->num;
     e.event_type = event_type;
     e.element = element;
     e.event_number = event_number;
@@ -7178,7 +7186,7 @@ static void _webui_send_client_ws(_webui_window_t* win, struct mg_connection* cl
         return;
 
     int ret = 0;
-    if (win->window_number > 0 && win->window_number < WEBUI_MAX_IDS) {
+    if (win->num > 0 && win->num < WEBUI_MAX_IDS) {
         if (client != NULL) {
             // Mutex
             _webui_mutex_lock(&_webui.mutex_send);
@@ -7350,7 +7358,7 @@ static bool _webui_get_cb_index(_webui_window_t* win, const char* element, size_
     _webui_mutex_lock(&_webui.mutex_bridge);
 
     #ifdef WEBUI_LOG_VERBOSE
-    printf("[Core]\t\t_webui_get_cb_index([%zu])\n", win->window_number);
+    printf("[Core]\t\t_webui_get_cb_index([%zu])\n", win->num);
     printf("[Core]\t\t_webui_get_cb_index() -> Element: [%s]\n", element);
     #endif
 
@@ -7403,7 +7411,7 @@ static void _webui_http_send_header(
     const char* mime_type, size_t body_len, bool cache) {
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_http_send_header([%zu])\n", win->window_number);
+    printf("[Core]\t\t_webui_http_send_header([%zu])\n", win->num);
     #endif
 
     const char* no_cache = "no-cache, no-store, must-revalidate, private, max-age=0";
@@ -7430,7 +7438,7 @@ static void _webui_http_send_header(
             _webui_generate_cookies(new_auth_cookies, WEBUI_COOKIES_LEN);
             if (_webui_client_cookies_save(win, new_auth_cookies, &new_client_id)) {
                 set_cookies = true;
-                _webui.cookies_single_set[win->window_number] = true;
+                _webui.cookies_single_set[win->num] = true;
                 #ifdef WEBUI_LOG
                 printf("[Core]\t\t_webui_http_send() -> New auth cookies [%s]\n",
                     _webui.cookies[new_client_id]
@@ -7485,15 +7493,17 @@ static void _webui_http_send_file(
     const char* mime_type, const char* path, bool cache) {
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_http_send_file([%zu])\n", win->window_number);
+    printf("[Core]\t\t_webui_http_send_file([%zu])\n", win->num);
     #endif
 
     // Open the file
     FILE* file = NULL;
-    if (WEBUI_FILE_OPEN(file, path, "rb") != 0 || !file) {
+    WEBUI_FILE_OPEN(file, path, "rb");
+    if (!file) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_http_send_file() -> Can't open file [%s]\n", path);
         #endif
+        _webui_http_send_error(client, webui_html_res_not_available, 404);
         return;
     }
 
@@ -7516,7 +7526,7 @@ static void _webui_http_send(
     const char* mime_type, const char* body, size_t body_len, bool cache) {
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_http_send([%zu])\n", win->window_number);
+    printf("[Core]\t\t_webui_http_send([%zu])\n", win->num);
     #endif
 
     // Send header
@@ -7593,7 +7603,7 @@ static bool _webui_client_cookies_save(_webui_window_t* win, const char* cookies
     #endif
     // [win number][_][cookies]
     char win_cookies[WEBUI_COOKIES_BUF];
-    WEBUI_SN_PRINTF_STATIC(win_cookies, sizeof(win_cookies), "%zu_%s", win->window_number, cookies);
+    WEBUI_SN_PRINTF_STATIC(win_cookies, sizeof(win_cookies), "%zu_%s", win->num, cookies);
     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
         if (_webui.cookies[i] == NULL) {
             _webui.cookies[i] = _webui_str_dup(win_cookies);
@@ -7640,7 +7650,7 @@ static size_t _webui_client_get_id(_webui_window_t* win, struct mg_connection* c
 //     #endif
 //     // [win number]
 //     char win_num[24];
-//     WEBUI_SN_PRINTF_STATIC(win_num, sizeof(win_num), "%zu_", win->window_number);
+//     WEBUI_SN_PRINTF_STATIC(win_num, sizeof(win_num), "%zu_", win->num);
 //     size_t len = strlen(win_num);
 //     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
 //         if (_webui.cookies[i] != NULL) {
@@ -7652,7 +7662,7 @@ static size_t _webui_client_get_id(_webui_window_t* win, struct mg_connection* c
 //         }
 //     }
 //     // Single
-//     _webui.cookies_single_set[win->window_number] = false;
+//     _webui.cookies_single_set[win->num] = false;
 // }
 
 // static void _webui_client_cookies_free(_webui_window_t* win, struct mg_connection* client) {
@@ -7746,7 +7756,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
         // Single client authorisation
         if (!_webui.config.multi_client) {
             if (!client_found) {
-                if ((_webui.cookies_single_set[win->window_number])) {
+                if ((_webui.cookies_single_set[win->num])) {
                     #ifdef WEBUI_LOG
                     printf("[Core]\t\t_webui_http_handler() -> 403 Forbidden\n");
                     #endif
@@ -7754,7 +7764,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                     _webui_mutex_unlock(&_webui.mutex_http_handler);
                     return 403;                    
                 }
-            } else _webui.cookies_single_set[win->window_number] = true;
+            } else _webui.cookies_single_set[win->num] = true;
         }
 
         // Let the server thread waits more time for `webui.js`
@@ -7810,7 +7820,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                 char* index_path = (char*)_webui_malloc(bf_len);
                 for (size_t i = 0; i < (sizeof(index_files) / sizeof(index_files[0])); i++) {
                     WEBUI_SN_PRINTF_DYN(index_path, bf_len, "%s%s%s",
-                        win->server_root_path, webui_sep, index_files[i]
+                        win->server_root_path, os_sep, index_files[i]
                     );
                     if (_webui_file_exist(index_path)) {
                         #ifdef WEBUI_LOG
@@ -7879,7 +7889,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                 size_t bf_len = (_webui_strlen(folder_path) + 1 + 24);
                 char* index_path = (char*)_webui_malloc(bf_len);
                 for (size_t i = 0; i < (sizeof(index_files) / sizeof(index_files[0])); i++) {
-                    WEBUI_SN_PRINTF_DYN(index_path, bf_len, "%s%s%s", folder_path, webui_sep, index_files[i]);
+                    WEBUI_SN_PRINTF_DYN(index_path, bf_len, "%s%s%s", folder_path, os_sep, index_files[i]);
                     if (_webui_file_exist(index_path)) {
                         // [URL][/][Index Name]
                         size_t redirect_len = (_webui_strlen(url) + 1 + 24);
@@ -8011,7 +8021,7 @@ static int _webui_ws_connect_handler(const struct mg_connection* client, void * 
     // Single client authorisation
     if (!_webui.config.multi_client) {
         if (!client_found) {
-            if ((_webui.cookies_single_set[win->window_number])) {
+            if ((_webui.cookies_single_set[win->num])) {
                 #ifdef WEBUI_LOG
                 printf("[Core]\t\t_webui_ws_connect_handler() -> 403 Forbidden\n");
                 #endif
@@ -8108,7 +8118,7 @@ static WEBUI_THREAD_SERVER_START {
     }
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_server_thread([%zu]) -> URL: [%s]\n", win->window_number, win->url);
+    printf("[Core]\t\t_webui_server_thread([%zu]) -> URL: [%s]\n", win->num, win->url);
     #endif
 
     // Folder monitor thread
@@ -8193,13 +8203,13 @@ static WEBUI_THREAD_SERVER_START {
 
             #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_server_thread([%zu]) -> Listening Success\n", 
-                win->window_number);
+                win->num);
             printf("[Core]\t\t_webui_server_thread([%zu]) -> HTTP/WS Port: %s\n", 
-                win->window_number, server_port);
+                win->num, server_port);
             printf("[Core]\t\t_webui_server_thread([%zu]) -> Root path: %s\n", 
-                win->window_number, win->server_root_path);
+                win->num, win->server_root_path);
             printf("[Core]\t\t_webui_server_thread([%zu]) -> Timeout is %zu seconds\n", 
-                win->window_number, _webui.startup_timeout);
+                win->num, _webui.startup_timeout);
             #endif
 
             bool stop = false;
@@ -8214,7 +8224,7 @@ static WEBUI_THREAD_SERVER_START {
                     #ifdef WEBUI_LOG
                     printf(
                         "[Core]\t\t_webui_server_thread([%zu]) -> Waiting for connection\n",
-                        win->window_number
+                        win->num
                     );
                     #endif
 
@@ -8246,7 +8256,7 @@ static WEBUI_THREAD_SERVER_START {
                             #ifdef WEBUI_LOG
                             printf(
                                 "[Core]\t\t_webui_server_thread([%zu]) -> Waiting more for connection\n",
-                                win->window_number
+                                win->num
                             );
                             #endif
 
@@ -8279,18 +8289,15 @@ static WEBUI_THREAD_SERVER_START {
                     #ifdef WEBUI_LOG
                     printf(
                         "[Core]\t\t_webui_server_thread([%zu]) -> Window Connected.\n",
-                        win->window_number
+                        win->num
                     );
                     #endif
 
                     // Folder monitor thread
                     if (_webui.config.folder_monitor && !monitor_created) {
                         monitor_created = true;
-                        _webui_monitor_arg_t* arg = (_webui_monitor_arg_t* ) _webui_malloc(sizeof(_webui_monitor_arg_t));
-                        arg->win_num = win->window_number;
-                        arg->path = win->server_root_path;
                         #ifdef _WIN32
-                        monitor_thread = CreateThread(NULL, 0, _webui_folder_monitor_thread, (void*)arg, 0, NULL);
+                        monitor_thread = CreateThread(NULL, 0, _webui_folder_monitor_thread, (void*)win, 0, NULL);
                         if (monitor_thread != NULL)
                             CloseHandle(monitor_thread);
                         #else
@@ -8318,7 +8325,7 @@ static WEBUI_THREAD_SERVER_START {
                             #ifdef WEBUI_LOG
                             printf(
                                 "[Core]\t\t_webui_server_thread([%zu]) -> Window disconnected\n",
-                                win->window_number
+                                win->num
                             );
                             #endif
 
@@ -8331,7 +8338,7 @@ static WEBUI_THREAD_SERVER_START {
                                     #ifdef WEBUI_LOG
                                     printf(
                                         "[Core]\t\t_webui_server_thread([%zu]) -> Waiting for reconnection\n",
-                                        win->window_number
+                                        win->num
                                     );
                                     #endif
 
@@ -8376,14 +8383,27 @@ static WEBUI_THREAD_SERVER_START {
 
             #ifdef WEBUI_LOG
             printf("[Core]\t\t_webui_server_thread([%zu]) -> Listening Success\n", 
-                win->window_number);
+                win->num);
             printf("[Core]\t\t_webui_server_thread([%zu]) -> HTTP/WS Port: %s\n", 
-                win->window_number, server_port);
+                win->num, server_port);
             printf("[Core]\t\t_webui_server_thread([%zu]) -> Root path: %s\n", 
-                win->window_number, win->server_root_path);
+                win->num, win->server_root_path);
             printf("[Core]\t\t_webui_server_thread([%zu]) -> Infinite loop\n", 
-                win->window_number);
+                win->num);
             #endif
+
+            // Folder monitor thread
+            if (_webui.config.folder_monitor && !monitor_created) {
+                monitor_created = true;
+                #ifdef _WIN32
+                monitor_thread = CreateThread(NULL, 0, _webui_folder_monitor_thread, (void*)win, 0, NULL);
+                if (monitor_thread != NULL)
+                    CloseHandle(monitor_thread);
+                #else
+                pthread_create(&monitor_thread, NULL, &_webui_folder_monitor_thread, (void*)win);
+                pthread_detach(monitor_thread);
+                #endif
+            }
 
             // Wait forever
             for (;;) {
@@ -8395,7 +8415,7 @@ static WEBUI_THREAD_SERVER_START {
     } else {
 
         #ifdef WEBUI_LOG
-        if (!http_ctx) printf("[Core]\t\t_webui_server_thread([%zu]) -> Listening failed.\n", win->window_number);
+        if (!http_ctx) printf("[Core]\t\t_webui_server_thread([%zu]) -> Listening failed.\n", win->num);
         #endif
 
         // Mutex
@@ -8403,19 +8423,10 @@ static WEBUI_THREAD_SERVER_START {
     }
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_server_thread([%zu]) -> Cleaning\n", win->window_number);
+    printf("[Core]\t\t_webui_server_thread([%zu]) -> Cleaning\n", win->num);
     #endif
 
     _webui_mutex_is_connected(win, WEBUI_MUTEX_FALSE);
-
-    // Clean monitor thread
-    #ifdef _WIN32
-    TerminateThread(monitor_thread, 0);
-    CloseHandle(monitor_thread);
-    #else
-    pthread_cancel(monitor_thread);
-    pthread_join(monitor_thread, NULL);
-    #endif
 
     // Clean WebView
     if (win->webView) {
@@ -8435,7 +8446,7 @@ static WEBUI_THREAD_SERVER_START {
     // win->process_id = 0;
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_server_thread([%zu]) -> Server stopped.\n", win->window_number);
+    printf("[Core]\t\t_webui_server_thread([%zu]) -> Server stopped.\n", win->num);
     #endif
 
     // Let the main wait() know that
@@ -8461,6 +8472,21 @@ static WEBUI_THREAD_SERVER_START {
         #endif
     }
 
+    // Clean monitor thread
+    if (_webui.config.folder_monitor && monitor_created) {
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_server_thread([%zu]) -> Killing folder monitor thread\n", win->num);
+        #endif
+        #ifdef _WIN32
+        TerminateThread(monitor_thread, 0);
+        CloseHandle(monitor_thread);
+        #else
+        if (monitor_thread) {
+            pthread_cancel(monitor_thread);
+        }
+        #endif
+    }
+
     WEBUI_THREAD_RETURN
 }
 
@@ -8468,7 +8494,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
     int event_type, void * data, size_t len) {
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_receive([%zu], [%d], [%zu])\n", win->window_number, event_type, len);
+    printf("[Core]\t\t_webui_receive([%zu], [%d], [%zu])\n", win->num, event_type, len);
     #endif
 
     static size_t recvNum = 0;
@@ -8652,7 +8678,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
 
 static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* client, size_t* connection_id) {
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_client_save([%zu])\n", win->window_number);
+    printf("[Core]\t\t_webui_client_save([%zu])\n", win->num);
     #endif
 
     // Save new ws client
@@ -8663,7 +8689,12 @@ static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* c
             printf("[Core]\t\t_webui_client_save() -> Registering client #%zu \n", i);
             #endif
             // Save
+            if (win->single_client == NULL) {
+                win->single_client = client;
+                win->single_client_token_check = false;
+            }
             _webui.clients[i] = client;
+            _webui.clients_win_num[i] = win->num;
             _webui.clients_token_check[i] = false;
             win->clients_count++;
             _webui_mutex_unlock(&_webui.mutex_client);
@@ -8682,7 +8713,7 @@ static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* c
 
 static void _webui_connection_remove(_webui_window_t* win, struct mg_connection* client) {
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_client_remove([%zu])\n", win->window_number);
+    printf("[Core]\t\t_webui_client_remove([%zu])\n", win->num);
     #endif
 
     _webui_mutex_lock(&_webui.mutex_client);
@@ -8700,7 +8731,12 @@ static void _webui_connection_remove(_webui_window_t* win, struct mg_connection*
                 }
             }
             // Clear
+            if (win->single_client == client) {
+                win->single_client = NULL;
+                win->single_client_token_check = false;
+            }
             _webui.clients[i] = NULL;
+            _webui.clients_win_num[i] = 0;
             _webui.clients_token_check[i] = false;
             if (win->clients_count > 0)
                 win->clients_count--;
@@ -8721,7 +8757,7 @@ static void _webui_connection_remove(_webui_window_t* win, struct mg_connection*
 
 static bool _webui_connection_get_id(_webui_window_t* win, struct mg_connection* client, size_t* connection_id) {
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_client_get_id([%zu], [%p])\n", win->window_number, client);
+    printf("[Core]\t\t_webui_client_get_id([%zu], [%p])\n", win->num, client);
     #endif
 
     // Find a ws client
@@ -9064,7 +9100,7 @@ static void _webui_ws_process(
 
                             // Create new event (Function Call)
                             webui_event_t e;
-                            e.window = win->window_number;
+                            e.window = win->num;
                             e.event_type = WEBUI_EVENT_CALLBACK;
                             e.element = element;
                             e.event_number = event_num;
@@ -9156,6 +9192,9 @@ static void _webui_ws_process(
 
                         size_t connection_id = 0;
                         if (_webui_connection_get_id(win, client, &connection_id)) {
+                            if (win->single_client == client) {
+                                win->single_client_token_check = true;
+                            }
                             _webui.clients_token_check[connection_id] = true;
                             status = 0x01;
                             #ifdef WEBUI_LOG
@@ -9993,7 +10032,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     // Close Event
     static void _webui_wv_event_closed(_webui_window_t* win) {
         #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_wv_event_closed([%zu])\n", win->window_number);
+        printf("[Core]\t\t_webui_wv_event_closed([%zu])\n", win->num);
         #endif
         win->is_closed = true;
     }
@@ -10228,7 +10267,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             const char* temp = _webui_get_temp_path();
             _webui.webview_cacheFolder = (char*)_webui_malloc(WEBUI_MAX_PATH);
             WEBUI_SN_PRINTF_DYN(_webui.webview_cacheFolder, WEBUI_MAX_PATH, 
-                "%s%s.WebUI%sWebUIWebViewCache_%"PRIu32, temp, webui_sep, webui_sep,
+                "%s%s.WebUI%sWebUIWebViewCache_%"PRIu32, temp, os_sep, os_sep,
                 _webui_generate_random_uint32());
         }
 
@@ -10873,7 +10912,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             return false;
 
         if (!_webui.is_wkwebview_main_run) {
-            if (_webui_macos_wv_new(win->window_number)) {
+            if (_webui_macos_wv_new(win->num)) {
                 if (!_webui.is_webview) {
                     // Let `wait()` use safe main-thread WKWebView loop
                     _webui.is_webview = true;
@@ -10884,7 +10923,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
         else {
 
-            _webui_macos_wv_new_thread_safe(win->window_number);
+            _webui_macos_wv_new_thread_safe(win->num);
             _webui_sleep(250);
         }
 
@@ -10904,7 +10943,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         webView->height = (win->height > 0 ? win->height : 600);
         webView->x = (win->x > 0 ? win->x : 100);
         webView->y = (win->y > 0 ? win->y : 100);
-        webView->index = win->window_number;
+        webView->index = win->num;
         win->webView = webView;
 
         // Show window
@@ -11031,24 +11070,42 @@ static WEBUI_THREAD_MONITOR {
     printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread()\n");
     #endif
 
-    // Get arguments
-    _webui_monitor_arg_t* args = (_webui_monitor_arg_t*)arg;
+    _webui_window_t* win = _webui_dereference_win_ptr(arg);
+    if (win == NULL) {
+        WEBUI_THREAD_RETURN
+    }
+
+    // Stop if a lower window already monitoring the same folder
+    // Loop trough all windows
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
+        if ((_webui.wins[i] != NULL) && (_webui.wins[i] != win) && (i < win->num)) {
+            WEBUI_THREAD_RETURN
+        }
+    }
+
+    const char* js = "location.reload();";
+    size_t js_len = _webui_strlen(js);
 
     #ifdef _WIN32
         // Windows
         HANDLE hDir = CreateFile(
-            args->path, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            win->server_root_path, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL
         );
         if (hDir == INVALID_HANDLE_VALUE) {
             #ifdef WEBUI_LOG
-            printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Failed to open folder: %s\n", args->path);
+            printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Failed to open folder: %s\n", 
+                win->server_root_path
+            );
             #endif
             WEBUI_THREAD_RETURN
         }
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Monitoring [%s]\n", win->server_root_path);
+        #endif
         char buffer[1024];
         DWORD bytesReturned;
-        while (!_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE)) {
+        while ((!_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE)) && (win->server_running)) {
             if (ReadDirectoryChangesW(
                     hDir, buffer, sizeof(buffer), TRUE,
                     FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES |
@@ -11058,7 +11115,12 @@ static WEBUI_THREAD_MONITOR {
                 #ifdef WEBUI_LOG
                 printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Folder updated\n");
                 #endif
-                webui_run(args->win_num, "location.reload();");
+                // Loop trough all connected clients in this window
+                for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+                    if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
+                        _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len);
+                    }
+                }
             } else {
                 #ifdef WEBUI_LOG
                 printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Failed to read folder changes\n");
@@ -11076,7 +11138,7 @@ static WEBUI_THREAD_MONITOR {
             #endif
             WEBUI_THREAD_RETURN
         }
-        int wd = inotify_add_watch(fd, args->path, IN_MODIFY | IN_CREATE | IN_DELETE);
+        int wd = inotify_add_watch(fd, win->server_root_path, IN_MODIFY | IN_CREATE | IN_DELETE);
         if (wd < 0) {
             #ifdef WEBUI_LOG
             printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> inotify_add_watch error\n");
@@ -11084,6 +11146,9 @@ static WEBUI_THREAD_MONITOR {
             close(fd);
             WEBUI_THREAD_RETURN
         }
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Monitoring [%s]\n", win->server_root_path);
+        #endif
         char buffer[1024];
         while (!_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE)) {
             int length = read(fd, buffer, sizeof(buffer));
@@ -11101,7 +11166,12 @@ static WEBUI_THREAD_MONITOR {
                         #ifdef WEBUI_LOG
                         printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Folder updated\n");
                         #endif
-                        webui_run(args->win_num, "location.reload();");
+                        // Loop trough all connected clients in this window
+                        for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+                            if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
+                                _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len);
+                            }
+                        }
                     }
                 }
                 i += sizeof(struct inotify_event) + event->len;
@@ -11118,7 +11188,7 @@ static WEBUI_THREAD_MONITOR {
             #endif
             WEBUI_THREAD_RETURN
         }
-        int fd = open(args->path, O_RDONLY);
+        int fd = open(win->server_root_path, O_RDONLY);
         if (fd == -1) {
             #ifdef WEBUI_LOG
             printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> open error\n");
@@ -11126,6 +11196,9 @@ static WEBUI_THREAD_MONITOR {
             close(kq);
             WEBUI_THREAD_RETURN
         }
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Monitoring [%s]\n", win->server_root_path);
+        #endif
         struct kevent change;
         EV_SET(&change, fd, EVFILT_VNODE, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_WRITE, 0, NULL);
         while (!_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE)) {
@@ -11141,7 +11214,12 @@ static WEBUI_THREAD_MONITOR {
                     #ifdef WEBUI_LOG
                     printf("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Folder updated\n");
                     #endif
-                    webui_run(args->win_num, "location.reload();");
+                    // Loop trough all connected clients in this window
+                    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+                        if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
+                            _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len);
+                        }
+                    }
                 }
             }
         }
