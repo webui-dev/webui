@@ -113,7 +113,9 @@ int main() {
 	// Bind events
 	webui_bind(MyWindow, "", events);
 
-	// Make Deno as the `.ts` and `.js` interpreter
+	// Set the `.ts` and `.js` runtime
+	// webui_set_runtime(MyWindow, NodeJS);
+	// webui_set_runtime(MyWindow, Bun);
 	webui_set_runtime(MyWindow, Deno);
 
 	// Set a custom files handler

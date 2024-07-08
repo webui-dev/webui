@@ -1,7 +1,12 @@
 // This file gets called like follow:
-// `Index.html` ->
-//  `http://localhost:xxx/deno_test.ts?foo=123&bar=456` ->
-//   `deno run --allow-all --unstable "deno_test.ts" "foo=123&bar=456"`
+// 
+// 1. UI `Index.html` request:
+//    `http://localhost:xxx/deno_test.ts?foo=123&bar=456`
+//
+// 2. WebUI runs command:
+//    `deno run --allow-all --unstable "deno_test.ts" "foo=123&bar=456"`
+//
+// 3. Deno parse args and print the response
 
 // Import parse()
 import { parse } from 'https://deno.land/std/flags/mod.ts';
@@ -21,4 +26,4 @@ for (const [key, value] of params.entries()) {
 	else if (key == 'bar') bar = value; // 456
 }
 
-console.error('foo + bar = ' + (parseInt(foo) + parseInt(bar))); // 579
+console.log('Response from Deno: ' + (parseInt(foo) + parseInt(bar))); // 579

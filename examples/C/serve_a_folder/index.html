@@ -66,7 +66,13 @@
 		By a simple HTTP request "deno_test.ts?foo=60&bar=40"
 		<br />
 		<br />
-		<button OnClick="call_deno_file();">deno_test.ts (Local file)</button>
+		<button OnClick="call_deno_file();">Deno_test.ts (Local file)</button>
+		<br />
+		<br />
+		<button OnClick="call_bun_file();">Bun_test.ts (Local file)</button>
+		<br />
+		<br />
+		<button OnClick="call_nodejs_file();">Nodejs_test.ts (Local file)</button>
 		<br />
 		<h4><a href="second.html">Second Page As A Simple Link (Local file)</a></h4>
 		<br />
@@ -89,14 +95,33 @@
 	<script src="/webui.js"></script>
 
 	<script>
-		function call_deno_file() {
-			// Because `main.c` set Deno as the `.ts` and `.js` interpreter
-			// then a simple HTTP request to `/deno_test.ts` will be bassed
-			// to Deno.
 
+		function call_deno_file() {
+			// Note:
+			// You need to set Deno as default runtime in the backend
 			// Simple HTTP Request
 			var xmlHttp = new XMLHttpRequest();
-			xmlHttp.open('GET', 'deno_test.ts?foo=60&bar=40', false);
+			xmlHttp.open('GET', 'deno_test.ts?foo=123&bar=456', false);
+			xmlHttp.send(null);
+			alert(xmlHttp.responseText);
+		}
+
+		function call_bun_file() {
+			// Note:
+			// You need to set Bun as default runtime in the backend
+			// Simple HTTP Request
+			var xmlHttp = new XMLHttpRequest();
+			xmlHttp.open('GET', 'bun_test.ts?foo=123&bar=456', false);
+			xmlHttp.send(null);
+			alert(xmlHttp.responseText);
+		}
+
+		function call_nodejs_file() {
+			// Note:
+			// You need to set Nodejs as default runtime in the backend
+			// Simple HTTP Request
+			var xmlHttp = new XMLHttpRequest();
+			xmlHttp.open('GET', 'node_test.js?foo=123&bar=456', false);
 			xmlHttp.send(null);
 			alert(xmlHttp.responseText);
 		}
