@@ -8691,7 +8691,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
 
 static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* client, size_t* connection_id) {
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_client_save([%zu])\n", win->num);
+    printf("[Core]\t\t_webui_connection_save([%zu])\n", win->num);
     #endif
 
     // Save new ws client
@@ -8699,7 +8699,7 @@ static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* c
     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
         if (_webui.clients[i] == NULL) {
             #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_client_save() -> Registering client #%zu \n", i);
+            printf("[Core]\t\t_webui_connection_save() -> Registering client #%zu \n", i);
             #endif
             // Save
             if (win->single_client == NULL) {
@@ -8718,7 +8718,7 @@ static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* c
     
     // List is full
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_client_save() -> Clients list is full\n");
+    printf("[Core]\t\t_webui_connection_save() -> Clients list is full\n");
     #endif
     _webui_mutex_unlock(&_webui.mutex_client);
     return false;
@@ -8726,7 +8726,7 @@ static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* c
 
 static void _webui_connection_remove(_webui_window_t* win, struct mg_connection* client) {
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_client_remove([%zu])\n", win->num);
+    printf("[Core]\t\t_webui_connection_remove([%zu])\n", win->num);
     #endif
 
     _webui_mutex_lock(&_webui.mutex_client);
@@ -8735,7 +8735,7 @@ static void _webui_connection_remove(_webui_window_t* win, struct mg_connection*
     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
         if (_webui.clients[i] == client) {
             #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_client_remove() -> Removing client #%zu \n", i);
+            printf("[Core]\t\t_webui_connection_remove() -> Removing client #%zu \n", i);
             #endif
             // Reset Token
             if (!_webui.config.multi_client) {
@@ -8762,7 +8762,7 @@ static void _webui_connection_remove(_webui_window_t* win, struct mg_connection*
 
     // Client not found
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_client_remove() -> Client not found\n");
+    printf("[Core]\t\t_webui_connection_remove() -> Client not found\n");
     #endif
     _webui_mutex_unlock(&_webui.mutex_client);
     mg_close_connection(client);
@@ -8770,7 +8770,7 @@ static void _webui_connection_remove(_webui_window_t* win, struct mg_connection*
 
 static bool _webui_connection_get_id(_webui_window_t* win, struct mg_connection* client, size_t* connection_id) {
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_client_get_id([%zu], [%p])\n", win->num, client);
+    printf("[Core]\t\t_webui_connection_get_id([%zu], [%p])\n", win->num, client);
     #endif
 
     // Find a ws client
@@ -8785,7 +8785,7 @@ static bool _webui_connection_get_id(_webui_window_t* win, struct mg_connection*
 
     // Client not found
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_client_get_id() -> Client not found\n");
+    printf("[Core]\t\t_webui_connection_get_id() -> Client not found\n");
     #endif
     _webui_mutex_unlock(&_webui.mutex_client);
     return false;
@@ -9295,6 +9295,17 @@ static void _webui_ws_process(
                     recvNum
                 );
                 #endif
+
+                // Send a void response to solve `.call()` promise
+
+                // Packet Protocol Format:
+                // [...]
+                // [CMD]
+
+                // Send the packet
+                _webui_send_client(
+                    win, client, packet_id, 0x00, NULL, 0
+                );
 
                 // Forced close
                 _webui_connection_remove(win, client);
