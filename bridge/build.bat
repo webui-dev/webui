@@ -37,7 +37,7 @@ IF NOT EXIST "%project_root%\bridge\node_modules\esbuild\" (
 
 REM Transpile WebUI-Bridge (TS to JS) & Convert WebUI-Bridge (JS to C)
 echo Transpile and bundle WebUI-Bridge from TypeScript to JavaScript...
-.\node_modules\.bin\esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=. ./webui_bridge.ts & %python_cmd% js2c.py
+.\node_modules\.bin\esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --minify-syntax --minify-whitespace --outdir=. ./webui_bridge.ts & %python_cmd% js2c.py
 
 echo Done.
 cd %cd%
