@@ -96,7 +96,7 @@ fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
         webui.linkFramework("WebKit");
     } else if (is_windows) {
         webui.linkSystemLibrary("ws2_32");
-        webui.linkSystemLibrary("Ole32");
+        webui.linkSystemLibrary("ole32");
         if (webui_target.abi == .msvc) {
             webui.linkSystemLibrary("Advapi32");
             webui.linkSystemLibrary("Shell32");
