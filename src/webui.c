@@ -7529,7 +7529,8 @@ static void _webui_http_send_header(
         // Header with auth cookies
         to_send = WEBUI_SN_PRINTF_DYN(buffer, buffer_len,
             "HTTP/1.1 200 OK\r\n"
-            "Set-Cookie: webui_auth=%s; Path=/; HttpOnly\r\n"
+            "Set-Cookie: webui_auth=%s; Path=/; HttpOnly; SameSite=Strict\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
             "Cache-Control: %s\r\n"
             "Content-Type: %s\r\n"
             "Content-Length: %zu\r\n"
@@ -7542,6 +7543,7 @@ static void _webui_http_send_header(
         // Header without auth cookies
         to_send = WEBUI_SN_PRINTF_DYN(buffer, buffer_len,
             "HTTP/1.1 200 OK\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
             "Cache-Control: %s\r\n"
             "Content-Type: %s\r\n"
             "Content-Length: %zu\r\n"

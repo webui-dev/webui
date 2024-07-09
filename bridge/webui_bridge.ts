@@ -370,14 +370,14 @@ class WebuiBridge {
 			this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN);
 			// this.#addID(packet, 0, this.#PROTOCOL_ID)
 			this.#sendData(packet);
-			if (this.#log) console.log(`WebUI -> Send Check Token [${this.#token}]`);
+			if (this.#log) console.log(`WebUI -> Send Token [0x${this.#token.toString(16).padStart(8, '0')}]`);
 			// Refresh the page if token not accepted
 			setTimeout(() => this.#checkTokenReload(), 1000);
 		}
 	}
 	#checkTokenReload() {
 		if (!this.#TokenAccepted) {
-			if (this.#log) console.log(`WebUI -> Token [${this.#token}] not accepted. Reload page...`);
+			if (this.#log) console.log(`WebUI -> Token [0x${this.#token.toString(16).padStart(8, '0')}] not accepted. Reload page...`);
 			this.#allowNavigation = true;
 			this.#wsStayAlive = false;
 			globalThis.location.reload();
