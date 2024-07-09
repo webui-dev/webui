@@ -708,6 +708,15 @@ WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
 WEBUI_EXPORT bool webui_set_port(size_t window, size_t port);
 
 /**
+ * @brief Get an available network port to be used by your app or by WebUI.
+ *
+ * @return Returns a free port
+ *
+ * @example int port = webui_get_free_port(); webui_set_port(myWindow, port);
+ */
+WEBUI_EXPORT size_t webui_get_free_port(void);
+
+/**
  * @brief Control the WebUI behaviour. It's recommended to be called at the beginning.
  *
  * @param option The desired option from `webui_config` enum
