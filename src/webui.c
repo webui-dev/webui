@@ -473,7 +473,7 @@ static void * _webui_run_browser_task(void * _arg);
 static void _webui_init(void);
 static bool _webui_show(_webui_window_t* win, struct mg_connection* client, const char* content, size_t browser);
 static bool _webui_get_cb_index(_webui_window_t* win, const char* element, size_t* id);
-static size_t _webui_get_free_port(void);
+// static size_t _webui_get_free_port(void); // now in headers
 static void _webui_free_port(size_t port);
 static char* _webui_get_current_path(void);
 static void _webui_send_client_ws(_webui_window_t* win, struct mg_connection* client,
@@ -7294,7 +7294,7 @@ static void _webui_free_port(size_t port) {
     }
 }
 
-static size_t _webui_get_free_port(void) {
+size_t _webui_get_free_port(void) {
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_get_free_port()\n");

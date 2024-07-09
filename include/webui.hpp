@@ -180,6 +180,9 @@ class window {
     // link of `webui.js` in case you are trying to use WebUI with an external web-server like NGNIX
     void set_port(size_t port) const { webui_set_port(webui_window, port); }
 
+    // Get an available network port to be used by your app or by WebUI.
+    size_t get_free_port() { _webui_get_free_port(); }
+
     // Set window position
     void set_position(unsigned int x, unsigned int y) const { webui_set_position(webui_window, x, y); }
 
