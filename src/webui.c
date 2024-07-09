@@ -2291,6 +2291,23 @@ void webui_set_event_blocking(size_t window, bool status) {
     win->ws_block = status;
 }
 
+size_t webui_get_port(size_t window) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_get_port([%zu])...\n", window);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return 0;
+    _webui_window_t* win = _webui.wins[window];
+
+    return win->server_port;
+}
+
 bool webui_set_port(size_t window, size_t port) {
 
     #ifdef WEBUI_LOG

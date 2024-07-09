@@ -176,6 +176,9 @@ class window {
     // Set window size
     void set_size(unsigned int width, unsigned int height) const { webui_set_size(webui_window, width, height); }
 
+    // Get the web-server network port to be used by WebUI. Returns 0 if no port is used.
+    size_t get_port() const { return webui_get_port(webui_window); }
+
     // Set a custom web-server network port to be used by WebUI. This can be useful to determine the HTTP 
     // link of `webui.js` in case you are trying to use WebUI with an external web-server like NGNIX
     void set_port(size_t port) const { webui_set_port(webui_window, port); }
