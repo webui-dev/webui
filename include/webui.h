@@ -712,9 +712,9 @@ WEBUI_EXPORT bool webui_set_port(size_t window, size_t port);
  *
  * @return Returns a free port
  *
- * @example int port = _webui_get_free_port(); webui_set_port(myWindow, port);
+ * @example int port = webui_get_free_port(); webui_set_port(myWindow, port);
  */
-WEBUI_EXPORT size_t _webui_get_free_port(void);
+WEBUI_EXPORT size_t webui_get_free_port(void);
 
 /**
  * @brief Control the WebUI behaviour. It's recommended to be called at the beginning.
