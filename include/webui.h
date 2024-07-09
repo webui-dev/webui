@@ -422,7 +422,8 @@ WEBUI_EXPORT bool webui_set_root_folder(size_t window, const char* path);
 WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
 
 /**
- * @brief Set a custom handler to serve files.
+ * @brief Set a custom handler to serve files. This custom handler should
+ * return full HTTP header and body.
  *
  * @param window The window number
  * @param handler The handler function: `void myHandler(const char* filename,
@@ -694,14 +695,12 @@ WEBUI_EXPORT size_t webui_get_parent_process_id(size_t window);
 WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
 
 /**
- * @brief Get the web-server network port to be used by WebUI.
- * This can be useful to determine the HTTP link of `webui.js` 
+ * @brief Get the network port of a running window.
+ * This can be useful to determine the HTTP link of `webui.js`
  *
  * @param window The window number
- * @param port The web-server network port WebUI should use
- *
- * @return Returns 0 if no port is used, or the port used by
- *  web-server network port WebUI should use
+ * 
+ * @return Returns the network port of the window
  *
  * @example size_t port = webui_get_port(myWindow);
  */
@@ -722,11 +721,11 @@ WEBUI_EXPORT size_t webui_get_port(size_t window);
 WEBUI_EXPORT bool webui_set_port(size_t window, size_t port);
 
 /**
- * @brief Get an available network port to be used by your app or by WebUI.
+ * @brief Get an available usable free network port.
  *
  * @return Returns a free port
  *
- * @example int port = webui_get_free_port(); webui_set_port(myWindow, port);
+ * @example size_t port = webui_get_free_port();
  */
 WEBUI_EXPORT size_t webui_get_free_port(void);
 
@@ -752,6 +751,15 @@ WEBUI_EXPORT void webui_set_config(webui_config option, bool status);
  * @example webui_set_event_blocking(myWindow, true);
  */
 WEBUI_EXPORT void webui_set_event_blocking(size_t window, bool status);
+
+/**
+ * @brief Get the HTTP mime type of a file.
+ *
+ * @return Returns the HTTP mime string
+ *
+ * @example const char* mime = webui_get_mime_type("foo.png");
+ */
+WEBUI_EXPORT const char* webui_get_mime_type(const char* file);
 
 // -- SSL/TLS -------------------------
 
