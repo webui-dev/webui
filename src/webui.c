@@ -7975,7 +7975,45 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
             // [Path][Sep][folder]
             char* folder_path = _webui_get_full_path(win, url);
 
-            if (_webui_folder_exist(folder_path)) {
+            if (_webui_file_exist(folder_path)) {
+			
+                // [/file]
+
+                bool script = false;
+                if (win->runtime != None) {
+                    const char* extension = _webui_get_extension(url);
+                    const char* index_extensions[] = {
+                        "js", "ts"
+                    };
+                    for (size_t i = 0; i < (sizeof(index_extensions) / sizeof(index_extensions[0])); i++) {
+                        if (strcmp(extension, index_extensions[i]) == 0) {
+                            script = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (script) {
+
+                    #ifdef WEBUI_LOG
+                    printf("[Core]\t\t_webui_http_handler() -> Interpret local script file\n");
+                    #endif
+
+                    // Serve as a script file to be interpreted by
+                    // an external interpreter (Deno, Bun, Nodejs)
+                    http_status_code = _webui_interpret_file(win, client, NULL, client_id);
+                }
+                else {
+
+                    #ifdef WEBUI_LOG
+                    printf("[Core]\t\t_webui_http_handler() -> Local file\n");
+                    #endif
+
+                    // Serve as a normal text-based file
+                    http_status_code = _webui_serve_file(win, client, client_id);
+                }
+			}
+			else if (_webui_folder_exist(folder_path)) {
 
                 // [/folder]
                 
@@ -8012,42 +8050,16 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                 http_status_code = 404;
             }
             else {
+				
+                // [invalid]
+				
+				#ifdef WEBUI_LOG
+				printf("[Core]\t\t_webui_http_handler() -> Not found\n");
+				#endif
 
-                // [/file]
-
-                bool script = false;
-                if (win->runtime != None) {
-                    const char* extension = _webui_get_extension(url);
-                    const char* index_extensions[] = {
-                        "js", "ts"
-                    };
-                    for (size_t i = 0; i < (sizeof(index_extensions) / sizeof(index_extensions[0])); i++) {
-                        if (strcmp(extension, index_extensions[i]) == 0) {
-                            script = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (script) {
-
-                    #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_http_handler() -> Interpret local script file\n");
-                    #endif
-
-                    // Serve as a script file to be interpreted by
-                    // an external interpreter (Deno, Bun, Nodejs)
-                    http_status_code = _webui_interpret_file(win, client, NULL, client_id);
-                }
-                else {
-
-                    #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_http_handler() -> Local file\n");
-                    #endif
-
-                    // Serve as a normal text-based file
-                    http_status_code = _webui_serve_file(win, client, client_id);
-                }
+                // No file or folder is found at this path
+                http_status_code = _webui_serve_file(win, client, client_id);
+                http_status_code = 404;
             }
 
             // Clear
