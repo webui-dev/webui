@@ -579,6 +579,7 @@ static bool _webui_client_cookies_get_id(_webui_window_t* win, const char* cooki
 static size_t _webui_client_get_id(_webui_window_t* win, struct mg_connection* client);
 static void _webui_generate_cookies(char* cookies, size_t length);
 static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client, size_t client_id);
+static int _webui_external_file_handler(_webui_window_t* win, struct mg_connection* client, size_t client_id);
 static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* client, char* index, size_t client_id);
 // WebView
 #ifdef _WIN32
@@ -2071,6 +2072,18 @@ size_t webui_get_parent_process_id(size_t window) {
     return win->process_id;
 }
 
+const char* webui_get_mime_type(const char* file) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_get_mime_type([%s])\n", file);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    return mg_get_builtin_mime_type(file);
+}
+
 size_t webui_get_free_port(void) {
 
     #ifdef WEBUI_LOG
@@ -2081,6 +2094,23 @@ size_t webui_get_free_port(void) {
     _webui_init();
 
     return _webui_get_free_port();
+}
+
+size_t webui_get_port(size_t window) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_get_port([%zu])\n", window);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return 0;
+    _webui_window_t* win = _webui.wins[window];
+
+    return win->server_port;
 }
 
 #ifdef WEBUI_TLS
@@ -2289,23 +2319,6 @@ void webui_set_event_blocking(size_t window, bool status) {
     _webui_window_t* win = _webui.wins[window];
 
     win->ws_block = status;
-}
-
-size_t webui_get_port(size_t window) {
-
-    #ifdef WEBUI_LOG
-    printf("[User] webui_get_port([%zu])...\n", window);
-    #endif
-
-    // Initialization
-    _webui_init();
-
-    // Dereference
-    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
-        return 0;
-    _webui_window_t* win = _webui.wins[window];
-
-    return win->server_port;
 }
 
 bool webui_set_port(size_t window, size_t port) {
@@ -4155,16 +4168,13 @@ static void _webui_free_event_inf(_webui_window_t* win, size_t event_num) {
     win->events[event_num] = NULL;
 }
 
-static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client, size_t client_id) {
+static int _webui_external_file_handler(_webui_window_t* win, struct mg_connection* client, size_t client_id) {
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_serve_file()\n");
+    printf("[Core]\t\t_webui_external_file_handler()\n");
     #endif
 
-    // Serve a normal text based file
-
     int http_status_code = 0;
-
     const struct mg_request_info * ri = mg_get_request_info(client);
     const char* url = ri->local_uri;
 
@@ -4188,24 +4198,39 @@ static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client,
         // e.cookies = "";
 
         // Files handler callback
-        const void * callback_resp = win->files_handler(url, (int*)&length);
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_external_file_handler() -> Path [%s]\n", url);
+        printf("[Core]\t\t_webui_external_file_handler() -> Calling custom files handler callback\n");
+        printf("[Call]\n");
+        #endif
+        const void* callback_resp = win->files_handler(url, (int*)&length);
 
         if (callback_resp != NULL) {
 
-            // File content found (200)
+            // File content found
 
             if (length == 0)
                 length = _webui_strlen(callback_resp);
 
-            // Send user data (200)
-            _webui_http_send(win, client, mg_get_builtin_mime_type(url), 
-                callback_resp, length, false);
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_external_file_handler() -> Custom files handler found (%zu bytes)\n",
+                length
+            );
+            #endif
+
+            // Send user data (Header + Body)
+            mg_write(client, callback_resp, length);
             
             // Safely free resources if end-user allocated
             // using `webui_malloc()`. Otherwise just do nothing.
-            webui_free((void*)callback_resp);
+            _webui_free_mem((void*)callback_resp);
 
             http_status_code = 200;
+        }
+        else {
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_external_file_handler() -> Custom files handler failed\n");
+            #endif
         }
 
         // If `data == NULL` thats mean the external handler
@@ -4213,30 +4238,44 @@ static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client,
         // looking for the file locally.
     }
 
-    if (http_status_code != 200) {
+    return http_status_code;
+}
 
-        // Using internal files handler
+static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client, size_t client_id) {
 
-        // Get full path
-        char* file = _webui_get_file_name_from_url(url);
-        char* full_path = _webui_get_full_path(win, file);
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_serve_file()\n");
+    #endif
 
-        if (_webui_file_exist(full_path)) {
+    // Serve a normal text based file
 
-            // 200 - File exist
-            _webui_http_send_file(win, client, mg_get_builtin_mime_type(url), full_path, false);
-            http_status_code = 200;
-        }
-        else {
+    int http_status_code = 0;
+    const struct mg_request_info * ri = mg_get_request_info(client);
+    const char* url = ri->local_uri;
 
-            // 404 - File not exist
-            _webui_http_send_error(client, webui_html_res_not_available, 404);
-            http_status_code = 404;
-        }
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_serve_file() -> Looking for file locally\n");
+    #endif
 
-        _webui_free_mem((void*)full_path);
-        _webui_free_mem((void*)file);
+    // Get full path
+    char* file = _webui_get_file_name_from_url(url);
+    char* full_path = _webui_get_full_path(win, file);
+
+    if (_webui_file_exist(full_path)) {
+
+        // 200 - File exist
+        _webui_http_send_file(win, client, mg_get_builtin_mime_type(url), full_path, false);
+        http_status_code = 200;
     }
+    else {
+
+        // 404 - File not exist
+        _webui_http_send_error(client, webui_html_res_not_available, 404);
+        http_status_code = 404;
+    }
+
+    _webui_free_mem((void*)full_path);
+    _webui_free_mem((void*)file);
 
     return http_status_code;
 }
@@ -7646,14 +7685,14 @@ static void _webui_http_send_error(struct mg_connection* client, const char* bod
     size_t buffer_len = (512 + body_len);
     char* buffer = (char*)_webui_malloc(buffer_len);
     to_send = WEBUI_SN_PRINTF_DYN(buffer, buffer_len,
-        "HTTP/1.1 200 OK\r\n"
+        "HTTP/1.1 %d OK\r\n"
         "Content-Type: text/html; charset=utf-8\r\n"
         "Cache-Control: no-cache, no-store, must-revalidate, private, max-age=0\r\n"
         "Pragma: no-cache\r\n"
         "Expires: 0\r\n"
         "Content-Length: %zu\r\n"
         "Connection: close\r\n\r\n%s",
-        body_len, body
+        status, body_len, body
     );
 
     // Send
@@ -7892,6 +7931,14 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                 _webui_http_send(win, client, "application/javascript", "", 0, false);
             }
         }
+        else if ((win->files_handler != NULL) && (_webui_external_file_handler(win, client, client_id) != 0)) {
+
+            // File already handled by the custom external file handler
+            // nothing to do now.
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_http_handler() -> Handled by custom external file handler\n");
+            #endif
+        }
         else if (strcmp(url, "/") == 0) {
 
             // [/]
@@ -7976,7 +8023,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
             char* folder_path = _webui_get_full_path(win, url);
 
             if (_webui_file_exist(folder_path)) {
-			
+
                 // [/file]
 
                 bool script = false;
@@ -8012,8 +8059,8 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                     // Serve as a normal text-based file
                     http_status_code = _webui_serve_file(win, client, client_id);
                 }
-			}
-			else if (_webui_folder_exist(folder_path)) {
+            }
+            else if (_webui_folder_exist(folder_path)) {
 
                 // [/folder]
                 
@@ -8050,7 +8097,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                 http_status_code = 404;
             }
             else {
-				
+
                 // [invalid]
 				
 				#ifdef WEBUI_LOG
@@ -8058,7 +8105,8 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
 				#endif
 
                 // No file or folder is found at this path
-                http_status_code = _webui_serve_file(win, client, client_id);
+                _webui_http_send_error(client, webui_html_res_not_available, 404);
+                _webui_free_mem((void*)folder_path);
                 http_status_code = 404;
             }
 
