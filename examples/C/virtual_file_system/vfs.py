@@ -63,7 +63,7 @@ def generate_vfs_header(directory, output_header):
         header.write('    return false;\n')
         header.write('}\n\n')
 
-        header.write('void* vfs(const char* path, int* length) {\n')
+        header.write('const void* vfs(const char* path, int* length) {\n')
         header.write('    const unsigned char* file_data;\n')
         header.write('    int file_length;\n\n')
 
