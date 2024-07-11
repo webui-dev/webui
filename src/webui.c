@@ -401,10 +401,10 @@ typedef struct _webui_core_t {
     char* default_server_root_path;
     bool ui;
     #ifdef WEBUI_TLS
-    uint8_t* root_cert;
-    uint8_t* root_key;
-    uint8_t* ssl_cert;
-    uint8_t* ssl_key;
+    char* root_cert;
+    char* root_key;
+    char* ssl_cert;
+    char* ssl_key;
     #endif
     // WebView
     bool is_browser_main_run;
@@ -556,8 +556,8 @@ static void _webui_connection_remove(_webui_window_t* win, struct mg_connection*
 static void _webui_remove_firefox_profile_ini(const char* path, const char* profile_name);
 static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* profile_name);
 static void _webui_send_client(_webui_window_t* win, struct mg_connection *client, 
-    uint16_t id, uint8_t cmd, const char* data, size_t len, bool token_bypass);
-static void _webui_send_all(_webui_window_t* win, uint16_t id, uint8_t cmd, const char* data, size_t len);
+    uint16_t id, unsigned char cmd, const char* data, size_t len, bool token_bypass);
+static void _webui_send_all(_webui_window_t* win, uint16_t id, unsigned char cmd, const char* data, size_t len);
 static uint16_t _webui_get_id(const char* data);
 static uint32_t _webui_get_token(const char* data);
 static uint32_t _webui_generate_random_uint32();
@@ -5038,7 +5038,7 @@ static uint16_t _webui_get_id(const char* data) {
     return id;
 }
 
-static void _webui_send_all(_webui_window_t* win, uint16_t id, uint8_t cmd, const char* data, size_t len) {
+static void _webui_send_all(_webui_window_t* win, uint16_t id, unsigned char cmd, const char* data, size_t len) {
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_send_all()\n");
@@ -5066,7 +5066,7 @@ static void _webui_send_all(_webui_window_t* win, uint16_t id, uint8_t cmd, cons
 
 static void _webui_send_client(
     _webui_window_t* win, struct mg_connection *client, 
-    uint16_t id, uint8_t cmd, const char* data, size_t len, bool token_bypass) {
+    uint16_t id, unsigned char cmd, const char* data, size_t len, bool token_bypass) {
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_send_client()\n");
@@ -6775,20 +6775,20 @@ static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key
     X509_gmtime_adj(X509_get_notAfter(root_x509), (long)(WEBUI_SSL_EXPIRE));
 
     X509_NAME * root_name = X509_get_subject_name(root_x509);
-    X509_NAME_add_entry_by_txt(root_name, "C", MBSTRING_ASC, "CA", -1, -1,
+    X509_NAME_add_entry_by_txt(root_name, "C", MBSTRING_ASC, (const unsigned char *)"CA", -1, -1,
         0); // Country
-    X509_NAME_add_entry_by_txt(root_name, "O", MBSTRING_ASC, "WebUI Root Authority", -1, -1, 0); // Organization
-    X509_NAME_add_entry_by_txt(root_name, "OU", MBSTRING_ASC, "WebUI", -1, -1,
+    X509_NAME_add_entry_by_txt(root_name, "O", MBSTRING_ASC, (const unsigned char *)"WebUI Root Authority", -1, -1, 0); // Organization
+    X509_NAME_add_entry_by_txt(root_name, "OU", MBSTRING_ASC, (const unsigned char *)"WebUI", -1, -1,
         0); // Organizational Unit
-    X509_NAME_add_entry_by_txt(root_name, "CN", MBSTRING_ASC, "localhost", -1, -1,
+    X509_NAME_add_entry_by_txt(root_name, "CN", MBSTRING_ASC, (const unsigned char *)"localhost", -1, -1,
         0); // Common Name
     X509_NAME_add_entry_by_txt(
-        root_name, "subjectAltName", MBSTRING_ASC, "127.0.0.1", -1, -1,
+        root_name, "subjectAltName", MBSTRING_ASC, (const unsigned char *)"127.0.0.1", -1, -1,
         0
     ); // Subject Alternative Name
-    X509_NAME_add_entry_by_txt(root_name, "ST", MBSTRING_ASC, "WebUI", -1, -1,
+    X509_NAME_add_entry_by_txt(root_name, "ST", MBSTRING_ASC, (const unsigned char *)"WebUI", -1, -1,
         0); // State
-    X509_NAME_add_entry_by_txt(root_name, "L", MBSTRING_ASC, "WebUI", -1, -1,
+    X509_NAME_add_entry_by_txt(root_name, "L", MBSTRING_ASC, (const unsigned char *)"WebUI", -1, -1,
         0); // Locality
 
     X509_set_issuer_name(root_x509, root_name);
@@ -6837,20 +6837,20 @@ static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key
     X509_gmtime_adj(X509_get_notAfter(x509), (long)(WEBUI_SSL_EXPIRE));
 
     X509_NAME * name = X509_get_subject_name(x509);
-    X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, "CA", -1, -1,
+    X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char *)"CA", -1, -1,
         0); // Country
-    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, "WebUI", -1, -1,
+    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char *)"WebUI", -1, -1,
         0); // Organization
-    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, "WebUI", -1, -1,
+    X509_NAME_add_entry_by_txt(name, "OU", MBSTRING_ASC, (const unsigned char *)"WebUI", -1, -1,
         0); // Organizational Unit
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, "localhost", -1, -1,
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char *)"localhost", -1, -1,
         0); // Common Name
     X509_NAME_add_entry_by_txt(
-        name, "subjectAltName", MBSTRING_ASC, "127.0.0.1", -1, -1, 0
+        name, "subjectAltName", MBSTRING_ASC, (const unsigned char *)"127.0.0.1", -1, -1, 0
     ); // Subject Alternative Name
-    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, "WebUI", -1, -1,
+    X509_NAME_add_entry_by_txt(name, "ST", MBSTRING_ASC, (const unsigned char *)"WebUI", -1, -1,
         0); // State
-    X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, "WebUI", -1, -1,
+    X509_NAME_add_entry_by_txt(name, "L", MBSTRING_ASC, (const unsigned char *)"WebUI", -1, -1,
         0); // Locality
 
     X509_set_issuer_name(x509, root_name);
@@ -7431,8 +7431,9 @@ static void _webui_init(void) {
 
     // Initializing server services
     #ifdef WEBUI_TLS
-    if (mg_init_library(MG_FEATURES_TLS) != MG_FEATURES_TLS)
+    if ((unsigned)mg_init_library(MG_FEATURES_TLS) != (unsigned)MG_FEATURES_TLS) {
         WEBUI_ASSERT("mg_init_library() failed");
+    }
     #else
     mg_init_library(0);
     #endif
