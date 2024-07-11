@@ -1,9 +1,13 @@
 /*
-  WebUI Bridge Utils
-
-  Copyright (c) 2024 Oculi Julien.
+  https://webui.me
+  https://github.com/webui-dev/webui
+  Copyright (c) 2020-2024 Hassan Draga.
   Licensed under MIT License.
   All rights reserved.
+  Canada.
+
+  File: WebUI Bridge Utils
+  Copyright (c) 2024 Oculi Julien.
 */
 
 /**

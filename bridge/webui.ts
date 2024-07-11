@@ -3,7 +3,7 @@
 /*
   WebUI Bridge
 
-  http://webui.me
+  https://webui.me
   https://github.com/webui-dev/webui
   Copyright (c) 2020-2024 Hassan Draga.
   Licensed under MIT License.

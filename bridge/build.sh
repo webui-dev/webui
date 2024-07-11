@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# http://webui.me
+# https://webui.me
 # https://github.com/webui-dev/webui
 # Copyright (c) 2020-2024 Hassan Draga.
 # Licensed under MIT License.
 # All rights reserved.
+# Canada.
 #
 # Special Thanks to Turiiya (https://github.com/ttytm)
 
