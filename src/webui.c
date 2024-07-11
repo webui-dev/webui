@@ -1649,7 +1649,7 @@ bool webui_show_browser(size_t window, const char* content, size_t browser) {
     _webui_window_t* win = _webui.wins[window];
 
     // Show the window using a specific browser only
-    win->allow_webview = (browser == WebView ? true : false);
+    win->allow_webview = (browser == Webview ? true : false);
 
     // Show for all connected clients
     return _webui_show(win, NULL, content, browser);
@@ -7056,7 +7056,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
                 #ifdef WEBUI_LOG
                 printf("[Core]\t\t_webui_show_window() -> WebView Found\n");
                 #endif
-                win->current_browser = WebView;
+                win->current_browser = Webview;
                 runWebView = true;
             }
             else {
