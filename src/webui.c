@@ -556,7 +556,7 @@ static void _webui_connection_remove(_webui_window_t* win, struct mg_connection*
 static void _webui_remove_firefox_profile_ini(const char* path, const char* profile_name);
 static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* profile_name);
 static void _webui_send_client(_webui_window_t* win, struct mg_connection *client, 
-    uint16_t id, uint8_t cmd, const char* data, size_t len);
+    uint16_t id, uint8_t cmd, const char* data, size_t len, bool token_bypass);
 static void _webui_send_all(_webui_window_t* win, uint16_t id, uint8_t cmd, const char* data, size_t len);
 static uint16_t _webui_get_id(const char* data);
 static uint32_t _webui_get_token(const char* data);
@@ -694,7 +694,7 @@ void webui_run_client(webui_event_t* e, const char* script) {
     // [Script]
 
     // Send the packet to a single client
-    _webui_send_client(win, _webui.clients[e->connection_id], 0, WEBUI_CMD_JS_QUICK, script, js_len);
+    _webui_send_client(win, _webui.clients[e->connection_id], 0, WEBUI_CMD_JS_QUICK, script, js_len, false);
 }
 
 void webui_run(size_t window, const char* script) {
@@ -790,7 +790,7 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
     // [Script]
 
     // Send the packet to a single client
-    _webui_send_client(win, _webui.clients[e->connection_id], run_id, WEBUI_CMD_JS, script, js_len);
+    _webui_send_client(win, _webui.clients[e->connection_id], run_id, WEBUI_CMD_JS, script, js_len, false);
 
     bool js_status = false;
 
@@ -1081,7 +1081,7 @@ void webui_close_client(webui_event_t* e) {
     // [CMD]
 
     // Send the packet to a single client
-    _webui_send_client(win, _webui.clients[e->connection_id], 0, WEBUI_CMD_CLOSE, NULL, 0);
+    _webui_send_client(win, _webui.clients[e->connection_id], 0, WEBUI_CMD_CLOSE, NULL, 0, false);
 
     // Forced close
     mg_close_connection(_webui.clients[e->connection_id]);
@@ -1275,7 +1275,7 @@ void webui_navigate_client(webui_event_t* e, const char* url) {
 
         // Send the packet to a single client
         _webui_send_client(win, _webui.clients[e->connection_id], 
-            0, WEBUI_CMD_NAVIGATION, url, _webui_strlen(url)
+            0, WEBUI_CMD_NAVIGATION, url, _webui_strlen(url), false
         );
     }
 }
@@ -2739,7 +2739,7 @@ void webui_send_raw_client(webui_event_t* e, const char* function, const void* r
 
     // Send the packet to single a client
     _webui_send_client(win, _webui.clients[e->connection_id], 
-        0, WEBUI_CMD_SEND_RAW, (const char*)buf, data_len
+        0, WEBUI_CMD_SEND_RAW, (const char*)buf, data_len, false
     );
 
     _webui_free_mem((void*)buf);
@@ -4674,33 +4674,13 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win, struct mg_con
         token = win->token;
     }
 
-    // Calculate the cb size
-    size_t cb_mem_size = 64; // To hold 'const _webui_bind_list = ["elem1", "elem2",];'
-    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-        if (!_webui_is_empty(win->html_elements[i])) {
-            cb_mem_size += _webui_strlen(win->html_elements[i]) + 3;
-        }
-    }
-
-    // Generate the cb array
-    char* event_cb_js_array = (char*)_webui_malloc(cb_mem_size);
-    WEBUI_STR_CAT_DYN(event_cb_js_array, cb_mem_size, "[");
-    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-        if (!_webui_is_empty(win->html_elements[i])) {
-            WEBUI_STR_CAT_DYN(event_cb_js_array, cb_mem_size, "\"");
-            WEBUI_STR_CAT_DYN(event_cb_js_array, cb_mem_size, win->html_elements[i]);
-            WEBUI_STR_CAT_DYN(event_cb_js_array, cb_mem_size, "\",");
-        }
-    }
-    WEBUI_STR_CAT_DYN(event_cb_js_array, cb_mem_size, "]");
-
     // Generate the full WebUI Bridge
     #ifdef WEBUI_LOG
     const char* log = "true";
     #else
     const char* log = "false";
     #endif
-    size_t len = 256 + cb_mem_size + _webui_strlen((const char*)webui_javascript_bridge);
+    size_t len = 256 + _webui_strlen((const char*)webui_javascript_bridge);
     char* js = (char*)_webui_malloc(len);
     #ifdef WEBUI_TLS
     const char* TLS = "true";
@@ -4710,8 +4690,8 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win, struct mg_con
     int c = WEBUI_SN_PRINTF_DYN(
         js, len,
         "%s\n document.addEventListener(\"DOMContentLoaded\",function(){ globalThis.webui = "
-        "new WebuiBridge({ secure: %s, token: %" PRIu32 ", port: %zu, winNum: %zu, bindList: %s, log: %s, ",
-        webui_javascript_bridge, TLS, token, win->server_port, win->num, event_cb_js_array, log
+        "new WebuiBridge({ secure: %s, token: %" PRIu32 ", port: %zu, log: %s, ",
+        webui_javascript_bridge, TLS, token, win->server_port, log
     );
     // Window Size
     if (win->size_set)
@@ -4723,7 +4703,6 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win, struct mg_con
     WEBUI_STR_CAT_DYN(js, len, "});});");
 
     // Free
-    _webui_free_mem((void*)event_cb_js_array);
     _webui_mutex_unlock(&_webui.mutex_bridge);
     return js;
 }
@@ -5068,30 +5047,37 @@ static void _webui_send_all(_webui_window_t* win, uint16_t id, uint8_t cmd, cons
         // Loop trough all connected clients in this window
         for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
             if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
-                _webui_send_client(win, _webui.clients[i], 0, cmd, data, len);
+                _webui_send_client(win, _webui.clients[i], 0, cmd, data, len, false);
             }
         }
     } else {
         // Single client
         if ((win->single_client != NULL) && (win->single_client_token_check)) {
-            _webui_send_client(win, win->single_client, 0, cmd, data, len);
+            _webui_send_client(win, win->single_client, 0, cmd, data, len, false);
         }
     }
 }
 
 static void _webui_send_client(
     _webui_window_t* win, struct mg_connection *client, 
-    uint16_t id, uint8_t cmd, const char* data, size_t len) {
+    uint16_t id, uint8_t cmd, const char* data, size_t len, bool token_bypass) {
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_send_client()\n");
     #endif
 
+    // Get connection id
     size_t connection_id = 0;
     if (!_webui_connection_get_id(win, client, &connection_id))
         return;
-    if ((_webui.clients[connection_id] == NULL) || (!_webui.clients_token_check[connection_id]))
+    if ((_webui.clients[connection_id] == NULL))
         return;
+    
+    // Check Token
+    if (!token_bypass) {
+        if (!_webui.clients_token_check[connection_id])
+            return;
+    }
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_send_client() -> ID = 0x%04X \n", id);
@@ -7156,7 +7142,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
             // Update single client
             _webui_send_client(
                 win, client, 0, WEBUI_CMD_NAVIGATION, 
-                (const char*)window_url, _webui_strlen(window_url)
+                (const char*)window_url, _webui_strlen(window_url), false
             );
         }
         else {
@@ -9301,7 +9287,7 @@ static void _webui_ws_process(
                             // Send the packet
                             _webui_send_client(
                                 win, client, packet_id, WEBUI_CMD_CALL_FUNC,
-                                event_inf->response, _webui_strlen(event_inf->response)
+                                event_inf->response, _webui_strlen(event_inf->response), false
                             );
 
                             // Free event
@@ -9326,7 +9312,7 @@ static void _webui_ws_process(
 
                             // Send the packet
                             _webui_send_client(
-                                win, client, packet_id, WEBUI_CMD_CALL_FUNC, NULL, 0
+                                win, client, packet_id, WEBUI_CMD_CALL_FUNC, NULL, 0, false
                             );
                         }
 
@@ -9346,42 +9332,64 @@ static void _webui_ws_process(
                         );
                         #endif
 
-                        unsigned char status = 0x00;
-
                         size_t connection_id = 0;
                         if (_webui_connection_get_id(win, client, &connection_id)) {
+
                             if (win->single_client == client) {
                                 win->single_client_token_check = true;
                             }
                             _webui.clients_token_check[connection_id] = true;
-                            status = 0x01;
+
                             #ifdef WEBUI_LOG
                             printf(
-                                "[Core]\t\t_webui_ws_process(%zu) -> Check token accepted.\n",
+                                "[Core]\t\t_webui_ws_process(%zu) -> Token accepted. Sending bind list\n",
                                 recvNum
                             );
                             #endif
-                        }
-                        else {
-                            #ifdef WEBUI_LOG
-                            printf(
-                                "[Core]\t\t_webui_ws_process(%zu) -> Check token not accepted.\n",
-                                recvNum
+
+                            // Calculate the bind list size
+                            // [0x01][element1,element2,element3,]
+                            size_t csv_size = 1;
+                            for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+                                if (!_webui_is_empty(win->html_elements[i])) {
+                                    csv_size += _webui_strlen(win->html_elements[i]) + 1;
+                                }
+                            }
+
+                            // Allocate
+                            char* csv = (char*)_webui_malloc(csv_size);
+                            csv[0] = 0x01;
+
+                            // Generate the bind list array (CSV)
+                            for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+                                if (!_webui_is_empty(win->html_elements[i])) {
+                                    // [element1,element2,element3,]
+                                    WEBUI_STR_CAT_DYN(&csv[1], csv_size, win->html_elements[i]);
+                                    WEBUI_STR_CAT_DYN(&csv[1], csv_size, ",");
+                                }
+                            }
+
+                            // Add all events bind element (empty)
+                            if (win->has_all_events) {
+                                // [element1,...,,]
+                                WEBUI_STR_CAT_DYN(&csv[1], csv_size, ",");
+                            }
+
+                            // Packet Protocol Format:
+                            // [...]
+                            // [CMD]
+                            // [Token Status]
+                            // [0x01 element1,element2,element3,]
+
+                            // Send the packet
+                            _webui_send_client(
+                                win, client, packet_id, WEBUI_CMD_CHECK_TK, 
+                                (const char*)csv, _webui_strlen(csv), true
                             );
-                            #endif
-                        }
 
-                        // Packet Protocol Format:
-                        // [...]
-                        // [CMD]
-                        // [Check Token Status]
+                            // Free
+                            _webui_free_mem((void*)csv);                            
 
-                        // Send the packet
-                        _webui_send_client(
-                            win, client, packet_id, WEBUI_CMD_CHECK_TK, (const char*)&status, 1
-                        );
-
-                        if (status == 0x01) {
                             // New Event
                             if (win->has_all_events) {
 
@@ -9405,6 +9413,28 @@ static void _webui_ws_process(
                                 // Free event
                                 // _webui_free_event_inf(win, event_num);
                             }
+                        }
+                        else {
+                            #ifdef WEBUI_LOG
+                            printf(
+                                "[Core]\t\t_webui_ws_process(%zu) -> Token not accepted.\n",
+                                recvNum
+                            );
+                            #endif
+
+                            unsigned char status = 0x00;
+
+                            // Packet Protocol Format:
+                            // [...]
+                            // [CMD]
+                            // [Token Status]
+                            // [0x00]
+
+                            // Send the packet
+                            _webui_send_client(
+                                win, client, packet_id, WEBUI_CMD_CHECK_TK, 
+                                (const char*)&status, 1, true
+                            );
                         }
                     }
                     #ifdef WEBUI_LOG
@@ -9449,7 +9479,7 @@ static void _webui_ws_process(
 
                 // Send the packet
                 _webui_send_client(
-                    win, client, packet_id, 0x00, NULL, 0
+                    win, client, packet_id, 0x00, NULL, 0, true
                 );
 
                 // Forced close
@@ -11287,7 +11317,7 @@ static WEBUI_THREAD_MONITOR {
                 // Loop trough all connected clients in this window
                 for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
                     if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
-                        _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len);
+                        _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len, false);
                     }
                 }
             } else {
@@ -11338,7 +11368,7 @@ static WEBUI_THREAD_MONITOR {
                         // Loop trough all connected clients in this window
                         for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
                             if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
-                                _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len);
+                                _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len, false);
                             }
                         }
                     }
@@ -11386,7 +11416,7 @@ static WEBUI_THREAD_MONITOR {
                     // Loop trough all connected clients in this window
                     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
                         if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
-                            _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len);
+                            _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len, false);
                         }
                     }
                 }
