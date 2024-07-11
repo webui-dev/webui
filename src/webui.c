@@ -89,7 +89,7 @@
 #define WEBUI_STDOUT_BUF     (10240) // Command STDOUT output buffer size
 #define WEBUI_DEFAULT_PATH   "."     // Default root path
 #define WEBUI_DEF_TIMEOUT    (15)    // Default startup timeout in seconds
-#define WEBUI_RELOAD_TIMEOUT (500)   // Default reload page timeout in milliseconds
+#define WEBUI_RELOAD_TIMEOUT (1500)  // Default reload page timeout in milliseconds
 #define WEBUI_MAX_TIMEOUT    (60)    // Maximum startup timeout in seconds the user can set
 #define WEBUI_MIN_WIDTH      (100)   // Minimal window width
 #define WEBUI_MIN_HEIGHT     (100)   // Minimal window height
