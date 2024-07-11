@@ -1006,7 +1006,7 @@ bool webui_browser_exist(size_t browser) {
     return _webui_browser_exist(NULL, browser);
 }
 
-bool webui_is_high_contrast() {
+bool webui_is_high_contrast(void) {
 
     #ifdef WEBUI_LOG
     printf("[User] webui_is_high_contrast()\n");
