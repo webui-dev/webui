@@ -133,18 +133,6 @@ typedef pthread_mutex_t webui_mutex_t;
 typedef pthread_cond_t webui_condition_t;
 #endif
 
-// Optimization
-#if defined(__clang__) || defined(__GNUC__)
-#define WEBUI_DISABLE_OPTIMIZATION_START _Pragma("GCC optimize (\"O0\")")
-#define WEBUI_DISABLE_OPTIMIZATION_END
-#elif defined(_MSC_VER)
-#define WEBUI_DISABLE_OPTIMIZATION_START __pragma(optimize("", off))
-#define WEBUI_DISABLE_OPTIMIZATION_END   __pragma(optimize("", on))
-#else
-#define WEBUI_DISABLE_OPTIMIZATION_START
-#define WEBUI_DISABLE_OPTIMIZATION_END
-#endif
-
 // Compiler
 #if defined(_MSC_VER)
     #define WEBUI_COMPILER "MSVC"
@@ -875,7 +863,6 @@ bool webui_script(size_t window, const char* script, size_t timeout,
     return webui_script_client(&e, script, timeout, buffer, buffer_length);
 }
 
-WEBUI_DISABLE_OPTIMIZATION_START
 static uint32_t _webui_generate_random_uint32() {
     uint32_t timestamp = (uint32_t) time(NULL);
     // Get the higher 16 bits
@@ -885,7 +872,6 @@ static uint32_t _webui_generate_random_uint32() {
     // Combine
     return (high << 16) | low;
 }
-WEBUI_DISABLE_OPTIMIZATION_END
 
 size_t webui_new_window(void) {
 
@@ -5076,7 +5062,7 @@ static void _webui_send_client(
     size_t connection_id = 0;
     if (!_webui_connection_get_id(win, client, &connection_id))
         return;
-    if ((_webui.clients[connection_id] == NULL))
+    if (_webui.clients[connection_id] == NULL)
         return;
     
     // Check Token
