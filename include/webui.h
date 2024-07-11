@@ -129,7 +129,7 @@ enum webui_browser {
     Epic,           // 10. The Epic Browser
     Yandex,         // 11. The Yandex Browser
     ChromiumBased,  // 12. Any Chromium based browser
-    WebView,        // 13. WebView (Non-web-browser)
+    Webview,        // 13. WebView (Non-web-browser)
 };
 
 enum webui_runtime {
