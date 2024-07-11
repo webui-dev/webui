@@ -24,7 +24,6 @@ class WebuiBridge {
 	#secure: boolean;
 	#token: number;
 	#port: number;
-	#bindList: string[] = [];
 	#log: boolean;
 	#winX: number;
 	#winY: number;
@@ -38,12 +37,13 @@ class WebuiBridge {
 	#TokenAccepted: boolean = false;
 	#closeReason: number = 0;
 	#closeValue: string;
-	#hasEvents: boolean = false;
+	#AllEvents: boolean = false;
 	#callPromiseID: Uint16Array = new Uint16Array(1);
 	#callPromiseResolve: (((data: string) => unknown) | undefined)[] = [];
 	#allowNavigation: boolean = true;
 	#sendQueue: Uint8Array[] = [];
 	#isSending: boolean = false;
+	#bindsList: string[];
 	// WebUI Const
 	#WEBUI_SIGNATURE: number = 221;
 	#CMD_JS: number = 254;
@@ -74,20 +74,18 @@ class WebuiBridge {
     };
 	// Constructor
 	constructor({
-		secure,
-		token,
-		port,
-		bindList,
+		secure = false,
+		token = 0,
+		port = 0,
 		log = false,
-		winX,
-		winY,
-		winW,
-		winH,
+		winX = 0,
+		winY = 0,
+		winW = 0,
+		winH = 0,
 	}: {
 		secure: boolean;
 		token: number;
 		port: number;
-		bindList: string[];
 		log?: boolean;
 		winX: number;
 		winY: number;
@@ -98,7 +96,6 @@ class WebuiBridge {
 		this.#secure = secure;
 		this.#token = token;
 		this.#port = port;
-		this.#bindList = bindList;
 		this.#log = log;
 		this.#winX = winX;
 		this.#winY = winY;
@@ -129,7 +126,7 @@ class WebuiBridge {
 		if ('navigation' in globalThis) {
 			globalThis.navigation.addEventListener('navigate', (event) => {
 				if (!this.#allowNavigation) {
-					if (this.#hasEvents && (this.#wsIsConnected())) {
+					if (this.#AllEvents && (this.#wsIsConnected())) {
 						event.preventDefault();
 						const url = new URL(event.destination.url);
 						if (this.#log) console.log(`WebUI -> DOM -> Navigation Event [${url.href}]`);
@@ -141,7 +138,7 @@ class WebuiBridge {
 			// Click navigation event listener
 			addRefreshableEventListener(document.body, 'a', 'click', (event) => {
 				if (!this.#allowNavigation) {
-					if (this.#hasEvents && (this.#wsIsConnected())) {
+					if (this.#AllEvents && (this.#wsIsConnected())) {
 						event.preventDefault();
 						const { href } = event.target as HTMLAnchorElement;
 						if (this.#log) console.log(`WebUI -> DOM -> Navigation Click Event [${href}]`);
@@ -229,13 +226,8 @@ class WebuiBridge {
 		buffer[index + 1] = (value >>> 8) & 0xff; // Most significant byte
 	}
 	#start() {
-		this.#generateCallObjects();
 		this.#keepAlive();
 		this.#callPromiseID[0] = 0;
-		if (this.#bindList.includes('')) {
-			this.#hasEvents = true;
-			this.#allowNavigation = false;
-		}
 		// Connect to the backend application
 		this.#wsConnect();
 	}
@@ -257,9 +249,9 @@ class WebuiBridge {
 			if (/^on(click)/.test(key)) {
 				globalThis.addEventListener(key.slice(2), (event) => {
 					if (!(event.target instanceof HTMLElement)) return;
-					if (
-						this.#hasEvents ||
-						(event.target.id !== '' && this.#bindList.includes(event.target?.id))
+					if (this.#AllEvents ||
+						((event.target.id !== '') && 
+						(this.#bindsList.includes(event.target?.id)))
 					) {
 						this.#sendClick(event.target.id);
 					}
@@ -371,16 +363,6 @@ class WebuiBridge {
 			// this.#addID(packet, 0, this.#PROTOCOL_ID)
 			this.#sendData(packet);
 			if (this.#log) console.log(`WebUI -> Send Token [0x${this.#token.toString(16).padStart(8, '0')}]`);
-			// Refresh the page if token not accepted
-			setTimeout(() => this.#checkTokenReload(), 1000);
-		}
-	}
-	#checkTokenReload() {
-		if (!this.#TokenAccepted) {
-			if (this.#log) console.log(`WebUI -> Token [0x${this.#token.toString(16).padStart(8, '0')}] not accepted. Reload page...`);
-			this.#allowNavigation = true;
-			this.#wsStayAlive = false;
-			globalThis.location.reload();
 		}
 	}
 	#sendEventNavigation(url: string) {
@@ -415,11 +397,19 @@ class WebuiBridge {
 			globalThis.close();
 		}, 1000);
 	}
+	#updateBindsList() {
+		if (this.#bindsList.includes('')) {
+			this.#AllEvents = true;
+			this.#allowNavigation = false;
+		}
+		this.#generateCallObjects();
+		this.#clicksListener();
+	}
 	#toUint16(value: number): number {
 		return value & 0xffff;
 	}
 	#generateCallObjects() {
-		for (const bind of this.#bindList) {
+		for (const bind of this.#bindsList) {
 			if (bind.trim()) {
 				const fn = bind;
 				if (fn.trim()) {
@@ -519,7 +509,6 @@ class WebuiBridge {
 		this.#unfreezeUI();
 		if (this.#log) console.log('WebUI -> Connected');
 		this.#checkToken();
-		this.#clicksListener();
 	};
 	#wsOnError = (event: Event) => {
 		if (this.#log) console.log(`WebUI -> Connection failed.`);
@@ -571,7 +560,7 @@ class WebuiBridge {
 						// 2: [ID]
 						// 3: [CMD]
 						// 4: [Script]
-						const script = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
+						const script: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
 						const scriptSanitize = script.replace(/(?:\r\n|\r|\n)/g, '\n');
 						if (this.#log) console.log(`WebUI -> CMD -> JS [${scriptSanitize}]`);
 						// Get callback result
@@ -638,7 +627,7 @@ class WebuiBridge {
 						// 2: [ID]
 						// 3: [CMD]
 						// 4: [Call Response]
-						const callResponse = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
+						const callResponse: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
 						if (this.#log) {
 							console.log(`WebUI -> CMD -> Call Response [${callResponse}]`);
 						}
@@ -658,7 +647,7 @@ class WebuiBridge {
 					// 2: [ID]
 					// 3: [CMD]
 					// 4: [URL]
-					const url = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
+					const url: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
 					console.log(`WebUI -> CMD -> Navigation [${url}]`);
 					this.#close(this.#CMD_NAVIGATION, url);
 					break;
@@ -669,9 +658,11 @@ class WebuiBridge {
 					// 2: [ID]
 					// 3: [CMD]
 					// 4: [New Element]
-					const newElement = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
+					const newElement: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
 					console.log(`WebUI -> CMD -> New Bind ID [${newElement}]`);
-					if (!this.#bindList.includes(newElement)) this.#bindList.push(newElement);
+					if (!this.#bindsList.includes(newElement)) this.#bindsList.push(newElement);
+					// Generate objects
+					this.#updateBindsList();
 					break;
 				case this.#CMD_CLOSE:
 					// Protocol
@@ -699,16 +690,29 @@ class WebuiBridge {
 					// 2: [ID]
 					// 3: [CMD]
 					// 4: [Status]
+					// 5: [BindsList]
 					const status = (buffer8[this.#PROTOCOL_DATA] == 0 ? false : true);
+					const tokenHex = `0x${this.#token.toString(16).padStart(8, '0')}`;
 					if (status) {
-						if (this.#log) console.log(`WebUI -> CMD -> Token Accepted`);
+						if (this.#log) console.log(`WebUI -> CMD -> Token [${tokenHex}] Accepted`);
 						this.#TokenAccepted = true;
+						// Get binds list (CSV)
+						let csv: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA + 1);
+						csv = csv.endsWith(',') ? csv.slice(0, -1) : csv;
+						this.#bindsList = csv.split(',');
+						// Generate objects
+						this.#updateBindsList();
+						// User event callback
 						if (this.#eventsCallback) {
 							this.#eventsCallback(this.event.CONNECTED);
 						}
 					}
 					else {
-						if (this.#log) console.log(`WebUI -> CMD -> Token Not Accepted`);
+						if (this.#log) console.log(`WebUI -> CMD -> Token [${tokenHex}] Not Accepted. Reload page...`);
+						// Refresh the page to get a new token
+						this.#allowNavigation = true;
+						this.#wsStayAlive = false;
+						globalThis.location.reload();
 					}
 					break;
 			}
@@ -751,7 +755,7 @@ class WebuiBridge {
 		if (!this.#wsIsConnected()) return Promise.reject(new Error('WebSocket is not connected'));
 
 		// Check binding list
-		if (!this.#hasEvents && !this.#bindList.includes(`${fn}`))
+		if (!this.#AllEvents && !this.#bindsList.includes(`${fn}`))
 			return Promise.reject(new ReferenceError(`No binding was found for "${fn}"`));
 
 		// Call backend and wait for response

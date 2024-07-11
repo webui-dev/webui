@@ -1,6 +1,6 @@
 # WebUI Bridge
 
-The WebUI Bridge connects the UI (_Web Browser_) with the backend application through WebSocket. This bridge is written in TypeScript, and it needs to be transpiled to JavaScript using [ESBuild](https://esbuild.github.io/) to produce `webui_bridge.js`, then converted to C header using the Python script `js2c.py` to generate `webui_bridge.h`.
+The WebUI Bridge connects the UI (_Web Browser_) with the backend application through WebSocket. This bridge is written in TypeScript, and it needs to be transpiled to JavaScript using [ESBuild](https://esbuild.github.io/) to produce `webui.js`, then converted to C header using the Python script `js2c.py` to generate `webui_bridge.h`.
 
 ### Windows
 
@@ -8,7 +8,7 @@ The WebUI Bridge connects the UI (_Web Browser_) with the backend application th
 - Install [Node.js](https://nodejs.org/en/download)
 - cd `webui\bridge`
 - `npm install esbuild`
-- `.\node_modules\.bin\esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=.\ .\webui_bridge.ts`
+- `.\node_modules\.bin\esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=.\ .\webui.ts`
 - `python js2c.py`
 
 ### Windows PowerShell
@@ -24,7 +24,7 @@ The WebUI Bridge connects the UI (_Web Browser_) with the backend application th
 - Install [Node.js](https://nodejs.org/en/download)
 - cd `webui/bridge`
 - `npm install esbuild`
-- `./node_modules/.bin/esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./ ./webui_bridge.ts`
+- `./node_modules/.bin/esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./ ./webui.ts`
 - `python js2c.py`
 
 ### Linux Bash
@@ -38,7 +38,7 @@ The WebUI Bridge connects the UI (_Web Browser_) with the backend application th
 - Install [Node.js](https://nodejs.org/en/download)
 - cd `webui/bridge`
 - `npm install esbuild`
-- `./node_modules/.bin/esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./ ./webui_bridge.ts`
+- `./node_modules/.bin/esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./ ./webui.ts`
 - `python js2c.py`
 
 ### macOS Bash

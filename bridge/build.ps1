@@ -59,7 +59,7 @@ if (-not (Test-Path "$project_root\bridge\node_modules\esbuild")) {
 
 # Transpile WebUI-Bridge (TS to JS)
 if (!$silent) { Write-Host "Transpile and bundle WebUI-Bridge from TypeScript to JavaScript..." }
-.\node_modules\.bin\esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --minify-syntax --minify-whitespace --outdir=. ./webui_bridge.ts $log_level
+.\node_modules\.bin\esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --minify-syntax --minify-whitespace --outdir=. ./webui.ts $log_level
 
 # Convert WebUI-Bridge (JS to C)
 if (!$silent) { Write-Host "Convert WebUI-Bridge JavaScript to C Header..." }

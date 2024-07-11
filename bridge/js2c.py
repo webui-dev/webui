@@ -41,4 +41,4 @@ def js_to_c_header(input_filename, output_filename):
         return
 
 # Main
-js_to_c_header('webui_bridge.js', 'webui_bridge.h')
+js_to_c_header('webui.js', 'webui_bridge.h')
