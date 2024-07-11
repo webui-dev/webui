@@ -64,49 +64,49 @@ int main() {
 
 	// HTML
 	const std::string my_html = R"V0G0N(
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <script src="/webui.js"></script>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <script src="/webui.js"></script>
 
-          <title>Call C++ from JavaScript Example</title>
-          <style>
-            body {
-              background: linear-gradient(to left, #36265a, #654da9);
-              color: AliceBlue;
-              font-size: 16px sans-serif;
-              text-align: center;
-              margin-top: 30px;
-            }
-            button {
-              margin: 5px 0 10px;
-            }
-          </style>
-        </head>
-        <body>
-          <h1>WebUI - Call C++ from JavaScript</h1>
-          <p>Call C++ functions with arguments (<em>See the logs in your terminal</em>)</p>
-          <button onclick="my_function_string('Hello', 'World');">Call my_function_string()</button>
-          <br>
-          <button onclick="my_function_integer(123, 456, 789);">Call my_function_integer()</button>
-          <br>
-          <button onclick="my_function_boolean(true, false);">Call my_function_boolean()</button>
-          <br>
-          <p>Call a C++ function that returns a response</p>
-          <button onclick="MyJS();">Call my_function_with_response()</button>
-          <div>Double: <input type="text" id="MyInputID" value="2"></div>
-          <script>
-            function MyJS() {
-              const MyInput = document.getElementById('MyInputID');
-              const number = MyInput.value;
-              my_function_with_response(number, 2).then((response) => {
-                MyInput.value = response;
-              });
-            }
-          </script>
-        </body>
-      </html>
-    )V0G0N";
+        <title>Call C++ from JavaScript Example</title>
+        <style>
+          body {
+            background: linear-gradient(to left, #36265a, #654da9);
+            color: AliceBlue;
+            font-size: 16px sans-serif;
+            text-align: center;
+            margin-top: 30px;
+          }
+          button {
+            margin: 5px 0 10px;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>WebUI - Call C++ from JavaScript</h1>
+        <p>Call C++ functions with arguments (<em>See the logs in your terminal</em>)</p>
+        <button onclick="my_function_string('Hello', 'World');">Call my_function_string()</button>
+        <br>
+        <button onclick="my_function_integer(123, 456, 789);">Call my_function_integer()</button>
+        <br>
+        <button onclick="my_function_boolean(true, false);">Call my_function_boolean()</button>
+        <br>
+        <p>Call a C++ function that returns a response</p>
+        <button onclick="MyJS();">Call my_function_with_response()</button>
+        <div>Double: <input type="text" id="MyInputID" value="2"></div>
+        <script>
+          function MyJS() {
+            const MyInput = document.getElementById('MyInputID');
+            const number = MyInput.value;
+            my_function_with_response(number, 2).then((response) => {
+              MyInput.value = response;
+            });
+          }
+        </script>
+      </body>
+    </html>
+  )V0G0N";
 
 	// Create a window
 	webui::window my_window;

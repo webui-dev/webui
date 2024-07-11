@@ -53,52 +53,52 @@ int main() {
 
 	// HTML
 	const std::string my_html = R"V0G0N(
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <script src="/webui.js"></script>
-          <title>Call JavaScript from C++ Example</title>
-          <style>
-            body {
-              background: linear-gradient(to left, #36265a, #654da9);
-              color: AliceBlue;
-              font: 16px sans-serif;
-              text-align: center;
-              margin-top: 30px;
-            }
-            button {
-              margin: 5px 0 10px;
-            }
-          </style>
-        </head>
-        <body>
-          <h1>WebUI - Call JavaScript from C++</h1>
-          <br>
-          <h1 id="count">0</h1>
-          <br>
-          <button id="my_function_count">Manual Count</button>
-          <br>
-          <button id="MyTest" onclick="AutoTest();">Auto Count (Every 10ms)</button>
-          <br>
-          <button id="Exit">Exit</button>
-          <script>
-            let count = 0;
-            function GetCount() {
-              return count;
-            }
-            function SetCount(number) {
-              document.getElementById('count').innerHTML = number;
-              count = number;
-            }
-            function AutoTest(number) {
-              setInterval(function() {
-                my_function_count();
-              }, 10);
-            }
-          </script>
-        </body>
-      </html>
-    )V0G0N";
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <script src="/webui.js"></script>
+        <title>Call JavaScript from C++ Example</title>
+        <style>
+          body {
+            background: linear-gradient(to left, #36265a, #654da9);
+            color: AliceBlue;
+            font: 16px sans-serif;
+            text-align: center;
+            margin-top: 30px;
+          }
+          button {
+            margin: 5px 0 10px;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>WebUI - Call JavaScript from C++</h1>
+        <br>
+        <h1 id="count">0</h1>
+        <br>
+        <button OnClick="my_function_count();">Manual Count</button>
+        <br>
+        <button OnClick="AutoTest();">Auto Count (Every 10ms)</button>
+        <br>
+        <button id="Exit">Exit</button>
+        <script>
+          let count = 0;
+          function GetCount() {
+            return count;
+          }
+          function SetCount(number) {
+            document.getElementById('count').innerHTML = number;
+            count = number;
+          }
+          function AutoTest(number) {
+            setInterval(function() {
+              my_function_count();
+            }, 10);
+          }
+        </script>
+      </body>
+    </html>
+  )V0G0N";
 
 	// Create a window
 	webui::window my_window;
