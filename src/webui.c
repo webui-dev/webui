@@ -7533,6 +7533,9 @@ static void _webui_http_send_header(
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_http_send_header([%zu])\n", win->num);
+    printf("[Core]\t\t_webui_http_send_header() -> mime_type: [%s]\n", mime_type);
+    printf("[Core]\t\t_webui_http_send_header() -> body_len: [%zu]\n", body_len);
+    printf("[Core]\t\t_webui_http_send_header() -> cache: [%d]\n", cache);
     #endif
 
     const char* no_cache = "no-cache, no-store, must-revalidate, private, max-age=0";
@@ -7575,13 +7578,12 @@ static void _webui_http_send_header(
         }
     }
 
-    // [header][body]
-    size_t buffer_len = (128 + body_len);
-    char* buffer = (char*)_webui_malloc(buffer_len);
+    // [header only]
+    char buffer[1024] = {0};
     int to_send = 0;
     if (set_cookies) {
         // Header with auth cookies
-        to_send = WEBUI_SN_PRINTF_DYN(buffer, buffer_len,
+        to_send = WEBUI_SN_PRINTF_STATIC(buffer, sizeof(buffer),
             "HTTP/1.1 200 OK\r\n"
             "Set-Cookie: webui_auth=%s; Path=/; HttpOnly; SameSite=Strict\r\n"
             "Access-Control-Allow-Origin: *\r\n"
@@ -7595,7 +7597,7 @@ static void _webui_http_send_header(
     }
     else {
         // Header without auth cookies
-        to_send = WEBUI_SN_PRINTF_DYN(buffer, buffer_len,
+        to_send = WEBUI_SN_PRINTF_DYN(buffer, sizeof(buffer),
             "HTTP/1.1 200 OK\r\n"
             "Access-Control-Allow-Origin: *\r\n"
             "Cache-Control: %s\r\n"
@@ -7606,9 +7608,14 @@ static void _webui_http_send_header(
         );
     }
 
+    #ifdef WEBUI_LOG
+    printf("---[ HTTP Header ]-----------------\n");
+    printf("%s\n", buffer);
+    printf("-----------------------------------\n");
+    #endif
+
     // Send
     mg_write(client, buffer, to_send);
-    _webui_free_mem((void*)buffer);
 }
 
 static void _webui_http_send_file(
