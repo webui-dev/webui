@@ -53,7 +53,7 @@ debug:
 #	Dynamic with Debug info
 	@echo Build WebUI Library (MSVC Debug Dynamic)...
 	@cl /Zi $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS)
-	@cl /Zi $(WEBUI_BUILD_FLAGS) $(WARNING_LOG) /D WEBUI_LOG
+	@cl /Zi $(WEBUI_BUILD_FLAGS) $(WARNING_LOG) /D WEBUI_LOG /D WEBUI_DYNAMIC
 	@link $(LIB_DYN_OUT)
 #	Clean
 	@- del *.obj >nul 2>&1
@@ -72,7 +72,7 @@ release:
 #	Dynamic Release
 	@echo Build WebUI Library (MSVC Release Dynamic)...
 	@cl $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS)
-	@cl $(WEBUI_BUILD_FLAGS) $(WARNING_RELEASE)
+	@cl $(WEBUI_BUILD_FLAGS) $(WARNING_RELEASE) /D WEBUI_DYNAMIC
 	@link $(LIB_DYN_OUT)
 #	Clean
 	@- del *.pdb >nul 2>&1

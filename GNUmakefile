@@ -118,7 +118,7 @@ endif
 	@cd "$(BUILD_DIR)/debug" \
 	&& echo "Build WebUI library ($(CC) $(TARGET)debug dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
-	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_LOG) -g -fPIC -DWEBUI_LOG \
+	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_LOG) -g -fPIC -DWEBUI_LOG -DWEBUI_DYNAMIC \
 	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
 ifeq ($(PLATFORM),windows)
 	@cd "$(BUILD_DIR)/debug" && del *.o >nul 2>&1
@@ -151,7 +151,7 @@ endif
 	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(CC) $(TARGET)release dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os -fPIC \
-	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_RELEASE) -O3 -fPIC \
+	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_RELEASE) -O3 -fPIC -DWEBUI_DYNAMIC \
 	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
 #	Clean
 ifeq ($(PLATFORM),windows)

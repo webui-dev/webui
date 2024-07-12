@@ -116,6 +116,12 @@
 #define WEBUI_WS_PROTOCOL   "ws://"
 #endif
 
+#ifdef WEBUI_DYNAMIC
+#define WEBUI_LIB_TYPE "Dynamic"
+#else
+#define WEBUI_LIB_TYPE "Static"
+#endif
+
 #ifdef _WIN32
 #define WEBUI_OS "Microsoft Windows"
 #elif __APPLE__
@@ -3741,7 +3747,7 @@ static void * _webui_malloc(size_t size) {
 static _webui_window_t* _webui_dereference_win_ptr(void * ptr) {
 
     #ifdef WEBUI_LOG_VERBOSE
-    printf("[Core]\t\t_webui_dereference_win_ptr()\n");
+    //printf("[Core]\t\t_webui_dereference_win_ptr()\n");
     #endif
 
     if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE))
@@ -7395,6 +7401,7 @@ static void _webui_init(void) {
         WEBUI_VERSION " ("
         WEBUI_OS ", "
         WEBUI_COMPILER ", "
+        WEBUI_LIB_TYPE ", "
         WEBUI_SECURE ")\n");
     printf("[Core]\t\t_webui_init()\n");
     #endif
@@ -10761,6 +10768,13 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #endif
 
         // Linux GTK WebView
+
+        #ifdef WEBUI_DYNAMIC
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_wv_show() -> WebUI dynamic version does not support Linux WebView\n");
+        #endif
+        return false;
+        #endif
 
         if (_webui.is_browser_main_run)
             return false;
