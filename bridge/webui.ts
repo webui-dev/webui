@@ -648,7 +648,7 @@ class WebuiBridge {
 					// 3: [CMD]
 					// 4: [URL]
 					const url: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
-					console.log(`WebUI -> CMD -> Navigation [${url}]`);
+					if (this.#log) console.log(`WebUI -> CMD -> Navigation [${url}]`);
 					this.#close(this.#CMD_NAVIGATION, url);
 					break;
 				case this.#CMD_NEW_ID:
@@ -659,7 +659,7 @@ class WebuiBridge {
 					// 3: [CMD]
 					// 4: [New Element]
 					const newElement: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
-					console.log(`WebUI -> CMD -> New Bind ID [${newElement}]`);
+					if (this.#log) console.log(`WebUI -> CMD -> New Bind ID [${newElement}]`);
 					if (!this.#bindsList.includes(newElement)) this.#bindsList.push(newElement);
 					// Generate objects
 					this.#updateBindsList();
