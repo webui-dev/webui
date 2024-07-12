@@ -13,7 +13,7 @@
 
 void (*close_callback)(int index) = NULL;
 
-@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate>
+@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate>
 {
     NSWindow *windows[512];
     WKWebView *webViews[512];
@@ -35,15 +35,17 @@ void (*close_callback)(int index) = NULL;
         }
     }
     return self;
+
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     #ifdef WEBUI_LOG
     printf("[ObjC]\t\t\tapplicationDidFinishLaunching()\n");
     #endif
-    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-    [[NSApplication sharedApplication] setActivationPolicy:NSApplicationActivationPolicyRegular];
-    [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
+    // check why this fn isn't called once app start ¯\_(ツ)_/¯
+    // [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    // [[NSApplication sharedApplication] setActivationPolicy:NSApplicationActivationPolicyRegular];
+    // [[NSApplication sharedApplication] activateIgnoringOtherApps:YES];
 }
 
 - (void)windowWillClose:(NSNotification *)notification {
@@ -112,6 +114,55 @@ void (*close_callback)(int index) = NULL;
     }
 }
 
+#pragma mark - WKUIDelegate
+
+- (void)webView:(WKWebView *)webView runJavaScriptAlertPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(void))completionHandler {
+    NSAlert *alert = [[NSAlert alloc] init];
+    [alert setMessageText:message];
+    [alert addButtonWithTitle:@"OK"];
+
+    [alert runModal];
+    completionHandler();
+}
+
+- (void)webView:(WKWebView *)webView runJavaScriptConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(BOOL))completionHandler {
+    NSAlert *alert = [[NSAlert alloc] init];
+    [alert setMessageText:message];
+    [alert addButtonWithTitle:@"OK"];
+    [alert addButtonWithTitle:@"Cancel"];
+
+    NSModalResponse response = [alert runModal];
+
+    completionHandler(response == NSAlertFirstButtonReturn);
+}
+
+- (void)webView:(WKWebView *)webView runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt defaultText:(NSString *)defaultText initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSString * _Nullable))completionHandler {
+     NSAlert *alert = [[NSAlert alloc] init];
+
+    [alert setMessageText:prompt];
+    [alert addButtonWithTitle:@"OK"];
+    [alert addButtonWithTitle:@"Cancel"];
+
+    NSTextField *inputField = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 200, 24)];
+    [inputField setStringValue:defaultText];
+    [inputField autorelease];
+    [inputField becomeFirstResponder];
+
+    [alert setAccessoryView:inputField];
+
+    NSWindow *alertWindow = [alert window];
+    [alertWindow setInitialFirstResponder:inputField];
+
+    NSModalResponse response = [alert runModal];
+
+    if (response == NSAlertFirstButtonReturn) {
+        NSString *userInput = [inputField stringValue];
+        completionHandler(userInput);
+    } else {
+        completionHandler(nil);
+    }
+}
+
 @end
 
 AppDelegate *delegate;
@@ -166,6 +217,11 @@ bool _webui_macos_wv_new(int index) {
 
     [delegate setWindow:window atIndex:index];
     [delegate setWebView:webView atIndex:index];
+
+    webView.UIDelegate = delegate;
+
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    [NSApp activateIgnoringOtherApps:YES];
 
     return true;
 }
