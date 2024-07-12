@@ -7590,7 +7590,7 @@ static void _webui_http_send_header(
     }
     else {
         // Header without auth cookies
-        to_send = WEBUI_SN_PRINTF_DYN(buffer, sizeof(buffer),
+        to_send = WEBUI_SN_PRINTF_STATIC(buffer, sizeof(buffer),
             "HTTP/1.1 200 OK\r\n"
             "Access-Control-Allow-Origin: *\r\n"
             "Cache-Control: %s\r\n"
