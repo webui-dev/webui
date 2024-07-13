@@ -516,11 +516,9 @@ class WebuiBridge {
 	#wsOnClose = (event: CloseEvent) => {
 		if (this.#closeReason === this.#CMD_NAVIGATION) {
 			this.#closeReason = 0;
-			if (this.#log) {
-				console.log(`WebUI -> Connection lost. Navigation to [${this.#closeValue}]`);
-				this.#allowNavigation = true;
-				globalThis.location.replace(this.#closeValue);
-			}
+			if (this.#log) console.log(`WebUI -> Connection lost. Navigation to [${this.#closeValue}]`);
+			this.#allowNavigation = true;
+			globalThis.location.replace(this.#closeValue);
 		} else {
 			if (this.#wsStayAlive) {
 				// Re-connect
