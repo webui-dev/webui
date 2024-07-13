@@ -9,11 +9,6 @@
 
 def js_to_c_header(input_filename, output_filename):
     try:
-        # Read JS file content
-        with open(input_filename, 'r', encoding='utf-8') as file_js:
-            content = file_js.read()
-            file_js.close()
-
         print(f"Converting '{input_filename}' to '{output_filename}'...")
 
         # comment
@@ -27,8 +22,19 @@ def js_to_c_header(input_filename, output_filename):
             "// Canada.\n\n"
         )
 
+        # Read JS file content
+        with open(input_filename, 'r', encoding='utf-8') as file_js:
+            content = file_js.read()
+            file_js.close()        
+
+        # Add comment to js
+        new_content = comment + content
+        with open(input_filename, 'w') as file_js:
+            file_js.write(new_content)
+            file_js.close()        
+
         # Convert each character in JS content to its hexadecimal value
-        hex_values = ["0x{:02x}".format(ord(char)) for char in content]
+        hex_values = ["0x{:02x}".format(ord(char)) for char in new_content]
 
         # Prepare the content for the C header file
         header_content = (
@@ -49,12 +55,6 @@ def js_to_c_header(input_filename, output_filename):
         with open(output_filename, 'w', encoding='utf-8') as file_h:
             file_h.write(header_content)
             file_h.close()
-        
-        # Add comment to js
-        new_content = comment + content
-        with open(input_filename, 'w') as file_js:
-            file_js.write(new_content)
-            file_js.close()
 
     except FileNotFoundError:
         print(f"Error: File '{input_filename}' not found.")
