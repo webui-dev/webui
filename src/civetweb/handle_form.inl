@@ -162,14 +162,17 @@ search_boundary(const char *buf,
                 const char *boundary,
                 size_t boundary_len)
 {
-	/* We must do a binary search here, not a string search, since the buffer
-	 * may contain '\x00' bytes, if binary data is transferred. */
-	int clen = (int)buf_len - (int)boundary_len - 4;
+	char *boundary_start = "\r\n--";
+	size_t boundary_start_len = strlen(boundary_start);
+
+	/* We must do a binary search here, not a string search, since the
+	 * buffer may contain '\x00' bytes, if binary data is transferred. */
+	int clen = (int)buf_len - (int)boundary_len - boundary_start_len;
 	int i;
 
 	for (i = 0; i <= clen; i++) {
-		if (!memcmp(buf + i, "\r\n--", 4)) {
-			if (!memcmp(buf + i + 4, boundary, boundary_len)) {
+		if (!memcmp(buf + i, boundary_start, boundary_start_len)) {
+			if (!memcmp(buf + i + boundary_start_len, boundary, boundary_len)) {
 				return buf + i;
 			}
 		}
@@ -624,6 +627,7 @@ mg_handle_form_request(struct mg_connection *conn,
 		}
 
 		/* Copy boundary string to variable "boundary" */
+		/* fbeg is pointer to start of value of boundary */
 		fbeg = content_type + bl + 9;
 		bl = strlen(fbeg);
 		boundary = (char *)mg_malloc(bl + 1);
@@ -701,43 +705,75 @@ mg_handle_form_request(struct mg_connection *conn,
 				return -1;
 			}
 
+			/* @see https://www.rfc-editor.org/rfc/rfc2046.html#section-5.1.1
+			 *
+			 * multipart-body := [preamble CRLF]
+			 *     dash-boundary transport-padding CRLF
+			 *     body-part *encapsulation
+			 *     close-delimiter transport-padding
+			 *     [CRLF epilogue]
+			 */
+
 			if (part_no == 0) {
-				int d = 0;
-				while ((d < buf_fill) && (buf[d] != '-')) {
-					d++;
+				size_t preamble_length = 0;
+				/* skip over the preamble until we find a complete boundary
+				 * limit the preamble length to prevent abuse */
+				/* +2 for the -- preceding the boundary */
+				while (preamble_length < 1024
+				       && (preamble_length < buf_fill - bl)
+				       && strncmp(buf + preamble_length + 2, boundary, bl)) {
+					preamble_length++;
 				}
-				if ((d > 0) && (buf[d] == '-')) {
-					memmove(buf, buf + d, (unsigned)buf_fill - (unsigned)d);
-					buf_fill -= d;
+				/* reset the start of buf to remove the preamble */
+				if (0 == strncmp(buf + preamble_length + 2, boundary, bl)) {
+					memmove(buf,
+					        buf + preamble_length,
+					        (unsigned)buf_fill - (unsigned)preamble_length);
+					buf_fill -= preamble_length;
 					buf[buf_fill] = 0;
 				}
 			}
 
-			if (buf[0] != '-' || buf[1] != '-') {
+			/* either it starts with a boundary and it's fine, or it's malformed
+			 * because:
+			 * - the preamble was longer than accepted
+			 * - couldn't find a boundary at all in the body
+			 * - didn't have a terminating boundary */
+			if (buf_fill < (bl + 2) || strncmp(buf, "--", 2)
+			    || strncmp(buf + 2, boundary, bl)) {
 				/* Malformed request */
 				mg_free(boundary);
 				return -1;
 			}
-			if (0 != strncmp(buf + 2, boundary, bl)) {
-				/* Malformed request */
-				mg_free(boundary);
-				return -1;
+
+			/* skip the -- */
+			char *boundary_start = buf + 2;
+			size_t transport_padding = 0;
+			while (boundary_start[bl + transport_padding] == ' '
+			       || boundary_start[bl + transport_padding] == '\t') {
+				transport_padding++;
 			}
-			if (buf[bl + 2] != '\r' || buf[bl + 3] != '\n') {
-				/* Every part must end with \r\n, if there is another part.
-				 * The end of the request has an extra -- */
-				if (((size_t)buf_fill != (size_t)(bl + 6))
-				    || (strncmp(buf + bl + 2, "--\r\n", 4))) {
+			char *boundary_end = boundary_start + bl + transport_padding;
+
+			/* after the transport padding, if the boundary isn't
+			 * immediately followed by a \r\n then it is either... */
+			if (strncmp(boundary_end, "\r\n", 2))
+			{
+				/* ...the final boundary, and it is followed by --, (in which
+				 * case it's the end of the request) or it's a malformed
+				 * request */
+				if (strncmp(boundary_end, "--", 2)) {
 					/* Malformed request */
 					mg_free(boundary);
 					return -1;
 				}
-				/* End of the request */
+				/* Ingore any epilogue here */
 				break;
 			}
 
+			/* skip the \r\n */
+			hbuf = boundary_end + 2;
 			/* Next, we need to get the part header: Read until \r\n\r\n */
-			hbuf = buf + bl + 4;
 			hend = strstr(hbuf, "\r\n\r\n");
 			if (!hend) {
 				/* Malformed request */

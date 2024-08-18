@@ -1551,7 +1551,7 @@ static void mg_snprintf(const struct mg_connection *conn,
 #if defined(vsnprintf)
 #undef vsnprintf
 #endif
-#ifndef NDEBUG
+#if !defined(NDEBUG)
 #define malloc DO_NOT_USE_THIS_FUNCTION__USE_mg_malloc
 #define calloc DO_NOT_USE_THIS_FUNCTION__USE_mg_calloc
 #define realloc DO_NOT_USE_THIS_FUNCTION__USE_mg_realloc
@@ -6213,13 +6213,18 @@ push_inner(struct mg_context *ctx,
 			/* For sockets, wait for the socket using poll */
 			struct mg_pollfd pfd[2];
 			int pollres;
+			unsigned int num_sock = 1;
 
 			pfd[0].fd = sock;
 			pfd[0].events = POLLOUT;
 
-			pfd[1].fd = ctx->thread_shutdown_notification_socket;
-			pfd[1].events = POLLIN;
-			pollres = mg_poll(pfd, 2, (int)(ms_wait), &(ctx->stop_flag));
+			if (ctx->context_type == CONTEXT_SERVER) {
+				pfd[num_sock].fd = ctx->thread_shutdown_notification_socket;
+				pfd[num_sock].events = POLLIN;
+				num_sock++;
+			}
+
+			pollres = mg_poll(pfd, num_sock, (int)(ms_wait), &(ctx->stop_flag));
 			if (!STOP_FLAG_IS_ZERO(&ctx->stop_flag)) {
 				return -2;
 			}
@@ -6330,6 +6335,7 @@ pull_inner(FILE *fp,
 		struct mg_pollfd pfd[2];
 		int to_read;
 		int pollres;
+		unsigned int num_sock = 1;
 
 		to_read = mbedtls_ssl_get_bytes_avail(conn->ssl);
 
@@ -6345,13 +6351,17 @@ pull_inner(FILE *fp,
 			pfd[0].fd = conn->client.sock;
 			pfd[0].events = POLLIN;
 
-			pfd[1].fd = conn->phys_ctx->thread_shutdown_notification_socket;
-			pfd[1].events = POLLIN;
+			if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+				pfd[num_sock].fd =
+				    conn->phys_ctx->thread_shutdown_notification_socket;
+				pfd[num_sock].events = POLLIN;
+				num_sock++;
+			}
 
 			to_read = len;
 
 			pollres = mg_poll(pfd,
-			                  2,
+			                  num_sock,
 			                  (int)(timeout * 1000.0),
 			                  &(conn->phys_ctx->stop_flag));
 
@@ -6388,6 +6398,7 @@ pull_inner(FILE *fp,
 		int ssl_pending;
 		struct mg_pollfd pfd[2];
 		int pollres;
+		unsigned int num_sock = 1;
 
 		if ((ssl_pending = SSL_pending(conn->ssl)) > 0) {
 			/* We already know there is no more data buffered in conn->buf
@@ -6400,11 +6411,16 @@ pull_inner(FILE *fp,
 		} else {
 			pfd[0].fd = conn->client.sock;
 			pfd[0].events = POLLIN;
-			pfd[1].fd = conn->phys_ctx->thread_shutdown_notification_socket;
-			pfd[1].events = POLLIN;
+
+			if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+				pfd[num_sock].fd =
+				    conn->phys_ctx->thread_shutdown_notification_socket;
+				pfd[num_sock].events = POLLIN;
+				num_sock++;
+			}
 
 			pollres = mg_poll(pfd,
-			                  2,
+			                  num_sock,
 			                  (int)(timeout * 1000.0),
 			                  &(conn->phys_ctx->stop_flag));
 			if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
@@ -6444,15 +6460,20 @@ pull_inner(FILE *fp,
 	} else {
 		struct mg_pollfd pfd[2];
 		int pollres;
+		unsigned int num_sock = 1;
 
 		pfd[0].fd = conn->client.sock;
 		pfd[0].events = POLLIN;
 
-		pfd[1].fd = conn->phys_ctx->thread_shutdown_notification_socket;
-		pfd[1].events = POLLIN;
+		if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+			pfd[num_sock].fd =
+			    conn->phys_ctx->thread_shutdown_notification_socket;
+			pfd[num_sock].events = POLLIN;
+			num_sock++;
+		}
 
 		pollres = mg_poll(pfd,
-		                  2,
+		                  num_sock,
 		                  (int)(timeout * 1000.0),
 		                  &(conn->phys_ctx->stop_flag));
 		if (!STOP_FLAG_IS_ZERO(&conn->phys_ctx->stop_flag)) {
@@ -10323,8 +10344,11 @@ send_file_data(struct mg_connection *conn,
 				}
 
 				/* Read from file, exit the loop on error */
-				if ((num_read =
-				         pull_inner(filep->access.fp, NULL, buf, to_read, /* unused */ 0.0))
+				if ((num_read = pull_inner(filep->access.fp,
+				                           NULL,
+				                           buf,
+				                           to_read,
+				                           /* unused */ 0.0))
 				    <= 0) {
 					break;
 				}
@@ -10957,7 +10981,7 @@ parse_http_headers(char **buf, struct mg_header hdr[MG_MAX_HEADERS])
 		}
 
 		/* here *dp is either 0 or '\n' */
-		/* in any case, we have a new header */
+		/* in any case, we have found a complete header */
 		num_headers = i + 1;
 
 		if (*dp) {
@@ -10966,9 +10990,11 @@ parse_http_headers(char **buf, struct mg_header hdr[MG_MAX_HEADERS])
 			*buf = dp;
 
 			if ((dp[0] == '\r') || (dp[0] == '\n')) {
-				/* This is the end of the header */
+				/* We've had CRLF twice in a row
+				 * This is the end of the headers */
 				break;
 			}
+			/* continue within the loop, find the next header */
 		} else {
 			*buf = dp;
 			break;
@@ -16787,16 +16813,24 @@ sslize(struct mg_connection *conn,
 					 * This is typical for non-blocking sockets. */
 					struct mg_pollfd pfd[2];
 					int pollres;
+					unsigned int num_sock = 1;
 					pfd[0].fd = conn->client.sock;
 					pfd[0].events = ((err == SSL_ERROR_WANT_CONNECT)
 					                 || (err == SSL_ERROR_WANT_WRITE))
 					                    ? POLLOUT
 					                    : POLLIN;
 
-					pfd[1].fd =
-					    conn->phys_ctx->thread_shutdown_notification_socket;
-					pfd[1].events = POLLIN;
-					pollres = mg_poll(pfd, 2, 50, &(conn->phys_ctx->stop_flag));
+					if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+						pfd[num_sock].fd =
+						    conn->phys_ctx->thread_shutdown_notification_socket;
+						pfd[num_sock].events = POLLIN;
+						num_sock++;
+					}
+
+					pollres = mg_poll(pfd,
+					                  num_sock,
+					                  50,
+					                  &(conn->phys_ctx->stop_flag));
 					if (pollres < 0) {
 						/* Break if error occurred (-1)
 						 * or server shutdown (-2) */
