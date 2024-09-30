@@ -263,6 +263,11 @@ namespace webui {
             webui_set_size(webui_window, width, height);
         }
 
+        // Set window minimum size (currently windows only.)
+        void set_minimum_size(unsigned int width, unsigned int height) const {
+        	webui_set_minimum_size(webui_window, width, height);
+        }
+
         // Get the network port of a running window. This can be useful to determine the HTTP link of `webui.js`
         size_t get_port() const {
             return webui_get_port(webui_window);

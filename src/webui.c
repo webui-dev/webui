@@ -324,6 +324,9 @@ typedef struct _webui_window_t {
     int width;
     int height;
     bool size_set;
+    int minimum_width;
+    int minimum_height;
+    bool minimum_size_set;
     int x;
     int y;
     bool position_set;
@@ -2493,6 +2496,32 @@ void webui_set_size(size_t window, unsigned int width, unsigned int height) {
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_TRUE);
         }
     }
+}
+
+void webui_set_minimum_size(size_t window, unsigned int width, unsigned int height) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_minimum_size(%zu, %u, %u)\n", window, width, height);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    if (width < WEBUI_MIN_WIDTH || width > WEBUI_MAX_WIDTH || height < WEBUI_MIN_HEIGHT ||
+        height > WEBUI_MAX_HEIGHT) {
+
+        win->minimum_size_set = false;
+        return;
+    }
+
+    win->minimum_width = width;
+    win->minimum_height = height;
+    win->minimum_size_set = true;
 }
 
 void webui_set_position(size_t window, unsigned int x, unsigned int y) {
@@ -10211,6 +10240,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     }
                 }
                 break;
+            case WM_GETMINMAXINFO:
+            	if (win) {
+					if (win->minimum_size_set) {
+						LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+						lpMMI->ptMinTrackSize.x = win->minimum_width;
+						lpMMI->ptMinTrackSize.y = win->minimum_height;
+					}
+				}
+				break;
             case WM_CLOSE:
                 if (win) {
                     // Stop the WebView thread, close the window
@@ -10422,7 +10460,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
         wc.cbClsExtra = 0;
         wc.cbWndExtra = 0;
-        wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+        wc.hIcon = LoadIcon(GetModuleHandle(NULL) ,MAKEINTRESOURCE(101));	// default user icon resouce : 101
+        if(!wc.hIcon) wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);			// if not existed, use system default icon
 
         if (!RegisterClassA(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
             _webui_wv_free(win->webView);
@@ -10437,6 +10476,13 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             win->webView->width, win->webView->height,
             NULL, NULL, GetModuleHandle(NULL), NULL
         );
+
+       	{	// window size correction
+       		RECT rc;
+       		GetClientRect(win->webView->hwnd, &rc);
+       		win->webView->width	= rc.right - rc.left;
+       		win->webView->height = rc.bottom - rc.top;
+       	}
 
         if (!win->webView->hwnd) {
             _webui_wv_free(win->webView);
