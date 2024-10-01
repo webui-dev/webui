@@ -430,7 +430,7 @@ WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
  * @param handler The handler function: `void myHandler(const char* filename,
  * int* length)`
  *
- * @example webui_set_file_handler_window(myWindow, myHandlerFunction);
+ * @example webui_set_file_handler(myWindow, myHandlerFunction);
  */
 WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(const char* filename, int* length));
 
@@ -443,7 +443,7 @@ WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(c
  * @param handler The handler function: `void myHandler(size_t window, const char* filename,
  * int* length)`
  *
- * @example webui_set_file_handler(myWindow, myHandlerFunction);
+ * @example webui_set_file_handler_window(myWindow, myHandlerFunction);
  */
 WEBUI_EXPORT void webui_set_file_handler_window(size_t window, const void* (*handler)(size_t window, const char* filename, int* length));
 
