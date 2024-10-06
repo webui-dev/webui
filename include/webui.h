@@ -568,6 +568,17 @@ WEBUI_EXPORT void webui_set_hide(size_t window, bool status);
 WEBUI_EXPORT void webui_set_size(size_t window, unsigned int width, unsigned int height);
 
 /**
+ * @brief Set the window minimum size.
+ *
+ * @param window The window number
+ * @param width The window width
+ * @param height The window height
+ *
+ * @example webui_set_minimum_size(myWindow, 800, 600);
+ */
+WEBUI_EXPORT void webui_set_minimum_size(size_t window, unsigned int width, unsigned int height);
+
+/**
  * @brief Set the window position.
  *
  * @param window The window number
