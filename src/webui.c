@@ -10495,19 +10495,23 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             WEBUI_THREAD_RETURN
         }
 
-        win->webView->hwnd = CreateWindowExA(
-            0, wvClass, "", WS_OVERLAPPEDWINDOW,
-            win->webView->x, win->webView->y, 
-            win->webView->width, win->webView->height,
-            NULL, NULL, GetModuleHandle(NULL), NULL
-        );
-
-       	{	// window size correction
-       		RECT rc;
-       		GetClientRect(win->webView->hwnd, &rc);
-       		win->webView->width	= rc.right - rc.left;
-       		win->webView->height = rc.bottom - rc.top;
-       	}
+        {
+            RECT rc;
+            rc.left     = win->webView->x;
+            rc.top      = win->webView->y;
+            rc.right    = rc.left + win->webView->width;
+            rc.bottom   = rc.top + win->webView->height;
+            // adjust to correct window size & position
+            AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, 0);
+            win->webView->x    = rc.left;
+            win->webView->y    = rc.top;
+            win->webView->hwnd = CreateWindowExA(
+                0, wvClass, "", WS_OVERLAPPEDWINDOW,
+                rc.left, rc.top, 
+                rc.right - rc.left, rc.bottom - rc.top,
+                NULL, NULL, GetModuleHandle(NULL), NULL
+            );
+        }
 
         if (!win->webView->hwnd) {
             _webui_wv_free(win->webView);
