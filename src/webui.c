@@ -18,6 +18,10 @@
 // -- WebView -------------------------
 #ifdef _WIN32
     #include "webview/WebView2.h"
+	#include <dwmapi.h>				// for DPI awareness (not declaired in header, to avoid possibility of type define duplication)
+	#ifndef DWMWA_CAPTION_COLOR
+		#define DWMWA_CAPTION_COLOR 35
+	#endif
 #elif __linux__
     #include <dlfcn.h>
 #else
@@ -330,6 +334,11 @@ typedef struct _webui_window_t {
     int x;
     int y;
     bool position_set;
+    struct {
+        webui_window_style id;
+        uint32_t focused_bgcolor;	// default background window color
+        uint32_t unfocused_bgcolor; // for out of client area, when you set custom style window.
+    } window_style;
     size_t process_id;
     const void*(*files_handler)(const char* filename, int* length);
     const void*(*files_handler_window)(size_t window, const char* filename, int* length);
@@ -764,6 +773,72 @@ void webui_set_file_handler_window(size_t window, const void*(*handler)(size_t w
     win->files_handler_window = handler;
 }
 
+void webui_set_window_style(size_t window, webui_window_style style_id, uint32_t focused_bgcolor, uint32_t unfocused_bgcolor) {
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+	win->window_style.id = style_id;
+	win->window_style.focused_bgcolor = focused_bgcolor;
+	win->window_style.unfocused_bgcolor = unfocused_bgcolor;
+}
+
+bool webui_command_window(size_t window, webui_window_command command) {
+	// Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return false;
+    _webui_window_t* win = _webui.wins[window];
+
+#ifdef _WIN32
+	switch(command) {
+	case WEBUI_WINDOW_COMMAND_HIDE:
+		SetWindowPos(win->webView->hwnd, 0, 0, 0, 0, 0, SWP_HIDEWINDOW | SWP_NOMOVE | SWP_NOSIZE );
+		break;
+	case WEBUI_WINDOW_COMMAND_SHOW:
+		SetWindowPos(win->webView->hwnd, 0, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE );
+		break;
+	case WEBUI_WINDOW_COMMAND_START_DRAG:
+		// set main window to dragging (thread-safe)
+		SendMessage(win->webView->hwnd, WM_APP - 1, 0, 0);
+		break;
+	case WEBUI_WINDOW_COMMAND_NORMAL:
+		PostMessage(win->webView->hwnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+		break;
+	case WEBUI_WINDOW_COMMAND_MAXIMIZE:
+		PostMessage(win->webView->hwnd, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+		SetForegroundWindow(win->webView->hwnd);
+		break;
+	case WEBUI_WINDOW_COMMAND_MINIMIZE:
+		PostMessage(win->webView->hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+		break;
+	case WEBUI_WINDOW_COMMAND_IS_NORMAL: {
+		WINDOWPLACEMENT pl;
+		GetWindowPlacement(win->webView->hwnd, &pl);
+		return (pl.showCmd == SW_SHOWNORMAL);
+	}
+	case WEBUI_WINDOW_COMMAND_IS_MAXIMIZED: {
+		WINDOWPLACEMENT pl;
+		GetWindowPlacement(win->webView->hwnd, &pl);
+		return (pl.showCmd == SW_SHOWMAXIMIZED);
+	}
+	case WEBUI_WINDOW_COMMAND_IS_MINIZED: {
+		WINDOWPLACEMENT pl;
+		GetWindowPlacement(win->webView->hwnd, &pl);
+		return (pl.showCmd == SW_SHOWMINIMIZED);
+	}
+	}
+#endif
+	return true;
+}
+
 bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
     char* buffer, size_t buffer_length) {
 
@@ -937,6 +1012,11 @@ size_t webui_new_window_id(size_t num) {
     // Create a new window
     _webui_window_t* win = (_webui_window_t* ) _webui_malloc(sizeof(_webui_window_t));
     _webui.wins[num] = win;
+
+    // default settings
+    win->window_style.id = WEBUI_WINDOW_STYLE_NORMAL;
+    win->window_style.focused_bgcolor = 0xFFFFFF;
+    win->window_style.unfocused_bgcolor = 0xFFFFFF;
 
     // Initialisation
     win->ws_block = _webui.config.ws_block;
@@ -7466,6 +7546,11 @@ static void _webui_init(void) {
     #else
     srand(time(NULL));
     #endif
+	
+    // Support high-dpi screens per a monitor for windows
+    #ifdef _WIN32
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    #endif
 
     // Initializing core
     _webui.startup_timeout = WEBUI_DEF_TIMEOUT;
@@ -10265,14 +10350,45 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     }
                 }
                 break;
-            case WM_GETMINMAXINFO:
-            	if (win) {
-					if (win->minimum_size_set) {
-						LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
-						lpMMI->ptMinTrackSize.x = win->minimum_width;
-						lpMMI->ptMinTrackSize.y = win->minimum_height;
-					}
+			case WM_SETFOCUS:
+				if ((win->window_style.id == WEBUI_WINDOW_STYLE_CUSTOM) || (win->window_style.id == WEBUI_WINDOW_STYLE_CUSTOM_MODAL)) {
+					DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, &win->window_style.focused_bgcolor, sizeof(win->window_style.focused_bgcolor));
 				}
+				goto DEFAULT_WINPROC;
+				break;	// not reached, but to prevent false alarm from cppcheck
+			case WM_KILLFOCUS:
+				if ((win->window_style.id == WEBUI_WINDOW_STYLE_CUSTOM) || (win->window_style.id == WEBUI_WINDOW_STYLE_CUSTOM_MODAL)) {
+					DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, &win->window_style.unfocused_bgcolor, sizeof(win->window_style.unfocused_bgcolor));
+				}
+				goto DEFAULT_WINPROC;
+				break;	// not reached, but to prevent false alarm from cppcheck
+            case WM_GETMINMAXINFO:
+            	if (win && win->minimum_size_set) {
+					UINT dpi = GetDpiForWindow(hwnd);
+					LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+					lpMMI->ptMinTrackSize.x = MulDiv(win->minimum_width, dpi, USER_DEFAULT_SCREEN_DPI);
+					lpMMI->ptMinTrackSize.y = MulDiv(win->minimum_height, dpi, USER_DEFAULT_SCREEN_DPI);
+				} else goto DEFAULT_WINPROC;
+				break;
+			case WM_DPICHANGED:	// resizing the window to DPI setting
+				{
+					int dpi = HIWORD(wParam);
+					{
+						RECT* const prcNewWindow = (RECT*)lParam;
+						SetWindowPos(hwnd,
+									 NULL,
+									 prcNewWindow->left,
+									 prcNewWindow->top,
+									 prcNewWindow->right - prcNewWindow->left,
+									 prcNewWindow->bottom - prcNewWindow->top,
+									 SWP_NOZORDER | SWP_NOACTIVATE);
+					}
+					return 0;
+				}
+				break;
+			case (WM_APP - 1):	// start dragging window
+				ReleaseCapture();	// force to release webview client mouse capture first
+				PostMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
 				break;
             case WM_CLOSE:
                 if (win) {
@@ -10293,6 +10409,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 }
                 break;
             default:
+DEFAULT_WINPROC:
                 return DefWindowProc(hwnd, uMsg, wParam, lParam);
         }
         return 0;
@@ -10386,7 +10503,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         //     return SUCCEEDED(hr);
         // }
         if (webView) {
-            return (SetWindowPos(webView->hwnd, NULL, 0, 0, windowWidth, windowHeight, SWP_NOMOVE| SWP_NOREPOSITION));
+			UINT dpi = GetDpiForWindow(webView->hwnd);
+            return (SetWindowPos(webView->hwnd, NULL, 0, 0, MulDiv(windowWidth, dpi, USER_DEFAULT_SCREEN_DPI), MulDiv(windowHeight, dpi, USER_DEFAULT_SCREEN_DPI), SWP_NOMOVE| SWP_NOREPOSITION));
         }
         return false;
     };
@@ -10482,7 +10600,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         wc.lpszClassName = wvClass;
         wc.style = 0;
         wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-        wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        wc.hbrBackground = (HBRUSH)CreateSolidBrush(win->window_style.focused_bgcolor);
         wc.cbClsExtra = 0;
         wc.cbWndExtra = 0;
         wc.hIcon = LoadIcon(GetModuleHandle(NULL) ,MAKEINTRESOURCE(101));	// default user icon resouce : 101
@@ -10495,19 +10613,49 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             WEBUI_THREAD_RETURN
         }
 
-        win->webView->hwnd = CreateWindowExA(
-            0, wvClass, "", WS_OVERLAPPEDWINDOW,
-            win->webView->x, win->webView->y, 
-            win->webView->width, win->webView->height,
-            NULL, NULL, GetModuleHandle(NULL), NULL
-        );
-
-       	{	// window size correction
-       		RECT rc;
-       		GetClientRect(win->webView->hwnd, &rc);
-       		win->webView->width	= rc.right - rc.left;
-       		win->webView->height = rc.bottom - rc.top;
-       	}
+		{
+			static const DWORD __window_style_list[] = {
+				WS_OVERLAPPEDWINDOW,									// WEBUI_WINDOW_STYLE_NORMAL
+				WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,				// WEBUI_WINDOW_STYLE_MODAL
+				WS_POPUPWINDOW | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU,			// WEBUI_WINDOW_STYLE_CUSTOM
+				WS_POPUPWINDOW | WS_SYSMENU,							// WEBUI_WINDOW_STYLE_CUSTOM_MODAL
+			};
+			DWORD  dwStyle	= __window_style_list[win->window_style.id];
+			
+			RECT rc;
+			rc.left		= win->webView->x;
+			rc.top		= win->webView->y;
+			rc.right	= rc.left + win->webView->width;
+			rc.bottom	= rc.top + win->webView->height;
+			// adjust to correct window size & position
+			AdjustWindowRect(&rc, dwStyle, 0);
+			win->webView->x	= rc.left;
+			win->webView->y	= rc.top;
+			win->webView->hwnd = CreateWindowExA(
+				0, wvClass, "", dwStyle,
+				rc.left, rc.top, 
+				rc.right - rc.left, rc.bottom - rc.top,
+				NULL, NULL, GetModuleHandle(NULL), NULL
+			);
+			
+			{	// rescale to DPI awareness
+				UINT dpi = GetDpiForWindow(win->webView->hwnd);
+				GetWindowRect(win->webView->hwnd, &rc);
+				int width = rc.right - rc.left;
+				int height = rc.bottom - rc.top;
+				int new_width = MulDiv(width, dpi, USER_DEFAULT_SCREEN_DPI);
+				int new_height = MulDiv(height, dpi, USER_DEFAULT_SCREEN_DPI);
+				rc.left	-= (new_width - width)/2;
+				rc.top	-= (new_height - height)/2;
+				
+				SetWindowPos(win->webView->hwnd, NULL, rc.left, rc.top, new_width, new_height, SWP_NOACTIVATE|SWP_FRAMECHANGED);
+				GetClientRect(win->webView->hwnd, &rc);
+				win->webView->width = rc.right - rc.left;
+				win->webView->height = rc.bottom - rc.top;
+				win->webView->x = rc.left;
+				win->webView->y = rc.top;
+			}
+		}
 
         if (!win->webView->hwnd) {
             _webui_wv_free(win->webView);

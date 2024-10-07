@@ -36,7 +36,7 @@ WARNING_LOG = /W4
 
 # Output Commands
 LIB_STATIC_OUT = /OUT:"$(WEBUI_OUT_LIB_NAME)-static.lib" "webui.obj" "civetweb.obj"
-LIB_DYN_OUT = /DLL /OUT:"$(WEBUI_OUT_LIB_NAME).dll" "webui.obj" "civetweb.obj" user32.lib Advapi32.lib Shell32.lib Ole32.lib $(TLS_LDFLAG_DYNAMIC)
+LIB_DYN_OUT = /DLL /OUT:"$(WEBUI_OUT_LIB_NAME).dll" "webui.obj" "civetweb.obj" dwmapi.lib gdi32.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib $(TLS_LDFLAG_DYNAMIC)
 
 # == 2.TARGETS ================================================================
 

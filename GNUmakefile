@@ -55,7 +55,7 @@ ifeq ($(OS),Windows_NT)
 	SHELL := CMD
 	PLATFORM := windows
 	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).dll
-	LWS2_OPT := -lws2_32 -lOle32
+	LWS2_OPT := -lws2_32 -lOle32 -ldwmapi -lgdi32
 	CIVETWEB_DEFINE_FLAGS += -DMUST_IMPLEMENT_CLOCK_GETTIME
 else ifeq ($(shell uname),Darwin)
 	# MacOS

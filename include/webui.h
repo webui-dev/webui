@@ -50,6 +50,11 @@
 
 // -- Windows -------------------------
 #ifdef _WIN32
+    #ifndef WINVER
+        // set minimum windows version requirement (windows 10, version 1607)
+        // (To use DPI awareness functions, 'SetProcessDpiAwarenessContext'...)
+        #define WINVER 0x0605
+    #endif
     #include <winsock2.h>
     #include <ws2tcpip.h>
     #ifndef WIN32_LEAN_AND_MEAN
@@ -146,6 +151,25 @@ enum webui_event {
     WEBUI_EVENT_NAVIGATION,       // 3. Window navigation event
     WEBUI_EVENT_CALLBACK,         // 4. Function call event
 };
+
+typedef enum {
+	WEBUI_WINDOW_STYLE_NORMAL = 0,      // 0. normal window (min/max/close + titlebar & resizable)
+	WEBUI_WINDOW_STYLE_MODAL,           // 1. modal window (close + titlebar, no resizable) - currently windows only
+	WEBUI_WINDOW_STYLE_CUSTOM,          // 2. custom window (no titlebar, but resizable) - currently windows only
+	WEBUI_WINDOW_STYLE_CUSTOM_MODAL,    // 3. custom modal window (no titlebar, no resizable) - currently windows only
+} webui_window_style;
+
+typedef enum {
+	WEBUI_WINDOW_COMMAND_HIDE = 0,		// 0. hide window (currently windows only)
+	WEBUI_WINDOW_COMMAND_SHOW,			// 1. show window (currently windows only)
+	WEBUI_WINDOW_COMMAND_START_DRAG,	// 2. start drag window (currently windows only)
+	WEBUI_WINDOW_COMMAND_NORMAL,		// 3. normal window (currently windows only)
+	WEBUI_WINDOW_COMMAND_MAXIMIZE,		// 4. maximize window (currently windows only)
+	WEBUI_WINDOW_COMMAND_MINIMIZE,		// 5. minimize window (currently windows only)
+	WEBUI_WINDOW_COMMAND_IS_NORMAL,		// 6. is normal window (currently windows only)
+	WEBUI_WINDOW_COMMAND_IS_MAXIMIZED,	// 7. is maximized window (currently windows only)
+	WEBUI_WINDOW_COMMAND_IS_MINIZED,	// 8. is minimized window (currently windows only)
+} webui_window_command;
 
 typedef enum {
     // Control if `webui_show()`, `webui_show_browser()` and
@@ -447,6 +471,28 @@ WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(c
  */
 WEBUI_EXPORT void webui_set_file_handler_window(size_t window, const void* (*handler)(size_t window, const char* filename, int* length));
 
+/**
+ * @brief Set window style. ItShould be used before `webui_show()`.
+ *
+ * @param window The window number
+ * @param id The desired window style from `webui_window_style` enum
+ * @param focused_bgcolor The focused background color (24bit RGB color, default : 0xFFFFFF)
+ * @param unfocused_bgcolor The un-focused background color (24bit RGB color, default : 0xFFFFFF)
+ *
+ * @example webui_set_window_style(myWindow, WEBUI_WINDOW_STYLE_CUSTOM, 0xFFFFFF, 0x808080);
+ */
+WEBUI_EXPORT void webui_set_window_style(size_t window, webui_window_style id, uint32_t focused_bgcolor, uint32_t unfocused_bgcolor);
+
+/**
+ * @brief Start dragging window. (currently windows only)
+ *
+ * @param window The window number
+ *
+ * @return Returns command is successful
+ *
+ * @example webui_start_drag_window(myWindow);
+ */
+WEBUI_EXPORT bool webui_command_window(size_t window, webui_window_command command);
 
 /**
  * @brief Check if the specified window is still running.
