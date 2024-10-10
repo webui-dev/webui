@@ -484,13 +484,14 @@ WEBUI_EXPORT void webui_set_file_handler_window(size_t window, const void* (*han
 WEBUI_EXPORT void webui_set_window_style(size_t window, webui_window_style id, uint32_t focused_bgcolor, uint32_t unfocused_bgcolor);
 
 /**
- * @brief Start dragging window. (currently windows only)
+ * @brief Command to window. (currently windows only)
  *
  * @param window The window number
+ * @param command type of command
  *
  * @return Returns command is successful
  *
- * @example webui_start_drag_window(myWindow);
+ * @example bool status = webui_command_window(myWindow, WEBUI_WINDOW_COMMAND_START_DRAG);
  */
 WEBUI_EXPORT bool webui_command_window(size_t window, webui_window_command command);
 

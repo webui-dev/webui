@@ -325,7 +325,7 @@ namespace webui {
 			webui_set_window_style(webui_window, id, focused_bgcolor, unfocused_bgcolor);
 		}
 		
-		// Command window.
+		// Command to window.
 		bool command_window(webui_window_command command) {
 			return webui_command_window(webui_window, command);
 		}
