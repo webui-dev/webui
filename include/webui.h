@@ -169,6 +169,8 @@ typedef enum {
 	WEBUI_WINDOW_COMMAND_IS_NORMAL,		// 6. is normal window (currently windows only)
 	WEBUI_WINDOW_COMMAND_IS_MAXIMIZED,	// 7. is maximized window (currently windows only)
 	WEBUI_WINDOW_COMMAND_IS_MINIZED,	// 8. is minimized window (currently windows only)
+	WEBUI_WINDOW_COMMAND_DISABLE_CLOSE,	// 9. disable close button (currently windows only)
+	WEBUI_WINDOW_COMMAND_ENABLE_CLOSE,	// 10. enable close button (currently windows only)
 } webui_window_command;
 
 typedef enum {

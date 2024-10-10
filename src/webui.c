@@ -883,6 +883,14 @@ bool webui_command_window(size_t window, webui_window_command command) {
 		GetWindowPlacement(win->webView->hwnd, &pl);
 		return (pl.showCmd == SW_SHOWMINIMIZED);
 	}
+	case WEBUI_WINDOW_COMMAND_DISABLE_CLOSE: {
+		EnableMenuItem(GetSystemMenu(win->webView->hwnd, FALSE), SC_CLOSE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+		SetClassLong(win->webView->hwnd, GCL_STYLE, GetClassLong(win->webView->hwnd, GCL_STYLE) | CS_NOCLOSE);
+	} break;
+	case WEBUI_WINDOW_COMMAND_ENABLE_CLOSE: {
+		EnableMenuItem(GetSystemMenu(win->webView->hwnd, FALSE), SC_CLOSE, MF_BYCOMMAND | MF_ENABLED);
+		SetClassLong(win->webView->hwnd, GCL_STYLE, GetClassLong(win->webView->hwnd, GCL_STYLE) & ~CS_NOCLOSE);
+	} break;
 	}
 #endif
 	return true;
@@ -10686,6 +10694,17 @@ DEFAULT_WINPROC:
 				rc.right - rc.left, rc.bottom - rc.top,
 				NULL, NULL, GetModuleHandle(NULL), NULL
 			);
+
+			// force to set rounded corner in WEBUI_WINDOW_STYLE_CUSTOM_MODAL style
+			if (win->window_style.id == WEBUI_WINDOW_STYLE_CUSTOM_MODAL) {
+				#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
+				#define DWMWA_WINDOW_CORNER_PREFERENCE 33
+				#define DWM_WINDOW_CORNER_PREFERENCE int
+				#define DWMWCP_ROUND 2
+				#endif
+				DWM_WINDOW_CORNER_PREFERENCE corner = DWMWCP_ROUND;
+				DwmSetWindowAttribute(win->webView->hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, &corner, sizeof(corner));
+			}
 			
 			{	// rescale to DPI awareness
 				UINT dpi = __GetDpiForWindow(win->webView->hwnd);
