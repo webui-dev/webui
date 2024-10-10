@@ -654,6 +654,55 @@ static WEBUI_THREAD_MONITOR;
 #define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strncat(dest, src, dest_size)
 #endif
 
+// Windows DPI awareness support
+#ifdef _WIN32
+#include <shellscalingapi.h>	// for 'SetProcessDpiAwareness' function use
+static void __InitDpiAwareness(void) {
+	{	// minimum platform : Windows 10, version 1703 / Windows Server 2016
+		BOOL (*pSetProcessDpiAwarenessContext)(DPI_AWARENESS_CONTEXT value) = (BOOL (*)(DPI_AWARENESS_CONTEXT))GetProcAddress(GetModuleHandle("user32.dll"), "SetProcessDpiAwarenessContext");
+
+		if (pSetProcessDpiAwarenessContext) {
+			pSetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+			return;
+		}
+	}
+	{	// minimum platform : Windows 8.1 / Windows Server 2012 R2
+		HMODULE hLib = LoadLibrary("Shcore.dll");	// dynamic load lib is required.
+		if (hLib) {
+			HRESULT (*pSetProcessDpiAwareness)(PROCESS_DPI_AWARENESS value) = (HRESULT (*)(PROCESS_DPI_AWARENESS))GetProcAddress(hLib, "SetProcessDpiAwareness");
+			if (pSetProcessDpiAwareness) {
+				if (pSetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE) != S_OK) {
+					pSetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE);
+				}
+				return;
+			}
+		}
+	}
+	{	// minimum platform : Windows Vista / Windows Server 2008
+		BOOL (*pSetProcessDPIAware)() = (BOOL (*)())GetProcAddress(GetModuleHandle("user32.dll"), "SetProcessDPIAware");
+		if (pSetProcessDPIAware) {
+			pSetProcessDPIAware();
+		}
+	}
+	
+	// If it reached to here, what ancient Windows is used?
+}
+
+static UINT __GetDpiForWindow(HWND hwnd) {
+	static bool bInitialized	= false;
+	static UINT (*pGetDpiForWindow)(HWND hwnd) = NULL;
+	
+	if (!bInitialized) {
+		pGetDpiForWindow = (UINT (*)(HWND))GetProcAddress(GetModuleHandle("user32.dll"), "GetDpiForWindow");
+		bInitialized = true;
+	}
+	// if it's supported
+	if(pGetDpiForWindow) return pGetDpiForWindow(hwnd);
+	// or not, return default DPI value. (under a Win 10.)
+	return USER_DEFAULT_SCREEN_DPI;
+}
+#endif
+
 // Assert
 #define WEBUI_ASSERT(s) _webui_panic(s);assert(0 && s);
 
@@ -7549,7 +7598,7 @@ static void _webui_init(void) {
 	
     // Support high-dpi screens per a monitor for windows
     #ifdef _WIN32
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+		__InitDpiAwareness();
     #endif
 
     // Initializing core
@@ -10364,7 +10413,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 				break;	// not reached, but to prevent false alarm from cppcheck
             case WM_GETMINMAXINFO:
             	if (win && win->minimum_size_set) {
-					UINT dpi = GetDpiForWindow(hwnd);
+					UINT dpi = __GetDpiForWindow(hwnd);
 					LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
 					lpMMI->ptMinTrackSize.x = MulDiv(win->minimum_width, dpi, USER_DEFAULT_SCREEN_DPI);
 					lpMMI->ptMinTrackSize.y = MulDiv(win->minimum_height, dpi, USER_DEFAULT_SCREEN_DPI);
@@ -10503,7 +10552,7 @@ DEFAULT_WINPROC:
         //     return SUCCEEDED(hr);
         // }
         if (webView) {
-			UINT dpi = GetDpiForWindow(webView->hwnd);
+			UINT dpi = __GetDpiForWindow(webView->hwnd);
             return (SetWindowPos(webView->hwnd, NULL, 0, 0, MulDiv(windowWidth, dpi, USER_DEFAULT_SCREEN_DPI), MulDiv(windowHeight, dpi, USER_DEFAULT_SCREEN_DPI), SWP_NOMOVE| SWP_NOREPOSITION));
         }
         return false;
@@ -10639,7 +10688,7 @@ DEFAULT_WINPROC:
 			);
 			
 			{	// rescale to DPI awareness
-				UINT dpi = GetDpiForWindow(win->webView->hwnd);
+				UINT dpi = __GetDpiForWindow(win->webView->hwnd);
 				GetWindowRect(win->webView->hwnd, &rc);
 				int width = rc.right - rc.left;
 				int height = rc.bottom - rc.top;
