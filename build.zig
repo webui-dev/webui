@@ -68,9 +68,8 @@ fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
     // Prepare compiler flags.
     const tls_flags = &[_][]const u8{ "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1" };
     var civetweb_flags = std.ArrayList([]const u8).init(b.allocator);
-    try civetweb_flags.appendSlice(&[_][]const u8{ "-DNDEBUG", "-DNO_CACHING", "-DNO_CGI", "-DUSE_WEBSOCKET" });
+    try civetweb_flags.appendSlice(&[_][]const u8{ "-DNDEBUG", "-DNO_CACHING", "-DNO_CGI", "-DUSE_WEBSOCKET", "-Wno-error=date-time" });
     try civetweb_flags.appendSlice(if (enable_tls) tls_flags else &[_][]const u8{ "-DUSE_WEBSOCKET", "-DNO_SSL" });
-    if (is_windows) try civetweb_flags.append("-DMUST_IMPLEMENT_CLOCK_GETTIME");
 
     webui.addCSourceFile(.{
         .file = if (zig_ver < 12) .{ .path = "src/webui.c" } else b.path("src/webui.c"),
