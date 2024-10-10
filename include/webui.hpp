@@ -319,6 +319,16 @@ namespace webui {
         void set_file_handler_window(const void* (*handler)(size_t window, const char* filename, int* length)) const {
             webui_set_file_handler_window(webui_window, handler);
         }
+		
+		// Set window style. Need to be called before `webui_show()`.
+		void set_window_style(webui_window_style id, uint32_t focused_bgcolor = 0xFFFFFF, uint32_t unfocused_bgcolor = 0xFFFFFF) {
+			webui_set_window_style(webui_window, id, focused_bgcolor, unfocused_bgcolor);
+		}
+		
+		// Command to window.
+		bool command_window(webui_window_command command) {
+			return webui_command_window(webui_window, command);
+		}
 
         // Set the web browser profile to use. An empty `name` and `path` means the default user profile. Need
         // to be called before `webui_show()`.

@@ -21,11 +21,11 @@ debug:
 #	Static with Debug info
 !IF "$(WEBUI_USE_TLS)" != "1"
 	@echo Build C++ Example (Debug Static)...
-	@cl /Zi /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME)-static.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main.exe 1>NUL 2>&1
+	@cl /Zi /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME)-static.lib dwmapi.lib gdi32.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main.exe 1>NUL 2>&1
 !ENDIF
 #	Dynamic with Debug info
 	@echo Build C++ Example (Debug Dynamic)...
-	@cl /Zi /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME)-static.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main-dyn.exe 1>NUL 2>&1
+	@cl /Zi /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME)-static.lib dwmapi.lib gdi32.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 #	Clean
 	@- del *.exp >nul 2>&1
 	@- del *.ilk >nul 2>&1
@@ -41,11 +41,11 @@ release:
 #	Static Release
 !IF "$(WEBUI_USE_TLS)" != "1"
 	@echo Build C++ Example (Release Static)...
-	@cl /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /SUBSYSTEM:WINDOWS $(WEBUI_LIB_NAME)-static.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main.exe 1>NUL 2>&1
+	@cl /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /SUBSYSTEM:WINDOWS $(WEBUI_LIB_NAME)-static.lib dwmapi.lib gdi32.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main.exe 1>NUL 2>&1
 !ENDIF
 #	Dynamic Release
 	@echo Build C++ Example (Release Dynamic)...
-	@cl /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /SUBSYSTEM:WINDOWS $(WEBUI_LIB_NAME).lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main-dyn.exe 1>NUL 2>&1
+	@cl /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /SUBSYSTEM:WINDOWS $(WEBUI_LIB_NAME).lib dwmapi.lib gdi32.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 #	Clean
 	@- del *.exp >nul 2>&1
 	@- del *.ilk >nul 2>&1

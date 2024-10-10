@@ -26,8 +26,8 @@ ifeq ($(OS),Windows_NT)
 	# Windows
 	PLATFORM := windows
 	SHELL := CMD
-	STATIC_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)-static -lws2_32 -Wall -Wl,-subsystem=console -luser32 -static
-	DYN_BUILD_FLAGS += "$(LIB_DIR)/$(WEBUI_LIB_NAME).dll" -lws2_32 -Wall -Wl,-subsystem=console -luser32
+	STATIC_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)-static -lws2_32 -Wall -Wl,-subsystem=console -luser32 -ldwmapi -lgdi32 -static
+	DYN_BUILD_FLAGS += "$(LIB_DIR)/$(WEBUI_LIB_NAME).dll" -lws2_32 -Wall -Wl,-subsystem=console -luser32 -ldwmapi -lgdi32
 	STATIC_OUT := main.exe
 	DYN_OUT := main-dyn.exe
 	LWS2_OPT := -lws2_32
