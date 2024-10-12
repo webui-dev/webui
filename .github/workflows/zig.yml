@@ -22,15 +22,15 @@ jobs:
         with:
           version: ${{ matrix.version }}
       - name: Build static library
-        run: zig build -Dverbose
+        run: zig build -Dverbose=debug
       - name: Build dynamic library
         if: ${{ !cancelled() }}
-        run: zig build -Ddynamic -Dverbose
+        run: zig build -Ddynamic -Dverbose=debug
       - name: Build static library with TLS support
         if: runner.os == 'Linux'
-        run: zig build -Denable-tls -Dverbose
+        run: zig build -Denable-tls -Dverbose=debug
       - name: Build dynamic library with TLS support
         if: runner.os == 'Linux'
-        run: zig build -Ddynamic -Denable-tls -Dverbose
+        run: zig build -Ddynamic -Denable-tls -Dverbose=debug
       - name: Build examples
         run: zig build examples
