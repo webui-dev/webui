@@ -134,9 +134,17 @@ fn build_examples(b: *Build, webui: *Compile) !void {
 
     const examples_path = (if (zig_ver < 12) (Build.LazyPath{ .path = "examples/C" }) else b.path("examples/C")).getPath(b);
     var examples_dir = if (zig_ver < 12)
-        try std.fs.cwd().openIterableDir(examples_path, .{})
+        std.fs.cwd().openIterableDir(examples_path, .{}) catch |e| switch (e) {
+            // Do not attempt building examples if directory does not exist.
+            error.FileNotFound => return,
+            else => return e,
+        }
     else
-        try std.fs.cwd().openDir(examples_path, .{ .iterate = true });
+        std.fs.cwd().openDir(examples_path, .{ .iterate = true }) catch |e| switch (e) {
+            // Do not attempt building examples if directory does not exist.
+            error.FileNotFound => return,
+            else => return e,
+        };
     defer examples_dir.close();
 
     var paths = examples_dir.iterate();
