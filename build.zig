@@ -100,6 +100,8 @@ fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
     } else if (is_windows) {
         webui.linkSystemLibrary("ws2_32");
         webui.linkSystemLibrary("ole32");
+        webui.linkSystemLibrary("dwmapi");
+        webui.linkSystemLibrary("gdi32");
         if (webui_target.abi == .msvc) {
             webui.linkSystemLibrary("Advapi32");
             webui.linkSystemLibrary("Shell32");
