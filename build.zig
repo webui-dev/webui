@@ -6,9 +6,9 @@ const OptimizeMode = std.builtin.OptimizeMode;
 const Compile = Build.Step.Compile;
 const Module = Build.Module;
 
-const log = std.log.scoped(.WebUI);
 const lib_name = "webui";
 const zig_ver = builtin.zig_version.minor;
+var global_log_level: std.log.Level = .warn;
 
 pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -16,30 +16,32 @@ pub fn build(b: *Build) !void {
 
     const is_dynamic = b.option(bool, "dynamic", "build the dynamic library") orelse false;
     const enable_tls = b.option(bool, "enable-tls", "enable TLS support") orelse false;
-    const verbose = b.option(bool, "verbose", "enable verbose output") orelse false;
+    const verbose = b.option(std.log.Level, "verbose", "set verbose output") orelse .warn;
 
-    switch (zig_ver) {
+    global_log_level = verbose;
+
+    switch (comptime zig_ver) {
         11 => {
             if (enable_tls and !target.isNative()) {
-                log.err("cross compilation is not supported with TLS enabled", .{});
-                std.os.exit(1);
+                log(.err, .WebUI, "cross compilation is not supported with TLS enabled", .{});
+                return error.InvalidBuildConfiguration;
             }
         },
         12, 13, 14 => {
             if (enable_tls and !target.query.isNative()) {
-                log.err("cross compilation is not supported with TLS enabled", .{});
-                std.process.exit(1);
+                log(.err, .WebUI, "cross compilation is not supported with TLS enabled", .{});
+                return error.InvalidBuildConfiguration;
             }
         },
-        else => @compileError("unsupported Zig version!"),
+        else => return error.UnsupportedZigVersion,
     }
 
-    if (verbose) {
-        std.debug.print("Building {s} WebUI library{s}...\n", .{
-            if (is_dynamic) "dynamic" else "static",
-            if (enable_tls) " with TLS support" else "",
-        });
-        defer std.debug.print("Done.\n", .{});
+    log(.info, .WebUI, "Building {s} WebUI library{s}...", .{
+        if (is_dynamic) "dynamic" else "static",
+        if (enable_tls) " with TLS support" else "",
+    });
+    defer {
+        log(.info, .WebUI, "Done.", .{});
     }
 
     const webui = if (is_dynamic) b.addSharedLibrary(.{
@@ -55,10 +57,7 @@ pub fn build(b: *Build) !void {
 
     b.installArtifact(webui);
 
-    build_examples(b, webui) catch |err| {
-        log.err("failed to build examples: {}", .{err});
-        if (zig_ver < 12) std.os.exit(1) else std.process.exit(1);
-    };
+    try build_examples(b, webui);
 }
 
 fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
@@ -66,18 +65,23 @@ fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
     const is_windows = if (zig_ver < 12) webui_target.isWindows() else webui_target.os.tag == .windows;
 
     // Prepare compiler flags.
-    const tls_flags = &[_][]const u8{ "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1" };
-    var civetweb_flags = std.ArrayList([]const u8).init(b.allocator);
-    try civetweb_flags.appendSlice(&[_][]const u8{ "-DNDEBUG", "-DNO_CACHING", "-DNO_CGI", "-DUSE_WEBSOCKET", "-Wno-error=date-time" });
-    try civetweb_flags.appendSlice(if (enable_tls) tls_flags else &[_][]const u8{ "-DUSE_WEBSOCKET", "-DNO_SSL" });
+    const no_tls_flags: []const []const u8 = &.{"-DNO_SSL"};
+    const tls_flags: []const []const u8 = &.{ "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1" };
+    const civetweb_flags: []const []const u8 = &.{
+        "-DNDEBUG",
+        "-DNO_CACHING",
+        "-DNO_CGI",
+        "-DUSE_WEBSOCKET",
+        "-Wno-error=date-time",
+    };
 
     webui.addCSourceFile(.{
         .file = if (zig_ver < 12) .{ .path = "src/webui.c" } else b.path("src/webui.c"),
-        .flags = if (enable_tls) tls_flags else &[_][]const u8{"-DNO_SSL"},
+        .flags = if (enable_tls) tls_flags else no_tls_flags,
     });
     webui.addCSourceFile(.{
         .file = if (zig_ver < 12) .{ .path = "src/civetweb/civetweb.c" } else b.path("src/civetweb/civetweb.c"),
-        .flags = civetweb_flags.items,
+        .flags = if (enable_tls) civetweb_flags ++ tls_flags else civetweb_flags ++ .{"-DUSE_WEBSOCKET"} ++ no_tls_flags,
     });
     webui.linkLibC();
     webui.addIncludePath(if (zig_ver < 12) .{ .path = "include" } else b.path("include"));
@@ -109,6 +113,18 @@ fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
         webui.linkSystemLibrary("ssl");
         webui.linkSystemLibrary("crypto");
     }
+
+    for (if (zig_ver < 12) webui.link_objects.items else webui.root_module.link_objects.items) |lo| {
+        switch (lo) {
+            .c_source_file => |csf| {
+                log(.debug, .WebUI, "{s} linker flags: {s}", .{
+                    if (zig_ver < 12) csf.file.path else csf.file.src_path.sub_path,
+                    csf.flags,
+                });
+            },
+            else => {},
+        }
+    }
 }
 
 fn build_examples(b: *Build, webui: *Compile) !void {
@@ -118,9 +134,9 @@ fn build_examples(b: *Build, webui: *Compile) !void {
 
     const examples_path = (if (zig_ver < 12) (Build.LazyPath{ .path = "examples/C" }) else b.path("examples/C")).getPath(b);
     var examples_dir = if (zig_ver < 12)
-        try std.fs.openIterableDirAbsolute(examples_path, .{})
+        try std.fs.cwd().openIterableDir(examples_path, .{})
     else
-        try std.fs.openDirAbsolute(examples_path, .{ .iterate = true });
+        try std.fs.cwd().openDir(examples_path, .{ .iterate = true });
     defer examples_dir.close();
 
     var paths = examples_dir.iterate();
@@ -128,10 +144,11 @@ fn build_examples(b: *Build, webui: *Compile) !void {
         if (val.kind != .directory) {
             continue;
         }
-
         const example_name = val.name;
+
         const exe = b.addExecutable(.{ .name = example_name, .target = target, .optimize = optimize });
         const path = try std.fmt.allocPrint(b.allocator, "examples/C/{s}/main.c", .{example_name});
+        defer b.allocator.free(path);
 
         exe.addCSourceFile(.{ .file = if (zig_ver < 12) .{ .path = path } else b.path(path), .flags = &.{} });
         exe.linkLibrary(webui);
@@ -139,13 +156,34 @@ fn build_examples(b: *Build, webui: *Compile) !void {
         const exe_install = b.addInstallArtifact(exe, .{});
         const exe_run = b.addRunArtifact(exe);
         const step_name = try std.fmt.allocPrint(b.allocator, "run_{s}", .{example_name});
+        defer b.allocator.free(step_name);
         const step_desc = try std.fmt.allocPrint(b.allocator, "run example {s}", .{example_name});
+        defer b.allocator.free(step_desc);
 
         const cwd = try std.fmt.allocPrint(b.allocator, "src/examples/{s}", .{example_name});
+        defer b.allocator.free(cwd);
         if (zig_ver < 12) exe_run.cwd = cwd else exe_run.setCwd(b.path(cwd));
 
         exe_run.step.dependOn(&exe_install.step);
         build_examples_step.dependOn(&exe_install.step);
         b.step(step_name, step_desc).dependOn(&exe_run.step);
+    }
+}
+
+/// Function to runtime-scope log levels based on build flag, for all scopes.
+fn log(
+    comptime level: std.log.Level,
+    comptime scope: @TypeOf(.EnumLiteral),
+    comptime format: []const u8,
+    args: anytype,
+) void {
+    const should_print: bool = @intFromEnum(global_log_level) >= @intFromEnum(level);
+    if (should_print) {
+        switch (comptime level) {
+            .err => std.log.scoped(scope).err(format, args),
+            .warn => std.log.scoped(scope).warn(format, args),
+            .info => std.log.scoped(scope).info(format, args),
+            .debug => std.log.scoped(scope).debug(format, args),
+        }
     }
 }
