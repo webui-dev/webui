@@ -331,6 +331,17 @@ WEBUI_EXPORT bool webui_show_wv(size_t window, const char* content);
 WEBUI_EXPORT void webui_set_kiosk(size_t window, bool status);
 
 /**
+ * @brief Add user-defined command line parameters.
+ *
+ * @param window The window number
+ * @param paramsLen Command line parameters length
+ * @param params Command line parameters
+ *
+ * @example webui_set_custom_parameters(myWindow, "--remote-debugging-port=9222");
+ */
+WEBUI_EXPORT void webui_set_custom_parameters(size_t window, int paramsLen, char *params);
+
+/**
  * @brief Set the window with high-contrast support. Useful when you want to 
  * build a better high-contrast theme with CSS.
  *

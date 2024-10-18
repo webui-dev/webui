@@ -317,6 +317,7 @@ typedef struct _webui_window_t {
     bool default_profile;
     char* profile_path;
     char* profile_name;
+    char* custom_parameters;
     size_t runtime;
     bool kiosk_mode;
     bool disable_browser_high_contrast;
@@ -996,6 +997,24 @@ void webui_set_kiosk(size_t window, bool status) {
     _webui_window_t* win = _webui.wins[window];
 
     win->kiosk_mode = status;
+}
+
+void webui_set_custom_parameters(size_t window, int paramsLen, char *params) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_custom_parameters([%zu], [%s])\n", window, params);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    win->custom_parameters = (char *)_webui_malloc(paramsLen + 1);
+    strcpy(win->custom_parameters, params);
 }
 
 void webui_set_high_contrast(size_t window, bool status) {
@@ -6108,6 +6127,12 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
             return c;
     }
 
+    // Add user-defined command line parameters.
+    if (!_webui_is_empty(win->custom_parameters)) {
+        c += WEBUI_SN_PRINTF_DYN(buffer, len, " %s", win->custom_parameters);
+        _webui_free_mem((void*)win->profile_path);
+    }
+        
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_get_browser_args() -> Unknown Browser (%zu)\n", browser);
     #endif
