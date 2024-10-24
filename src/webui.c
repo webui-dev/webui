@@ -4138,7 +4138,7 @@ static char* _webui_get_file_name_from_url(const char* url) {
     }
 
     // Copy the path to a new string
-    char* file = strdup(pos);
+    char* file = _webui_str_dup(pos);
 
     // Find the position of the first '?'
     char* question_mark = strchr(file, '?');
@@ -4180,9 +4180,6 @@ static char* _webui_get_full_path(_webui_window_t* win, const char* file) {
         }
     }
     #endif
-
-    // Clean
-    _webui_free_mem((void*)file);
 
     #ifdef WEBUI_LOG_VERBOSE
     printf("[Core]\t\t_webui_get_full_path() -> Full path: [%s]\n", full_path);
