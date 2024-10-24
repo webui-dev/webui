@@ -9329,7 +9329,7 @@ static void _webui_ws_process(
 
                             // Check the response
                             if (_webui_is_empty(event_inf->response))
-                                event_inf->response = (char*)"";
+                                event_inf->response = NULL;
 
                             #ifdef WEBUI_LOG
                             printf(
