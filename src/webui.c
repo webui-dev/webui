@@ -8854,7 +8854,8 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
     if (win->ws_block) {
         // Process the packet in this current thread
         _webui_ws_process(win, client, connection_id, arg_ptr, arg_len, ++recvNum, event_type);
-        _webui_free_mem((void*)arg_ptr);
+        if (arg_ptr != data)
+            _webui_free_mem((void*)arg_ptr);
     }
     else {
         // Process the packet in a new thread
