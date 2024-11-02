@@ -11068,7 +11068,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
 
             while (true) {
-
+                _webui_sleep(100);
                 if (_webui_mutex_is_webview_update(win, WEBUI_MUTEX_NONE)) {
 
                     _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
