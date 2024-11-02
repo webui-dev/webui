@@ -3095,7 +3095,7 @@ void webui_wait(void) {
             _webui.is_gtk_main_run = true;
 
             while (true) {
-
+                _webui_sleep(100);
                 while (gtk_events_pending()) {
                     gtk_main_iteration_do(0);
                 }
