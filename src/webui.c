@@ -3643,7 +3643,7 @@ static void _webui_ptr_add(void * ptr, size_t size) {
     _webui_mutex_lock(&_webui.mutex_mem);
     for (i = 0; i < _webui.ptr_position; i++) {
         if (_webui.ptr_list[i] == NULL) {
-			break;
+            break;
         }
     }
 
@@ -3653,11 +3653,11 @@ static void _webui_ptr_add(void * ptr, size_t size) {
 
     _webui.ptr_list[i] = ptr;
     _webui.ptr_size[i] = size;
-	if (i == _webui.ptr_position) {
+    if (i == _webui.ptr_position) {
         _webui.ptr_position++;
         if (_webui.ptr_position >= WEBUI_MAX_IDS)
-			_webui.ptr_position = (WEBUI_MAX_IDS - 1);
-	}
+            _webui.ptr_position = (WEBUI_MAX_IDS - 1);
+    }
     _webui_mutex_unlock(&_webui.mutex_mem);
 }
 
