@@ -3651,13 +3651,15 @@ static void _webui_ptr_add(void * ptr, size_t size) {
     printf("[Core]\t\t_webui_ptr_add(%p) -> Allocate %zu bytes\n", ptr, size);
     #endif
 
+    if (i == _webui.ptr_position) {
+        // Not found NULL in ptr_list
+        _webui.ptr_position++;
+        if (_webui.ptr_position > 2 * WEBUI_MAX_IDS)    // should use ARRAY_SIZE(_webui.ptr_list);
+            _webui.ptr_position = 2 * WEBUI_MAX_IDS;    // should use ARRAY_SIZE(_webui.ptr_list);
+        i = _webui.ptr_position - 1;
+    }
     _webui.ptr_list[i] = ptr;
     _webui.ptr_size[i] = size;
-    if (i == _webui.ptr_position) {
-        _webui.ptr_position++;
-        if (_webui.ptr_position >= WEBUI_MAX_IDS)
-            _webui.ptr_position = (WEBUI_MAX_IDS - 1);
-    }
     _webui_mutex_unlock(&_webui.mutex_mem);
 }
 
