@@ -395,6 +395,7 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_webview_stop;
     webui_mutex_t mutex_http_handler;
     webui_mutex_t mutex_client;
+    webui_mutex_t mutex_mem;
     webui_condition_t condition_wait;
     char* default_server_root_path;
     bool ui;
@@ -770,7 +771,7 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
     #ifdef WEBUI_LOG
     printf("[User] webui_script_client([%zu])\n", e->window);
     printf("[User] webui_script_client([%zu]) -> Script [%s] \n", e->window, script);
-    printf("[User] webui_script_client([%zu]) -> Response Buffer @ 0x%p \n", e->window, buffer);
+    printf("[User] webui_script_client([%zu]) -> Response Buffer @ %p \n", e->window, buffer);
     printf("[User] webui_script_client([%zu]) -> Response Buffer Size %zu bytes \n", e->window, buffer_length);
     #endif
 
@@ -952,7 +953,7 @@ size_t webui_new_window_id(size_t num) {
     webui_bind(num, "__webui_core_api__", _webui_bridge_api_handler);
 
     #ifdef WEBUI_LOG
-    printf("[User] webui_new_window_id() -> New window #%zu @ 0x%p\n", num, win);
+    printf("[User] webui_new_window_id() -> New window #%zu @ %p\n", num, win);
     #endif
 
     return num;
@@ -2923,7 +2924,7 @@ char* webui_decode(const char* str) {
 void webui_free(void * ptr) {
 
     #ifdef WEBUI_LOG
-    printf("[User] webui_free([0x%p])\n", ptr);
+    printf("[User] webui_free([%p])\n", ptr);
     #endif
 
     // Initialization
@@ -3352,7 +3353,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
             // Call user all-events cb
             #ifdef WEBUI_LOG
             printf(
-                "[Core]\t\t_webui_interface_bind_handler() -> User all-events callback @ 0x%p\n",
+                "[Core]\t\t_webui_interface_bind_handler() -> User all-events callback @ %p\n",
                 win->cb_interface[events_cb_index]
             );
             printf("[Core]\t\t_webui_interface_bind_handler() -> User all-events e->event_type [%zu]\n", e->event_type);
@@ -3376,7 +3377,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
         if (exist && win->cb_interface[cb_index] != NULL) {
             #ifdef WEBUI_LOG
             printf(
-                "[Core]\t\t_webui_interface_bind_handler() -> User callback @ 0x%p\n",
+                "[Core]\t\t_webui_interface_bind_handler() -> User callback @ %p\n",
                 win->cb_interface[cb_index]
             );
             printf("[Core]\t\t_webui_interface_bind_handler() -> e->event_type [%zu]\n", e->event_type);
@@ -3507,7 +3508,7 @@ size_t webui_interface_get_size_at(size_t window, size_t event_number, size_t in
 size_t webui_interface_bind(size_t window, const char* element, void(*func)(size_t, size_t, char* , size_t, size_t)) {
 
     #ifdef WEBUI_LOG
-    printf("[User] webui_interface_bind([%zu], [%s], [0x%p])\n", window, element, func);
+    printf("[User] webui_interface_bind([%zu], [%s], [%p])\n", window, element, func);
     #endif
 
     // Dereference
@@ -3612,68 +3613,70 @@ static bool _webui_ptr_exist(void * ptr) {
 
     if (ptr == NULL)
         return false;
-
+    _webui_mutex_lock(&_webui.mutex_mem);
     for (size_t i = 0; i < _webui.ptr_position; i++) {
 
         if (_webui.ptr_list[i] == ptr)
+        {
+            _webui_mutex_unlock(&_webui.mutex_mem);
             return true;
+        }
     }
-
+    _webui_mutex_unlock(&_webui.mutex_mem);
     return false;
 }
 
 static void _webui_ptr_add(void * ptr, size_t size) {
 
     #ifdef WEBUI_LOG_VERBOSE
-    printf("[Core]\t\t_webui_ptr_add(0x%p)\n", ptr);
+    printf("[Core]\t\t_webui_ptr_add(%p)\n", ptr);
     #endif
 
     if (ptr == NULL)
         return;
 
-    if (!_webui_ptr_exist(ptr)) {
+    // _webui_ptr_exist will use _webui.mutex_mem
+    if (_webui_ptr_exist(ptr))
+        return;
 
-        for (size_t i = 0; i < _webui.ptr_position; i++) {
-
-            if (_webui.ptr_list[i] == NULL) {
-
-                #ifdef WEBUI_LOG_VERBOSE
-                printf("[Core]\t\t_webui_ptr_add(0x%p) -> Allocate %zu bytes\n", ptr, size);
-                #endif
-
-                _webui.ptr_list[i] = ptr;
-                _webui.ptr_size[i] = size;
-                return;
-            }
+    size_t i;
+    _webui_mutex_lock(&_webui.mutex_mem);
+    for (i = 0; i < _webui.ptr_position; i++) {
+        if (_webui.ptr_list[i] == NULL) {
+			break;
         }
+    }
 
-        #ifdef WEBUI_LOG_VERBOSE
-        printf("[Core]\t\t_webui_ptr_add(0x%p) -> Allocate %zu bytes\n", ptr, size);
-        #endif
+    #ifdef WEBUI_LOG_VERBOSE
+    printf("[Core]\t\t_webui_ptr_add(%p) -> Allocate %zu bytes\n", ptr, size);
+    #endif
 
-        _webui.ptr_list[_webui.ptr_position] = ptr;
-        _webui.ptr_size[_webui.ptr_position] = size;
+    _webui.ptr_list[i] = ptr;
+    _webui.ptr_size[i] = size;
+	if (i == _webui.ptr_position) {
         _webui.ptr_position++;
         if (_webui.ptr_position >= WEBUI_MAX_IDS)
-            _webui.ptr_position = (WEBUI_MAX_IDS - 1);
-    }
+			_webui.ptr_position = (WEBUI_MAX_IDS - 1);
+	}
+    _webui_mutex_unlock(&_webui.mutex_mem);
 }
 
 static void _webui_free_mem(void * ptr) {
 
     #ifdef WEBUI_LOG_VERBOSE
-    printf("[Core]\t\t_webui_free_mem(0x%p)\n", ptr);
+    printf("[Core]\t\t_webui_free_mem(%p)\n", ptr);
     #endif
 
     if (ptr == NULL)
         return;
 
+    _webui_mutex_lock(&_webui.mutex_mem);
     for (size_t i = 0; i < _webui.ptr_position; i++) {
 
         if (_webui.ptr_list[i] == ptr) {
 
             #ifdef WEBUI_LOG_VERBOSE
-            printf("[Core]\t\t_webui_free_mem(0x%p) -> Free %zu bytes\n", ptr, _webui.ptr_size[i]);
+            printf("[Core]\t\t_webui_free_mem(%p) -> Free %zu bytes\n", ptr, _webui.ptr_size[i]);
             #endif
 
             free(ptr);
@@ -3691,6 +3694,7 @@ static void _webui_free_mem(void * ptr) {
             break;
         }
     }
+    _webui_mutex_unlock(&_webui.mutex_mem);
 }
 
 static void _webui_free_all_mem(void) {
@@ -3706,6 +3710,7 @@ static void _webui_free_all_mem(void) {
     freed = true;
 
     void * ptr = NULL;
+    _webui_mutex_lock(&_webui.mutex_mem);
     for (size_t i = 0; i < _webui.ptr_position; i++) {
 
         ptr = _webui.ptr_list[i];
@@ -3714,13 +3719,14 @@ static void _webui_free_all_mem(void) {
 
             #ifdef WEBUI_LOG
             printf(
-                "[Core]\t\t_webui_free_all_mem() -> Free %zu bytes @ 0x%p\n", _webui.ptr_size[i], ptr
+                "[Core]\t\t_webui_free_all_mem() -> Free %zu bytes @ %p\n", _webui.ptr_size[i], ptr
             );
             #endif
 
             free(ptr);
         }
     }
+    _webui_mutex_unlock(&_webui.mutex_mem);
 }
 
 static void _webui_panic(char* msg) {
@@ -3755,7 +3761,7 @@ static size_t _webui_mb(size_t size) {
     size--;
 
     size_t block_size = 4;
-    while(block_size <= size)
+    while(block_size < size)
         block_size *= 2;
 
     return block_size;
@@ -5931,6 +5937,7 @@ static void _webui_clean(void) {
     _webui_mutex_destroy(&_webui.mutex_webview_stop);
     _webui_mutex_destroy(&_webui.mutex_http_handler);
     _webui_mutex_destroy(&_webui.mutex_client);
+    _webui_mutex_destroy(&_webui.mutex_mem);
     _webui_condition_destroy(&_webui.condition_wait);
 
     #ifdef WEBUI_LOG
@@ -7494,6 +7501,7 @@ static void _webui_init(void) {
     _webui_mutex_init(&_webui.mutex_webview_stop);
     _webui_mutex_init(&_webui.mutex_http_handler);
     _webui_mutex_init(&_webui.mutex_client);
+    _webui_mutex_init(&_webui.mutex_mem);
     _webui_condition_init(&_webui.condition_wait);
 }
 
@@ -9134,7 +9142,7 @@ static void _webui_ws_process(
                                     recvNum, data_len
                                 );
                                 printf(
-                                    "[Core]\t\t_webui_ws_process(%zu) -> data = [%s] @ 0x%p\n",
+                                    "[Core]\t\t_webui_ws_process(%zu) -> data = [%s] @ %p\n",
                                     recvNum, data, data
                                 );
                                 #endif
