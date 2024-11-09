@@ -224,8 +224,8 @@ namespace webui {
         }
 
         // Add user-defined command line parameters
-        void set_custom_parameters(int paramsLen, char *params) const {
-            webui_set_custom_parameters(webui_window, paramsLen, params);
+        void set_custom_parameters(char *params) const {
+            webui_set_custom_parameters(webui_window, params);
         }
 
         // Set the window with high-contrast support. Useful when you want to build a better high-contrast theme with CSS.
