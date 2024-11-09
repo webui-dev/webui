@@ -179,6 +179,10 @@ typedef enum {
     //
     // Default: False
     use_cookies,
+    // If the backend uses asynchronous operations, set this 
+    // option to `True`. This will make webui wait until the 
+    // backend sets a response using `webui_return_x()`.
+    asynchronous_response
 } webui_config;
 
 // -- Structs -------------------------

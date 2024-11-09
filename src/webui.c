@@ -167,6 +167,7 @@ typedef struct webui_event_inf_t {
     size_t event_size[WEBUI_MAX_ARG + 1]; // Event data size (in bytes)
     char* response; // Event response (string)
     size_t count; // Event arguments count
+    bool done;
 } webui_event_inf_t;
 
 // WebView
@@ -361,6 +362,7 @@ typedef struct _webui_core_t {
         bool folder_monitor;
         bool multi_client;
         bool use_cookies;
+        bool asynchronous_response;
     } config;
     struct mg_connection* clients[WEBUI_MAX_IDS];
     size_t clients_win_num[WEBUI_MAX_IDS];
@@ -396,6 +398,7 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_webview_stop;
     webui_mutex_t mutex_http_handler;
     webui_mutex_t mutex_client;
+    webui_mutex_t mutex_async_response;
     webui_condition_t condition_wait;
     char* default_server_root_path;
     bool ui;
@@ -2000,6 +2003,13 @@ void webui_return_int(webui_event_t* e, long long int n) {
 
     // Set response
     event_inf->response = buf;
+
+    // Async response
+    if (_webui.config.asynchronous_response) {
+        _webui_mutex_lock(&_webui.mutex_async_response);
+        event_inf->done = true;
+        _webui_mutex_unlock(&_webui.mutex_async_response);
+    }
 }
 
 void webui_return_float(webui_event_t* e, double f) {
@@ -2032,6 +2042,13 @@ void webui_return_float(webui_event_t* e, double f) {
 
     // Set response
     event_inf->response = buf;
+
+    // Async response
+    if (_webui.config.asynchronous_response) {
+        _webui_mutex_lock(&_webui.mutex_async_response);
+        event_inf->done = true;
+        _webui_mutex_unlock(&_webui.mutex_async_response);
+    }
 }
 
 void webui_return_string(webui_event_t* e, const char* s) {
@@ -2067,6 +2084,13 @@ void webui_return_string(webui_event_t* e, const char* s) {
 
     // Set response
     event_inf->response = buf;
+
+    // Async response
+    if (_webui.config.asynchronous_response) {
+        _webui_mutex_lock(&_webui.mutex_async_response);
+        event_inf->done = true;
+        _webui_mutex_unlock(&_webui.mutex_async_response);
+    }
 }
 
 void webui_return_bool(webui_event_t* e, bool b) {
@@ -2099,6 +2123,13 @@ void webui_return_bool(webui_event_t* e, bool b) {
 
     // Set response
     event_inf->response = buf;
+
+    // Async response
+    if (_webui.config.asynchronous_response) {
+        _webui_mutex_lock(&_webui.mutex_async_response);
+        event_inf->done = true;
+        _webui_mutex_unlock(&_webui.mutex_async_response);
+    }
 }
 
 size_t webui_get_parent_process_id(size_t window) {
@@ -2333,6 +2364,9 @@ void webui_set_config(webui_config option, bool status) {
             break;
         case use_cookies:
             _webui.config.use_cookies = status;
+            break;
+        case asynchronous_response:
+            _webui.config.asynchronous_response = status;
             break;
         case ui_event_blocking:
             _webui.config.ws_block = status;
@@ -3390,8 +3424,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
             #endif
             // Call all-events cb
             #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user "
-                "all-events callback\n[Call]\n");
+            printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user all-events callback\n[Call]\n");
             #endif
             win->cb_interface[events_cb_index](e->window, e->event_type, e->element, e->event_number, e->bind_id);
         }
@@ -3414,27 +3447,35 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
             #endif
             // Call cb
             #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user "
-                "callback\n[Call]\n");
+            printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user callback\n[Call]\n");
             #endif
             win->cb_interface[cb_index](e->window, e->event_type, e->element, e->event_number, e->bind_id);
         }
     }
 
-    #ifdef WEBUI_LOG
-    // Print cb response
-    char* response = NULL;
     // Get event inf
     webui_event_inf_t* event_inf = win->events[e->event_number];
     if (event_inf != NULL) {
-        if (event_inf->response != NULL)
-            response = event_inf->response;
+
+        // Async response wait
+        if (_webui.config.asynchronous_response) {
+            bool done = false;
+            while (!done) {
+                _webui_sleep(10);
+                _webui_mutex_lock(&_webui.mutex_async_response);
+                if (event_inf->done) done = true;
+                _webui_mutex_unlock(&_webui.mutex_async_response);
+            }
+        }
+
+        #ifdef WEBUI_LOG
+        // Print cb response
+        printf(
+            "[Core]\t\t_webui_interface_bind_handler() -> user-callback response [%s]\n",
+            event_inf->response
+        );
+        #endif
     }
-    printf(
-        "[Core]\t\t_webui_interface_bind_handler() -> user-callback response [%s]\n",
-        response
-    );
-    #endif
 }
 
 const char* webui_interface_get_string_at(size_t window, size_t event_number, size_t index) {
@@ -3578,6 +3619,13 @@ void webui_interface_set_response(size_t window, size_t event_number, const char
     size_t len = _webui_strlen(response);
     event_inf->response = (char*)_webui_malloc(len);
     WEBUI_STR_COPY_DYN(event_inf->response, len, response);
+
+    // Async response
+    if (_webui.config.asynchronous_response) {
+        _webui_mutex_lock(&_webui.mutex_async_response);
+        event_inf->done = true;
+        _webui_mutex_unlock(&_webui.mutex_async_response);
+    }
 
     #ifdef WEBUI_LOG
     printf("[User] webui_interface_set_response() -> Internal buffer [%s] \n", event_inf->response);
@@ -5959,6 +6007,7 @@ static void _webui_clean(void) {
     _webui_mutex_destroy(&_webui.mutex_webview_stop);
     _webui_mutex_destroy(&_webui.mutex_http_handler);
     _webui_mutex_destroy(&_webui.mutex_client);
+    _webui_mutex_destroy(&_webui.mutex_async_response);
     _webui_condition_destroy(&_webui.condition_wait);
 
     #ifdef WEBUI_LOG
@@ -7364,6 +7413,22 @@ static void _webui_window_event(
         }
     }
 
+    // Get event inf
+    webui_event_inf_t* event_inf = win->events[e.event_number];
+    if (event_inf != NULL) {
+
+        // Async response wait
+        if (_webui.config.asynchronous_response) {
+            bool done = false;
+            while (!done) {
+                _webui_sleep(10);
+                _webui_mutex_lock(&_webui.mutex_async_response);
+                if (event_inf->done) done = true;
+                _webui_mutex_unlock(&_webui.mutex_async_response);
+            }
+        }
+    }
+
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_window_event() -> Finished\n");
     #endif
@@ -7528,6 +7593,7 @@ static void _webui_init(void) {
     _webui_mutex_init(&_webui.mutex_webview_stop);
     _webui_mutex_init(&_webui.mutex_http_handler);
     _webui_mutex_init(&_webui.mutex_client);
+    _webui_mutex_init(&_webui.mutex_async_response);
     _webui_condition_init(&_webui.condition_wait);
 }
 
@@ -9359,6 +9425,17 @@ static void _webui_ws_process(
                                 #endif
                                 e.bind_id = cb_index;
                                 win->cb[cb_index](&e);
+
+                                // Async response wait
+                                if (_webui.config.asynchronous_response) {
+                                    bool done = false;
+                                    while (!done) {
+                                        _webui_sleep(10);
+                                        _webui_mutex_lock(&_webui.mutex_async_response);
+                                        if (event_inf->done) done = true;
+                                        _webui_mutex_unlock(&_webui.mutex_async_response);
+                                    }
+                                }
                             }
 
                             // Check the response
