@@ -20,7 +20,7 @@
 #define WEBUI_MAX_ARG (16)
 
 // Dynamic Library Exports
-#if defined(_MSC_VER) || defined(__TINYC__)
+#if defined(_WIN32) && (defined(_MSC_VER) || defined(__TINYC__))
     #ifndef WEBUI_EXPORT
         #define WEBUI_EXPORT __declspec(dllexport)
     #endif
