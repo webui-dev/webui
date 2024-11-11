@@ -50,7 +50,7 @@ $ErrorActionPreference="Stop"
 if (-not (Test-Path "$project_root\bridge\node_modules\esbuild")) {
     if (Get-Command npm -ErrorAction SilentlyContinue) {
         if (!$silent) { Write-Host "Installing esbuild..." }
-        npm install esbuild
+        npm install --prefix ./ esbuild
     } else {
         Write-Host "Error: Please install NPM."
         Set-Location $current_location
