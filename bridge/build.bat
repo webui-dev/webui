@@ -27,7 +27,7 @@ IF NOT EXIST "%project_root%\bridge\node_modules\esbuild\" (
     where npm > NUL 2>&1
     IF %errorlevel%==0 (
         echo Installing esbuild...
-        npm install esbuild
+        npm install --prefix ./ esbuild
     ) ELSE (
         echo Error: Please install NPM.
         cd %cd%
