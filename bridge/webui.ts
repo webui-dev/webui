@@ -245,17 +245,12 @@ class WebuiBridge {
 		}
 	};
 	#clicksListener() {
-		Object.keys(window).forEach((key) => {
-			if (/^on(click)/.test(key)) {
-				globalThis.addEventListener(key.slice(2), (event) => {
-					if (!(event.target instanceof HTMLElement)) return;
-					if (this.#AllEvents ||
-						((event.target.id !== '') && 
-						(this.#bindsList.includes(event.target?.id)))
-					) {
-						this.#sendClick(event.target.id);
-					}
-				});
+		document.querySelectorAll<HTMLElement>("[id]").forEach(e => {
+			if (this.#AllEvents || ((e.id !== '') && (this.#bindsList.includes(e.id)))) {
+				if (e.id && !e.dataset.webui_click_is_set) {
+					e.dataset.webui_click_is_set = "true";
+					e.addEventListener("click", () => this.#sendClick(e.id));
+				}
 			}
 		});
 	}
@@ -413,10 +408,11 @@ class WebuiBridge {
 			if (bind.trim()) {
 				const fn = bind;
 				if (fn.trim()) {
-					if (fn !== '_webui_core_api') {
-						this[fn] = (...args: DataTypes[]) => this.call(fn, ...args);
+					if (fn !== '__webui_core_api__') {
 						if (typeof (window as any)[fn] === 'undefined') {
+							this[fn] = (...args: DataTypes[]) => this.call(fn, ...args);
 							(window as any)[fn] = (...args: string[]) => this.call(fn, ...args);
+							if (this.#log) console.log(`WebUI -> Binding backend function [${fn}]`);
 						}
 					}
 				}
@@ -753,8 +749,10 @@ class WebuiBridge {
 		if (!this.#wsIsConnected()) return Promise.reject(new Error('WebSocket is not connected'));
 
 		// Check binding list
-		if (!this.#AllEvents && !this.#bindsList.includes(`${fn}`))
-			return Promise.reject(new ReferenceError(`No binding was found for "${fn}"`));
+		if (fn !== '__webui_core_api__') {
+			if (!this.#AllEvents && !this.#bindsList.includes(`${fn}`))
+				return Promise.reject(new ReferenceError(`No binding was found for "${fn}"`));
+		}
 
 		// Call backend and wait for response
 		if (this.#log) console.log(`WebUI -> Calling [${fn}(...)]`);
