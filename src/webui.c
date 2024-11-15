@@ -399,6 +399,7 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_http_handler;
     webui_mutex_t mutex_client;
     webui_mutex_t mutex_async_response;
+    webui_mutex_t mutex_mem;
     webui_condition_t condition_wait;
     char* default_server_root_path;
     bool ui;
@@ -3744,6 +3745,8 @@ static void _webui_free_mem(void * ptr) {
     if (ptr == NULL)
         return;
 
+    _webui_mutex_lock(&_webui.mutex_mem);
+
     for (size_t i = 0; i < _webui.ptr_position; i++) {
 
         if (_webui.ptr_list[i] == ptr) {
@@ -3767,6 +3770,8 @@ static void _webui_free_mem(void * ptr) {
             break;
         }
     }
+
+    _webui_mutex_unlock(&_webui.mutex_mem);
 }
 
 static void _webui_free_all_mem(void) {
@@ -3780,6 +3785,8 @@ static void _webui_free_all_mem(void) {
     if (freed)
         return;
     freed = true;
+
+    _webui_mutex_lock(&_webui.mutex_mem);
 
     void * ptr = NULL;
     for (size_t i = 0; i < _webui.ptr_position; i++) {
@@ -3797,6 +3804,8 @@ static void _webui_free_all_mem(void) {
             free(ptr);
         }
     }
+
+    _webui_mutex_unlock(&_webui.mutex_mem);
 }
 
 static void _webui_panic(char* msg) {
@@ -3843,6 +3852,8 @@ static void * _webui_malloc(size_t size) {
     printf("[Core]\t\t_webui_malloc([%zu])\n", size);
     #endif
 
+    _webui_mutex_lock(&_webui.mutex_mem);
+
     size = _webui_mb(size);
 
     void * block = NULL;
@@ -3868,6 +3879,8 @@ static void * _webui_malloc(size_t size) {
     memset(block, 0, size);
 
     _webui_ptr_add((void*)block, size);
+
+    _webui_mutex_unlock(&_webui.mutex_mem);
 
     return block;
 }
@@ -6008,6 +6021,7 @@ static void _webui_clean(void) {
     _webui_mutex_destroy(&_webui.mutex_http_handler);
     _webui_mutex_destroy(&_webui.mutex_client);
     _webui_mutex_destroy(&_webui.mutex_async_response);
+    _webui_mutex_destroy(&_webui.mutex_mem);
     _webui_condition_destroy(&_webui.condition_wait);
 
     #ifdef WEBUI_LOG
@@ -7556,6 +7570,22 @@ static void _webui_init(void) {
     printf("[Core]\t\t_webui_init()\n");
     #endif
 
+    // Initializing mutex
+    _webui_mutex_init(&_webui.mutex_server_start);
+    _webui_mutex_init(&_webui.mutex_send);
+    _webui_mutex_init(&_webui.mutex_receive);
+    _webui_mutex_init(&_webui.mutex_wait);
+    _webui_mutex_init(&_webui.mutex_bridge);
+    _webui_mutex_init(&_webui.mutex_js_run);
+    _webui_mutex_init(&_webui.mutex_win_connect);
+    _webui_mutex_init(&_webui.mutex_exit_now);
+    _webui_mutex_init(&_webui.mutex_webview_stop);
+    _webui_mutex_init(&_webui.mutex_http_handler);
+    _webui_mutex_init(&_webui.mutex_client);
+    _webui_mutex_init(&_webui.mutex_async_response);
+    _webui_mutex_init(&_webui.mutex_mem);
+    _webui_condition_init(&_webui.condition_wait);
+
     // Random
     #ifdef _WIN32
     srand((unsigned int) time(NULL));
@@ -7580,21 +7610,6 @@ static void _webui_init(void) {
     #else
     mg_init_library(0);
     #endif
-
-    // Initializing mutex
-    _webui_mutex_init(&_webui.mutex_server_start);
-    _webui_mutex_init(&_webui.mutex_send);
-    _webui_mutex_init(&_webui.mutex_receive);
-    _webui_mutex_init(&_webui.mutex_wait);
-    _webui_mutex_init(&_webui.mutex_bridge);
-    _webui_mutex_init(&_webui.mutex_js_run);
-    _webui_mutex_init(&_webui.mutex_win_connect);
-    _webui_mutex_init(&_webui.mutex_exit_now);
-    _webui_mutex_init(&_webui.mutex_webview_stop);
-    _webui_mutex_init(&_webui.mutex_http_handler);
-    _webui_mutex_init(&_webui.mutex_client);
-    _webui_mutex_init(&_webui.mutex_async_response);
-    _webui_condition_init(&_webui.condition_wait);
 }
 
 static const char* _webui_url_encode(const char* str) {
