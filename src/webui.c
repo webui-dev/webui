@@ -3819,7 +3819,7 @@ static void * _webui_malloc(size_t size) {
     }
 
     // Ini memory block
-    memset(mem, 0, size);
+    memset(mem, 0, (size + 1));
 
     // Add pointer to the list
     _webui_ptr_add((void*)mem, size);
