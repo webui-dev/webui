@@ -634,7 +634,7 @@ static WEBUI_THREAD_MONITOR;
 #define WEBUI_FILE_OPEN(file, filename, mode) fopen_s(&file, filename, mode)
 #define WEBUI_SN_PRINTF_DYN(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, ##__VA_ARGS__)
 #define WEBUI_SN_PRINTF_STATIC(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, ##__VA_ARGS__)
-#define WEBUI_STR_COPY_DYN(dest, dest_size, src) strcpy_s(dest, dest_size, src)
+#define WEBUI_STR_COPY_DYN(dest, dest_size, src) strcpy_s(dest, (dest_size + 1), src)
 #define WEBUI_STR_COPY_STATIC(dest, dest_size, src) strcpy_s(dest, dest_size, src)
 #define WEBUI_STR_CAT_DYN(dest, dest_size, src) strcat_s(dest, dest_size, src)
 #define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strcat_s(dest, dest_size, src)
@@ -8052,6 +8052,12 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
 
                 #ifdef WEBUI_LOG
                 printf("[Core]\t\t_webui_http_handler() -> Embedded Index HTML\n");
+                #endif
+
+                #ifdef WEBUI_LOG
+                printf("---[ HTML (%zu bytes)]--------------\n", _webui_strlen(win->html));
+                printf("%s\n", win->html);
+                printf("------------------------------------\n");
                 #endif
 
                 // Send 200
