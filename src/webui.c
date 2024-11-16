@@ -632,20 +632,20 @@ static WEBUI_THREAD_MONITOR;
 #ifdef _WIN32
 #define WEBUI_STR_TOK(str, delim, context) strtok_s(str, delim, context)
 #define WEBUI_FILE_OPEN(file, filename, mode) fopen_s(&file, filename, mode)
-#define WEBUI_SN_PRINTF_DYN(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, ##__VA_ARGS__)
+#define WEBUI_SN_PRINTF_DYN(buffer, buffer_size, format, ...) snprintf(buffer, (buffer_size + 1), format, ##__VA_ARGS__)
 #define WEBUI_SN_PRINTF_STATIC(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, ##__VA_ARGS__)
 #define WEBUI_STR_COPY_DYN(dest, dest_size, src) strcpy_s(dest, (dest_size + 1), src)
 #define WEBUI_STR_COPY_STATIC(dest, dest_size, src) strcpy_s(dest, dest_size, src)
-#define WEBUI_STR_CAT_DYN(dest, dest_size, src) strcat_s(dest, dest_size, src)
+#define WEBUI_STR_CAT_DYN(dest, dest_size, src) strcat_s(dest, (dest_size + 1), src)
 #define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strcat_s(dest, dest_size, src)
 #else
 #define WEBUI_STR_TOK(str, delim, context) strtok_r(str, delim, context)
 #define WEBUI_FILE_OPEN(file, filename, mode) ((file) = fopen(filename, mode))
-#define WEBUI_SN_PRINTF_DYN(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, ##__VA_ARGS__)
+#define WEBUI_SN_PRINTF_DYN(buffer, buffer_size, format, ...) snprintf(buffer, (buffer_size + 1), format, ##__VA_ARGS__)
 #define WEBUI_SN_PRINTF_STATIC(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, ##__VA_ARGS__)
-#define WEBUI_STR_COPY_DYN(dest, dest_size, src) strncpy(dest, src, dest_size)
+#define WEBUI_STR_COPY_DYN(dest, dest_size, src) strncpy(dest, src, (dest_size + 1))
 #define WEBUI_STR_COPY_STATIC(dest, dest_size, src) strncpy(dest, src, dest_size)
-#define WEBUI_STR_CAT_DYN(dest, dest_size, src) strncat(dest, src, dest_size)
+#define WEBUI_STR_CAT_DYN(dest, dest_size, src) strncat(dest, src, (dest_size + 1))
 #define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strncat(dest, src, dest_size)
 #endif
 
