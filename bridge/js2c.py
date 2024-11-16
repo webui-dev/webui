@@ -13,7 +13,7 @@ def js_to_c_header(input_filename, output_filename):
 
         # comment
         comment = (
-            "// WebUI v2.5.0-beta.2\n"
+            "// WebUI v2.5.0-beta.3\n"
             "// https://webui.me\n"
             "// https://github.com/webui-dev/webui\n"
             "// Copyright (c) 2020-2024 Hassan Draga.\n"
