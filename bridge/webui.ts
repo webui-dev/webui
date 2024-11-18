@@ -170,10 +170,31 @@ class WebuiBridge {
 		}
 	}
 	#freezeUi() {
-		document.body.style.filter = 'contrast(1%)';
+		if (document.getElementById('webui-error-connection-lost')) return;
+		const div = document.createElement('div');
+		div.id = 'webui-error-connection-lost';
+		Object.assign(div.style, {
+			position: 'relative',
+			top: '0',
+			left: '0',
+			width: '100%',
+			backgroundColor: '#ff4d4d',
+			color: '#fff',
+			textAlign: 'center',
+			padding: '2px 0',
+			fontFamily: 'Arial, sans-serif',
+			fontSize: '14px',
+			zIndex: '1000',
+			lineHeight: '1'
+		});
+		div.innerText = 'WebUI Error: Connection with the backend is lost.';
+		document.body.insertBefore(div, document.body.firstChild);
 	}
 	#unfreezeUI() {
-		document.body.style.filter = 'contrast(100%)';
+		const div = document.getElementById('webui-error-connection-lost');
+		if (div) {
+			div.remove();
+		}
 	}
 	#isTextBasedCommand(cmd: number): Boolean {
 		if (cmd !== this.#CMD_SEND_RAW) return true;
