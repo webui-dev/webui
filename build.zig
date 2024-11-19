@@ -10,30 +10,34 @@ const lib_name = "webui";
 const zig_ver = builtin.zig_version.minor;
 var global_log_level: std.log.Level = .warn;
 
+/// Vendored dependencies of webui.
+pub const Dependency = enum {
+    civetweb,
+    // TODO: Check and add all vendored dependencies, e.g. "webview"
+};
+
+const DebugDependencies = std.EnumSet(Dependency);
+
 pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    switch (comptime zig_ver) {
+        12, 13, 14 => {},
+        else => return error.UnsupportedZigVersion,
+    }
+
     const is_dynamic = b.option(bool, "dynamic", "build the dynamic library") orelse false;
     const enable_tls = b.option(bool, "enable-tls", "enable TLS support") orelse false;
     const verbose = b.option(std.log.Level, "verbose", "set verbose output") orelse .warn;
-
     global_log_level = verbose;
+    // TODO: Support list of dependencies once support is limited to >0.13.0
+    const debug = b.option(Dependency, "debug", "enable dependency debug output");
+    const debug_dependencies = DebugDependencies.initMany(if (debug) |d| &.{d} else &.{});
 
-    switch (comptime zig_ver) {
-        11 => {
-            if (enable_tls and !target.isNative()) {
-                log(.err, .WebUI, "cross compilation is not supported with TLS enabled", .{});
-                return error.InvalidBuildConfiguration;
-            }
-        },
-        12, 13, 14 => {
-            if (enable_tls and !target.query.isNative()) {
-                log(.err, .WebUI, "cross compilation is not supported with TLS enabled", .{});
-                return error.InvalidBuildConfiguration;
-            }
-        },
-        else => return error.UnsupportedZigVersion,
+    if (enable_tls and !target.query.isNative()) {
+        log(.err, .WebUI, "cross compilation is not supported with TLS enabled", .{});
+        return error.InvalidBuildConfiguration;
     }
 
     log(.info, .WebUI, "Building {s} WebUI library{s}...", .{
@@ -48,51 +52,65 @@ pub fn build(b: *Build) !void {
         .name = lib_name,
         .target = target,
         .optimize = optimize,
+        .pic = true,
     }) else b.addStaticLibrary(.{
         .name = lib_name,
         .target = target,
         .optimize = optimize,
     });
-    try addLinkerFlags(b, webui, enable_tls);
+    try addLinkerFlags(b, webui, enable_tls, debug_dependencies);
 
     b.installArtifact(webui);
 
     try build_examples(b, webui);
 }
 
-fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
-    const webui_target = if (zig_ver < 12) webui.target else webui.rootModuleTarget();
-    const is_windows = if (zig_ver < 12) webui_target.isWindows() else webui_target.os.tag == .windows;
+fn addLinkerFlags(
+    b: *Build,
+    webui: *Compile,
+    enable_tls: bool,
+    debug_dependencies: DebugDependencies,
+) !void {
+    const webui_target = webui.rootModuleTarget();
+    const is_windows = webui_target.os.tag == .windows;
+    const debug = webui.root_module.optimize.? == .Debug;
 
     // Prepare compiler flags.
     const no_tls_flags: []const []const u8 = &.{"-DNO_SSL"};
     const tls_flags: []const []const u8 = &.{ "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1" };
     const civetweb_flags: []const []const u8 = &.{
-        "-DNDEBUG",
         "-DNO_CACHING",
         "-DNO_CGI",
         "-DUSE_WEBSOCKET",
         "-Wno-error=date-time",
     };
 
+    if (debug) {
+        webui.root_module.addCMacro("WEBUI_LOG", "");
+    }
     webui.addCSourceFile(.{
-        .file = if (zig_ver < 12) .{ .path = "src/webui.c" } else b.path("src/webui.c"),
+        .file = b.path("src/webui.c"),
         .flags = if (enable_tls) tls_flags else no_tls_flags,
     });
+
+    const civetweb_debug = debug and debug_dependencies.contains(.civetweb);
     webui.addCSourceFile(.{
-        .file = if (zig_ver < 12) .{ .path = "src/civetweb/civetweb.c" } else b.path("src/civetweb/civetweb.c"),
-        .flags = if (enable_tls) civetweb_flags ++ tls_flags else civetweb_flags ++ .{"-DUSE_WEBSOCKET"} ++ no_tls_flags,
+        .file = b.path("src/civetweb/civetweb.c"),
+        .flags = if (enable_tls and !civetweb_debug)
+            civetweb_flags ++ tls_flags ++ .{"-DNDEBUG"}
+        else if (enable_tls and civetweb_debug)
+            civetweb_flags ++ tls_flags
+        else if (!enable_tls and !civetweb_debug)
+            civetweb_flags ++ .{"-DUSE_WEBSOCKET"} ++ no_tls_flags ++ .{"-DNDEBUG"}
+        else
+            civetweb_flags ++ .{"-DUSE_WEBSOCKET"} ++ no_tls_flags,
     });
     webui.linkLibC();
-    webui.addIncludePath(if (zig_ver < 12) .{ .path = "include" } else b.path("include"));
-    if (zig_ver < 12) {
-        webui.installHeader("include/webui.h", "webui.h");
-    } else {
-        webui.installHeader(b.path("include/webui.h"), "webui.h");
-    }
+    webui.addIncludePath(b.path("include"));
+    webui.installHeader(b.path("include/webui.h"), "webui.h");
     if (webui_target.isDarwin()) {
         webui.addCSourceFile(.{
-            .file = if (zig_ver < 12) .{ .path = "src/webview/wkwebview.m" } else b.path("src/webview/wkwebview.m"),
+            .file = b.path("src/webview/wkwebview.m"),
             .flags = &.{},
         });
         webui.linkFramework("Cocoa");
@@ -114,11 +132,11 @@ fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
         webui.linkSystemLibrary("crypto");
     }
 
-    for (if (zig_ver < 12) webui.link_objects.items else webui.root_module.link_objects.items) |lo| {
+    for (webui.root_module.link_objects.items) |lo| {
         switch (lo) {
             .c_source_file => |csf| {
                 log(.debug, .WebUI, "{s} linker flags: {s}", .{
-                    if (zig_ver < 12) csf.file.path else csf.file.src_path.sub_path,
+                    csf.file.src_path.sub_path,
                     csf.flags,
                 });
             },
@@ -129,22 +147,18 @@ fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
 
 fn build_examples(b: *Build, webui: *Compile) !void {
     const build_examples_step = b.step("examples", "builds the library and its examples");
-    const target = if (zig_ver < 12) webui.target else webui.root_module.resolved_target.?;
-    const optimize = if (zig_ver < 12) webui.optimize else webui.root_module.optimize.?;
+    const target = webui.root_module.resolved_target.?;
+    const optimize = webui.root_module.optimize.?;
 
-    const examples_path = (if (zig_ver < 12) (Build.LazyPath{ .path = "examples/C" }) else b.path("examples/C")).getPath(b);
-    var examples_dir = if (zig_ver < 12)
-        std.fs.cwd().openIterableDir(examples_path, .{}) catch |e| switch (e) {
-            // Do not attempt building examples if directory does not exist.
-            error.FileNotFound => return,
-            else => return e,
-        }
-    else
-        std.fs.cwd().openDir(examples_path, .{ .iterate = true }) catch |e| switch (e) {
-            // Do not attempt building examples if directory does not exist.
-            error.FileNotFound => return,
-            else => return e,
-        };
+    const examples_path = b.path("examples/C").getPath(b);
+    var examples_dir = std.fs.cwd().openDir(
+        examples_path,
+        .{ .iterate = true },
+    ) catch |e| switch (e) {
+        // Do not attempt building examples if directory does not exist.
+        error.FileNotFound => return,
+        else => return e,
+    };
     defer examples_dir.close();
 
     var paths = examples_dir.iterate();
@@ -154,11 +168,15 @@ fn build_examples(b: *Build, webui: *Compile) !void {
         }
         const example_name = val.name;
 
-        const exe = b.addExecutable(.{ .name = example_name, .target = target, .optimize = optimize });
+        const exe = b.addExecutable(.{
+            .name = example_name,
+            .target = target,
+            .optimize = optimize,
+        });
         const path = try std.fmt.allocPrint(b.allocator, "examples/C/{s}/main.c", .{example_name});
         defer b.allocator.free(path);
 
-        exe.addCSourceFile(.{ .file = if (zig_ver < 12) .{ .path = path } else b.path(path), .flags = &.{} });
+        exe.addCSourceFile(.{ .file = b.path(path), .flags = &.{} });
         exe.linkLibrary(webui);
 
         const exe_install = b.addInstallArtifact(exe, .{});
@@ -170,7 +188,7 @@ fn build_examples(b: *Build, webui: *Compile) !void {
 
         const cwd = try std.fmt.allocPrint(b.allocator, "src/examples/{s}", .{example_name});
         defer b.allocator.free(cwd);
-        if (zig_ver < 12) exe_run.cwd = cwd else exe_run.setCwd(b.path(cwd));
+        exe_run.setCwd(b.path(cwd));
 
         exe_run.step.dependOn(&exe_install.step);
         build_examples_step.dependOn(&exe_install.step);
