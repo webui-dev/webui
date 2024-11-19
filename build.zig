@@ -41,6 +41,7 @@ pub fn build(b: *Build) !void {
         .name = lib_name,
         .target = target,
         .optimize = optimize,
+        .pic = true,
     }) else b.addStaticLibrary(.{
         .name = lib_name,
         .target = target,
