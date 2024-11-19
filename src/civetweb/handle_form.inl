@@ -188,7 +188,7 @@ mg_handle_form_request(struct mg_connection *conn,
 	char path[512];
 	char buf[MG_BUF_LEN]; /* Must not be smaller than ~900 */
 	int field_storage;
-	int buf_fill = 0;
+	size_t buf_fill = 0;
 	int r;
 	int field_count = 0;
 	struct mg_file fstore = STRUCT_FILE_INITIALIZER;
@@ -397,10 +397,10 @@ mg_handle_form_request(struct mg_connection *conn,
 			int end_of_key_value_pair_found = 0;
 			int get_block;
 
-			if ((size_t)buf_fill < (sizeof(buf) - 1)) {
+			if (buf_fill < (sizeof(buf) - 1)) {
 
-				size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
-				r = mg_read(conn, buf + (size_t)buf_fill, to_read);
+				size_t to_read = sizeof(buf) - 1 - buf_fill;
+				r = mg_read(conn, buf + buf_fill, to_read);
 				if ((r < 0) || ((r == 0) && all_data_read)) {
 					/* read error */
 					return -1;
@@ -529,11 +529,11 @@ mg_handle_form_request(struct mg_connection *conn,
 					        buf + (size_t)used,
 					        sizeof(buf) - (size_t)used);
 					next = buf;
-					buf_fill -= (int)used;
-					if ((size_t)buf_fill < (sizeof(buf) - 1)) {
+					buf_fill -= used;
+					if (buf_fill < (sizeof(buf) - 1)) {
 
-						size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
-						r = mg_read(conn, buf + (size_t)buf_fill, to_read);
+						size_t to_read = sizeof(buf) - 1 - buf_fill;
+						r = mg_read(conn, buf + buf_fill, to_read);
 						if ((r < 0) || ((r == 0) && all_data_read)) {
 #if !defined(NO_FILESYSTEMS)
 							/* read error */
@@ -592,7 +592,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			/* Proceed to next entry */
 			used = next - buf;
 			memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
-			buf_fill -= (int)used;
+			buf_fill -= used;
 		}
 
 		return field_count;
@@ -682,12 +682,12 @@ mg_handle_form_request(struct mg_connection *conn,
 		for (part_no = 0;; part_no++) {
 			size_t towrite, fnlen, n;
 			int get_block;
-			size_t to_read = sizeof(buf) - 1 - (size_t)buf_fill;
+			size_t to_read = sizeof(buf) - 1 - buf_fill;
 
 			/* Unused without filesystems */
 			(void)n;
 
-			r = mg_read(conn, buf + (size_t)buf_fill, to_read);
+			r = mg_read(conn, buf + buf_fill, to_read);
 			if ((r < 0) || ((r == 0) && all_data_read)) {
 				/* read error */
 				mg_free(boundary);
@@ -1001,12 +1001,12 @@ mg_handle_form_request(struct mg_connection *conn,
 #endif /* NO_FILESYSTEMS */
 
 				memmove(buf, hend + towrite, bl + 4);
-				buf_fill = (int)(bl + 4);
+				buf_fill = bl + 4;
 				hend = buf;
 
 				/* Read new data */
-				to_read = sizeof(buf) - 1 - (size_t)buf_fill;
-				r = mg_read(conn, buf + (size_t)buf_fill, to_read);
+				to_read = sizeof(buf) - 1 - buf_fill;
+				r = mg_read(conn, buf + buf_fill, to_read);
 				if ((r < 0) || ((r == 0) && all_data_read)) {
 #if !defined(NO_FILESYSTEMS)
 					/* read error */
@@ -1025,7 +1025,7 @@ mg_handle_form_request(struct mg_connection *conn,
 				/* buf_fill is at least 8 here */
 
 				/* Find boundary */
-				next = search_boundary(buf, (size_t)buf_fill, boundary, bl);
+				next = search_boundary(buf, buf_fill, boundary, bl);
 
 				if (!next && (r == 0)) {
 					/* incomplete request */
@@ -1100,7 +1100,7 @@ mg_handle_form_request(struct mg_connection *conn,
 			if (next) {
 				used = next - buf + 2;
 				memmove(buf, buf + (size_t)used, sizeof(buf) - (size_t)used);
-				buf_fill -= (int)used;
+				buf_fill -= used;
 			} else {
 				buf_fill = 0;
 			}

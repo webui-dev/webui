@@ -183,6 +183,10 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
 #error "Symbian is no longer maintained. CivetWeb no longer supports Symbian."
 #endif /* __SYMBIAN32__ */
 
+#if defined(__rtems__)
+#include <rtems/version.h>
+#endif
+
 #if defined(__ZEPHYR__)
 #include <ctype.h>
 #include <fcntl.h>
@@ -885,7 +889,9 @@ typedef unsigned short int in_port_t;
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#if !defined(__rtems__)
 #include <sys/utsname.h>
+#endif
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
@@ -901,8 +907,22 @@ typedef unsigned short int in_port_t;
 #endif
 
 #if defined(__MACH__) && defined(__APPLE__)
-#define SSL_LIB "libssl.dylib"
-#define CRYPTO_LIB "libcrypto.dylib"
+
+#if defined(OPENSSL_API_3_0)
+#define SSL_LIB "libssl.3.dylib"
+#define CRYPTO_LIB "libcrypto.3.dylib"
+#endif
+
+#if defined(OPENSSL_API_1_1)
+#define SSL_LIB "libssl.1.1.dylib"
+#define CRYPTO_LIB "libcrypto.1.1.dylib"
+#endif /* OPENSSL_API_1_1 */
+
+#if defined(OPENSSL_API_1_0)
+#define SSL_LIB "libssl.1.0.dylib"
+#define CRYPTO_LIB "libcrypto.1.0.dylib"
+#endif /* OPENSSL_API_1_0 */
+
 #else
 #if !defined(SSL_LIB)
 #define SSL_LIB "libssl.so"
@@ -963,7 +983,7 @@ count_leap(int y)
 	return (y - 1969) / 4 - (y - 1901) / 100 + (y - 1601) / 400;
 }
 
-time_t
+static time_t
 timegm(struct tm *tm)
 {
 	static const unsigned short ydays[] = {
@@ -19532,6 +19552,9 @@ mg_connect_websocket_client(const char *host,
 	memset(&client_options, 0, sizeof(client_options));
 	client_options.host = host;
 	client_options.port = port;
+	if (use_ssl) {
+		client_options.host_name = host;
+	}
 
 	return mg_connect_websocket_client_impl(&client_options,
 	                                        use_ssl,
@@ -20786,6 +20809,8 @@ get_system_name(char **sysName)
 
 	*sysName = mg_strdup(name);
 
+#elif defined(__rtems__)
+	*sysName = mg_strdup("RTEMS");
 #elif defined(__ZEPHYR__)
 	*sysName = mg_strdup("Zephyr OS");
 #else
@@ -22079,12 +22104,22 @@ mg_get_system_info(char *buffer, int buflen)
 		            (unsigned)si.dwNumberOfProcessors,
 		            (unsigned)si.dwActiveProcessorMask);
 		system_info_length += mg_str_append(&buffer, end, block);
-#elif defined(__ZEPHYR__)
+#elif defined(__rtems__)
 		mg_snprintf(NULL,
 		            NULL,
 		            block,
 		            sizeof(block),
 		            ",%s\"os\" : \"%s %s\"",
+		            eol,
+		           "RTEMS",
+		            rtems_version());
+		system_info_length += mg_str_append(&buffer, end, block);
+#elif defined(__ZEPHYR__)
+		mg_snprintf(NULL,
+		            NULL,
+		            block,
+		            sizeof(block),
+		            ",%s\"os\" : \"%s\"",
 		            eol,
 		            "Zephyr OS",
 		            ZEPHYR_VERSION);
