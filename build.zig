@@ -10,6 +10,14 @@ const lib_name = "webui";
 const zig_ver = builtin.zig_version.minor;
 var global_log_level: std.log.Level = .warn;
 
+/// Vendored dependencies of webui.
+pub const Dependency = enum {
+    civetweb,
+    // TODO: Check and add all vendored dependencies, e.g. "webview"
+};
+
+const DebugDependencies = std.EnumSet(Dependency);
+
 pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -23,6 +31,9 @@ pub fn build(b: *Build) !void {
     const enable_tls = b.option(bool, "enable-tls", "enable TLS support") orelse false;
     const verbose = b.option(std.log.Level, "verbose", "set verbose output") orelse .warn;
     global_log_level = verbose;
+    // TODO: Support list of dependencies once support is limited to >0.13.0
+    const debug = b.option(Dependency, "debug", "enable dependency debug output");
+    const debug_dependencies = DebugDependencies.initMany(if (debug) |d| &.{d} else &.{});
 
     if (enable_tls and !target.query.isNative()) {
         log(.err, .WebUI, "cross compilation is not supported with TLS enabled", .{});
@@ -47,22 +58,28 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    try addLinkerFlags(b, webui, enable_tls);
+    try addLinkerFlags(b, webui, enable_tls, debug_dependencies);
 
     b.installArtifact(webui);
 
     try build_examples(b, webui);
 }
 
-fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
+fn addLinkerFlags(
+    b: *Build,
+    webui: *Compile,
+    enable_tls: bool,
+    debug_dependencies: DebugDependencies,
+) !void {
     const webui_target = webui.rootModuleTarget();
     const is_windows = webui_target.os.tag == .windows;
+
+    const debug = webui.root_module.optimize.? == .Debug;
 
     // Prepare compiler flags.
     const no_tls_flags: []const []const u8 = &.{"-DNO_SSL"};
     const tls_flags: []const []const u8 = &.{ "-DWEBUI_TLS", "-DNO_SSL_DL", "-DOPENSSL_API_1_1" };
     const civetweb_flags: []const []const u8 = &.{
-        "-DNDEBUG",
         "-DNO_CACHING",
         "-DNO_CGI",
         "-DUSE_WEBSOCKET",
@@ -73,9 +90,18 @@ fn addLinkerFlags(b: *Build, webui: *Compile, enable_tls: bool) !void {
         .file = b.path("src/webui.c"),
         .flags = if (enable_tls) tls_flags else no_tls_flags,
     });
+
+    const civetweb_debug = debug and debug_dependencies.contains(.civetweb);
     webui.addCSourceFile(.{
         .file = b.path("src/civetweb/civetweb.c"),
-        .flags = if (enable_tls) civetweb_flags ++ tls_flags else civetweb_flags ++ .{"-DUSE_WEBSOCKET"} ++ no_tls_flags,
+        .flags = if (enable_tls and !civetweb_debug)
+            civetweb_flags ++ tls_flags ++ .{"-DNDEBUG"}
+        else if (enable_tls and civetweb_debug)
+            civetweb_flags ++ tls_flags
+        else if (!enable_tls and !civetweb_debug)
+            civetweb_flags ++ .{"-DUSE_WEBSOCKET"} ++ no_tls_flags ++ .{"-DNDEBUG"}
+        else
+            civetweb_flags ++ .{"-DUSE_WEBSOCKET"} ++ no_tls_flags,
     });
     webui.linkLibC();
     webui.addIncludePath(b.path("include"));
@@ -140,7 +166,11 @@ fn build_examples(b: *Build, webui: *Compile) !void {
         }
         const example_name = val.name;
 
-        const exe = b.addExecutable(.{ .name = example_name, .target = target, .optimize = optimize });
+        const exe = b.addExecutable(.{
+            .name = example_name,
+            .target = target,
+            .optimize = optimize,
+        });
         const path = try std.fmt.allocPrint(b.allocator, "examples/C/{s}/main.c", .{example_name});
         defer b.allocator.free(path);
 
