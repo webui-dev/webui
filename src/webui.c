@@ -382,7 +382,7 @@ typedef struct _webui_core_t {
     bool initialized;
     char* executable_path;
     void * ptr_list[WEBUI_MAX_IDS * 2];
-    size_t ptr_position;
+    size_t ptr_last_pos;
     size_t ptr_size[WEBUI_MAX_IDS * 2];
     size_t current_browser;
     _webui_window_t* wins[WEBUI_MAX_IDS];
@@ -3690,8 +3690,7 @@ static bool _webui_ptr_exist(void * ptr) {
     if (ptr == NULL)
         return false;
 
-    for (size_t i = 0; i < _webui.ptr_position; i++) {
-
+    for (size_t i = 0; i < _webui.ptr_last_pos; i++) {
         if (_webui.ptr_list[i] == ptr)
             return true;
     }
@@ -3708,19 +3707,29 @@ static void _webui_ptr_add(void * ptr, size_t size) {
     if (ptr == NULL)
         return;
 
-    // Search for first empty slot & add
+    // Search for first empty slot & save pointer
     if (!_webui_ptr_exist(ptr)) {
-        size_t i = 0; 
-        for (; i < _webui.ptr_position; i++) {
+        size_t i = 0;
+        for (; i < _webui.ptr_last_pos; i++) {
             if (_webui.ptr_list[i] == NULL) {
+                // Pointer found
                 break;
             }
         }
-        _webui.ptr_list[_webui.ptr_position] = ptr;
-        _webui.ptr_size[_webui.ptr_position] = size;
-        _webui.ptr_position++;
-        if (_webui.ptr_position >= WEBUI_MAX_IDS)
-            _webui.ptr_position = (WEBUI_MAX_IDS - 1);
+        if (i == _webui.ptr_last_pos) {
+            // Pointer not found
+            i = _webui.ptr_last_pos++;
+            if (_webui.ptr_last_pos >= (WEBUI_MAX_IDS * 2)) {
+                _webui.ptr_last_pos = ((WEBUI_MAX_IDS * 2) - 1);
+                #ifdef WEBUI_LOG
+                printf("[Core]\t\t_webui_ptr_add(0x%p) -> ERROR: Maximum pointer capacity reached.\n",
+                ptr);
+                #endif
+            }
+        }
+        // Add pointer
+        _webui.ptr_list[i] = ptr;
+        _webui.ptr_size[i] = size;
         #ifdef WEBUI_LOG_VERBOSE
         printf("[Core]\t\t_webui_ptr_add(0x%p) -> Pointer #%zu saved (%zu + 1 bytes)\n", ptr, i, size);
         #endif        
@@ -3739,10 +3748,11 @@ static void _webui_free_mem(void * ptr) {
     _webui_mutex_lock(&_webui.mutex_mem);
 
     // Search for pointer & free
-    for (size_t i = 0; i < _webui.ptr_position; i++) {
+    for (size_t i = 0; i < _webui.ptr_last_pos; i++) {
         if (_webui.ptr_list[i] == ptr) {
             #ifdef WEBUI_LOG_VERBOSE
-            printf("[Core]\t\t_webui_free_mem(0x%p) -> Pointer #%zu freed (%zu + 1 bytes)\n", ptr, i, _webui.ptr_size[i]);
+            printf("[Core]\t\t_webui_free_mem(0x%p) -> Pointer #%zu freed (%zu + 1 bytes)\n",
+            ptr, i, _webui.ptr_size[i]);
             #endif
             free(ptr);
             _webui.ptr_size[i] = 0;
@@ -3751,9 +3761,9 @@ static void _webui_free_mem(void * ptr) {
     }
 
     // Search (backward) for first empty slot
-    for (int i = _webui.ptr_position; i >= 0;i--) {
+    for (int i = _webui.ptr_last_pos; i >= 0;i--) {
         if (_webui.ptr_list[i] == NULL) {
-            _webui.ptr_position = i;
+            _webui.ptr_last_pos = i;
             break;
         }
     }
@@ -3777,14 +3787,16 @@ static void _webui_free_all_mem(void) {
 
     // Free all pointers in the list
     void * ptr = NULL;
-    for (size_t i = 0; i < _webui.ptr_position; i++) {
+    for (size_t i = 0; i < _webui.ptr_last_pos; i++) {
         ptr = _webui.ptr_list[i];
         if (ptr != NULL) {
             #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_free_all_mem() -> Free %zu bytes @ 0x%p\n",
-            _webui.ptr_size[i], ptr);
+            printf("[Core]\t\t_webui_free_all_mem() -> Pointer #%zu freed (%zu + 1 bytes) 0x%p\n",
+            i, _webui.ptr_size[i], ptr);
             #endif
             free(ptr);
+            _webui.ptr_size[i] = 0;
+            _webui.ptr_list[i] = NULL;
         }
     }
 
