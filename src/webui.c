@@ -1016,17 +1016,18 @@ void webui_set_custom_parameters(size_t window, char* params) {
         return;
     _webui_window_t* win = _webui.wins[window];
 
+    // Always free old data to allow user to clear custom params
+    // by passing an empty `params`.
+    _webui_free_mem((void*)win->custom_parameters);
+
     // Check size
     size_t len = _webui_strlen(params);
     if (len < 1)
         return;
 
-    // Free old
-    _webui_free_mem((void*)win->custom_parameters);
-
     // Set new
     win->custom_parameters = (char*)_webui_malloc(len);
-    WEBUI_STR_COPY_STATIC(win->custom_parameters, len, params);
+    WEBUI_STR_COPY_DYN(win->custom_parameters, len, params);
 }
 
 void webui_set_high_contrast(size_t window, bool status) {
