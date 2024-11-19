@@ -73,7 +73,6 @@ fn addLinkerFlags(
 ) !void {
     const webui_target = webui.rootModuleTarget();
     const is_windows = webui_target.os.tag == .windows;
-
     const debug = webui.root_module.optimize.? == .Debug;
 
     // Prepare compiler flags.
@@ -86,6 +85,9 @@ fn addLinkerFlags(
         "-Wno-error=date-time",
     };
 
+    if (debug) {
+        webui.root_module.addCMacro("WEBUI_LOG", "");
+    }
     webui.addCSourceFile(.{
         .file = b.path("src/webui.c"),
         .flags = if (enable_tls) tls_flags else no_tls_flags,
