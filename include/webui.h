@@ -173,11 +173,13 @@ typedef enum {
     //
     // Default: False
     multi_client,
-    // Allow multiple clients to connect to the same window,
-    // This is helpful for web apps (non-desktop software),
-    // Please see the documentation for more details.
+    // Allow or prevent WebUI from adding `webui_auth` cookies.
+    // WebUI uses these cookies to identify clients and block 
+    // unauthorized access to the window content using a URL.
+    // Please keep this option to `True` if you want only a single
+    // client to access the window content.
     //
-    // Default: False
+    // Default: True
     use_cookies,
     // If the backend uses asynchronous operations, set this 
     // option to `True`. This will make webui wait until the 
