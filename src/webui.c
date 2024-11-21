@@ -400,6 +400,7 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_client;
     webui_mutex_t mutex_async_response;
     webui_mutex_t mutex_mem;
+    webui_mutex_t mutex_token;
     webui_condition_t condition_wait;
     char* default_server_root_path;
     bool ui;
@@ -4814,6 +4815,28 @@ static bool _webui_mutex_is_connected(_webui_window_t* win, int update) {
     return status;
 }
 
+static bool _webui_mutex_is_single_client_token_valid(_webui_window_t* win, int update) {
+
+    bool status = false;
+    _webui_mutex_lock(&_webui.mutex_token);
+    if (update == WEBUI_MUTEX_TRUE) win->single_client_token_check = true;
+    else if (update == WEBUI_MUTEX_FALSE) win->single_client_token_check = false;
+    status = win->single_client_token_check;
+    _webui_mutex_unlock(&_webui.mutex_token);
+    return status;
+}
+
+static bool _webui_mutex_is_multi_client_token_valid(_webui_window_t* win, int update, int index) {
+
+    bool status = false;
+    _webui_mutex_lock(&_webui.mutex_token);
+    if (update == WEBUI_MUTEX_TRUE) _webui.clients_token_check[index] = true;
+    else if (update == WEBUI_MUTEX_FALSE) _webui.clients_token_check[index] = false;
+    status = _webui.clients_token_check[index];
+    _webui_mutex_unlock(&_webui.mutex_token);
+    return status;
+}
+
 static bool _webui_mutex_is_exit_now(int update) {
 
     bool status = false;
@@ -5142,13 +5165,14 @@ static void _webui_send_all(_webui_window_t* win, uint16_t id, unsigned char cmd
     if (_webui.config.multi_client) {
         // Loop trough all connected clients in this window
         for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-            if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
+            if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && 
+                (_webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_NONE, i))) {
                 _webui_send_client(win, _webui.clients[i], 0, cmd, data, len, false);
             }
         }
     } else {
         // Single client
-        if ((win->single_client != NULL) && (win->single_client_token_check)) {
+        if ((win->single_client != NULL) && (_webui_mutex_is_single_client_token_valid(win, WEBUI_MUTEX_NONE))) {
             _webui_send_client(win, win->single_client, 0, cmd, data, len, false);
         }
     }
@@ -5171,7 +5195,7 @@ static void _webui_send_client(
     
     // Check Token
     if (!token_bypass) {
-        if (!_webui.clients_token_check[connection_id])
+        if (!_webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_NONE, connection_id))
             return;
     }
 
@@ -5980,6 +6004,7 @@ static void _webui_clean(void) {
     _webui_mutex_destroy(&_webui.mutex_client);
     _webui_mutex_destroy(&_webui.mutex_async_response);
     _webui_mutex_destroy(&_webui.mutex_mem);
+    _webui_mutex_destroy(&_webui.mutex_token);
     _webui_condition_destroy(&_webui.condition_wait);
 
     #ifdef WEBUI_LOG
@@ -7261,11 +7286,11 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
         _webui_free_mem((void*)window_url);
     }
 
-    // Wait for window connection
+    // Wait for window connection & token validation
     if ((browser != NoBrowser) && _webui.config.show_wait_connection) {
 
         #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_show_window() -> Waiting for window connection\n");
+        printf("[Core]\t\t_webui_show_window() -> Waiting for window connection & token validation\n");
         #endif
 
         size_t timeout = (_webui.startup_timeout > 0 ? 
@@ -7273,6 +7298,8 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
         );
 
         if (_webui.is_webview) {
+
+            // WebView
 
             _webui_timer_t timer;
             _webui_timer_start(&timer);
@@ -7299,8 +7326,8 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
                     #endif
                 }
 
-                // Stop if window is connected
-                if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE))
+                // Stop if window is connected & token is valid
+                if (_webui_mutex_is_single_client_token_valid(win, WEBUI_MUTEX_NONE))
                     break;
                 
                 // Stop if timer is finished
@@ -7309,15 +7336,16 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
             }
         } else {
 
-            // Wait for server thread to start
+            // Web Browser
+
             _webui_timer_t timer;
             _webui_timer_start(&timer);
             for (;;) {
 
                 _webui_sleep(10);
 
-                // Stop if window is connected
-                if (_webui_mutex_is_connected(win, WEBUI_MUTEX_NONE))
+                // Stop if window is connected & token is valid
+                if (_webui_mutex_is_single_client_token_valid(win, WEBUI_MUTEX_NONE))
                     break;
                 
                 // Stop if timer is finished
@@ -7326,7 +7354,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
             }
         }
 
-        // The window is successfully launched and connected.
+        // Return status of the window connection (not token validation)
         return _webui_mutex_is_connected(win, WEBUI_MUTEX_NONE);
     }
 
@@ -7542,6 +7570,7 @@ static void _webui_init(void) {
     _webui_mutex_init(&_webui.mutex_client);
     _webui_mutex_init(&_webui.mutex_async_response);
     _webui_mutex_init(&_webui.mutex_mem);
+    _webui_mutex_init(&_webui.mutex_token);
     _webui_condition_init(&_webui.condition_wait);
 
     // Random
@@ -8973,11 +9002,11 @@ static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* c
             // Save
             if (win->single_client == NULL) {
                 win->single_client = client;
-                win->single_client_token_check = false;
+                _webui_mutex_is_single_client_token_valid(win, WEBUI_MUTEX_FALSE);
             }
             _webui.clients[i] = client;
             _webui.clients_win_num[i] = win->num;
-            _webui.clients_token_check[i] = false;
+            _webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_FALSE, i);
             win->clients_count++;
             _webui_mutex_unlock(&_webui.mutex_client);
             *connection_id = i;
@@ -9008,18 +9037,18 @@ static void _webui_connection_remove(_webui_window_t* win, struct mg_connection*
             #endif
             // Reset Token
             if (!_webui.config.multi_client) {
-                if (_webui.clients_token_check[i]) {
+                if (_webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_NONE, i)) {
                     win->token = 0;
                 }
             }
             // Clear
             if (win->single_client == client) {
                 win->single_client = NULL;
-                win->single_client_token_check = false;
+                _webui_mutex_is_single_client_token_valid(win, WEBUI_MUTEX_FALSE);
             }
             _webui.clients[i] = NULL;
             _webui.clients_win_num[i] = 0;
-            _webui.clients_token_check[i] = false;
+            _webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_FALSE, i);
             if (win->clients_count > 0)
                 win->clients_count--;
             // Close
@@ -9485,9 +9514,9 @@ static void _webui_ws_process(
                         if (_webui_connection_get_id(win, client, &connection_id)) {
 
                             if (win->single_client == client) {
-                                win->single_client_token_check = true;
+                                _webui_mutex_is_single_client_token_valid(win, WEBUI_MUTEX_TRUE);
                             }
-                            _webui.clients_token_check[connection_id] = true;
+                            _webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_TRUE, connection_id);
 
                             #ifdef WEBUI_LOG
                             printf(
@@ -9537,7 +9566,7 @@ static void _webui_ws_process(
                             );
 
                             // Free
-                            _webui_free_mem((void*)csv);                            
+                            _webui_free_mem((void*)csv);
 
                             // New Event
                             if (win->has_all_events) {
@@ -11489,7 +11518,8 @@ static WEBUI_THREAD_MONITOR {
                 #endif
                 // Loop trough all connected clients in this window
                 for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-                    if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
+                    if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && 
+                        (_webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_NONE, i))) {
                         _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len, false);
                     }
                 }
@@ -11540,7 +11570,8 @@ static WEBUI_THREAD_MONITOR {
                         #endif
                         // Loop trough all connected clients in this window
                         for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-                            if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
+                            if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && 
+                                (_webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_NONE, i))) {
                                 _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len, false);
                             }
                         }
@@ -11588,7 +11619,8 @@ static WEBUI_THREAD_MONITOR {
                     #endif
                     // Loop trough all connected clients in this window
                     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-                        if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && (_webui.clients_token_check[i])) {
+                        if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && 
+                            (_webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_NONE, i))) {
                             _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len, false);
                         }
                     }
