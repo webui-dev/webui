@@ -73,12 +73,18 @@ else
 		LLVM_OPT := llvm-
 	endif
 endif
-# macOS can set `ARCH_TARGET=arm64` - intented for CI cross-compilation.
+
+# macOS can set `ARCH_TARGET=arm64` for cross-compilation.
 ifneq ($(ARCH_TARGET),)
 	ifneq ($(PLATFORM),macos)
 		$(error ARCH_TARGET is only available on macOS)
-	else ifeq ($(ARCH_TARGET),arm64)
-		TARGET := -target arm64-apple-darwin
+	endif
+	ifeq ($(ARCH_TARGET),arm64)
+		TARGET := -target arm64-apple-darwin -arch arm64
+	else ifeq ($(ARCH_TARGET),x64)
+		TARGET := -target x86_64-apple-darwin -arch x86_64
+	else
+		$(error Unsupported ARCH_TARGET: $(ARCH_TARGET). Use 'arm64' or 'x64'.)
 	endif
 endif
 
@@ -104,19 +110,19 @@ endif
 #	Build macOS WKWebView
 ifeq ($(shell uname),Darwin)
 	@cd "$(BUILD_DIR)/debug" \
-	&& echo "Build WebUI Objective-C WKWebKit ($(CC) $(TARGET)debug)..." \
+	&& echo "Build WebUI Objective-C WKWebKit ($(CC) $(TARGET) debug)..." \
 	&& $(CC) $(TARGET) $(WKWEBKIT_BUILD_FLAGS) -g -DWEBUI_LOG
 endif
 #	Static with Debug info
 	@cd "$(BUILD_DIR)/debug" \
-	&& echo "Build WebUI library ($(CC) $(TARGET)debug static)..." \
+	&& echo "Build WebUI library ($(CC) $(TARGET) debug static)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_LOG) -g -DWEBUI_LOG \
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o $(WEBKIT_OBJ) \
 	&& $(LLVM_OPT)ranlib $(LIB_STATIC_OUT)
 #	Dynamic with Debug info
 	@cd "$(BUILD_DIR)/debug" \
-	&& echo "Build WebUI library ($(CC) $(TARGET)debug dynamic)..." \
+	&& echo "Build WebUI library ($(CC) $(TARGET) debug dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_LOG) -g -fPIC -DWEBUI_LOG -DWEBUI_DYNAMIC \
 	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
@@ -137,19 +143,19 @@ endif
 #	Build macOS WKWebView
 ifeq ($(shell uname),Darwin)
 	@cd "$(BUILD_DIR)" \
-	&& echo "Build WebUI Objective-C WKWebKit ($(CC) $(TARGET)release)..." \
+	&& echo "Build WebUI Objective-C WKWebKit ($(CC) $(TARGET) release)..." \
 	&& $(CC) $(TARGET) $(WKWEBKIT_BUILD_FLAGS) -Os
 endif
 #	Static Release
 	@cd "$(BUILD_DIR)" \
-	&& echo "Build WebUI library ($(CC) $(TARGET)release static)..." \
+	&& echo "Build WebUI library ($(CC) $(TARGET) release static)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_RELEASE) -Os \
 	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o $(WEBKIT_OBJ) \
 	&& $(LLVM_OPT)ranlib $(LIB_STATIC_OUT)
 #	Dynamic Release
 	@cd "$(BUILD_DIR)" \
-	&& echo "Build WebUI library ($(CC) $(TARGET)release dynamic)..." \
+	&& echo "Build WebUI library ($(CC) $(TARGET) release dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_RELEASE) -O3 -fPIC -DWEBUI_DYNAMIC \
 	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
