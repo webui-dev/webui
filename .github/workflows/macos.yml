@@ -47,25 +47,18 @@ jobs:
           fail-on-cache-miss: true
       - name: Setup OpenSSL
         run: |
-          if [[ "${{ matrix.arch }}" == "x64" ]]; then
-            HOMEBREW_X64_PATH="/usr/local/bin/brew"
-            arch -arm64 brew uninstall openssl@1.1 || true
-            arch -x86_64 $HOMEBREW_X64_PATH install openssl@1.1
-            echo "WEBUI_TLS_INCLUDE=$($HOMEBREW_X64_PATH --prefix openssl@1.1)/include/" >> $GITHUB_ENV
-            echo "WEBUI_TLS_LIB=$($HOMEBREW_X64_PATH --prefix openssl@1.1)/lib/" >> $GITHUB_ENV
-          else
-            brew install openssl@1.1
-            echo "WEBUI_TLS_INCLUDE=$(brew --prefix openssl@1.1)/include/" >> $GITHUB_ENV
-            echo "WEBUI_TLS_LIB=$(brew --prefix openssl@1.1)/lib/" >> $GITHUB_ENV
-          fi
+          echo "WEBUI_TLS_INCLUDE=$(brew --cellar)/openssl@1.1/1.1.1w/include/" >> $GITHUB_ENV
+          echo "WEBUI_TLS_LIB=$(brew --cellar)/openssl@1.1/1.1.1w/lib/" >> $GITHUB_ENV
       - name: Build Debug Target
         run: make ARCH_TARGET=${{ matrix.arch }} debug
       - name: Build Release Target
         if: ${{ !cancelled() }}
         run: make ARCH_TARGET=${{ matrix.arch }}
       - name: Build TLS Debug Target
+        if: ${{ matrix.arch != 'x64' }}
         run: make ARCH_TARGET=${{ matrix.arch }} WEBUI_USE_TLS=1 debug
       - name: Build TLS Release Target
+        if: ${{ matrix.arch != 'x64' }}
         run: make ARCH_TARGET=${{ matrix.arch }} WEBUI_USE_TLS=1
       - name: Build examples
         run: |
@@ -109,7 +102,6 @@ jobs:
               echo "TITLE=WebUI Nightly Build $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
               echo "BODY=Generated from commit $GITHUB_SHA."
             } >> $GITHUB_ENV
-          fi
       - name: Update Nightly Tag
         if: env.IS_PRERELEASE
         uses: richardsimko/update-tag@v1
