@@ -10678,19 +10678,17 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             // Success
             // Let `wait()` use safe main-thread WebView2 loop
             _webui.is_webview = true;
+            
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
-
             MSG msg;
             while (true) {
 
-                // Win32 Messages
-                if (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE) > 0) {
+                // Check if there is any Win32 Messages
 
-                    // Process
+                if (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE) > 0) {
                     TranslateMessage(&msg);
                     DispatchMessageW(&msg);
-
-                    // Check if window manually closed
+                    // Window manually closed
                     if (msg.message == WM_QUIT) {
                         if (win->webView) {
                             DestroyWindow(win->webView->hwnd);
@@ -10698,36 +10696,40 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                         break;
                     }
                 }
+                else {
 
-                if (_webui_mutex_is_webview_update(win, WEBUI_MUTEX_NONE)) {
+                    // Check if there is any WebUI Messages
 
-                    _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
-
-                    if (win->webView) {
-
-                        // Stop this thread
-                        if (win->webView->stop) {
-                            DestroyWindow(win->webView->hwnd);
-                            break;
+                    if (_webui_mutex_is_webview_update(win, WEBUI_MUTEX_NONE)) {
+                        _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
+                        if (win->webView) {
+                            // Stop this thread
+                            if (win->webView->stop) {
+                                DestroyWindow(win->webView->hwnd);
+                                break;
+                            }
+                            // Window Size
+                            if (win->webView->size) {
+                                win->webView->size = false;
+                                _webui_wv_set_size(win->webView, win->webView->width, win->webView->height);
+                            }
+                            // Window Position
+                            if (win->webView->position) {
+                                win->webView->position = false;
+                                _webui_wv_set_position(win->webView, win->webView->x, win->webView->y);
+                            }
+                            // Navigation
+                            if (win->webView->navigate) {
+                                win->webView->navigate = false;
+                                _webui_wv_navigate(win->webView, win->webView->url);
+                            }
                         }
+                    }
+                    else {
 
-                        // Window Size
-                        if (win->webView->size) {
-                            win->webView->size = false;
-                            _webui_wv_set_size(win->webView, win->webView->width, win->webView->height);
-                        }
-
-                        // Window Position
-                        if (win->webView->position) {
-                            win->webView->position = false;
-                            _webui_wv_set_position(win->webView, win->webView->x, win->webView->y);
-                        }
-
-                        // Navigation
-                        if (win->webView->navigate) {
-                            win->webView->navigate = false;
-                            _webui_wv_navigate(win->webView, win->webView->url);
-                        }
+                        // At this moment, there is no Win32 or WebUI messages
+                        // let's IDLE for 10ms in this current thread.
+                        _webui_sleep(10);
                     }
                 }
             }
