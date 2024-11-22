@@ -12,6 +12,7 @@ const App = () => {
 
   return (
     <div style={{ margin: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <img src="logo192.png" width="64" height="64"></img>
       <h2>WebUI React Example</h2>
       <div style={{ marginBottom: '10px' }}>
         <label>

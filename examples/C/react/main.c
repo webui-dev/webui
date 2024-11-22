@@ -13,10 +13,10 @@ int main() {
     size_t react_window = webui_new_window();
 
     // Set window size
-    webui_set_size(react_window, 800, 800);
+    webui_set_size(react_window, 550, 450);
 
     // Set window position
-    webui_set_position(react_window, 200, 200);
+    webui_set_position(react_window, 250, 250);
 
     // Allow multi-user connection to WebUI window
     webui_set_config(multi_client, true);
