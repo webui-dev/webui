@@ -102,6 +102,7 @@ jobs:
               echo "TITLE=WebUI Nightly Build $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
               echo "BODY=Generated from commit $GITHUB_SHA."
             } >> $GITHUB_ENV
+          fi
       - name: Update Nightly Tag
         if: env.IS_PRERELEASE
         uses: richardsimko/update-tag@v1
