@@ -48,6 +48,7 @@ jobs:
       - name: Setup OpenSSL
         run: |
           if [[ "${{ matrix.arch }}" == "x64" ]]; then
+            brew uninstall openssl@1.1 || true
             arch -x86_64 brew install openssl@1.1
             echo "WEBUI_TLS_INCLUDE=$(arch -x86_64 brew --prefix openssl@1.1)/include/" >> $GITHUB_ENV
             echo "WEBUI_TLS_LIB=$(arch -x86_64 brew --prefix openssl@1.1)/lib/" >> $GITHUB_ENV
