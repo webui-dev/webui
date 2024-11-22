@@ -11190,35 +11190,37 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
             while (true) {
 
+                // Check if there is any WebUI Messages
+
                 if (_webui_mutex_is_webview_update(win, WEBUI_MUTEX_NONE)) {
-
                     _webui_mutex_is_webview_update(win, WEBUI_MUTEX_FALSE);
-
                     if (win->webView) {
-
                         // Stop this thread
                         if (win->webView->stop) {
                             break;
                         }
-
                         // Window Size
                         if (win->webView->size) {
                             win->webView->size = false;
                             _webui_wv_set_size(win->webView, win->webView->width, win->webView->height);
                         }
-
                         // Window Position
                         if (win->webView->position) {
                             win->webView->position = false;
                             _webui_wv_set_position(win->webView, win->webView->x, win->webView->y);
                         }
-
                         // Navigation
                         if (win->webView->navigate) {
                             win->webView->navigate = false;
                             _webui_wv_navigate(win->webView, win->webView->url);
                         }
                     }
+                }
+                else {
+
+                    // At this moment, there is no WebUI messages
+                    // let's IDLE for 250ms in this current thread.
+                    _webui_sleep(250);
                 }
             }
         }
