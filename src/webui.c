@@ -1504,8 +1504,8 @@ static void _webui_remove_firefox_profile_ini(const char* path, const char* prof
     if (!file)
         return;
 
-    char buffer[4096] = {0};
-    char output[4096] = {0};
+    char buffer[1024 * 3] = {0};
+    char output[1024 * 4] = {0};
     char target[128] = {0};
 
     WEBUI_SN_PRINTF_STATIC(target, sizeof(target), "Name=%s", profile_name);
@@ -1518,14 +1518,14 @@ static void _webui_remove_firefox_profile_ini(const char* path, const char* prof
         }
         if (!skip) {
             if (strstr(buffer, target) != NULL) {
-
                 #ifdef WEBUI_LOG
                 printf("[Core]\t\t_webui_remove_firefox_profile_ini() -> Target found\n");
                 #endif
                 skip = true;
                 continue;
-            } else
+            } else {
                 WEBUI_STR_CAT_STATIC(output, sizeof(output), buffer);
+            }
         }
     }
 
