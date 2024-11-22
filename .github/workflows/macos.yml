@@ -48,15 +48,16 @@ jobs:
       - name: Setup OpenSSL
         run: |
           if [[ "${{ matrix.arch }}" == "x64" ]]; then
-            brew uninstall openssl@1.1 || true
-            arch -x86_64 brew install openssl@1.1
-            echo "WEBUI_TLS_INCLUDE=$(arch -x86_64 brew --prefix openssl@1.1)/include/" >> $GITHUB_ENV
-            echo "WEBUI_TLS_LIB=$(arch -x86_64 brew --prefix openssl@1.1)/lib/" >> $GITHUB_ENV
-          else
-            brew install openssl@1.1
-            echo "WEBUI_TLS_INCLUDE=$(brew --prefix openssl@1.1)/include/" >> $GITHUB_ENV
-            echo "WEBUI_TLS_LIB=$(brew --prefix openssl@1.1)/lib/" >> $GITHUB_ENV
-          fi
+          HOMEBREW_X64_PATH="/usr/local/bin/brew"
+          arch -arm64 brew uninstall openssl@1.1 || true
+          arch -x86_64 $HOMEBREW_X64_PATH install openssl@1.1
+          echo "WEBUI_TLS_INCLUDE=$($HOMEBREW_X64_PATH --prefix openssl@1.1)/include/" >> $GITHUB_ENV
+          echo "WEBUI_TLS_LIB=$($HOMEBREW_X64_PATH --prefix openssl@1.1)/lib/" >> $GITHUB_ENV
+        else
+          brew install openssl@1.1
+          echo "WEBUI_TLS_INCLUDE=$(brew --prefix openssl@1.1)/include/" >> $GITHUB_ENV
+          echo "WEBUI_TLS_LIB=$(brew --prefix openssl@1.1)/lib/" >> $GITHUB_ENV
+        fi
       - name: Build Debug Target
         run: make ARCH_TARGET=${{ matrix.arch }} debug
       - name: Build Release Target
