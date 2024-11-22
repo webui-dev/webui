@@ -1525,7 +1525,7 @@ static void _webui_remove_firefox_profile_ini(const char* path, const char* prof
                 skip = true;
                 continue;
             } else
-                WEBUI_STR_CAT_DYN(output, sizeof(output), buffer);
+                WEBUI_STR_CAT_STATIC(output, sizeof(output), buffer);
         }
     }
 
