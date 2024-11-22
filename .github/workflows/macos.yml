@@ -47,8 +47,15 @@ jobs:
           fail-on-cache-miss: true
       - name: Setup OpenSSL
         run: |
-          echo "WEBUI_TLS_INCLUDE=$(brew --cellar)/openssl@1.1/1.1.1w/include/" >> $GITHUB_ENV
-          echo "WEBUI_TLS_LIB=$(brew --cellar)/openssl@1.1/1.1.1w/lib/" >> $GITHUB_ENV
+          if [[ "${{ matrix.arch }}" == "x64" ]]; then
+            arch -x86_64 brew install openssl@1.1
+            echo "WEBUI_TLS_INCLUDE=$(arch -x86_64 brew --prefix openssl@1.1)/include/" >> $GITHUB_ENV
+            echo "WEBUI_TLS_LIB=$(arch -x86_64 brew --prefix openssl@1.1)/lib/" >> $GITHUB_ENV
+          else
+            brew install openssl@1.1
+            echo "WEBUI_TLS_INCLUDE=$(brew --prefix openssl@1.1)/include/" >> $GITHUB_ENV
+            echo "WEBUI_TLS_LIB=$(brew --prefix openssl@1.1)/lib/" >> $GITHUB_ENV
+          fi
       - name: Build Debug Target
         run: make ARCH_TARGET=${{ matrix.arch }} debug
       - name: Build Release Target
