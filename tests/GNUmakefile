@@ -46,7 +46,7 @@ ifeq ($(OS),Windows_NT)
 	DYN_BUILD_FLAGS += "$(WEBUI_LIB_NAME).dll" -lws2_32 -Wall -luser32
 	STATIC_OUT := $(TEST_OUT).exe
 	DYN_OUT := $(TEST_OUT)-dyn.exe
-	LWS2_OPT := -lws2_32 -lOle32
+	LWS2_OPT := -lws2_32 -lole32
 	STRIP_OPT := --strip-all
 	CONSOLE_APP := -Wl,-subsystem=console
 	GUI_APP := -Wl,-subsystem=windows
