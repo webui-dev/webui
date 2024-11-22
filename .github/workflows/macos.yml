@@ -61,6 +61,7 @@ jobs:
         if: ${{ matrix.arch != 'x64' }}
         run: make ARCH_TARGET=${{ matrix.arch }} WEBUI_USE_TLS=1
       - name: Build examples
+        if: ${{ matrix.arch != 'x64' }}
         run: |
           examples_base_dir=$(pwd)/examples/C
           for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
