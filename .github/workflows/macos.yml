@@ -55,16 +55,16 @@ jobs:
         if: ${{ !cancelled() }}
         run: make ARCH_TARGET=${{ matrix.arch }}
       - name: Build TLS Debug Target
-        run: make WEBUI_USE_TLS=1 debug
+        run: make ARCH_TARGET=${{ matrix.arch }} WEBUI_USE_TLS=1 debug
       - name: Build TLS Release Target
-        run: make WEBUI_USE_TLS=1
+        run: make ARCH_TARGET=${{ matrix.arch }} WEBUI_USE_TLS=1
       - name: Build examples
         run: |
           examples_base_dir=$(pwd)/examples/C
           for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
             echo "> $example"
             cd $example || (exit_code=1 && continue)
-            if ! make; then
+            if ! make ARCH_TARGET=${{ matrix.arch }}; then
                echo "Failed to build '$example'"
                exit_code=1
                continue
