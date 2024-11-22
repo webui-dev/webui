@@ -4,7 +4,11 @@
 
 MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJECT_DIR := $(dir $(MAKEFILE_PATH))/../../../
+TARGET := $(firstword $(MAKECMDGOALS))
 LIB_DIR := $(PROJECT_DIR)/dist
+ifeq ($(TARGET), debug)
+LIB_DIR := $(LIB_DIR)/debug
+endif
 INCLUDE_DIR := $(PROJECT_DIR)/include
 WEBUI_LIB_NAME = webui-2
 ifeq ($(WEBUI_USE_TLS), 1)
@@ -13,25 +17,28 @@ endif
 
 # ARGS
 # Set a compiler when running on Linux via `make CC=g++` / `make CC=clang`
-CXX = g++
+CC = g++
 # Build the WebUI library if running via `make BUILD_LIB=true`
 BUILD_LIB ?=
 
 # BUILD FLAGS
-STATIC_BUILD_FLAGS = -std=c++17 -lstdc++ main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
-DYN_BUILD_FLAGS = -std=c++17 -lstdc++ main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
+STATIC_BUILD_FLAGS = main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
+DYN_BUILD_FLAGS = main.cpp -I"$(INCLUDE_DIR)" -L"$(LIB_DIR)"
 
 # Platform conditions
 ifeq ($(OS),Windows_NT)
 	# Windows
 	PLATFORM := windows
 	SHELL := CMD
-	STATIC_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)-static -lws2_32 -Wall -Wl,-subsystem=console -luser32 -static
-	DYN_BUILD_FLAGS += "$(LIB_DIR)/$(WEBUI_LIB_NAME).dll" -lws2_32 -Wall -Wl,-subsystem=console -luser32
+	STATIC_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)-static -lws2_32 -Wall -luser32 -static
+	COPY_LIB_CMD := @copy "$(LIB_DIR)\$(WEBUI_LIB_NAME).dll" "$(WEBUI_LIB_NAME).dll"
+	DYN_BUILD_FLAGS += "$(WEBUI_LIB_NAME).dll" -lws2_32 -Wall -luser32
 	STATIC_OUT := main.exe
 	DYN_OUT := main-dyn.exe
-	LWS2_OPT := -lws2_32
+	LWS2_OPT := -lws2_32 -lole32
 	STRIP_OPT := --strip-all
+	CONSOLE_APP := -Wl,-subsystem=console
+	GUI_APP := -Wl,-subsystem=windows
 else
 	STATIC_BUILD_FLAGS += -lpthread -lm -l$(WEBUI_LIB_NAME)-static
 	DYN_BUILD_FLAGS += -lpthread -lm
@@ -40,15 +47,18 @@ else
 	ifeq ($(shell uname),Darwin)
 		# MacOS
 		PLATFORM := macos
-		DYN_BUILD_FLAGS += "$(LIB_DIR)/$(WEBUI_LIB_NAME).dylib"
-		CXX = clang
+		CC = clang
+		COPY_LIB_CMD := @cp "$(LIB_DIR)/$(WEBUI_LIB_NAME).dylib" "$(WEBUI_LIB_NAME).dylib"
+		DYN_BUILD_FLAGS += "./$(WEBUI_LIB_NAME).dylib"
+		WKWEBKIT_LINK_FLAGS := -framework Cocoa -framework WebKit
 	else
 		# Linux
 		PLATFORM := linux
+		COPY_LIB_CMD := @cp "$(LIB_DIR)/$(WEBUI_LIB_NAME).so" "$(WEBUI_LIB_NAME).so"
 		STATIC_BUILD_FLAGS += -ldl
-		DYN_BUILD_FLAGS += -ldl "$(LIB_DIR)/$(WEBUI_LIB_NAME).so"
+		DYN_BUILD_FLAGS += -ldl "./$(WEBUI_LIB_NAME).so"
 		STRIP_OPT := --strip-all
-		ifeq ($(CXX),clang)
+		ifeq ($(CC),clang)
 			LLVM_OPT := llvm-
 		endif
 	endif
@@ -58,19 +68,19 @@ endif
 
 all: release
 
-debug: LIB_DIR := $(LIB_DIR)/debug
 debug: --validate-args
 ifeq ($(BUILD_LIB),true)
 	@cd "$(PROJECT_DIR)" && $(MAKE) debug
 endif
 #	Static with Debug info
 ifneq ($(WEBUI_USE_TLS), 1)
-	@echo "Build C Example ($(CXX) debug static)..."
-	@$(CXX) -g $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
+	@echo "Build C++ Example ($(CC) debug static)..."
+	@$(CC) -g $(CONSOLE_APP) $(STATIC_BUILD_FLAGS) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) -o $(STATIC_OUT)
 endif
 #	Dynamic with Debug info
-	@echo "Build C Example ($(CXX) debug dynamic)..."
-	@$(CXX) -g $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
+	@echo "Build C++ Example ($(CC) debug dynamic)..."
+	$(COPY_LIB_CMD)
+	@$(CC) -g $(CONSOLE_APP) $(DYN_BUILD_FLAGS) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) -o $(DYN_OUT)
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@- del *.o >nul 2>&1
@@ -86,13 +96,14 @@ ifeq ($(BUILD_LIB),true)
 endif
 #	Static Release
 ifneq ($(WEBUI_USE_TLS), 1)
-	@echo "Build C Example ($(CXX) release static)..."
-	@$(CXX) -Os $(STATIC_BUILD_FLAGS) $(LWS2_OPT) -o $(STATIC_OUT)
+	@echo "Build C++ Example ($(CC) release static)..."
+	@$(CC) -Os $(GUI_APP) $(STATIC_BUILD_FLAGS) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) -o $(STATIC_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(STATIC_OUT)
 endif
 #	Dynamic Release
-	@echo "Build C Example ($(CXX) release dynamic)..."
-	@$(CXX) $(DYN_BUILD_FLAGS) $(LWS2_OPT) -o $(DYN_OUT)
+	@echo "Build C++ Example ($(CC) release dynamic)..."
+	$(COPY_LIB_CMD)
+	@$(CC) $(GUI_APP) $(DYN_BUILD_FLAGS) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) -o $(DYN_OUT)
 	@$(LLVM_OPT)strip $(STRIP_OPT) $(DYN_OUT)
 #	Clean
 ifeq ($(PLATFORM),windows)
@@ -108,8 +119,8 @@ clean: --clean-$(PLATFORM)
 # INTERNAL TARGETS
 
 --validate-args:
-ifneq ($(filter $(CXX),g++ clang),$(CXX))
-	$(error Invalid compiler specified: `$(CXX)`)
+ifneq ($(filter $(CC),g++ clang aarch64-linux-gnu-g++ arm-linux-gnueabihf-g++ musl-g++),$(CC))
+$(error Invalid compiler specified: `$(CC)`)
 endif
 
 --clean-linux: --clean-unix
