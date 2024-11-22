@@ -47,7 +47,7 @@ jobs:
           fail-on-cache-miss: true
       - name: Setup OpenSSL
         run: |
-          if [[ "${{ matrix.arch }}" == "x64" ]]; then
+        if [[ "${{ matrix.arch }}" == "x64" ]]; then
           HOMEBREW_X64_PATH="/usr/local/bin/brew"
           arch -arm64 brew uninstall openssl@1.1 || true
           arch -x86_64 $HOMEBREW_X64_PATH install openssl@1.1
