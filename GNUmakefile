@@ -4,6 +4,13 @@
 
 WEBUI_OUT_LIB_NAME = webui-2
 
+# Detect the OS once
+ifeq ($(OS),Windows_NT)
+DETECTED_OS := Windows
+else
+DETECTED_OS := $(shell uname -s)
+endif
+
 # TLS
 WEBUI_USE_TLS =
 WEBUI_TLS_INCLUDE ?= .
@@ -13,7 +20,7 @@ TLS_LDFLAG_DYNAMIC =
 ifeq ($(WEBUI_USE_TLS), 1)
 WEBUI_OUT_LIB_NAME = webui-2-secure
 TLS_CFLAG = -DWEBUI_TLS -DNO_SSL_DL -DOPENSSL_API_1_1
-ifeq ($(OS),Windows_NT)
+ifeq ($(DETECTED_OS),Windows)
 TLS_LDFLAG_DYNAMIC = -lssl -lcrypto -lbcrypt
 else
 TLS_LDFLAG_DYNAMIC = -lssl -lcrypto
@@ -27,7 +34,7 @@ BUILD_DIR := $(MAKEFILE_DIR)/dist
 # ARGS
 CC ?= gcc
 ifeq ($(CC), cc)
-	ifeq ($(shell uname),Darwin)
+	ifeq ($(DETECTED_OS),Darwin)
 		CC = clang
 	else
 		CC = gcc
@@ -50,14 +57,14 @@ WARNING_LOG := -Wall -Wno-unused
 LIB_STATIC_OUT := lib$(WEBUI_OUT_LIB_NAME)-static.a
 
 # Platform defaults and dynamic library outputs
-ifeq ($(OS),Windows_NT)
+ifeq ($(DETECTED_OS),Windows)
 	# Windows
 	SHELL := CMD
 	PLATFORM := windows
 	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).dll
 	LWS2_OPT := -lws2_32 -lole32
 	CIVETWEB_DEFINE_FLAGS += -DMUST_IMPLEMENT_CLOCK_GETTIME
-else ifeq ($(shell uname),Darwin)
+else ifeq ($(DETECTED_OS),Darwin)
 	# MacOS
 	PLATFORM := macos
 	CC = clang
@@ -108,7 +115,7 @@ else
 	@mkdir -p "$(BUILD_DIR)/debug"
 endif
 #	Build macOS WKWebView
-ifeq ($(shell uname),Darwin)
+ifeq ($(DETECTED_OS),Darwin)
 	@cd "$(BUILD_DIR)/debug" \
 	&& echo "Build WebUI Objective-C WKWebKit ($(CC) $(TARGET) debug)..." \
 	&& $(CC) $(TARGET) $(WKWEBKIT_BUILD_FLAGS) -g -DWEBUI_LOG
@@ -141,7 +148,7 @@ else
 	@mkdir -p "$(BUILD_DIR)"
 endif
 #	Build macOS WKWebView
-ifeq ($(shell uname),Darwin)
+ifeq ($(DETECTED_OS),Darwin)
 	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI Objective-C WKWebKit ($(CC) $(TARGET) release)..." \
 	&& $(CC) $(TARGET) $(WKWEBKIT_BUILD_FLAGS) -Os
