@@ -15,8 +15,8 @@ void (*close_callback)(int index) = NULL;
 
 @interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate>
 {
-    NSWindow *windows[512];
-    WKWebView *webViews[512];
+    NSWindow *windows[256];
+    WKWebView *webViews[256];
 }
 - (NSWindow *)windowAtIndex:(int)index;
 - (void)setWindow:(NSWindow *)window atIndex:(int)index;
@@ -29,7 +29,7 @@ void (*close_callback)(int index) = NULL;
 - (instancetype)init {
     self = [super init];
     if (self) {
-        for (int i = 0; i < 512; i++) {
+        for (int i = 0; i < 256; i++) {
             windows[i] = nil;
             webViews[i] = nil;
         }
@@ -50,7 +50,7 @@ void (*close_callback)(int index) = NULL;
     #ifdef WEBUI_LOG
     printf("[ObjC]\t\t\twindowWillClose()\n");
     #endif
-    for (int i = 0; i < 512; i++) {
+    for (int i = 0; i < 256; i++) {
         if (windows[i] == [notification object]) {
             #ifdef WEBUI_LOG
             printf("[ObjC]\t\t\twindowWillClose() -> Index [%d]\n", i);
@@ -65,7 +65,7 @@ void (*close_callback)(int index) = NULL;
     }
 
     BOOL anyWindowOpen = NO;
-    for (int i = 0; i < 512; i++) {
+    for (int i = 0; i < 256; i++) {
         if (windows[i] != nil) {
             anyWindowOpen = YES;
             break;
@@ -99,7 +99,7 @@ void (*close_callback)(int index) = NULL;
 
 - (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
     NSString *title = webView.title;
-    for (int i = 0; i < 512; i++) {
+    for (int i = 0; i < 256; i++) {
         if (webViews[i] == webView) {
             NSWindow *window = windows[i];
             [window setTitle:title];
@@ -121,7 +121,7 @@ bool _webui_macos_wv_new(int index) {
     printf("[ObjC]\t\t\t_webui_macos_wv_new([%d])\n", index);
     #endif
 
-    if (index < 0 || index >= 512) {
+    if (index < 0 || index >= 256) {
         #ifdef WEBUI_LOG
         printf("[ObjC]\t\t\t_webui_macos_wv_new([%d]) -> Invalid index\n", index);
         #endif
@@ -188,7 +188,7 @@ bool _webui_macos_wv_show(int index, const char* urlString, int x, int y, int wi
     printf("[ObjC]\t\t\t_webui_macos_wv_show([%d]) -> width: [%d]\n", index, width);
     printf("[ObjC]\t\t\t_webui_macos_wv_show([%d]) -> height: [%d]\n", index, height);
     #endif
-    if (index < 0 || index >= 512) {
+    if (index < 0 || index >= 256) {
         #ifdef WEBUI_LOG
         printf("[ObjC]\t\t\t_webui_macos_wv_show([%d]) -> Invalid index\n", index);
         #endif
@@ -276,7 +276,7 @@ bool _webui_macos_wv_close(int index) {
     #ifdef WEBUI_LOG
     printf("[ObjC]\t\t\t_webui_macos_wv_close([%d])\n", index);
     #endif
-    if (index < 0 || index >= 512) {
+    if (index < 0 || index >= 256) {
         #ifdef WEBUI_LOG
         printf("[ObjC]\t\t\t_webui_macos_wv_close([%d]) -> Invalid index\n", index);
         #endif
@@ -308,7 +308,7 @@ bool _webui_macos_wv_set_position(int index, int x, int y) {
     printf("[ObjC]\t\t\t_webui_macos_wv_set_position([%d]) -> x: [%d]\n", index, x);
     printf("[ObjC]\t\t\t_webui_macos_wv_set_position([%d]) -> y: [%d]\n", index, y);
     #endif
-    if (index < 0 || index >= 512) {
+    if (index < 0 || index >= 256) {
         #ifdef WEBUI_LOG
         printf("[ObjC]\t\t\t_webui_macos_wv_set_position([%d]) -> Invalid index\n", index);
         #endif
@@ -340,7 +340,7 @@ bool _webui_macos_wv_set_size(int index, int width, int height) {
     printf("[ObjC]\t\t\t_webui_macos_wv_set_size([%d]) -> width: [%d]\n", index, width);
     printf("[ObjC]\t\t\t_webui_macos_wv_set_size([%d]) -> height: [%d]\n", index, height);
     #endif
-    if (index < 0 || index >= 512) {
+    if (index < 0 || index >= 256) {
         #ifdef WEBUI_LOG
         printf("[ObjC]\t\t\t_webui_macos_wv_set_size([%d]) -> Invalid index\n", index);
         #endif
@@ -371,7 +371,7 @@ bool _webui_macos_wv_navigate(int index, const char* urlString) {
     printf("[ObjC]\t\t\t_webui_macos_wv_navigate([%d])\n", index);
     printf("[ObjC]\t\t\t_webui_macos_wv_navigate([%d]) -> url: [%s]\n", index, urlString);
     #endif
-    if (index < 0 || index >= 512) {
+    if (index < 0 || index >= 256) {
         #ifdef WEBUI_LOG
         printf("[ObjC]\t\t\t_webui_macos_wv_navigate([%d]) -> Invalid index\n", index);
         #endif
