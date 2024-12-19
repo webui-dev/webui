@@ -727,7 +727,7 @@ void webui_run(size_t window, const char* script) {
     // [CMD]
     // [Script]
 
-    // Send the packet to all clients
+    // Send the packet to all clients because no need for client's response
     _webui_send_all(win, 0, WEBUI_CMD_JS_QUICK, script, js_len);
 }
 
@@ -814,7 +814,7 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
     // [CMD]
     // [Script]
 
-    // Send the packet to a single client
+    // Send the packet to a single specific client and wait for response
     _webui_send_client(win, _webui.clients[e->connection_id], run_id, WEBUI_CMD_JS, script, js_len, false);
 
     bool js_status = false;
@@ -879,6 +879,14 @@ bool webui_script(size_t window, const char* script, size_t timeout,
     printf("[User] webui_script([%zu])\n", window);
     #endif
 
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return false;
+    _webui_window_t* win = _webui.wins[window];
+
     // Stop if multi-client mode is enabled.
     // we can't send and receive from all clients
     if (_webui.config.multi_client) {
@@ -892,10 +900,18 @@ bool webui_script(size_t window, const char* script, size_t timeout,
         return false;
     }
 
-    // Event
+    // New Event
     webui_event_t e;
     e.window = window;
-    e.connection_id = 0; // Single client
+    e.connection_id = 0;
+    
+    // Get the single client ID of this current window
+    // because we are in single client mode, and we need
+    // to wait for this client's response.
+    if (!_webui_connection_get_id(win, win->single_client, &e.connection_id))
+        return false;
+    if (_webui.clients[e.connection_id] == NULL)
+        return false;
 
     return webui_script_client(&e, script, timeout, buffer, buffer_length);
 }
@@ -5200,9 +5216,10 @@ static void _webui_send_client(
     }
 
     #ifdef WEBUI_LOG
-    printf("[Core]\t\t_webui_send_client() -> ID = 0x%04X \n", id);
-    printf("[Core]\t\t_webui_send_client() -> CMD = 0x%02x \n", cmd);
-    printf("[Core]\t\t_webui_send_client() -> Data = %zu bytes \n", len);
+    printf("[Core]\t\t_webui_send_client() -> Connection ID = %zu \n", connection_id);
+    printf("[Core]\t\t_webui_send_client() -> Packet ID = 0x%04X \n", id);
+    printf("[Core]\t\t_webui_send_client() -> Packet CMD = 0x%02x \n", cmd);
+    printf("[Core]\t\t_webui_send_client() -> Packet Data = %zu bytes \n", len);
     #endif
 
     // Protocol
