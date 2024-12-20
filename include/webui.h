@@ -1164,4 +1164,82 @@ WEBUI_EXPORT bool webui_interface_get_bool_at(size_t window, size_t event_number
  */
 WEBUI_EXPORT size_t webui_interface_get_size_at(size_t window, size_t event_number, size_t index);
 
+/**
+ * @brief Show a window using embedded HTML, or a file. If the window is already
+ * open, it will be refreshed. Single client.
+ *
+ * @param window The window number
+ * @param event_number The event number
+ * @param content The HTML, URL, Or a local file
+ *
+ * @return Returns True if showing the window is successed.
+ *
+ * @example webui_show_client(e, "<html>...</html>"); | 
+ * webui_show_client(e, "index.html"); | webui_show_client(e, "http://...");
+ */
+WEBUI_EXPORT bool webui_interface_show_client(size_t window, size_t event_number, const char* content);
+
+/**
+ * @brief Close a specific client.
+ *
+ * @param window The window number
+ * @param event_number The event number
+ *
+ * @example webui_close_client(e);
+ */
+WEBUI_EXPORT void webui_interface_close_client(size_t window, size_t event_number);
+
+/**
+ * @brief Safely send raw data to the UI. Single client.
+ *
+ * @param window The window number
+ * @param event_number The event number
+ * @param function The JavaScript function to receive raw data: `function
+ * myFunc(myData){}`
+ * @param raw The raw data buffer
+ * @param size The raw data size in bytes
+ *
+ * @example webui_send_raw_client(e, "myJavaScriptFunc", myBuffer, 64);
+ */
+WEBUI_EXPORT void webui_interface_send_raw_client(size_t window, size_t event_number, const char* function, const void* raw, size_t size);
+
+/**
+ * @brief Navigate to a specific URL. Single client.
+ *
+ * @param window The window number
+ * @param event_number The event number
+ * @param url Full HTTP URL
+ *
+ * @example webui_navigate_client(e, "http://domain.com");
+ */
+WEBUI_EXPORT void webui_interface_navigate_client(size_t window, size_t event_number, const char* url);
+
+/**
+ * @brief Run JavaScript without waiting for the response. Single client.
+ *
+ * @param window The window number
+ * @param event_number The event number
+ * @param script The JavaScript to be run
+ *
+ * @example webui_run_client(e, "alert('Hello');");
+ */
+WEBUI_EXPORT void webui_interface_run_client(size_t window, size_t event_number, const char* script);
+
+/**
+ * @brief Run JavaScript and get the response back. Single client.
+ * Make sure your local buffer can hold the response.
+ *
+ * @param window The window number
+ * @param event_number The event number
+ * @param script The JavaScript to be run
+ * @param timeout The execution timeout in seconds
+ * @param buffer The local buffer to hold the response
+ * @param buffer_length The local buffer size
+ *
+ * @return Returns True if there is no execution error
+ *
+ * @example bool err = webui_script_client(e, "return 4 + 6;", 0, myBuffer, myBufferSize);
+ */
+WEBUI_EXPORT bool webui_interface_script_client(size_t window, size_t event_number, const char* script, size_t timeout, char* buffer, size_t buffer_length);
+
 #endif /* _WEBUI_H */
