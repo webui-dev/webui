@@ -90,7 +90,7 @@ namespace webui {
             // ------ Event methods `e->xxx()` ------
 
             // Get how many arguments there are in an event.
-            size_t get_count(size_t index = 0) { 
+            size_t get_count(size_t index = 0) {
                 return webui_get_count(this);
             }
 
@@ -125,9 +125,9 @@ namespace webui {
             }
 
             // Run JavaScript without waiting for the response. Single client.
-            void script_client(const std::string_view script, unsigned int timeout, 
+            bool script_client(const std::string_view script, unsigned int timeout,
                             char* buffer, size_t buffer_length) {
-                webui_script_client(this, script.data(), timeout, buffer, buffer_length);
+                return webui_script_client(this, script.data(), timeout, buffer, buffer_length);
             }
 
             // Run JavaScript without waiting for the response. Single client.
@@ -278,10 +278,10 @@ namespace webui {
             return webui_get_port(webui_window);
         }
 
-        // Set a custom web-server network port to be used by WebUI. This can be useful to determine the HTTP 
+        // Set a custom web-server network port to be used by WebUI. This can be useful to determine the HTTP
         // link of `webui.js` in case you are trying to use WebUI with an external web-server like NGNIX
-        void set_port(size_t port) const {
-            webui_set_port(webui_window, port);
+        bool set_port(size_t port) const {
+            return webui_set_port(webui_window, port);
         }
 
         // Set window position
@@ -346,7 +346,7 @@ namespace webui {
             webui_navigate(webui_window, url.data());
         }
 
-        // Control if UI events coming from this window should be processed one at a time in a 
+        // Control if UI events coming from this window should be processed one at a time in a
         // single blocking thread `True`, or process every event in a new non-blocking thread `False`.
         void set_event_blocking(bool status) const {
             webui_set_event_blocking(webui_window, status);
@@ -373,7 +373,7 @@ namespace webui {
         }
 
         // Run a JavaScript, and get the response back (Make sure your local buffer can hold the response).
-        bool script(const std::string_view script, unsigned int timeout, 
+        bool script(const std::string_view script, unsigned int timeout,
                     char* buffer, size_t buffer_length) const {
             return webui_script(webui_window, script.data(), timeout, buffer, buffer_length);
         }
@@ -443,9 +443,9 @@ namespace webui {
 
     // Set the SSL/TLS certificate and the private key content, both in PEM format.
     // This works only with `webui-2-secure` library. If set empty WebUI will generate a self-signed certificate.
-    inline void set_tls_certificate(const std::string_view certificate_pem, 
+    inline bool set_tls_certificate(const std::string_view certificate_pem,
                                     const std::string_view private_key_pem) {
-        webui_set_tls_certificate(certificate_pem.data(), private_key_pem.data());
+        return webui_set_tls_certificate(certificate_pem.data(), private_key_pem.data());
     }
 
     // Safely free a buffer allocated by WebUI, for example when using webui_encode().
