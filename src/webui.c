@@ -339,6 +339,9 @@ typedef struct _webui_window_t {
     size_t process_id;
     const void*(*files_handler)(const char* filename, int* length);
     const void*(*files_handler_window)(size_t window, const char* filename, int* length);
+    const void* file_handler_async_response;
+    int file_handler_async_len;
+    bool file_handler_async_done;
     webui_event_inf_t* events[WEBUI_MAX_IDS];
     size_t events_count;
     bool is_public;
@@ -3675,6 +3678,34 @@ void webui_interface_set_response(size_t window, size_t event_number, const char
     #endif
 }
 
+void webui_interface_set_response_file_handler(size_t window, const void* response, int length) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_interface_set_response_file_handler()\n");
+    printf("[User] webui_interface_set_response_file_handler() -> window #%zu\n", window);
+    printf("[User] webui_interface_set_response_file_handler() -> Response %zu bytes\n", length);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    // Set the response
+    win->file_handler_async_response = response;
+    win->file_handler_async_len = length;
+
+    // Async response
+    if (_webui.config.asynchronous_response) {
+        _webui_mutex_lock(&_webui.mutex_async_response);
+        win->file_handler_async_done = true;
+        _webui_mutex_unlock(&_webui.mutex_async_response);
+    }
+}
+
 bool webui_interface_is_app_running(void) {
 
     #ifdef WEBUI_LOG
@@ -4494,9 +4525,27 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
         printf("[Call]\n");
         #endif
 
+        // Async response ini
+        if (_webui.config.asynchronous_response) {
+            win->file_handler_async_response = NULL;
+            win->file_handler_async_len = 0;
+            win->file_handler_async_done = false;
+        }
+
         // True if we pass the window num to the handler, false otherwise.
         int is_file_handler_window = win->files_handler_window != NULL;
         const void* callback_resp = is_file_handler_window ? win->files_handler_window(win->num, url, (int*)&length) : win->files_handler(url, (int*)&length);
+
+        // Async response wait
+        if (_webui.config.asynchronous_response) {
+            bool done = false;
+            while (!done) {
+                _webui_sleep(10);
+                _webui_mutex_lock(&_webui.mutex_async_response);
+                if(win->file_handler_async_done) done = true;
+                _webui_mutex_unlock(&_webui.mutex_async_response);
+            }
+        }
 
         if (callback_resp != NULL) {
 

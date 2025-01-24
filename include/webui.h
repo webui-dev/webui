@@ -463,6 +463,17 @@ WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(c
  */
 WEBUI_EXPORT void webui_set_file_handler_window(size_t window, const void* (*handler)(size_t window, const char* filename, int* length));
 
+/**
+ * @brief Use this API to set a file handler response if your backend need async 
+ * response for `webui_set_file_handler()`.
+ *
+ * @param window The window number
+ * @param response The response buffer
+ * @param length The response size
+ *
+ * @example webui_interface_set_response_file_handler(myWindow, buffer, 1024);
+ */
+WEBUI_EXPORT void webui_interface_set_response_file_handler(size_t window, const void* response, int length);
 
 /**
  * @brief Check if the specified window is still running.
