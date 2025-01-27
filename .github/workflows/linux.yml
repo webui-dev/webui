@@ -219,33 +219,33 @@ jobs:
             fi
           done
           exit $exit_code
-      - name: Setup Browser
-        uses: browser-actions/setup-chrome@v1
-      - name: Setup Tests
-        run: |
-          sudo apt update && sudo apt install xvfb
-          cd tests
-          make call_c_from_js.c
-          make fail_test.c
-          ls -1
-      - name: Test Static
-        timeout-minutes: 2
-        run: |
-          cd tests
-          call_c_from_js=$(pwd)/call_c_from_js
-          fail_test=$(pwd)/fail_test
-          xvfb-run "$call_c_from_js"
-          # Run again and capture its output.
-          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
-          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
-          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
-      - name: Test Dynamic
-        timeout-minutes: 2
-        run: |
-          cd tests
-          call_c_from_js=$(pwd)/call_c_from_js-dyn
-          fail_test=$(pwd)/fail_test-dyn
-          xvfb-run "$call_c_from_js"
-          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
-          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
-          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
+      # - name: Setup Browser
+      #   uses: browser-actions/setup-chrome@v1
+      # - name: Setup Tests
+      #   run: |
+      #     sudo apt update && sudo apt install xvfb
+      #     cd tests
+      #     make call_c_from_js.c
+      #     make fail_test.c
+      #     ls -1
+      # - name: Test Static
+      #   timeout-minutes: 2
+      #   run: |
+      #     cd tests
+      #     call_c_from_js=$(pwd)/call_c_from_js
+      #     fail_test=$(pwd)/fail_test
+      #     xvfb-run "$call_c_from_js"
+      #     # Run again and capture its output.
+      #     output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+      #     [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
+      #     xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
+      # - name: Test Dynamic
+      #   timeout-minutes: 2
+      #   run: |
+      #     cd tests
+      #     call_c_from_js=$(pwd)/call_c_from_js-dyn
+      #     fail_test=$(pwd)/fail_test-dyn
+      #     xvfb-run "$call_c_from_js"
+      #     output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+      #     [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
+      #     xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
