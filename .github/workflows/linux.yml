@@ -158,9 +158,9 @@ jobs:
           prerelease: ${{ env.IS_PRERELEASE }}
           allowUpdates: true
 
-  build-ubuntu-24:
+  build-ubuntu-22:
     needs: setup
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     strategy:
@@ -184,9 +184,9 @@ jobs:
         run: |
           CC="${{ matrix.cc }}"
           if [ "$CC" == "clang" ]; then
-            sudo ln -s llvm-ar-16 /usr/bin/llvm-ar
-            sudo ln -s llvm-ranlib-16 /usr/bin/llvm-ranlib
-            sudo ln -s llvm-strip-16 /usr/bin/llvm-strip
+            sudo ln -s llvm-ar-14 /usr/bin/llvm-ar
+            sudo ln -s llvm-ranlib-14 /usr/bin/llvm-ranlib
+            sudo ln -s llvm-strip-14 /usr/bin/llvm-strip
           else
             sudo apt -qq install gcc-14
             CC+="-14"
