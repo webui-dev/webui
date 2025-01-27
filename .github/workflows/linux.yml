@@ -188,7 +188,7 @@ jobs:
             sudo ln -s llvm-ranlib-14 /usr/bin/llvm-ranlib
             sudo ln -s llvm-strip-14 /usr/bin/llvm-strip
           else
-            sudo apt -qq install gcc-14
+            sudo apt -qq install gcc-11
             CC+="-14"
           fi
           echo "CC=$CC" >> $GITHUB_ENV
