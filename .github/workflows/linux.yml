@@ -189,7 +189,7 @@ jobs:
             sudo ln -s llvm-strip-14 /usr/bin/llvm-strip
           else
             sudo apt -qq install gcc-11
-            CC+="-14"
+            CC+="-11"
           fi
           echo "CC=$CC" >> $GITHUB_ENV
       - name: Build Debug Target
