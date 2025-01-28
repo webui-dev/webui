@@ -4532,12 +4532,18 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
             win->file_handler_async_done = false;
         }
 
-        // True if we pass the window num to the handler, false otherwise.
-        int is_file_handler_window = win->files_handler_window != NULL;
-        const void* callback_resp = is_file_handler_window ? win->files_handler_window(win->num, url, (int*)&length) : win->files_handler(url, (int*)&length);
+        // Call user callback
+        const void* callback_resp = NULL;
+        if (win->files_handler_window != NULL) {
+            callback_resp = win->files_handler_window(win->num, url, (int*)&length);
+        } else {
+            callback_resp = win->files_handler(url, (int*)&length);
+        }
 
         // Async response wait
         if (_webui.config.asynchronous_response) {
+            // `callback_resp` is NULL now, we need to
+            // wait for the response that will come later.
             bool done = false;
             while (!done) {
                 _webui_sleep(10);
@@ -4545,6 +4551,9 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
                 if(win->file_handler_async_done) done = true;
                 _webui_mutex_unlock(&_webui.mutex_async_response);
             }
+            // Get the async response
+            callback_resp = win->file_handler_async_response;
+            length = win->file_handler_async_len;
         }
 
         if (callback_resp != NULL) {
@@ -4562,8 +4571,8 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
 
             #ifdef WEBUI_LOG
             printf("---[ External File Handler ]--------\n");
-            printf("%s\n", (char*)callback_resp);
-            printf("------------------------------------\n");
+            _webui_print_ascii((const char*)callback_resp, length);
+            printf("\n------------------------------------\n");
             #endif
 
             // Send user data (Header + Body)
@@ -8029,8 +8038,8 @@ static void _webui_http_send_header(
 
     #ifdef WEBUI_LOG
     printf("---[ HTTP Header ]-----------------\n");
-    printf("%s\n", buffer);
-    printf("-----------------------------------\n");
+    printf("%s", buffer);
+    printf("\n-----------------------------------\n");
     #endif
 
     // Send
@@ -8365,8 +8374,8 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
 
                 #ifdef WEBUI_LOG
                 printf("---[ HTML (%zu bytes)]--------------\n", _webui_strlen(win->html));
-                printf("%s\n", win->html);
-                printf("------------------------------------\n");
+                printf("%s", win->html);
+                printf("\n------------------------------------\n");
                 #endif
 
                 // Send 200
