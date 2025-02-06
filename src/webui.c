@@ -6730,7 +6730,7 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     #endif
 
     // Non existing browser
-    if (_browser > 12)
+    if (_browser > 13)
         return false;
 
     // No browser mode
