@@ -847,6 +847,17 @@ class WebuiBridge {
 		if (this.#log) console.log(`Core Response: [${response}]`);
 		return response;
 	}
+	/**
+	 * When binding all events on the backend, WebUI blocks all navigation events
+	 * and sends them to the backend. This API allows you to control that behavior.
+	 *
+	 * @param status - Boolean `True` means WebUI will allow navigations
+	 * @example - webui.allowNavigation(true); // Allow navigation
+	 * window.location.replace('www.test.com'); // This will now proceed as usual
+	 */
+	allowNavigation(status: boolean): void {
+        this.#allowNavigation = status;
+    }
 }
 // Export
 type webui = WebuiBridge;
