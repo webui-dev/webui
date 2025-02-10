@@ -6396,8 +6396,10 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
             if (!_webui_is_empty(win->profile_path))
                 c = WEBUI_SN_PRINTF_DYN(buffer, len, " --user-data-dir=\"%s\"", win->profile_path);
             // Basic
-            for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", chromium_options[i]);
+            if (_webui_is_empty(win->custom_parameters)) {
+                for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
+                    c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", chromium_options[i]);
+                }
             }
             // Kiosk Mode
             if (win->kiosk_mode)
@@ -6417,8 +6419,11 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
             // Proxy
             if (win->proxy_set)
                 c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " --proxy-server=%s", win->proxy_server);
-            else
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "--no-proxy-server");
+            else {
+                if (_webui_is_empty(win->custom_parameters)) {
+                    c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "--no-proxy-server");
+                }
+            }
             // User-defined command line parameters.
             if (!_webui_is_empty(win->custom_parameters)) {
                 c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", win->custom_parameters);
@@ -6432,7 +6437,9 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
             if (!_webui_is_empty(win->profile_name))
                 c = WEBUI_SN_PRINTF_DYN(buffer, len, " -P %s", win->profile_name);
             // Basic
-            c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " -purgecaches");
+            if (_webui_is_empty(win->custom_parameters)) {
+                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " -purgecaches");
+            }
             // Kiosk Mode
             if (win->kiosk_mode)
                 c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "-kiosk");
