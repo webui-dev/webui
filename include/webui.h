@@ -246,6 +246,43 @@ WEBUI_EXPORT size_t webui_get_new_window_id(void);
 WEBUI_EXPORT size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t* e));
 
 /**
+ * @brief Use this API after using `webui_bind()` to add any user data to it that can be
+ * read later using `webui_get_context()`.
+ *
+ * @param window The window number
+ * @param element The HTML element / JavaScript object
+ * @param context Any user data
+ *
+ * @example
+ * webui_bind(myWindow, "myFunction", myFunction);
+ * 
+ * webui_set_context(myWindow, "myFunction", myData);
+ * 
+ * void myFunction(webui_event_t* e) {
+ *   void* myData = webui_get_context(e);
+ * }
+ */
+WEBUI_EXPORT void webui_set_context(size_t window, const char* element, void* context);
+
+/**
+ * @brief Get user data that is set using `webui_set_context()`.
+ *
+ * @param e The event struct
+ * 
+ * @return Returns user data pointer.
+ *
+ * @example
+ * webui_bind(myWindow, "myFunction", myFunction);
+ * 
+ * webui_set_context(myWindow, "myFunction", myData);
+ * 
+ * void myFunction(webui_event_t* e) {
+ *   void* myData = webui_get_context(e);
+ * }
+ */
+WEBUI_EXPORT void* webui_get_context(webui_event_t* e);
+
+/**
  * @brief Get the recommended web browser ID to use. If you 
  * are already using one, this function will return the same ID.
  * 
