@@ -3083,6 +3083,18 @@ void webui_free(void * ptr) {
     _webui_free_mem(ptr);
 }
 
+void webui_memcpy(void* dest, void* src, size_t count) {
+    
+    #ifdef WEBUI_LOG
+    printf("[User] webui_memcpy()\n");
+    printf("[User] webui_memcpy() -> Copying %zu bytes from [%p] to [%p]\n", count, src, dest);
+    #endif
+
+    if ((dest != NULL) && (src != NULL) && (count > 0)) {
+        memcpy(dest, src, count);
+    }
+}
+
 void * webui_malloc(size_t size) {
 
     #ifdef WEBUI_LOG
