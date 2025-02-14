@@ -3988,6 +3988,25 @@ bool webui_interface_script_client(size_t window, size_t event_number, const cha
     return webui_script_client(&e, script, timeout, buffer, buffer_length);
 }
 
+void* webui_interface_get_context(size_t window, size_t event_number) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_interface_get_context([%zu], [%zu])\n", window, event_number);
+    #endif
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return NULL;
+    _webui_window_t* win = _webui.wins[window];
+
+    // New Event (Wrapper)
+    webui_event_t e;
+    e.window = window;
+    e.event_number = event_number;
+
+    return webui_get_context(&e);
+}
+
 // -- Core's Functions ----------------
 static bool _webui_ptr_exist(void * ptr) {
 
