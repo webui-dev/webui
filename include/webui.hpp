@@ -175,6 +175,11 @@ namespace webui {
                 return webui_show_client(this, s.data());
             }
 
+            // Get user data that is set using `set_context()`
+            void* get_context() {
+                return webui_get_context(this);
+            }
+
             // Extras
 
             // Get current window object pointer
@@ -381,6 +386,12 @@ namespace webui {
         // Chose between Deno and Nodejs runtime for .js and .ts files.
         void set_runtime(unsigned int runtime) const {
             webui_set_runtime(webui_window, runtime);
+        }
+
+        // Use this API after using `bind()` to add any user data to it that can be
+        // read later using `get_context()`.
+        void set_context(const std::string_view element, void* context) const {
+            webui_set_context(webui_window, element.data(), context);
         }
     };
 
