@@ -40,5 +40,10 @@ jobs:
     permissions:
       contents: write
 
+  linux_redhat:
+    uses: ./.github/workflows/linux_redhat.yml
+    permissions:
+      contents: write
+
   zig:
     uses: ./.github/workflows/zig.yml
