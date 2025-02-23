@@ -2,7 +2,7 @@
 
 # https://webui.me
 # https://github.com/webui-dev/webui
-# Copyright (c) 2020-2024 Hassan Draga.
+# Copyright (c) 2020-2025 Hassan Draga.
 # Licensed under MIT License.
 # All rights reserved.
 # Canada.

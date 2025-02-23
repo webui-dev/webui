@@ -2,7 +2,7 @@
   WebUI Library
   https://webui.me
   https://github.com/webui-dev/webui
-  Copyright (c) 2020-2024 Hassan Draga.
+  Copyright (c) 2020-2025 Hassan Draga.
   Licensed under MIT License.
   All rights reserved.
   Canada.
@@ -246,6 +246,43 @@ WEBUI_EXPORT size_t webui_get_new_window_id(void);
 WEBUI_EXPORT size_t webui_bind(size_t window, const char* element, void (*func)(webui_event_t* e));
 
 /**
+ * @brief Use this API after using `webui_bind()` to add any user data to it that can be
+ * read later using `webui_get_context()`.
+ *
+ * @param window The window number
+ * @param element The HTML element / JavaScript object
+ * @param context Any user data
+ *
+ * @example
+ * webui_bind(myWindow, "myFunction", myFunction);
+ * 
+ * webui_set_context(myWindow, "myFunction", myData);
+ * 
+ * void myFunction(webui_event_t* e) {
+ *   void* myData = webui_get_context(e);
+ * }
+ */
+WEBUI_EXPORT void webui_set_context(size_t window, const char* element, void* context);
+
+/**
+ * @brief Get user data that is set using `webui_set_context()`.
+ *
+ * @param e The event struct
+ * 
+ * @return Returns user data pointer.
+ *
+ * @example
+ * webui_bind(myWindow, "myFunction", myFunction);
+ * 
+ * webui_set_context(myWindow, "myFunction", myData);
+ * 
+ * void myFunction(webui_event_t* e) {
+ *   void* myData = webui_get_context(e);
+ * }
+ */
+WEBUI_EXPORT void* webui_get_context(webui_event_t* e);
+
+/**
  * @brief Get the recommended web browser ID to use. If you 
  * are already using one, this function will return the same ID.
  * 
@@ -463,6 +500,17 @@ WEBUI_EXPORT void webui_set_file_handler(size_t window, const void* (*handler)(c
  */
 WEBUI_EXPORT void webui_set_file_handler_window(size_t window, const void* (*handler)(size_t window, const char* filename, int* length));
 
+/**
+ * @brief Use this API to set a file handler response if your backend need async 
+ * response for `webui_set_file_handler()`.
+ *
+ * @param window The window number
+ * @param response The response buffer
+ * @param length The response size
+ *
+ * @example webui_interface_set_response_file_handler(myWindow, buffer, 1024);
+ */
+WEBUI_EXPORT void webui_interface_set_response_file_handler(size_t window, const void* response, int length);
 
 /**
  * @brief Check if the specified window is still running.
@@ -534,6 +582,17 @@ WEBUI_EXPORT void webui_free(void* ptr);
  * @example char* myBuffer = (char*)webui_malloc(1024);
  */
 WEBUI_EXPORT void* webui_malloc(size_t size);
+
+/**
+ * @brief Copy raw data.
+ *
+ * @param dest Destination memory pointer
+ * @param src Source memory pointer
+ * @param count Bytes to copy
+ *
+ * @example webui_memcpy(myBuffer, myData, 64);
+ */
+WEBUI_EXPORT void webui_memcpy(void* dest, void* src, size_t count);
 
 /**
  * @brief Safely send raw data to the UI. All clients.

@@ -1,6 +1,6 @@
 # https://webui.me
 # https://github.com/webui-dev/webui
-# Copyright (c) 2020-2024 Hassan Draga.
+# Copyright (c) 2020-2025 Hassan Draga.
 # Licensed under MIT License.
 # All rights reserved.
 # Canada.
@@ -16,7 +16,7 @@ def js_to_c_header(input_filename, output_filename):
             "// WebUI v2.5.0-beta.3\n"
             "// https://webui.me\n"
             "// https://github.com/webui-dev/webui\n"
-            "// Copyright (c) 2020-2024 Hassan Draga.\n"
+            "// Copyright (c) 2020-2025 Hassan Draga.\n"
             "// Licensed under MIT License.\n"
             "// All rights reserved.\n"
             "// Canada.\n\n"

@@ -2,7 +2,7 @@
   WebUI Library
   https://webui.me
   https://github.com/webui-dev/webui
-  Copyright (c) 2020-2024 Hassan Draga.
+  Copyright (c) 2020-2025 Hassan Draga.
   Licensed under MIT License.
   All rights reserved.
   Canada.
@@ -308,6 +308,7 @@ typedef struct _webui_window_t {
     size_t num; // Window number
     const char* html_elements[WEBUI_MAX_IDS];
     bool has_all_events;
+    void* cb_context[WEBUI_MAX_IDS];
     void(*cb[WEBUI_MAX_IDS])(webui_event_t* e);
     void(*cb_interface[WEBUI_MAX_IDS])(size_t, size_t, char* , size_t, size_t);
     bool ws_block;
@@ -339,6 +340,9 @@ typedef struct _webui_window_t {
     size_t process_id;
     const void*(*files_handler)(const char* filename, int* length);
     const void*(*files_handler_window)(size_t window, const char* filename, int* length);
+    const void* file_handler_async_response;
+    int file_handler_async_len;
+    bool file_handler_async_done;
     webui_event_inf_t* events[WEBUI_MAX_IDS];
     size_t events_count;
     bool is_public;
@@ -642,7 +646,7 @@ static WEBUI_THREAD_MONITOR;
 #define WEBUI_STR_COPY_DYN(dest, dest_size, src) strcpy_s(dest, (dest_size + 1), src)
 #define WEBUI_STR_COPY_STATIC(dest, dest_size, src) strcpy_s(dest, dest_size, src)
 #define WEBUI_STR_CAT_DYN(dest, dest_size, src) strcat_s(dest, (dest_size + 1), src)
-#define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strcat_s(dest, dest_size, src)
+#define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strcat_s(dest, (dest_size - (strlen(dest) - 1)), src)
 #else
 #define WEBUI_STR_TOK(str, delim, context) strtok_r(str, delim, context)
 #define WEBUI_FILE_OPEN(file, filename, mode) ((file) = fopen(filename, mode))
@@ -651,7 +655,7 @@ static WEBUI_THREAD_MONITOR;
 #define WEBUI_STR_COPY_DYN(dest, dest_size, src) strncpy(dest, src, (dest_size + 1))
 #define WEBUI_STR_COPY_STATIC(dest, dest_size, src) strncpy(dest, src, dest_size)
 #define WEBUI_STR_CAT_DYN(dest, dest_size, src) strncat(dest, src, (dest_size + 1))
-#define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strncat(dest, src, dest_size)
+#define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strncat(dest, src, (dest_size - (strlen(dest) - 1)))
 #endif
 
 // Assert
@@ -1727,6 +1731,59 @@ bool webui_show_browser(size_t window, const char* content, size_t browser) {
     return _webui_show(win, NULL, content, browser);
 }
 
+void* webui_get_context(webui_event_t* e) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_get_context()\n");
+    #endif
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[e->window] == NULL)
+        return 0;
+    _webui_window_t* win = _webui.wins[e->window];
+
+    // Search
+    size_t cb_index = 0;
+    if (_webui_get_cb_index(win, e->element, &cb_index)) {
+        // Get context
+        #ifdef WEBUI_LOG
+        printf("[User] webui_get_context() -> Found context at %p\n", win->cb_context[cb_index]);
+        #endif
+        return win->cb_context[cb_index];
+    }
+
+    return NULL;
+}
+
+void webui_set_context(size_t window, const char* element, void* context) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_context([%zu])\n", window);
+    printf("[User] webui_set_context() -> Element: [%s]\n", element);
+    printf("[User] webui_set_context() -> Context: [%p]\n", context);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+    
+    // Get bind Index
+    // We should use `webui_bind()` with NULL to make `webui_set_context()`
+    // works fine if user call it before or after `webui_bind()`.
+    size_t cb_index = webui_bind(window, element, NULL);
+
+    // Set context
+    win->cb_context[cb_index] = context;
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_context() -> Context saved at %zu\n", cb_index);
+    #endif
+}
+
 size_t webui_bind(size_t window, const char* element, void(*func)(webui_event_t* e)) {
 
     #ifdef WEBUI_LOG
@@ -1743,41 +1800,48 @@ size_t webui_bind(size_t window, const char* element, void(*func)(webui_event_t*
 
     // Search
     size_t cb_index = 0;
-    bool exist = _webui_get_cb_index(win, element, &cb_index);    
+    bool exist = _webui_get_cb_index(win, element, &cb_index);
 
-    // All events
-    if (_webui_is_empty(element)) {
-        win->has_all_events = true;
-        size_t index = (exist ? cb_index : _webui.cb_count++);
-        win->html_elements[index] = "";
-        win->cb[index] = func;
-        #ifdef WEBUI_LOG
-        printf("[User] webui_bind() -> Save bind (all events) at %zu\n", index);
-        #endif
-        return index;
-    }
-
-    // New bind
-    const char* element_cpy = (const char*)_webui_str_dup(element);
+    // Free old ID
     size_t index = (exist ? cb_index : _webui.cb_count++);
-    win->html_elements[index] = element_cpy;
-    win->cb[index] = func;
-    #ifdef WEBUI_LOG
-    printf("[User] webui_bind() -> Save bind at %zu\n", index);
-    #endif
+    _webui_free_mem((void*)win->html_elements[index]);
 
-    // Send to all connected clients the new binding ID
-    // Packet Protocol Format:
+    // All events binding
+    if (_webui_is_empty(element)) {
+        // Empty Element ID Binding (New / Update)
+        win->html_elements[index] = "";
+        if (func != NULL) {
+            win->has_all_events = true;
+            win->cb[index] = func;
+            #ifdef WEBUI_LOG
+            printf("[User] webui_bind() -> Save bind (all events) at %zu\n", index);
+            #endif
+        }
+        return index;
+    } else {
+        // Non-empty Element ID Binding (New / Update)
+        const char* element_cpy = (const char*)_webui_str_dup(element);
+        win->html_elements[index] = element_cpy;
+        if (func != NULL) {
+            win->cb[index] = func;
+            #ifdef WEBUI_LOG
+            printf("[User] webui_bind() -> Save bind at %zu\n", index);
+            #endif
 
-    // [...]
-    // [CMD]
-    // [NewElement]
-    // Send the packet
+            // Send to all connected clients the new binding ID
+            // Packet Protocol Format:
 
-    _webui_send_all(
-        win, 0, WEBUI_CMD_ADD_ID,
-        element, _webui_strlen(element_cpy)
-    );
+            // [...]
+            // [CMD]
+            // [NewElement]
+            // Send the packet
+
+            _webui_send_all(
+                win, 0, WEBUI_CMD_ADD_ID,
+                element, _webui_strlen(element_cpy)
+            );        
+        }
+    }
 
     return index;
 }
@@ -3019,6 +3083,18 @@ void webui_free(void * ptr) {
     _webui_free_mem(ptr);
 }
 
+void webui_memcpy(void* dest, void* src, size_t count) {
+    
+    #ifdef WEBUI_LOG
+    printf("[User] webui_memcpy()\n");
+    printf("[User] webui_memcpy() -> Copying %zu bytes from [%p] to [%p]\n", count, src, dest);
+    #endif
+
+    if ((dest != NULL) && (src != NULL) && (count > 0)) {
+        memcpy(dest, src, count);
+    }
+}
+
 void * webui_malloc(size_t size) {
 
     #ifdef WEBUI_LOG
@@ -3675,6 +3751,34 @@ void webui_interface_set_response(size_t window, size_t event_number, const char
     #endif
 }
 
+void webui_interface_set_response_file_handler(size_t window, const void* response, int length) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_interface_set_response_file_handler()\n");
+    printf("[User] webui_interface_set_response_file_handler() -> window #%zu\n", window);
+    printf("[User] webui_interface_set_response_file_handler() -> Response %d bytes\n", length);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    // Set the response
+    win->file_handler_async_response = response;
+    win->file_handler_async_len = length;
+
+    // Async response
+    if (_webui.config.asynchronous_response) {
+        _webui_mutex_lock(&_webui.mutex_async_response);
+        win->file_handler_async_done = true;
+        _webui_mutex_unlock(&_webui.mutex_async_response);
+    }
+}
+
 bool webui_interface_is_app_running(void) {
 
     #ifdef WEBUI_LOG
@@ -3882,6 +3986,25 @@ bool webui_interface_script_client(size_t window, size_t event_number, const cha
     e.connection_id = event_inf->connection_id;
 
     return webui_script_client(&e, script, timeout, buffer, buffer_length);
+}
+
+void* webui_interface_get_context(size_t window, size_t event_number) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_interface_get_context([%zu], [%zu])\n", window, event_number);
+    #endif
+
+    // Dereference
+    if (_webui_mutex_is_exit_now(WEBUI_MUTEX_NONE) || _webui.wins[window] == NULL)
+        return NULL;
+    _webui_window_t* win = _webui.wins[window];
+
+    // New Event (Wrapper)
+    webui_event_t e;
+    e.window = window;
+    e.event_number = event_number;
+
+    return webui_get_context(&e);
 }
 
 // -- Core's Functions ----------------
@@ -4494,9 +4617,36 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
         printf("[Call]\n");
         #endif
 
-        // True if we pass the window num to the handler, false otherwise.
-        int is_file_handler_window = win->files_handler_window != NULL;
-        const void* callback_resp = is_file_handler_window ? win->files_handler_window(win->num, url, (int*)&length) : win->files_handler(url, (int*)&length);
+        // Async response ini
+        if (_webui.config.asynchronous_response) {
+            win->file_handler_async_response = NULL;
+            win->file_handler_async_len = 0;
+            win->file_handler_async_done = false;
+        }
+
+        // Call user callback
+        const void* callback_resp = NULL;
+        if (win->files_handler_window != NULL) {
+            callback_resp = win->files_handler_window(win->num, url, (int*)&length);
+        } else {
+            callback_resp = win->files_handler(url, (int*)&length);
+        }
+
+        // Async response wait
+        if (_webui.config.asynchronous_response) {
+            // `callback_resp` is NULL now, we need to
+            // wait for the response that will come later.
+            bool done = false;
+            while (!done) {
+                _webui_sleep(10);
+                _webui_mutex_lock(&_webui.mutex_async_response);
+                if(win->file_handler_async_done) done = true;
+                _webui_mutex_unlock(&_webui.mutex_async_response);
+            }
+            // Get the async response
+            callback_resp = win->file_handler_async_response;
+            length = win->file_handler_async_len;
+        }
 
         if (callback_resp != NULL) {
 
@@ -4513,8 +4663,8 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
 
             #ifdef WEBUI_LOG
             printf("---[ External File Handler ]--------\n");
-            printf("%s\n", (char*)callback_resp);
-            printf("------------------------------------\n");
+            _webui_print_ascii((const char*)callback_resp, length);
+            printf("\n------------------------------------\n");
             #endif
 
             // Send user data (Header + Body)
@@ -5178,10 +5328,24 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
         #endif
 
         if (!win->custom_profile){
-            if(!win->disable_browser_high_contrast)
-                WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIFirefoxProfile", temp, os_sep, os_sep);
-            else
-                WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%sWebUIFirefoxProfile-NoHC", temp, os_sep, os_sep);
+            // Set Firefox profile folder name
+            const char* ff = "FirefoxProfile";
+            if(!win->disable_browser_high_contrast) {
+                ff = "WebUIFirefoxProfile-NoHC";
+            }
+            // Generate Firefox profile path
+            if (WEBUI_SN_PRINTF_DYN(win->profile_path, WEBUI_MAX_PATH, "%s%s.WebUI%s%s",
+                temp, os_sep, os_sep, ff) >= WEBUI_MAX_PATH) {
+                // Generated path is too big
+                #ifdef WEBUI_LOG
+                printf(
+                    "[Core]\t\t_webui_browser_create_new_profile(%zu) -> "
+                    "Generated Firefox profile folder path is too big\n",
+                    browser
+                );
+                #endif
+                return false;
+            }
         }
 
         if (!_webui_folder_exist(win->profile_path) ||
@@ -6324,8 +6488,10 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
             if (!_webui_is_empty(win->profile_path))
                 c = WEBUI_SN_PRINTF_DYN(buffer, len, " --user-data-dir=\"%s\"", win->profile_path);
             // Basic
-            for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", chromium_options[i]);
+            if (_webui_is_empty(win->custom_parameters)) {
+                for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
+                    c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", chromium_options[i]);
+                }
             }
             // Kiosk Mode
             if (win->kiosk_mode)
@@ -6345,8 +6511,11 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
             // Proxy
             if (win->proxy_set)
                 c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " --proxy-server=%s", win->proxy_server);
-            else
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "--no-proxy-server");
+            else {
+                if (_webui_is_empty(win->custom_parameters)) {
+                    c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "--no-proxy-server");
+                }
+            }
             // User-defined command line parameters.
             if (!_webui_is_empty(win->custom_parameters)) {
                 c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", win->custom_parameters);
@@ -6360,7 +6529,9 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
             if (!_webui_is_empty(win->profile_name))
                 c = WEBUI_SN_PRINTF_DYN(buffer, len, " -P %s", win->profile_name);
             // Basic
-            c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " -purgecaches");
+            if (_webui_is_empty(win->custom_parameters)) {
+                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " -purgecaches");
+            }
             // Kiosk Mode
             if (win->kiosk_mode)
                 c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "-kiosk");
@@ -6658,7 +6829,7 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     #endif
 
     // Non existing browser
-    if (_browser > 12)
+    if (_browser > 13)
         return false;
 
     // No browser mode
@@ -7966,8 +8137,8 @@ static void _webui_http_send_header(
 
     #ifdef WEBUI_LOG
     printf("---[ HTTP Header ]-----------------\n");
-    printf("%s\n", buffer);
-    printf("-----------------------------------\n");
+    printf("%s", buffer);
+    printf("\n-----------------------------------\n");
     #endif
 
     // Send
@@ -8302,8 +8473,8 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
 
                 #ifdef WEBUI_LOG
                 printf("---[ HTML (%zu bytes)]--------------\n", _webui_strlen(win->html));
-                printf("%s\n", win->html);
-                printf("------------------------------------\n");
+                printf("%s", win->html);
+                printf("\n------------------------------------\n");
                 #endif
 
                 // Send 200

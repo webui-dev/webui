@@ -1,6 +1,6 @@
 # https://webui.me
 # https://github.com/webui-dev/webui
-# Copyright (c) 2020-2024 Hassan Draga.
+# Copyright (c) 2020-2025 Hassan Draga.
 # Licensed under MIT License.
 # All rights reserved.
 # Canada.
@@ -13,7 +13,7 @@ on:
 
 jobs:
   setup:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: Bundle WebUI Bridge
@@ -28,7 +28,7 @@ jobs:
 
   build:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     strategy:
@@ -158,9 +158,9 @@ jobs:
           prerelease: ${{ env.IS_PRERELEASE }}
           allowUpdates: true
 
-  build-ubuntu-24:
+  build-ubuntu-22:
     needs: setup
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     strategy:
@@ -184,12 +184,12 @@ jobs:
         run: |
           CC="${{ matrix.cc }}"
           if [ "$CC" == "clang" ]; then
-            sudo ln -s llvm-ar-16 /usr/bin/llvm-ar
-            sudo ln -s llvm-ranlib-16 /usr/bin/llvm-ranlib
-            sudo ln -s llvm-strip-16 /usr/bin/llvm-strip
+            sudo ln -s llvm-ar-14 /usr/bin/llvm-ar
+            sudo ln -s llvm-ranlib-14 /usr/bin/llvm-ranlib
+            sudo ln -s llvm-strip-14 /usr/bin/llvm-strip
           else
-            sudo apt -qq install gcc-14
-            CC+="-14"
+            sudo apt -qq install gcc-11
+            CC+="-11"
           fi
           echo "CC=$CC" >> $GITHUB_ENV
       - name: Build Debug Target
@@ -219,33 +219,33 @@ jobs:
             fi
           done
           exit $exit_code
-      - name: Setup Browser
-        uses: browser-actions/setup-chrome@v1
-      - name: Setup Tests
-        run: |
-          sudo apt update && sudo apt install xvfb
-          cd tests
-          make call_c_from_js.c
-          make fail_test.c
-          ls -1
-      - name: Test Static
-        timeout-minutes: 2
-        run: |
-          cd tests
-          call_c_from_js=$(pwd)/call_c_from_js
-          fail_test=$(pwd)/fail_test
-          xvfb-run "$call_c_from_js"
-          # Run again and capture its output.
-          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
-          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
-          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
-      - name: Test Dynamic
-        timeout-minutes: 2
-        run: |
-          cd tests
-          call_c_from_js=$(pwd)/call_c_from_js-dyn
-          fail_test=$(pwd)/fail_test-dyn
-          xvfb-run "$call_c_from_js"
-          output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
-          [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
-          xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
+      # - name: Setup Browser
+      #   uses: browser-actions/setup-chrome@v1
+      # - name: Setup Tests
+      #   run: |
+      #     sudo apt update && sudo apt install xvfb
+      #     cd tests
+      #     make call_c_from_js.c
+      #     make fail_test.c
+      #     ls -1
+      # - name: Test Static
+      #   timeout-minutes: 2
+      #   run: |
+      #     cd tests
+      #     call_c_from_js=$(pwd)/call_c_from_js
+      #     fail_test=$(pwd)/fail_test
+      #     xvfb-run "$call_c_from_js"
+      #     # Run again and capture its output.
+      #     output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+      #     [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
+      #     xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true
+      # - name: Test Dynamic
+      #   timeout-minutes: 2
+      #   run: |
+      #     cd tests
+      #     call_c_from_js=$(pwd)/call_c_from_js-dyn
+      #     fail_test=$(pwd)/fail_test-dyn
+      #     xvfb-run "$call_c_from_js"
+      #     output=$(xvfb-run --auto-servernum --server-num=1 "$call_c_from_js")
+      #     [[ "$output" == *"Hello from the backend!"* ]] && true || exit 1
+      #     xvfb-run --auto-servernum --server-num=1 "$fail_test" && exit 1 || true

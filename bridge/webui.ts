@@ -5,7 +5,7 @@
 
   https://webui.me
   https://github.com/webui-dev/webui
-  Copyright (c) 2020-2024 Hassan Draga.
+  Copyright (c) 2020-2025 Hassan Draga.
   Licensed under MIT License.
   All rights reserved.
   Canada.
@@ -847,6 +847,17 @@ class WebuiBridge {
 		if (this.#log) console.log(`Core Response: [${response}]`);
 		return response;
 	}
+	/**
+	 * When binding all events on the backend, WebUI blocks all navigation events
+	 * and sends them to the backend. This API allows you to control that behavior.
+	 *
+	 * @param status - Boolean `True` means WebUI will allow navigations
+	 * @example - webui.allowNavigation(true); // Allow navigation
+	 * window.location.replace('www.test.com'); // This will now proceed as usual
+	 */
+	allowNavigation(status: boolean): void {
+        this.#allowNavigation = status;
+    }
 }
 // Export
 type webui = WebuiBridge;
