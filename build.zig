@@ -108,7 +108,7 @@ fn addLinkerFlags(
     webui.linkLibC();
     webui.addIncludePath(b.path("include"));
     webui.installHeader(b.path("include/webui.h"), "webui.h");
-    if (webui_target.isDarwin()) {
+    if (webui_target.os.tag.isDarwin()) {
         webui.addCSourceFile(.{
             .file = b.path("src/webview/wkwebview.m"),
             .flags = &.{},
