@@ -20,25 +20,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  windows:
-    uses: ./.github/workflows/windows.yml
-    permissions:
-      contents: write
+  # windows:
+  #   uses: ./.github/workflows/windows.yml
+  #   permissions:
+  #     contents: write
 
-  macos:
-    uses: ./.github/workflows/macos.yml
-    permissions:
-      contents: write
+  # macos:
+  #   uses: ./.github/workflows/macos.yml
+  #   permissions:
+  #     contents: write
 
-  linux:
-    uses: ./.github/workflows/linux.yml
-    permissions:
-      contents: write
+  # linux:
+  #   uses: ./.github/workflows/linux.yml
+  #   permissions:
+  #     contents: write
 
-  linux_arm:
-    uses: ./.github/workflows/linux_arm.yml
-    permissions:
-      contents: write
+  # linux_arm:
+  #   uses: ./.github/workflows/linux_arm.yml
+  #   permissions:
+  #     contents: write
 
   # TODO: This task never picked up by a GitHub job.
   #
