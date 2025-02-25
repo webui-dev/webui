@@ -10,28 +10,8 @@ on:
   workflow_call:
 
 jobs:
-  setup:
-    runs-on: rhel-8
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Dependencies
-        run: |
-          sudo dnf install -y npm
-      - name: Bundle WebUI Bridge
-        run: |
-          npm i -g esbuild
-          chmod +x bridge/build.sh
-          bridge/build.sh
-      - uses: actions/cache@v4
-        with:
-          path: bridge/webui_bridge.h
-          key: ${{ runner.os }}-${{ github.sha }}-bridge
-
   build:
-    needs: setup
-    runs-on: rhel-8
-    permissions:
-      contents: write
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
@@ -42,56 +22,52 @@ jobs:
       fail-fast: false
     env:
       ARTIFACT: webui-linux-redhat-${{ matrix.cc }}-${{ matrix.arch }}
-      CC: ${{ matrix.cc }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache/restore@v4
-        with:
-          path: bridge/webui_bridge.h
-          key: ${{ runner.os }}-${{ github.sha }}-bridge
-          fail-on-cache-miss: true
-      - name: Install Build Tools
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build RedHat Docker Image
         run: |
-          sudo dnf install -y $CC make
-          if [ "$CC" == "clang" ]; then
-            sudo dnf install -y llvm llvm-libs llvm-devel
-          fi
-      - name: Build Debug Target
-        run: make debug
-      - name: Build Release Target
-        if: ${{ !cancelled() }}
-        run: make
-      - name: Build TLS Debug Target
-        run: make WEBUI_USE_TLS=1 debug
-      - name: Build TLS Release Target
-        run: make WEBUI_USE_TLS=1
-      - name: Build Examples
+          docker build -t redhat:latest - <<EOF
+          FROM almalinux:9
+          RUN dnf install -y epel-release
+          RUN dnf groupinstall -y "Development Tools"
+          RUN dnf install -y git nodejs npm clang llvm-toolset lld
+          EOF
+
+      - name: Run build inside RedHat container
         run: |
-          examples_base_dir=$(pwd)/examples/C
-          for example in $(find $examples_base_dir/* -maxdepth 0 -type d); do
-            echo "> $example"
-            cd $example || (exit_code=1 && continue)
-            if ! make; then
-               echo "Failed to build '$example'"
-               exit_code=1
-               continue
-            fi
-            if [[ ! -e "main" || ! -e "main-dyn" ]] ; then
-              echo "Failed to find executable for '$example'" && find .
-              exit_code=1
-              continue
-            fi
-          done
-          exit $exit_code
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            --user root \
+            redhat:latest \
+            bash -c "
+              git config --global --add safe.directory /workspace &&
+              npm i -g esbuild &&
+              chmod +x bridge/build.sh &&
+              ./bridge/build.sh &&
+              make debug &&
+              make &&
+              make WEBUI_USE_TLS=1 debug &&
+              make WEBUI_USE_TLS=1 &&
+              chown -R $(id -u):$(id -g) /workspace
+            "
+
       - name: Prepare Artifact
         run: |
           cp -r include dist
           mv dist/ "$ARTIFACT"
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT }}
           path: ${{ env.ARTIFACT }}
+
       - name: Prepare Release
         if: >
           github.repository_owner == 'webui-dev'
@@ -108,6 +84,7 @@ jobs:
               echo "BODY=Generated from commit $GITHUB_SHA."
             } >> $GITHUB_ENV
           fi
+
       - name: Update Nightly Tag
         if: env.IS_PRERELEASE
         uses: richardsimko/update-tag@v1
@@ -115,6 +92,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: nightly
+
       - name: Release
         if: >
           github.repository_owner == 'webui-dev'
