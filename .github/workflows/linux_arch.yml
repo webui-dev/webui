@@ -22,6 +22,7 @@ jobs:
       fail-fast: false
     env:
       ARTIFACT: webui-linux-arch-${{ matrix.cc }}-${{ matrix.arch }}
+      CC: ${{ matrix.cc }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -42,11 +43,16 @@ jobs:
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             --user root \
+            -e CC=${{ matrix.cc }} \
             archlinux:latest \
             bash -c "
               git config --global --add safe.directory /workspace &&
               npm i -g esbuild &&
               chmod +x bridge/build.sh &&
+              if [ '${{ matrix.cc }}' == 'clang' ]; then
+                export AR=llvm-ar
+                export STRIP=llvm-strip
+              fi &&
               ./bridge/build.sh &&
               make debug &&
               make &&
@@ -64,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT }}
-          path: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT}}
 
       - name: Prepare Release
         if: >
