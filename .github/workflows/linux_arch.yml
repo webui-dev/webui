@@ -43,6 +43,7 @@ jobs:
             -w /workspace \
             archlinux:latest \
             bash -c "
+              git config --global --add safe.directory /workspace &&
               npm i -g esbuild &&
               chmod +x bridge/build.sh &&
               ./bridge/build.sh &&
