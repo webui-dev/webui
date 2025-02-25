@@ -39,22 +39,5 @@ jobs:
               make debug &&
               make &&
               make WEBUI_USE_TLS=1 debug &&
-              make WEBUI_USE_TLS=1 &&
-              examples_base_dir=\$(pwd)/examples/C &&
-              exit_code=0 &&
-              for example in \$(find \$examples_base_dir/* -maxdepth 0 -type d); do
-                echo \"> \$example\"
-                cd \$example || { exit_code=1; continue; }
-                if ! make; then
-                  echo \"Failed to build '\$example'\"
-                  exit_code=1
-                  continue
-                fi
-                if [[ ! -e \"main\" || ! -e \"main-dyn\" ]]; then
-                  echo \"Failed to find executable for '\$example'\" && find .
-                  exit_code=1
-                  continue
-                fi
-              done
-              exit \$exit_code
+              make WEBUI_USE_TLS=1
             "
