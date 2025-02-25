@@ -35,7 +35,7 @@ jobs:
           FROM almalinux:9
           RUN dnf install -y epel-release
           RUN dnf groupinstall -y "Development Tools"
-          RUN dnf install -y git nodejs npm clang llvm-toolset lld
+          RUN dnf install -y git nodejs npm clang llvm-toolset lld openssl-devel
           EOF
 
       - name: Run build inside RedHat container
