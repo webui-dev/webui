@@ -41,6 +41,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
+            --user root \
             archlinux:latest \
             bash -c "
               git config --global --add safe.directory /workspace &&
@@ -50,7 +51,8 @@ jobs:
               make debug &&
               make &&
               make WEBUI_USE_TLS=1 debug &&
-              make WEBUI_USE_TLS=1
+              make WEBUI_USE_TLS=1 &&
+              chown -R $(id -u):$(id -g) /workspace
             "
 
       - name: Prepare Artifact
