@@ -73,6 +73,7 @@ fn addLinkerFlags(
 ) !void {
     const webui_target = webui.rootModuleTarget();
     const is_windows = webui_target.os.tag == .windows;
+    const is_darwin = webui_target.os.tag == .macos;
     const debug = webui.root_module.optimize.? == .Debug;
 
     // Prepare compiler flags.
@@ -108,7 +109,7 @@ fn addLinkerFlags(
     webui.linkLibC();
     webui.addIncludePath(b.path("include"));
     webui.installHeader(b.path("include/webui.h"), "webui.h");
-    if (webui_target.isDarwin()) {
+    if (is_darwin) {
         webui.addCSourceFile(.{
             .file = b.path("src/webview/wkwebview.m"),
             .flags = &.{},
