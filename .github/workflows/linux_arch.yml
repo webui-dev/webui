@@ -23,7 +23,7 @@ jobs:
         run: |
           docker build -t archlinux:latest - <<EOF
           FROM archlinux:latest
-          RUN pacman -Syu --noconfirm npm make gcc clang llvm lld
+          RUN pacman -Syu --noconfirm git npm make gcc clang llvm lld
           EOF
 
       - name: Run build inside Arch Linux container
