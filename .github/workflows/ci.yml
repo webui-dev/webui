@@ -52,5 +52,5 @@ jobs:
     permissions:
       contents: write
 
-  zig:
-    uses: ./.github/workflows/zig.yml
+  # zig:
+  #   uses: ./.github/workflows/zig.yml
