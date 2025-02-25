@@ -10,45 +10,8 @@ on:
   workflow_call:
 
 jobs:
-  setup:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Docker
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
-          sudo systemctl start docker
-          sudo systemctl enable docker
-      - name: Pull Arch Linux Docker Image
-        run: |
-          docker pull archlinux:latest
-      - name: Create and Start Arch Linux Container
-        run: |
-          docker run -d --name archlinux_container -v ${{ github.workspace }}:/workspace -w /workspace archlinux:latest tail -f /dev/null
-      - name: Install Dependencies in Arch Linux Container
-        run: |
-          docker exec archlinux_container bash -c "
-            pacman -Syu --noconfirm &&
-            pacman -S --noconfirm base-devel git npm
-          "
-      - name: Bundle WebUI Bridge
-        run: |
-          docker exec archlinux_container bash -c "
-            npm i -g esbuild &&
-            chmod +x bridge/build.sh &&
-            ./bridge/build.sh
-          "
-      - uses: actions/cache@v4
-        with:
-          path: bridge/webui_bridge.h
-          key: ${{ runner.os }}-${{ github.sha }}-bridge
-
   build:
-    needs: setup
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
@@ -59,65 +22,64 @@ jobs:
       fail-fast: false
     env:
       ARTIFACT: webui-linux-arch-${{ matrix.cc }}-${{ matrix.arch }}
-      CC: ${{ matrix.cc }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache/restore@v4
-        with:
-          path: bridge/webui_bridge.h
-          key: ${{ runner.os }}-${{ github.sha }}-bridge
-          fail-on-cache-miss: true
-      - name: Install Build Tools in Arch Linux Container
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Arch Linux Docker Image
         run: |
-          docker exec archlinux_container bash -c "
-            if [ \"$CC\" == \"clang\" ]; then
-              pacman -S --noconfirm clang
-            else
-              pacman -S --noconfirm gcc
-            fi
-          "
-      - name: Build Debug Target
+          docker build -t archlinux:latest - <<EOF
+          FROM archlinux:latest
+          RUN pacman -Syu --noconfirm git npm make gcc clang llvm lld
+          EOF
+
+      - name: Run build inside Arch Linux container
         run: |
-          docker exec archlinux_container bash -c "make debug"
-      - name: Build Release Target
-        if: ${{ !cancelled() }}
-        run: |
-          docker exec archlinux_container bash -c "make"
-      - name: Build TLS Debug Target
-        run: |
-          docker exec archlinux_container bash -c "make WEBUI_USE_TLS=1 debug"
-      - name: Build TLS Release Target
-        run: |
-          docker exec archlinux_container bash -c "make WEBUI_USE_TLS=1"
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            archlinux:latest \
+            bash -c "
+              npm i -g esbuild &&
+              chmod +x bridge/build.sh &&
+              ./bridge/build.sh &&
+              make debug &&
+              make &&
+              make WEBUI_USE_TLS=1 debug &&
+              make WEBUI_USE_TLS=1
+            "
+
       - name: Prepare Artifact
         run: |
-          docker exec archlinux_container bash -c "
-            cp -r include dist &&
-            mv dist/ \"$ARTIFACT\"
-          "
+          cp -r include dist
+          mv dist/ "$ARTIFACT"
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT }}
           path: ${{ env.ARTIFACT }}
+
       - name: Prepare Release
         if: >
           github.repository_owner == 'webui-dev'
           && (github.ref_type == 'tag' || (github.ref_name == 'main' && github.event_name == 'push'))
         run: |
-          docker exec archlinux_container bash -c "
-            zip -r \"$ARTIFACT.zip\" \"$ARTIFACT\"
-          "
+          zip -r "$ARTIFACT.zip" "$ARTIFACT"
           if [ $GITHUB_REF_TYPE == tag ]; then
             echo "TAG=$GITHUB_REF_NAME" >> $GITHUB_ENV
           else
             {
               echo "IS_PRERELEASE=true";
               echo "TAG=nightly";
-              echo "TITLE=WebUI Nightly Build $(date -u +'%Y-%m-%d %H:%M:%S UTC')";
-              echo "BODY=Generated from commit $GITHUB_SHA.";
+              echo "TITLE=WebUI Nightly Build $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+              echo "BODY=Generated from commit $GITHUB_SHA."
             } >> $GITHUB_ENV
           fi
+
       - name: Update Nightly Tag
         if: env.IS_PRERELEASE
         uses: richardsimko/update-tag@v1
@@ -125,6 +87,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: nightly
+
       - name: Release
         if: >
           github.repository_owner == 'webui-dev'
