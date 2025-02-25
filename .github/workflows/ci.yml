@@ -40,17 +40,15 @@ jobs:
   #   permissions:
   #     contents: write
 
-  # TODO: This task never picked up by a GitHub job.
-  #
-  # linux_redhat:
-  #   uses: ./.github/workflows/linux_redhat.yml
-  #   permissions:
-  #     contents: write
-
-  linux_arch:
-    uses: ./.github/workflows/linux_arch.yml
+  linux_redhat:
+    uses: ./.github/workflows/linux_redhat.yml
     permissions:
       contents: write
+
+  # linux_arch:
+  #   uses: ./.github/workflows/linux_arch.yml
+  #   permissions:
+  #     contents: write
 
   # zig:
   #   uses: ./.github/workflows/zig.yml
