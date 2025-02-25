@@ -13,44 +13,48 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - name: Build and Run Arch Linux Container
+
+      - name: Build Arch Linux Docker Image
         run: |
           docker build -t archlinux:latest - <<EOF
           FROM archlinux:latest
           RUN pacman -Syu --noconfirm npm make gcc clang llvm lld
           EOF
-          docker run --name archlinux_container -d archlinux:latest tail -f /dev/null
-      - name: Execute Build Steps in Container
+
+      - name: Run build inside Arch Linux container
         run: |
-          docker exec archlinux_container bash -c "
-            npm i -g esbuild &&
-            chmod +x bridge/build.sh &&
-            ./bridge/build.sh &&
-            make debug &&
-            make &&
-            make WEBUI_USE_TLS=1 debug &&
-            make WEBUI_USE_TLS=1 &&
-            examples_base_dir=\$(pwd)/examples/C &&
-            for example in \$(find \$examples_base_dir/* -maxdepth 0 -type d); do
-              echo \"> \$example\"
-              cd \$example || { exit_code=1; continue; }
-              if ! make; then
-                echo \"Failed to build '\$example'\"
-                exit_code=1
-                continue
-              fi
-              if [[ ! -e \"main\" || ! -e \"main-dyn\" ]]; then
-                echo \"Failed to find executable for '\$example'\" && find .
-                exit_code=1
-                continue
-              fi
-            done
-            exit \$exit_code
-          "
-      - name: Clean Up
-        run: |
-          docker stop archlinux_container
-          docker rm archlinux_container
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            archlinux:latest \
+            bash -c "
+              npm i -g esbuild &&
+              chmod +x bridge/build.sh &&
+              ./bridge/build.sh &&
+              make debug &&
+              make &&
+              make WEBUI_USE_TLS=1 debug &&
+              make WEBUI_USE_TLS=1 &&
+              examples_base_dir=\$(pwd)/examples/C &&
+              exit_code=0 &&
+              for example in \$(find \$examples_base_dir/* -maxdepth 0 -type d); do
+                echo \"> \$example\"
+                cd \$example || { exit_code=1; continue; }
+                if ! make; then
+                  echo \"Failed to build '\$example'\"
+                  exit_code=1
+                  continue
+                fi
+                if [[ ! -e \"main\" || ! -e \"main-dyn\" ]]; then
+                  echo \"Failed to find executable for '\$example'\" && find .
+                  exit_code=1
+                  continue
+                fi
+              done
+              exit \$exit_code
+            "
