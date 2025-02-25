@@ -47,5 +47,10 @@ jobs:
   #   permissions:
   #     contents: write
 
+  linux_arch:
+    uses: ./.github/workflows/linux_arch.yml
+    permissions:
+      contents: write
+
   zig:
     uses: ./.github/workflows/zig.yml
