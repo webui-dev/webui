@@ -593,6 +593,7 @@ static void _webui_generate_cookies(char* cookies, size_t length);
 static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client, size_t client_id);
 static int _webui_external_file_handler(_webui_window_t* win, struct mg_connection* client, size_t client_id);
 static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* client, char* index, size_t client_id);
+static void _webui_webview_update(_webui_window_t* win);
 // WebView
 #ifdef _WIN32
 // Microsoft Windows
@@ -1196,7 +1197,7 @@ void webui_close(size_t window) {
         // Stop WebView thread if any
         if (win->webView) {
             win->webView->stop = true;
-            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
+            _webui_webview_update(win);
         }
     }
 }
@@ -1407,7 +1408,7 @@ void webui_navigate(size_t window, const char* url) {
         #endif
 
         win->webView->navigate = true;
-        _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
+        _webui_webview_update(win);
     }
 }
 
@@ -2674,7 +2675,7 @@ void webui_set_size(size_t window, unsigned int width, unsigned int height) {
             win->webView->width = width;
             win->webView->height = height;
             win->webView->size = true;
-            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
+            _webui_webview_update(win);
         }
     }
 }
@@ -2749,7 +2750,7 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
             win->webView->x = X;
             win->webView->y = Y;
             win->webView->position = true;
-            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
+            _webui_webview_update(win);
         }
     }
 }
@@ -3154,7 +3155,7 @@ void webui_exit(void) {
                     // Stop WebView thread if any
                     if (_webui.wins[i]->webView) {
                         _webui.wins[i]->webView->stop = true;
-                        _webui_mutex_is_webview_update(_webui.wins[i], WEBUI_MUTEX_SET_TRUE);
+                        _webui_webview_update(_webui.wins[i]);
                     }        
                 }
             }
@@ -3346,7 +3347,7 @@ void webui_wait(void) {
                 if (_webui.wins[i] != NULL) {
                     if (_webui.wins[i]->webView) {
                         _webui.wins[i]->webView->stop = true;
-                        _webui_mutex_is_webview_update(_webui.wins[i], WEBUI_MUTEX_SET_TRUE);
+                        _webui_webview_update(_webui.wins[i]);
                     }
                 }
                 // Process drawing events if any
@@ -5218,6 +5219,20 @@ static bool _webui_mutex_is_webview_update(_webui_window_t* win, int update) {
     status = win->update_webview;
     _webui_mutex_unlock(&win->mutex_webview_update);
     return status;
+}
+
+static void _webui_webview_update(_webui_window_t* win) {
+
+    #ifdef _WIN32
+    // Windows - WebView2
+    _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
+    #elif __linux__
+    // Linux - GTK WebView
+    _webui_condition_signal(&win->condition_webview_update);
+    #else
+    // macOS - WKWebView
+    _webui_condition_signal(&win->condition_webview_update);
+    #endif
 }
 
 static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t browser) {
@@ -9122,7 +9137,7 @@ static WEBUI_THREAD_SERVER_START {
     // Clean WebView
     if (win->webView) {
         win->webView->stop = true;
-        _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
+        _webui_webview_update(win);
     }
 
     // Clean
@@ -10779,7 +10794,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     // and free resources.
                     if (win->webView) {
                         win->webView->stop = true;
-                        _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
+                        _webui_webview_update(win);
                     }                    
                     _webui_wv_event_closed(win);
                 }
@@ -10839,7 +10854,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Expecting `_webui_webview_thread` to change `mutex_is_webview_update` 
         // to `false` when initialization is done, and `_webui.is_webview`
         // to `true` if loading the WebView is succeeded.
-        _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
+        _webui_webview_update(win);
 
         // Win32 WebView thread
         #ifdef _WIN32
@@ -11080,6 +11095,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 }
                 else {
 
+                    // No Win32 Messages.
                     // Check if there is any WebUI Messages
 
                     if (_webui_mutex_is_webview_update(win, WEBUI_MUTEX_GET_STATUS)) {
@@ -11109,8 +11125,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     }
                     else {
 
-                        // At this moment, there is no Win32 or WebUI messages
-                        // let's IDLE for 10ms in this current thread.
+                        // At this moment, there is no Win32 or WebUI messages.
+                        // Let's IDLE for 10ms in this current thread.
                         _webui_sleep(10);
                     }
                 }
@@ -11466,7 +11482,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Free old WebView
         if (win->webView) {
             win->webView->stop = true;
-            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
+            _webui_webview_update(win);
         }
 
         // Copy URL
@@ -11511,7 +11527,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Expecting `_webui_webview_thread` to change `mutex_is_webview_update` 
         // to `false` when initialization is done, and `_webui.is_webview`
         // to `true` if loading the WebView is succeeded.
-        _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
+        _webui_webview_update(win);
 
         // Wait for WebView thread to get
         // started by `_webui_wv_create()`
@@ -11681,7 +11697,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 // Stop WebView thread if any
                 if (_webui.wins[index]->webView) {
                     _webui.wins[index]->webView->stop = true;
-                    _webui_mutex_is_webview_update(_webui.wins[index], WEBUI_MUTEX_SET_TRUE);
+                    _webui_webview_update(_webui.wins[index]);
                 }
             }
         }
@@ -11742,7 +11758,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Initializing
         // Expecting `_webui_webview_thread` to change
         // `mutex_is_webview_update` to false when success
-        _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
+        _webui_webview_update(win);
 
         // macOS WebView thread
         #ifdef _WIN32
