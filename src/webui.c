@@ -5223,6 +5223,10 @@ static bool _webui_mutex_is_webview_update(_webui_window_t* win, int update) {
 
 static void _webui_webview_update(_webui_window_t* win) {
 
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_webview_update(%zu)\n", win->num);
+    #endif
+
     #ifdef _WIN32
     // Windows - WebView2
     _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_TRUE);
@@ -11588,38 +11592,34 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
             while (true) {
 
-                // Check if there is any WebUI Messages
+                // Wait for WebUI Messages
 
-                if (_webui_mutex_is_webview_update(win, WEBUI_MUTEX_GET_STATUS)) {
-                    _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
-                    if (win->webView) {
-                        // Stop this thread
-                        if (win->webView->stop) {
-                            break;
-                        }
-                        // Window Size
-                        if (win->webView->size) {
-                            win->webView->size = false;
-                            _webui_wv_set_size(win->webView, win->webView->width, win->webView->height);
-                        }
-                        // Window Position
-                        if (win->webView->position) {
-                            win->webView->position = false;
-                            _webui_wv_set_position(win->webView, win->webView->x, win->webView->y);
-                        }
-                        // Navigation
-                        if (win->webView->navigate) {
-                            win->webView->navigate = false;
-                            _webui_wv_navigate(win->webView, win->webView->url);
-                        }
+                _webui_mutex_lock(&win->mutex_webview_update);
+                _webui_condition_wait(&win->condition_webview_update, &win->mutex_webview_update);
+
+                if (win->webView) {
+                    // Stop this thread
+                    if (win->webView->stop) {
+                        break;
+                    }
+                    // Window Size
+                    if (win->webView->size) {
+                        win->webView->size = false;
+                        _webui_wv_set_size(win->webView, win->webView->width, win->webView->height);
+                    }
+                    // Window Position
+                    if (win->webView->position) {
+                        win->webView->position = false;
+                        _webui_wv_set_position(win->webView, win->webView->x, win->webView->y);
+                    }
+                    // Navigation
+                    if (win->webView->navigate) {
+                        win->webView->navigate = false;
+                        _webui_wv_navigate(win->webView, win->webView->url);
                     }
                 }
-                else {
 
-                    // At this moment, there is no WebUI messages
-                    // let's IDLE for 250ms in this current thread.
-                    _webui_sleep(250);
-                }
+                _webui_mutex_unlock(&win->mutex_webview_update);
             }
         }
 
@@ -11813,37 +11813,33 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
                 // Check if there is any WebUI Messages
 
-                if (_webui_mutex_is_webview_update(win, WEBUI_MUTEX_GET_STATUS)) {
-                    _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
-                    if (win->webView) {
-                        // Stop this thread
-                        if (win->webView->stop) {
-                            _webui_macos_wv_close(win->webView->index);
-                            break;
-                        }
-                        // Window Size
-                        if (win->webView->size) {
-                            win->webView->size = false;
-                            _webui_wv_set_size(win->webView, win->webView->width, win->webView->height);
-                        }
-                        // Window Position
-                        if (win->webView->position) {
-                            win->webView->position = false;
-                            _webui_wv_set_position(win->webView, win->webView->x, win->webView->y);
-                        }
-                        // Navigation
-                        if (win->webView->navigate) {
-                            win->webView->navigate = false;
-                            _webui_wv_navigate(win->webView, win->webView->url);
-                        }
+                _webui_mutex_lock(&win->mutex_webview_update);
+                _webui_condition_wait(&win->condition_webview_update, &win->mutex_webview_update);
+
+                if (win->webView) {
+                    // Stop this thread
+                    if (win->webView->stop) {
+                        _webui_macos_wv_close(win->webView->index);
+                        break;
+                    }
+                    // Window Size
+                    if (win->webView->size) {
+                        win->webView->size = false;
+                        _webui_wv_set_size(win->webView, win->webView->width, win->webView->height);
+                    }
+                    // Window Position
+                    if (win->webView->position) {
+                        win->webView->position = false;
+                        _webui_wv_set_position(win->webView, win->webView->x, win->webView->y);
+                    }
+                    // Navigation
+                    if (win->webView->navigate) {
+                        win->webView->navigate = false;
+                        _webui_wv_navigate(win->webView, win->webView->url);
                     }
                 }
-                else {
 
-                    // At this moment, there is no WebUI messages
-                    // let's IDLE for 250ms in this current thread.
-                    _webui_sleep(250);
-                }
+                _webui_mutex_unlock(&win->mutex_webview_update);
             }
         }
 
