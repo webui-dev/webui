@@ -351,6 +351,8 @@ typedef struct _webui_window_t {
     // WebView
     bool allow_webview;
     bool update_webview;
+    webui_mutex_t mutex_webview_update;
+    webui_condition_t condition_webview_update;
     #ifdef _WIN32
     _webui_wv_win32_t* webView;
     #elif __linux__
@@ -403,7 +405,6 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_js_run;
     webui_mutex_t mutex_win_connect;
     webui_mutex_t mutex_exit_now;
-    webui_mutex_t mutex_webview_update;
     webui_mutex_t mutex_http_handler;
     webui_mutex_t mutex_client;
     webui_mutex_t mutex_async_response;
@@ -976,6 +977,10 @@ size_t webui_new_window_id(size_t num) {
         WEBUI_SN_PRINTF_DYN(win->server_root_path, WEBUI_MAX_PATH, "%s", WEBUI_DEFAULT_PATH);
     else
         WEBUI_SN_PRINTF_DYN(win->server_root_path, WEBUI_MAX_PATH, "%s", _webui.default_server_root_path);
+    
+    // Mutex Initialisation
+    _webui_mutex_init(&win->mutex_webview_update);
+    _webui_condition_init(&win->condition_webview_update);
 
     // Auto bind JavaScript-Bridge Core API Handler
     webui_bind(num, "__webui_core_api__", _webui_bridge_api_handler);
@@ -1263,6 +1268,10 @@ void webui_destroy(size_t window) {
         if (win->events[i] != NULL)
             _webui_free_mem((void*)win->events[i]);
     }
+
+    // Free Mutex
+    _webui_condition_destroy(&win->condition_webview_update);
+    _webui_mutex_destroy(&win->mutex_webview_update);
 
     // Free window struct
     _webui_free_mem((void*)_webui.wins[window]);
@@ -5203,11 +5212,11 @@ static bool _webui_mutex_is_exit_now(int update) {
 static bool _webui_mutex_is_webview_update(_webui_window_t* win, int update) {
 
     bool status = false;
-    _webui_mutex_lock(&_webui.mutex_webview_update);
+    _webui_mutex_lock(&win->mutex_webview_update);
     if (update == WEBUI_MUTEX_SET_TRUE) win->update_webview = true;
     else if (update == WEBUI_MUTEX_SET_FALSE) win->update_webview = false;
     status = win->update_webview;
-    _webui_mutex_unlock(&_webui.mutex_webview_update);
+    _webui_mutex_unlock(&win->mutex_webview_update);
     return status;
 }
 
@@ -6366,7 +6375,6 @@ static void _webui_clean(void) {
     _webui_mutex_destroy(&_webui.mutex_js_run);
     _webui_mutex_destroy(&_webui.mutex_win_connect);
     _webui_mutex_destroy(&_webui.mutex_exit_now);
-    _webui_mutex_destroy(&_webui.mutex_webview_update);
     _webui_mutex_destroy(&_webui.mutex_http_handler);
     _webui_mutex_destroy(&_webui.mutex_client);
     _webui_mutex_destroy(&_webui.mutex_async_response);
@@ -7939,7 +7947,6 @@ static void _webui_init(void) {
     _webui_mutex_init(&_webui.mutex_js_run);
     _webui_mutex_init(&_webui.mutex_win_connect);
     _webui_mutex_init(&_webui.mutex_exit_now);
-    _webui_mutex_init(&_webui.mutex_webview_update);
     _webui_mutex_init(&_webui.mutex_http_handler);
     _webui_mutex_init(&_webui.mutex_client);
     _webui_mutex_init(&_webui.mutex_async_response);
