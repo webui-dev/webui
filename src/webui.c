@@ -403,7 +403,7 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_js_run;
     webui_mutex_t mutex_win_connect;
     webui_mutex_t mutex_exit_now;
-    webui_mutex_t mutex_webview_stop;
+    webui_mutex_t mutex_webview_update;
     webui_mutex_t mutex_http_handler;
     webui_mutex_t mutex_client;
     webui_mutex_t mutex_async_response;
@@ -5203,11 +5203,11 @@ static bool _webui_mutex_is_exit_now(int update) {
 static bool _webui_mutex_is_webview_update(_webui_window_t* win, int update) {
 
     bool status = false;
-    _webui_mutex_lock(&_webui.mutex_webview_stop);
+    _webui_mutex_lock(&_webui.mutex_webview_update);
     if (update == WEBUI_MUTEX_SET_TRUE) win->update_webview = true;
     else if (update == WEBUI_MUTEX_SET_FALSE) win->update_webview = false;
     status = win->update_webview;
-    _webui_mutex_unlock(&_webui.mutex_webview_stop);
+    _webui_mutex_unlock(&_webui.mutex_webview_update);
     return status;
 }
 
@@ -6366,7 +6366,7 @@ static void _webui_clean(void) {
     _webui_mutex_destroy(&_webui.mutex_js_run);
     _webui_mutex_destroy(&_webui.mutex_win_connect);
     _webui_mutex_destroy(&_webui.mutex_exit_now);
-    _webui_mutex_destroy(&_webui.mutex_webview_stop);
+    _webui_mutex_destroy(&_webui.mutex_webview_update);
     _webui_mutex_destroy(&_webui.mutex_http_handler);
     _webui_mutex_destroy(&_webui.mutex_client);
     _webui_mutex_destroy(&_webui.mutex_async_response);
@@ -7939,7 +7939,7 @@ static void _webui_init(void) {
     _webui_mutex_init(&_webui.mutex_js_run);
     _webui_mutex_init(&_webui.mutex_win_connect);
     _webui_mutex_init(&_webui.mutex_exit_now);
-    _webui_mutex_init(&_webui.mutex_webview_stop);
+    _webui_mutex_init(&_webui.mutex_webview_update);
     _webui_mutex_init(&_webui.mutex_http_handler);
     _webui_mutex_init(&_webui.mutex_client);
     _webui_mutex_init(&_webui.mutex_async_response);
