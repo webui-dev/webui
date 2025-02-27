@@ -6486,61 +6486,61 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
         case Chromium:
             // Profile
             if (!_webui_is_empty(win->profile_path))
-                c = WEBUI_SN_PRINTF_DYN(buffer, len, " --user-data-dir=\"%s\"", win->profile_path);
+                c = WEBUI_SN_PRINTF_STATIC(buffer, len, " --user-data-dir=\"%s\"", win->profile_path);
             // Basic
             if (_webui_is_empty(win->custom_parameters)) {
                 for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
-                    c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", chromium_options[i]);
+                    c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", chromium_options[i]);
                 }
             }
             // Kiosk Mode
             if (win->kiosk_mode)
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "--chrome-frame --kiosk");
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "--chrome-frame --kiosk");
             // High Contrast Support
             if (win->disable_browser_high_contrast)
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "--disable-features=ForcedColors");
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "--disable-features=ForcedColors");
             // Hide Mode
             if (win->hide)
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "--headless --headless=new");
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "--headless --headless=new");
             // Window Size
             if (win->size_set)
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " --window-size=%u,%u", win->width, win->height);
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " --window-size=%u,%u", win->width, win->height);
             // Window Position
             if (win->position_set)
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " --window-position=%u,%u", win->x, win->y);
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " --window-position=%u,%u", win->x, win->y);
             // Proxy
             if (win->proxy_set)
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " --proxy-server=%s", win->proxy_server);
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " --proxy-server=%s", win->proxy_server);
             else {
                 if (_webui_is_empty(win->custom_parameters)) {
-                    c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "--no-proxy-server");
+                    c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "--no-proxy-server");
                 }
             }
             // User-defined command line parameters.
             if (!_webui_is_empty(win->custom_parameters)) {
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", win->custom_parameters);
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", win->custom_parameters);
             }
 
             // URL (END)
-            c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "--app=");
+            c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "--app=");
             return c;
         case Firefox:
             // Profile
             if (!_webui_is_empty(win->profile_name))
-                c = WEBUI_SN_PRINTF_DYN(buffer, len, " -P %s", win->profile_name);
+                c = WEBUI_SN_PRINTF_STATIC(buffer, len, " -P %s", win->profile_name);
             // Basic
             if (_webui_is_empty(win->custom_parameters)) {
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " -purgecaches");
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " -purgecaches");
             }
             // Kiosk Mode
             if (win->kiosk_mode)
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "-kiosk");
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "-kiosk");
             // Hide Mode
             if (win->hide)
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", "-headless");
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "-headless");
             // Window Size
             if (win->size_set)
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " -width %u -height %u", win->width, win->height);
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " -width %u -height %u", win->width, win->height);
             // Window Position
                 // Firefox does not support window positioning.
             // Proxy
@@ -6552,17 +6552,17 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
             }
             // User-defined command line parameters.
             if (!_webui_is_empty(win->custom_parameters))
-                c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " %s", win->custom_parameters);
+                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", win->custom_parameters);
 
             // URL (END)
-            c += WEBUI_SN_PRINTF_DYN(buffer + c, len, " -new-window ");
+            c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " -new-window ");
             return c;
     }
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_get_browser_args() -> Unknown Browser (%zu)\n", browser);
     #endif
-    WEBUI_STR_COPY_DYN(buffer, len, "");
+    WEBUI_STR_COPY_DYN(buffer, len - 1, "");
     return 0;
 }
 
