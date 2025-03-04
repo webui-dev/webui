@@ -202,25 +202,31 @@ typedef struct webui_event_inf_t {
 #elif __linux__
     void* libgtk;
     void* libwebkit;
-    // GTK Symbol Addresses
-    typedef void *(*gtk_init_func)(int *argc, char ***argv);
-    typedef void (*gtk_widget_show_all_func)(void *);
-    typedef void (*gtk_main_iteration_do_func)(int);
-    typedef int (*gtk_events_pending_func)(void);
-    typedef void (*gtk_container_add_func)(void *, void *);
-    typedef void *(*gtk_window_new_func)(int);
+    // GTK Symbol Definition
+    typedef void *(*gtk_init_func)(int *argc, char ***argv); // Ini
+    typedef void (*gtk_widget_show_all_func)(void *); // Show
+    typedef int (*gtk_main_iteration_do_func)(int); // Last UI draw when exit
+    typedef int (*gtk_events_pending_func)(void); // Last UI draw when exit
+    typedef void *(*gtk_main_func)(void); // Main loop
+    typedef void *(*gtk_main_quit_func)(void); // Exit main loop
+    typedef int (*g_timeout_add_func)(int, int (*function)(void*), void*); // WebUI exit loop
+    typedef void (*gtk_container_add_func)(void *, void *); // WebView Container
+    typedef void *(*gtk_window_new_func)(int); // New Window
+    typedef int (*g_idle_add_func)(int (*function)(void*), void*); // New Window creation schedule    
     typedef void (*gtk_window_set_default_size_func)(void *, int, int);
     typedef void (*gtk_window_set_title_func)(void *, const char *);
     typedef void (*gtk_window_move_func)(void *, int, int);
     typedef void (*gtk_window_close_func)(void *);
     typedef void (*gtk_window_resize_func)(void *, int, int);
     typedef void (*gtk_window_set_position_func)(void *, int);
-    typedef int (*g_idle_add_func)(int (*function)(void*), void*);
-    typedef void (*g_signal_connect_data_func)(void *, const char *,
-        void (*callback)(void), void *, void *, int);
+    typedef unsigned long (*g_signal_connect_data_func)(void *, const char *, void (*callback)(void), void *, void *, int);
+    // GTK Symbol Initialization
     gtk_init_func gtk_init = NULL;
     gtk_widget_show_all_func gtk_widget_show_all = NULL;
     gtk_main_iteration_do_func gtk_main_iteration_do = NULL;
+    gtk_main_func gtk_main = NULL;
+    gtk_main_quit_func gtk_main_quit = NULL;
+    g_timeout_add_func g_timeout_add = NULL;
     gtk_events_pending_func gtk_events_pending = NULL;
     gtk_container_add_func gtk_container_add = NULL;
     gtk_window_new_func gtk_window_new = NULL;
@@ -617,6 +623,7 @@ static bool _webui_wv_set_position(_webui_wv_linux_t* webView, int x, int y);
 static bool _webui_wv_set_size(_webui_wv_linux_t* webView, int windowWidth, int windowHeight);
 static bool _webui_wv_show(_webui_window_t* win, char* url);
 static void _webui_wv_event_closed(void *widget, void *arg);
+static int _webui_wv_exit_schedule(void* arg);
 #else
 // macOS
 static void _webui_wv_free(_webui_wv_macos_t* webView);
@@ -3275,15 +3282,8 @@ void webui_wait(void) {
 
             _webui.is_gtk_main_run = true;
 
-            while (true) {
-
-                while (gtk_events_pending()) {
-                    gtk_main_iteration_do(0);
-                }
-                
-                if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
-                    break;
-            }
+            // GTK Run Application
+            gtk_main();
 
             _webui.is_gtk_main_run = false;
         }
@@ -11319,8 +11319,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         _webui.is_webview = false;
-        libgtk = NULL;
         libwebkit = NULL;
+        libgtk = NULL;
     };
 
     static void _webui_wv_create(_webui_window_t* win) {
@@ -11377,6 +11377,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         pthread_create(&thread, NULL, &_webui_webview_thread, (void*)win);
         pthread_detach(thread);
         #endif
+
+        // WebUI Exit Event for GTK
+        g_timeout_add((1 * 1000), _webui_wv_exit_schedule, NULL);
     }
 
     static int _webui_wv_create_schedule(void* arg) {
@@ -11394,6 +11397,24 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         return 0;
+    }
+
+    static int _webui_wv_exit_schedule(void* arg) {
+
+        #ifdef WEBUI_LOG
+        // printf("[Core]\t\t_webui_wv_exit_schedule()\n");
+        #endif
+
+        if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+            if (_webui.is_gtk_main_run) {
+                #ifdef WEBUI_LOG
+                printf("[Core]\t\t_webui_wv_exit_schedule() -> Quit GTK Main Loop...\n");
+                #endif
+                gtk_main_quit();
+            }
+            return 0;
+        }
+        return 1;
     }
 
     static bool _webui_wv_show(_webui_window_t* win, char* url) {
@@ -11462,6 +11483,12 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libgtk, "gtk_widget_show_all");
             gtk_main_iteration_do = (gtk_main_iteration_do_func)dlsym(
                 libgtk, "gtk_main_iteration_do");
+            gtk_main = (gtk_main_func)dlsym(
+                libgtk, "gtk_main");
+            gtk_main_quit = (gtk_main_quit_func)dlsym(
+                libgtk, "gtk_main_quit");
+            g_timeout_add = (g_timeout_add_func)dlsym(
+                libgtk, "g_timeout_add");
             gtk_events_pending = (gtk_events_pending_func)dlsym(
                 libgtk, "gtk_events_pending");
             gtk_container_add = (gtk_container_add_func)dlsym(
@@ -11495,12 +11522,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
             // Check GTK
             if (
-                // GTK Commun
-                !gtk_init || !gtk_window_new || !gtk_window_set_default_size
-                || !gtk_window_set_title || !g_signal_connect_data
                 // GTK v3
-                || !gtk_widget_show_all || !gtk_main_iteration_do
-                || !gtk_events_pending || !gtk_container_add
+                !gtk_init || !gtk_window_new || !gtk_window_set_default_size
+                || !gtk_window_set_title || !g_signal_connect_data || !gtk_main
+                || !gtk_main_quit || !gtk_widget_show_all || !gtk_main_iteration_do
+                || !g_timeout_add || !gtk_events_pending || !gtk_container_add
                 || !gtk_window_move
                 // GTK v4
                 // ...
@@ -11562,10 +11588,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             // so it's safe to create the new WebView window
             // from this thread, which is should be fired from
             // the back-end main thread.
-
-            #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_wv_show() -> New WebView window\n");
-            #endif
 
             _webui_wv_create(win);
         }
