@@ -3338,6 +3338,7 @@ mg_get_server_ports(const struct mg_context *ctx,
 		ports[cnt].is_ssl = ctx->listening_sockets[i].is_ssl;
 		ports[cnt].is_redirect = ctx->listening_sockets[i].ssl_redir;
 		ports[cnt].is_optional = ctx->listening_sockets[i].is_optional;
+		ports[cnt].is_bound = ctx->listening_sockets[i].sock != INVALID_SOCKET;
 
 		if (ctx->listening_sockets[i].lsa.sa.sa_family == AF_INET) {
 			/* IPv4 */
