@@ -5461,8 +5461,10 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
             if (file == NULL)
                 return false;
             fputs(
-                "#navigator-toolbox{opacity:0 !important;height:0px !important;max-height:0px !important;"
-                "width:0px !important;max-width:0px !important;}"
+                "#navigator-toolbox,#TabsToolbar,#nav-bar,#PersonalToolbar,#sidebar-box{"
+                "visibility:collapse!important;height:0!important;margin:0!important;padding:0!important;}"
+                "#titlebar{visibility:visible!important;display:flex!important;}#browser{"
+                "margin-top:0!important;padding-top:0!important;}"
             , file);
             fclose(file);
         }
