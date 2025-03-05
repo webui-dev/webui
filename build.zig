@@ -7,7 +7,6 @@ const Compile = Build.Step.Compile;
 const Module = Build.Module;
 
 const lib_name = "webui";
-const zig_ver = builtin.zig_version.minor;
 var global_log_level: std.log.Level = .warn;
 
 /// Vendored dependencies of webui.
@@ -21,11 +20,6 @@ const DebugDependencies = std.EnumSet(Dependency);
 pub fn build(b: *Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-
-    switch (comptime zig_ver) {
-        12, 13, 14 => {},
-        else => return error.UnsupportedZigVersion,
-    }
 
     const is_dynamic = b.option(bool, "dynamic", "build the dynamic library") orelse false;
     const enable_tls = b.option(bool, "enable-tls", "enable TLS support") orelse false;
