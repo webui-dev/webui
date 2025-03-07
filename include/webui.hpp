@@ -393,6 +393,12 @@ namespace webui {
         void set_context(const std::string_view element, void* context) const {
             webui_set_context(webui_window, element.data(), context);
         }
+
+        // Gets Win32 window `HWND`. More reliable with WebView than web browser 
+        // window, as browser PIDs may change on launch.
+        void* win32_get_hwnd() const {
+            return webui_win32_get_hwnd(webui_window);
+        }
     };
 
     // ------ Namespace members `webui::xxx()` ------
@@ -492,6 +498,11 @@ namespace webui {
     // Check if the app is still running.
     inline bool is_app_running() {
         return webui_interface_is_app_running();
+    }
+
+    // Copy raw data.
+    inline void memcpy(void* dest, const void* src, size_t count) {
+        webui_memcpy(dest, const_cast<void*>(src), count);
     }
 
 } // namespace webui
