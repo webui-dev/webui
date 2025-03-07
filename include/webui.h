@@ -796,6 +796,18 @@ WEBUI_EXPORT size_t webui_get_parent_process_id(size_t window);
 WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
 
 /**
+ * @brief Gets Win32 window `HWND`. More reliable with WebView
+ * than web browser window, as browser PIDs may change on launch.
+ *
+ * @param window The window number
+ *
+ * @return Returns the window `hwnd` as `void*`
+ *
+ * @example HWND hwnd = webui_win32_get_hwnd(myWindow);
+ */
+WEBUI_EXPORT void* webui_win32_get_hwnd(size_t window);
+
+/**
  * @brief Get the network port of a running window.
  * This can be useful to determine the HTTP link of `webui.js`
  *

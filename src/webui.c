@@ -2633,6 +2633,54 @@ size_t webui_get_child_process_id(size_t window) {
     #endif
 }
 
+void* webui_win32_get_hwnd(size_t window) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_win32_get_hwnd([%zu])\n", window);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return NULL;
+    _webui_window_t* win = _webui.wins[window];
+
+    #ifdef _WIN32
+    if (_webui.is_webview) {
+        // WebView Window
+        if (win->webView) {
+            return win->webView->hwnd;
+        }
+        return NULL;
+    } else {
+        // Web Browser Window
+        size_t child_pid = webui_get_child_process_id(window);
+        if (child_pid == 0) {
+            return NULL;
+        }
+        HWND hwnd = NULL;
+        int max_iterations = 10000;
+        do {
+            hwnd = FindWindowEx(NULL, hwnd, NULL, NULL);
+            if (hwnd == NULL) {
+                break;
+            }
+            DWORD pid;
+            GetWindowThreadProcessId(hwnd, &pid);
+            if (pid == child_pid) {
+                return hwnd;
+            }
+        } while (--max_iterations > 0);
+        return NULL;
+    }
+    #endif
+
+    // This API is only available on Windows
+    return NULL;
+}
+
 void webui_set_hide(size_t window, bool status) {
 
     #ifdef WEBUI_LOG
@@ -2820,7 +2868,6 @@ void webui_set_profile(size_t window, const char* name, const char* path) {
     else
         win->default_profile = false;
 }
-
 
 void webui_set_proxy(size_t window, const char* proxy_server) {
 
