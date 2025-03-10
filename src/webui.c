@@ -5800,6 +5800,51 @@ static bool _webui_is_google_chrome_folder(const char* folder) {
     return true;
 }
 
+static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
+
+    #ifdef WEBUI_LOG
+    printf("[Core]\t\t_webui_custom_browser_exist([%zu])\n", browser);
+    #endif
+
+    if (!_webui.custom_browser_folder_path)
+        return false;
+    
+    #ifdef _WIN32
+    char* executable = NULL;
+    if (browser == Chrome) executable = "chrome.exe";
+    else if (browser == Edge) executable = "msedge.exe";
+    else if (browser == Epic) executable = "epic.exe";
+    else if (browser == Vivaldi) executable = "vivaldi.exe";
+    else if (browser == Brave) executable = "brave.exe";
+    else if (browser == Firefox) executable = "firefox.exe";
+    else if (browser == Yandex) executable = "browser.exe";
+    else if (browser == Chromium) executable = "chrome.exe";
+    else return false;
+    if (_webui_folder_exist(_webui.custom_browser_folder_path)) {
+        char full_path[WEBUI_MAX_PATH] = {0};
+        WEBUI_SN_PRINTF_STATIC(
+            full_path, WEBUI_MAX_PATH,
+            "%s\\%s", _webui.custom_browser_folder_path, executable
+        );
+        if (_webui_file_exist(full_path)) {
+            // Browser Found
+            if(win) WEBUI_SN_PRINTF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", full_path);
+            return true;
+        }
+    }
+    #elif __APPLE__
+    // TODO: Custom browser path macOS
+    // `Chromium.app`...
+    // `Firefox.app`...
+    #else
+    // TODO: Custom browser path Linux
+    // `google-chrome`...
+    // `firefox`...
+    #endif
+
+    return false;
+}
+
 static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
     #ifdef WEBUI_LOG
@@ -5816,6 +5861,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         if(win) {
             if (ChromeExist && !_webui_is_empty(win->browser_path))
                 return true;
+        }
+
+        // Custom user browser path
+        if (_webui_custom_browser_exist(win, browser)) {
+            ChromeExist = true;
+            return true;
         }
 
         #ifdef _WIN32
@@ -5898,6 +5949,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         if(win) {
             if (EdgeExist && !_webui_is_empty(win->browser_path))
                 return true;
+        }
+
+        // Custom user browser path
+        if (_webui_custom_browser_exist(win, browser)) {
+            EdgeExist = true;
+            return true;
         }
 
         #ifdef _WIN32
@@ -5987,6 +6044,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 return true;
         }
 
+        // Custom user browser path
+        if (_webui_custom_browser_exist(win, browser)) {
+            EpicExist = true;
+            return true;
+        }
+
         #ifdef _WIN32
 
         // Epic on Windows
@@ -6060,6 +6123,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         if(win) {
             if (VivaldiExist && !_webui_is_empty(win->browser_path))
                 return true;
+        }
+
+        // Custom user browser path
+        if (_webui_custom_browser_exist(win, browser)) {
+            VivaldiExist = true;
+            return true;
         }
 
         #ifdef _WIN32
@@ -6147,6 +6216,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 return true;
         }
 
+        // Custom user browser path
+        if (_webui_custom_browser_exist(win, browser)) {
+            BraveExist = true;
+            return true;
+        }
+
         #ifdef _WIN32
 
         // Brave on Windows
@@ -6220,6 +6295,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         if(win) {
             if (FirefoxExist && !_webui_is_empty(win->browser_path))
                 return true;
+        }
+
+        // Custom user browser path
+        if (_webui_custom_browser_exist(win, browser)) {
+            FirefoxExist = true;
+            return true;
         }
 
         #ifdef _WIN32
@@ -6300,6 +6381,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
                 return true;
         }
 
+        // Custom user browser path
+        if (_webui_custom_browser_exist(win, browser)) {
+            YandexExist = true;
+            return true;
+        }
+
         #ifdef _WIN32
 
         // Yandex on Windows
@@ -6373,6 +6460,12 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         if(win) {
             if (ChromiumExist && !_webui_is_empty(win->browser_path))
                 return true;
+        }
+
+        // Custom user browser path
+        if (_webui_custom_browser_exist(win, browser)) {
+            ChromiumExist = true;
+            return true;
         }
 
         #ifdef _WIN32
