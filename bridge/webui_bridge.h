@@ -1,4 +1,4 @@
-// WebUI v2.5.0-beta.3
+// WebUI v2.5.0-beta.4
 // https://webui.me
 // https://github.com/webui-dev/webui
 // Copyright (c) 2020-2025 Hassan Draga.
