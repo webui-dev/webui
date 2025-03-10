@@ -422,6 +422,7 @@ typedef struct _webui_core_t {
     webui_condition_t condition_wait;
     char* default_server_root_path;
     bool ui;
+    char* custom_browser_folder_path;
     #ifdef WEBUI_TLS
     char* root_cert;
     char* root_key;
@@ -3474,6 +3475,23 @@ void webui_set_runtime(size_t window, size_t runtime) {
         win->runtime = None;
     else
         win->runtime = runtime;
+}
+
+void webui_set_browser_folder(const char* path) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_browser_folder([%s])\n", path);
+    #endif
+
+    // Free existing custom path
+    if (_webui.custom_browser_folder_path)
+        _webui_free_mem((void*)_webui.custom_browser_folder_path);
+    _webui.custom_browser_folder_path = NULL;
+
+    // Set new custom path
+    if (!_webui_is_empty(path)) {
+        _webui.custom_browser_folder_path = _webui_str_dup(path);
+    }
 }
 
 bool webui_set_root_folder(size_t window, const char* path) {
