@@ -5843,9 +5843,56 @@ static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
     // `Chromium.app`...
     // `Firefox.app`...
     #else
-    // TODO: Custom browser path Linux
-    // `google-chrome`...
-    // `firefox`...
+    #define MAX_BROWSER_FILES (2)
+    char* executable = NULL;
+    char* executables[MAX_BROWSER_FILES] = {0};
+    if (browser == Chrome) {
+        executables[0] = "google-chrome";
+        executables[1] = "google-chrome-stable";
+    }
+    else if (browser == Edge) {
+        executables[0] = "microsoft-edge-stable";
+        executables[1] = "microsoft-edge-beta";
+    }
+    else if (browser == Epic) {
+        executables[0] = "epic";
+        executables[1] = NULL;
+    }
+    else if (browser == Vivaldi) {
+        executables[0] = "vivaldi";
+        executables[1] = "vivaldi-stable";
+    }
+    else if (browser == Brave) {
+        executables[0] = "brave";
+        executables[1] = NULL;
+    }
+    else if (browser == Firefox) {
+        executables[0] = "firefox";
+        executables[1] = NULL;
+    }
+    else if (browser == Yandex) {
+        executables[0] = "yandex-browser";
+        executables[1] = NULL;
+    }
+    else if (browser == Chromium) {
+        executables[0] = "chromium-browser";
+        executables[1] = "chromium";
+    }
+    else return false;
+    if (_webui_folder_exist(_webui.custom_browser_folder_path)) {
+        char full_path[(WEBUI_MAX_PATH - 1)] = {0};
+        for (int i = 0; i < MAX_BROWSER_FILES && executables[i] != NULL; i++) {
+            WEBUI_SN_PRINTF_STATIC(
+                full_path, (WEBUI_MAX_PATH - 1),
+                "%s/%s", _webui.custom_browser_folder_path, executables[i]
+            );
+            if (_webui_file_exist(full_path)) {
+                // Browser Found
+                if(win) WEBUI_SN_PRINTF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", full_path);
+                return true;
+            }
+        }
+    }
     #endif
 
     return false;
