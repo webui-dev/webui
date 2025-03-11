@@ -5839,9 +5839,34 @@ static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
         }
     }
     #elif __APPLE__
-    // TODO: Custom browser path macOS
-    // `Chromium.app`...
-    // `Firefox.app`...
+    char* executable = NULL;
+    if (browser == Chrome) executable = "Google Chrome.app";
+    else if (browser == Edge) executable = "Microsoft Edge.app";
+    else if (browser == Epic) executable = "Epic.app";
+    else if (browser == Vivaldi) executable = "Vivaldi.app";
+    else if (browser == Brave) executable = "Brave Browser.app";
+    else if (browser == Firefox) executable = "Firefox.app";
+    else if (browser == Yandex) executable = "Yandex.app";
+    else if (browser == Chromium) executable = "Chromium.app";
+    else return false;
+    if (_webui_folder_exist(_webui.custom_browser_folder_path)) {
+        char full_app_path[(WEBUI_MAX_PATH - 2)] = {0};
+        WEBUI_SN_PRINTF_STATIC(
+            full_app_path, (WEBUI_MAX_PATH - 2),
+            "%s/%s", _webui.custom_browser_folder_path, executable
+        );
+        if (_webui_folder_exist(full_app_path)) {
+            // Create macOS command
+            char full_app_cmd[(WEBUI_MAX_PATH - 1)] = {0};
+            WEBUI_SN_PRINTF_STATIC(
+                full_app_cmd, (WEBUI_MAX_PATH - 1),
+                "open --new -a \"%s\" --args", full_app_path
+            );
+            // Browser Found
+            if(win) WEBUI_SN_PRINTF_DYN(win->browser_path, WEBUI_MAX_PATH, "\"%s\"", full_app_cmd);
+            return true;
+        }
+    }
     #else
     #define MAX_BROWSER_FILES (2)
     char* executable = NULL;
