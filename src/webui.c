@@ -3165,6 +3165,9 @@ void webui_memcpy(void* dest, void* src, size_t count) {
     printf("[User] webui_memcpy() -> Copying %zu bytes from [%p] to [%p]\n", count, src, dest);
     #endif
 
+    // Initialization
+    _webui_init();
+
     if ((dest != NULL) && (src != NULL) && (count > 0)) {
         memcpy(dest, src, count);
     }
@@ -3482,6 +3485,9 @@ void webui_set_browser_folder(const char* path) {
     #ifdef WEBUI_LOG
     printf("[User] webui_set_browser_folder([%s])\n", path);
     #endif
+
+    // Initialization
+    _webui_init();
 
     // Free existing custom path
     if (_webui.custom_browser_folder_path)
