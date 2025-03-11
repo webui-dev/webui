@@ -875,6 +875,16 @@ WEBUI_EXPORT void webui_set_config(webui_config option, bool status);
 WEBUI_EXPORT void webui_set_event_blocking(size_t window, bool status);
 
 /**
+ * @brief Make a WebView window headless.
+ *
+ * @param window The window number
+ * @param status The headless status `true` or `false`
+ *
+ * @example webui_wv_set_headless(myWindow, true);
+ */
+WEBUI_EXPORT void webui_wv_set_headless(size_t window, bool status);
+
+/**
  * @brief Get the HTTP mime type of a file.
  *
  * @return Returns the HTTP mime string

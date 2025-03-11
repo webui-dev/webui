@@ -360,6 +360,7 @@ typedef struct _webui_window_t {
     bool allow_webview;
     bool allow_browser;
     bool update_webview;
+    bool headless_webview;
     webui_mutex_t mutex_webview_update;
     webui_condition_t condition_webview_update;
     #ifdef _WIN32
@@ -2498,6 +2499,23 @@ void webui_set_config(webui_config option, bool status) {
             break;
         #endif
     }
+}
+
+void webui_wv_set_headless(size_t window, bool status) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_wv_set_headless([%zu], [%d])\n", window, status);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    win->headless_webview = status;
 }
 
 void webui_set_event_blocking(size_t window, bool status) {
@@ -11292,8 +11310,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             WEBUI_THREAD_RETURN
         }
 
+        // Set window style based on headless flag
+        DWORD style = WS_OVERLAPPEDWINDOW;
+        if (win->headless_webview) {
+            // Headless mode
+            style = WS_POPUP | WS_VISIBLE; 
+        }
+
         win->webView->hwnd = CreateWindowExA(
-            0, wvClass, "", WS_OVERLAPPEDWINDOW,
+            0, wvClass, "", style,
             win->webView->x, win->webView->y, 
             win->webView->width, win->webView->height,
             NULL, NULL, GetModuleHandle(NULL), NULL
