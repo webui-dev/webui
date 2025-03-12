@@ -49,7 +49,7 @@ else
 		PLATFORM := macos
 		CC = clang
 		COPY_LIB_CMD := @cp "$(LIB_DIR)/lib$(WEBUI_LIB_NAME).dylib" "lib$(WEBUI_LIB_NAME).dylib"
-		DYN_BUILD_FLAGS += -l$(WEBUI_LIB_NAME).dylib
+		DYN_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)
 		WKWEBKIT_LINK_FLAGS := -framework Cocoa -framework WebKit
 	else
 		# Linux
