@@ -226,9 +226,9 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
   | Compiler | Type    | Command |
   |----------|--------|---------|
   | GCC      | Static  | `gcc -Os my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-secure-static -lpthread -lm -ldl -o my_application` |
-  | GCC      | Dynamic | `gcc my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" "./webui-2-secure.so" -lpthread -lm -ldl -o my_application` |
+  | GCC      | Dynamic | `gcc my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-secure -lpthread -lm -ldl -o my_application` |
   | Clang    | Static  | `clang -Os my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-secure-static -lpthread -lm -ldl -o my_application` |
-  | Clang    | Dynamic | `clang my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" "./webui-2-secure.so" -lpthread -lm -ldl -o my_application` |
+  | Clang    | Dynamic | `clang my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-secure -lpthread -lm -ldl -o my_application` |
 </details>
 
 ### macOS
@@ -236,7 +236,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | Compiler | Type    | Command |
 |----------|--------|---------|
 | Clang    | Static  | `clang -Os my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-static -lpthread -lm -framework Cocoa -framework WebKit -o my_application` |
-| Clang    | Dynamic | `clang my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" "./webui-2.dylib" -lpthread -lm -framework Cocoa -framework WebKit -o my_application` |
+| Clang    | Dynamic | `clang my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2 -lpthread -lm -framework Cocoa -framework WebKit -o my_application` |
 
 <details>
   <summary><strong>macOS With SSL/TLS (Optional)</strong></summary>
@@ -244,7 +244,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
   | Compiler | Type    | Command |
   |----------|--------|---------|
   | Clang    | Static  | `clang -Os my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-secure-static -lpthread -lm -framework Cocoa -framework WebKit -o my_application` |
-  | Clang    | Dynamic | `clang my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" "./webui-2-secure.dylib" -lpthread -lm -framework Cocoa -framework WebKit -o my_application` |
+  | Clang    | Dynamic | `clang my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-secure -lpthread -lm -framework Cocoa -framework WebKit -o my_application` |
 </details>
 
 ## Wrappers

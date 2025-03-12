@@ -68,7 +68,7 @@ else ifeq ($(DETECTED_OS),Darwin)
 	# MacOS
 	PLATFORM := macos
 	CC = clang
-	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).dylib
+	LIB_DYN_OUT := lib$(WEBUI_OUT_LIB_NAME).dylib
 	WEBKIT_OBJ := wkwebview.o
 	WKWEBKIT_BUILD_FLAGS := -o wkwebview.o -c "$(MAKEFILE_DIR)/src/webview/wkwebview.m"
 	WKWEBKIT_LINK_FLAGS := -framework Cocoa -framework WebKit

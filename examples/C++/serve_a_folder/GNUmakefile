@@ -48,15 +48,15 @@ else
 		# MacOS
 		PLATFORM := macos
 		CC = clang
-		COPY_LIB_CMD := @cp "$(LIB_DIR)/$(WEBUI_LIB_NAME).dylib" "$(WEBUI_LIB_NAME).dylib"
-		DYN_BUILD_FLAGS += "./$(WEBUI_LIB_NAME).dylib"
+		COPY_LIB_CMD := @cp "$(LIB_DIR)/lib$(WEBUI_LIB_NAME).dylib" "lib$(WEBUI_LIB_NAME).dylib"
+		DYN_BUILD_FLAGS += -l$(WEBUI_LIB_NAME).dylib
 		WKWEBKIT_LINK_FLAGS := -framework Cocoa -framework WebKit
 	else
 		# Linux
 		PLATFORM := linux
-		COPY_LIB_CMD := @cp "$(LIB_DIR)/$(WEBUI_LIB_NAME).so" "$(WEBUI_LIB_NAME).so"
+		COPY_LIB_CMD := @cp "$(LIB_DIR)/lib$(WEBUI_LIB_NAME).so" "lib$(WEBUI_LIB_NAME).so"
 		STATIC_BUILD_FLAGS += -ldl
-		DYN_BUILD_FLAGS += -ldl "./$(WEBUI_LIB_NAME).so"
+		DYN_BUILD_FLAGS += -ldl -l$(WEBUI_LIB_NAME)
 		STRIP_OPT := --strip-all
 		ifeq ($(CC),clang)
 			LLVM_OPT := llvm-
