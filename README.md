@@ -216,9 +216,9 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | Compiler | Type    | Command |
 |----------|--------|---------|
 | GCC      | Static  | `gcc -Os my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-static -lpthread -lm -ldl -o my_application` |
-| GCC      | Dynamic | `gcc my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" "./webui-2.so" -lpthread -lm -ldl -o my_application` |
+| GCC      | Dynamic | `gcc my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2 -lpthread -lm -ldl -o my_application` |
 | Clang    | Static  | `clang -Os my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-static -lpthread -lm -ldl -o my_application` |
-| Clang    | Dynamic | `clang my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" "./webui-2.so" -lpthread -lm -ldl -o my_application` |
+| Clang    | Dynamic | `clang my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2 -lpthread -lm -ldl -o my_application` |
 
 <details>
   <summary><strong>Linux With SSL/TLS (Optional)</strong></summary>
