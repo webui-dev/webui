@@ -132,6 +132,27 @@ void _webui_macos_wv_check_exit() {
     }
 }
 
+void _webui_macos_wv_start() {
+    #ifdef WEBUI_LOG
+    printf("[ObjC]\t\t\t_webui_macos_wv_start()\n");
+    #endif
+
+    @autoreleasepool {
+        NSApplication *app = [NSApplication sharedApplication];
+        [app setActivationPolicy:NSApplicationActivationPolicyRegular];
+
+        // Ensure the event loop keeps running
+        [app finishLaunching];
+
+        // Run the application event loop
+        [app run];
+
+        #ifdef WEBUI_LOG
+        printf("[ObjC]\t\t\t_webui_macos_wv_start() -> Exit.\n");
+        #endif
+    }
+}
+
 bool _webui_macos_wv_new(int index) {
     #ifdef WEBUI_LOG
     printf("[ObjC]\t\t\t_webui_macos_wv_new([%d])\n", index);
@@ -274,7 +295,7 @@ void _webui_macos_wv_stop() {
         NSApplication *app = [NSApplication sharedApplication];
         [app stop:nil];
 
-        // Dummy event to immediately break `_webui_macos_wv_process()`
+        // Dummy event to immediately break `[app run]` in `_webui_macos_wv_start`
         NSEvent *event = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
                                             location:NSMakePoint(0, 0)
                                        modifierFlags:0
