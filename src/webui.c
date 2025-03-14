@@ -6644,12 +6644,8 @@ static void _webui_clean(void) {
         return;
     cleaned = true;
 
-    // Stop all threads
-    _webui_mutex_app_is_exit_now(WEBUI_MUTEX_SET_TRUE);
-
-    // Let's give other threads more time to safely exit
-    // and finish cleaning up.    
-    // _webui_sleep(500);
+    // Make sure app is stopped
+    webui_exit();
 
     // Clean all servers services
     mg_exit_library();
