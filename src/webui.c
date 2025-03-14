@@ -273,6 +273,7 @@ typedef struct webui_event_inf_t {
     extern void _webui_macos_wv_stop();
     extern void _webui_macos_wv_set_close_cb(void (*cb)(int index));
     extern void _webui_macos_wv_new_thread_safe(int index);
+    extern void _webui_macos_wv_start();
 
     typedef struct _webui_wv_macos_t {
         // macOS WebView
@@ -3376,13 +3377,8 @@ void webui_wait(void) {
 
             _webui.is_wkwebview_main_run = true;
 
-            while (true) {
-
-                _webui_macos_wv_process();
-
-                if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
-                    break;
-            }
+            // WKWebView Run Application
+            _webui_macos_wv_start();
 
             _webui.is_wkwebview_main_run = false;
         }
