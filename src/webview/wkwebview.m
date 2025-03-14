@@ -308,7 +308,7 @@ void _webui_macos_wv_stop() {
 }
 
 void _webui_macos_wv_check_exit() {
-    if (webui_interface_is_app_running()) {
+    if (!webui_interface_is_app_running()) {
         _webui_macos_wv_stop();
     }
 }
