@@ -11,14 +11,11 @@
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
 
-#define WEBUI_MAX_IDS         (256) // Max windows, servers and threads
-#define WEBUI_MUTEX_GET_STATUS  (0) // Check boolen mutex without update
-#define WEBUI_MUTEX_SET_TRUE    (1) // Update boolen mutex to true
-#define WEBUI_MUTEX_SET_FALSE   (2) // Update boolen mutex false
+#define WEBUI_MAX_IDS (256) // Max windows, servers and threads
+extern bool webui_interface_is_app_running(void);
 
 void (*close_callback)(int index) = NULL;
 void _webui_macos_wv_check_exit();
-extern bool _webui_mutex_app_is_exit_now(int update);
 
 @interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate>
 {
@@ -41,7 +38,7 @@ extern bool _webui_mutex_app_is_exit_now(int update);
             webViews[i] = nil;
         }
 
-        [NSTimer scheduledTimerWithTimeInterval:3.0
+        [NSTimer scheduledTimerWithTimeInterval:1.0
             target:self
             selector:@selector(_webui_macos_wv_timer)
             userInfo:nil
@@ -311,7 +308,7 @@ void _webui_macos_wv_stop() {
 }
 
 void _webui_macos_wv_check_exit() {
-    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+    if (webui_interface_is_app_running()) {
         _webui_macos_wv_stop();
     }
 }
