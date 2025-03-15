@@ -662,7 +662,7 @@ static WEBUI_THREAD_MONITOR;
 #define WEBUI_STR_COPY_DYN(dest, dest_size, src) strcpy_s(dest, (dest_size + 1), src)
 #define WEBUI_STR_COPY_STATIC(dest, dest_size, src) strcpy_s(dest, dest_size, src)
 #define WEBUI_STR_CAT_DYN(dest, dest_size, src) strcat_s(dest, (dest_size + 1), src)
-#define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strcat_s(dest, (dest_size - (strlen(dest) - 1)), src)
+#define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strcat_s(dest, (dest_size), src)
 #else
 #define WEBUI_STR_TOK(str, delim, context) strtok_r(str, delim, context)
 #define WEBUI_FILE_OPEN(file, filename, mode) ((file) = fopen(filename, mode))
