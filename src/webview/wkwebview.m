@@ -151,9 +151,9 @@ void _webui_macos_wv_start() {
     }
 }
 
-bool _webui_macos_wv_new(int index) {
+bool _webui_macos_wv_new(int index, bool frameless) {
     #ifdef WEBUI_LOG
-    printf("[ObjC]\t\t\t_webui_macos_wv_new([%d])\n", index);
+    printf("[ObjC]\t\t\t_webui_macos_wv_new([%d], [%d])\n", index, frameless);
     #endif
 
     if (index < 0 || index >= WEBUI_MAX_IDS) {
@@ -173,10 +173,15 @@ bool _webui_macos_wv_new(int index) {
     }
 
     NSRect frame = NSMakeRect(0, 0, 800, 600);
+
+    // Set window style
+    NSWindowStyleMask windowStyle = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable;
+    if (frameless) {
+        windowStyle = NSWindowStyleMaskBorderless;
+    }
+
     NSWindow *window = [[NSWindow alloc] initWithContentRect:frame
-                                                   styleMask:(NSWindowStyleMaskTitled |
-                                                              NSWindowStyleMaskClosable |
-                                                              NSWindowStyleMaskResizable)
+                                                   styleMask:windowStyle
                                                      backing:NSBackingStoreBuffered
                                                        defer:NO];
     if (!window) {
@@ -185,7 +190,9 @@ bool _webui_macos_wv_new(int index) {
         #endif
         return false;
     }
-    [window setTitle:@"Loading..."];
+    if (!frameless) {
+        [window setTitle:@"Loading..."];
+    }
     [window setDelegate:delegate];
 
     WKWebView *webView = [[WKWebView alloc] initWithFrame:[[window contentView] bounds]];
@@ -205,12 +212,12 @@ bool _webui_macos_wv_new(int index) {
     return true;
 }
 
-void _webui_macos_wv_new_thread_safe(int index) {
+void _webui_macos_wv_new_thread_safe(int index, bool frameless) {
     #ifdef WEBUI_LOG
     printf("[ObjC]\t\t\t_webui_macos_wv_new_thread_safe([%d])\n", index);
     #endif
     dispatch_async(dispatch_get_main_queue(), ^{
-        _webui_macos_wv_new(index);
+        _webui_macos_wv_new(index, frameless);
     });
 }
 
