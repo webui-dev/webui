@@ -68,6 +68,7 @@
 #define WEBUI_CMD_ADD_ID     0xF7    // Command: Add new bind ID
 #define WEBUI_CMD_MULTI      0xF6    // Command: Multi packet data
 #define WEBUI_CMD_CHECK_TK   0xF5    // Command: Check validity of a client's token
+#define WEBUI_CMD_WIN_DRAG   0xF4    // Command: Drag window (WebUI `-webkit-app-region: drag;` custom implementation)
 #define WEBUI_PROTOCOL_SIZE  (8)     // Protocol header size in bytes
 #define WEBUI_PROTOCOL_SIGN  (0)     // Protocol byte position: Signature (1 Byte)
 #define WEBUI_PROTOCOL_TOKEN (1)     // Protocol byte position: Token (4 Bytes)
@@ -9843,7 +9844,41 @@ static void _webui_ws_process(
 
                 if (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) { // Check if previous event called exit()
 
-                    if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_CLICK) {
+                    if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_WIN_DRAG) {
+
+                        // Drag Window Event (WebUI `-webkit-app-region: drag;` custom implementation)
+
+                        // Protocol
+                        // [Header]
+                        // [X]
+                        // [Y]
+
+                        uint32_t x = 0;
+                        uint32_t y = 0;
+                        int X = 0;
+                        int Y = 0;
+
+                        // Little-endian
+                        x |= ((uint32_t) packet[WEBUI_PROTOCOL_DATA]&0xFF);
+                        x |= ((uint32_t) packet[WEBUI_PROTOCOL_DATA + 1]&0xFF) << 8;
+                        x |= ((uint32_t) packet[WEBUI_PROTOCOL_DATA + 2]&0xFF) << 16;
+                        x |= ((uint32_t) packet[WEBUI_PROTOCOL_DATA + 3]&0xFF) << 24;
+                        y |= ((uint32_t) packet[(WEBUI_PROTOCOL_DATA + 4)]&0xFF);
+                        y |= ((uint32_t) packet[(WEBUI_PROTOCOL_DATA + 4) + 1]&0xFF) << 8;
+                        y |= ((uint32_t) packet[(WEBUI_PROTOCOL_DATA + 4) + 2]&0xFF) << 16;
+                        y |= ((uint32_t) packet[(WEBUI_PROTOCOL_DATA + 4) + 3]&0xFF) << 24;
+
+                        X = (int)x;
+                        Y = (int)y;
+
+                        #ifdef WEBUI_LOG
+                        printf("[Core]\t\t_webui_ws_process(%zu) -> Drag Window: X = %d (0x%08X), Y = %d (0x%08X)\n", recvNum, X, x, Y, y);
+                        #endif
+
+                        // Move the dragged window
+                        webui_set_position(win->num, X, Y);
+
+                    } else if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_CLICK) {
 
                         // Click Event
 
@@ -11204,11 +11239,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wv_set_position(%d. %d)\n", x, y);
         #endif
-        if (webView && webView->webviewController) {
-            RECT bounds;
-            webView->webviewController->lpVtbl->get_Bounds(webView->webviewController, &bounds);
-            HRESULT hr = MoveWindow(webView->hwnd, x, y, bounds.right - bounds.left, bounds.bottom - bounds.top, TRUE);
-            return hr != 0;
+        if (webView) {
+            SetWindowPos(webView->hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
         }
         return false;
     };

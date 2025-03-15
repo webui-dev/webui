@@ -29,6 +29,14 @@ class WebuiBridge {
 	#winY: number;
 	#winW: number;
 	#winH: number;
+	// Frameless Dragging
+	#isDragging: boolean = false;
+	#initialMouseX: number = 0;
+	#initialMouseY: number = 0;
+	#initialWindowX: number = window.screenX || window.screenLeft;
+	#initialWindowY: number = window.screenY || window.screenTop;
+	#currentWindowX: number = window.screenX || window.screenLeft;
+	#currentWindowY: number = window.screenY || window.screenTop;
 	// Internals
 	#ws: WebSocket;
 	#wsStayAlive: boolean = true;
@@ -56,6 +64,7 @@ class WebuiBridge {
 	#CMD_NEW_ID: number = 247;
 	#CMD_MULTI: number = 246;
 	#CMD_CHECK_TK: number = 245;
+	#CMD_WINDOW_DRAG: number = 244;
 	#MULTI_CHUNK_SIZE: number = 65500;
 	#PROTOCOL_SIZE: number = 8; // Protocol header size in bytes
 	#PROTOCOL_SIGN: number = 0; // Protocol byte position: Signature (1 Byte)
@@ -151,6 +160,43 @@ class WebuiBridge {
 		document.addEventListener('keydown', (event) => {
 			if (this.#log) return; // Allowed in debug mode
 			if (event.key === 'F5') event.preventDefault();
+		});
+		// Frameless Dragging
+		document.addEventListener("mousemove", (e) => {
+			// WebUI `-webkit-app-region: drag;` custom implementation
+			if (e.buttons !== 1) {
+				this.#isDragging = false;
+				return;
+			}
+			if (!this.#isDragging) {
+				let target = e.target;
+				while (target) {
+					if (window.getComputedStyle(target).getPropertyValue("-webkit-app-region") === "drag") {
+						this.#initialMouseX = e.screenX;
+						this.#initialMouseY = e.screenY;
+						this.#initialWindowX = this.#currentWindowX;
+						this.#initialWindowY = this.#currentWindowY;
+						this.#isDragging = true;
+						break;
+					}
+					target = target.parentElement;
+				}
+				return;
+			}
+			// Calculate window position relative to cursor movement
+			const deltaX = e.screenX - this.#initialMouseX;
+			const deltaY = e.screenY - this.#initialMouseY;
+			const newX = this.#initialWindowX + deltaX;
+			const newY = this.#initialWindowY + deltaY;
+			// Move the window
+			this.#sendDrag(newX, newY);
+			// Update the last window position
+			this.#currentWindowX = newX;
+			this.#currentWindowY = newY;
+		});
+		// Stop frameless dragging on mouse release
+		document.addEventListener("mouseup", () => {
+			this.#isDragging = false;
 		});
 		onbeforeunload = () => {
 			this.#close();
@@ -410,6 +456,33 @@ class WebuiBridge {
 				// this.#addID(packet, 0, this.#PROTOCOL_ID)
 				this.#sendData(packet);
 			}
+		}
+	}
+	#sendDrag(x: number, y: number) {
+		if (this.#wsIsConnected()) {
+			if (this.#log) console.log(`WebUI -> Send Drag Event [${x}, ${y}]`);
+			const packet = Uint8Array.of(
+				// Protocol
+				// 0: [SIGNATURE]
+				// 1: [TOKEN]
+				// 2: [ID]
+				// 3: [CMD]
+				// 4: [X]
+				// 4: [Y]
+				this.#WEBUI_SIGNATURE,
+				0,
+				0,
+				0,
+				0, // Token (4 Bytes)
+				0,
+				0, // ID (2 Bytes)
+				this.#CMD_WINDOW_DRAG,
+				...new Uint8Array(new Int32Array([x]).buffer), // X (4 Bytes)
+				...new Uint8Array(new Int32Array([y]).buffer), // Y (4 Bytes)
+			);
+			this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN);
+			// this.#addID(packet, 0, this.#PROTOCOL_ID)
+			this.#sendData(packet);
 		}
 	}
 	#closeWindowTimer() {
