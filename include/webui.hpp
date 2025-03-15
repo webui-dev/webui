@@ -90,7 +90,7 @@ namespace webui {
             // ------ Event methods `e->xxx()` ------
 
             // Get how many arguments there are in an event.
-            size_t get_count(size_t index = 0) {
+            size_t get_count() {
                 return webui_get_count(this);
             }
 
