@@ -430,6 +430,24 @@ WEBUI_EXPORT void webui_wait(void);
 WEBUI_EXPORT void webui_close(size_t window);
 
 /**
+ * @brief Minimize a WebView window.
+ *
+ * @param window The window number
+ *
+ * @example webui_minimize(myWindow);
+ */
+WEBUI_EXPORT void webui_minimize(size_t window);
+
+/**
+ * @brief Maximize a WebView window.
+ *
+ * @param window The window number
+ *
+ * @example webui_maximize(myWindow);
+ */
+WEBUI_EXPORT void webui_maximize(size_t window);
+
+/**
  * @brief Close a specific client.
  *
  * @param e The event struct

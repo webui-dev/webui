@@ -382,6 +382,62 @@ bool _webui_macos_wv_set_position(int index, int x, int y) {
     return success;
 }
 
+bool _webui_macos_wv_minimize(int index) {
+    #ifdef WEBUI_LOG
+    printf("[ObjC]\t\t\t_webui_macos_wv_minimize([%d])\n", index);
+    #endif
+
+    if (index < 0 || index >= WEBUI_MAX_IDS) {
+        #ifdef WEBUI_LOG
+        printf("[ObjC]\t\t\t_webui_macos_wv_minimize([%d]) -> Invalid index\n", index);
+        #endif
+        return false;
+    }
+
+    __block bool success = false;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSWindow *window = [delegate windowAtIndex:index];
+        if (window) {
+            [window miniaturize:nil];
+            success = true;
+        } else {
+            #ifdef WEBUI_LOG
+            printf("[ObjC]\t\t\t_webui_macos_wv_minimize([%d]) -> Window not found.\n", index);
+            #endif
+        }
+    });
+
+    return success;
+}
+
+bool _webui_macos_wv_maximize(int index) {
+    #ifdef WEBUI_LOG
+    printf("[ObjC]\t\t\t_webui_macos_wv_maximize([%d])\n", index);
+    #endif
+
+    if (index < 0 || index >= WEBUI_MAX_IDS) {
+        #ifdef WEBUI_LOG
+        printf("[ObjC]\t\t\t_webui_macos_wv_maximize([%d]) -> Invalid index\n", index);
+        #endif
+        return false;
+    }
+
+    __block bool success = false;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSWindow *window = [delegate windowAtIndex:index];
+        if (window) {
+            [window zoom:nil];
+            success = true;
+        } else {
+            #ifdef WEBUI_LOG
+            printf("[ObjC]\t\t\t_webui_macos_wv_maximize([%d]) -> Window not found.\n", index);
+            #endif
+        }
+    });
+
+    return success;
+}
+
 bool _webui_macos_wv_set_size(int index, int width, int height) {
     #ifdef WEBUI_LOG
     printf("[ObjC]\t\t\t_webui_macos_wv_set_size([%d])\n", index);

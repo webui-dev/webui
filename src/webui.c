@@ -277,6 +277,8 @@ typedef struct webui_event_inf_t {
     extern void _webui_macos_wv_set_close_cb(void (*cb)(int index));
     extern void _webui_macos_wv_new_thread_safe(int index, bool frameless);
     extern void _webui_macos_wv_start();
+    extern bool _webui_macos_wv_maximize(int index);
+    extern bool _webui_macos_wv_minimize(int index);
 
     typedef struct _webui_wv_macos_t {
         // macOS WebView
@@ -620,6 +622,8 @@ static bool _webui_wv_set_position(_webui_wv_win32_t* webView, int x, int y);
 static bool _webui_wv_set_size(_webui_wv_win32_t* webView, int windowWidth, int windowHeight);
 static bool _webui_wv_show(_webui_window_t* win, char* url);
 static void _webui_wv_event_closed(_webui_window_t* win);
+static bool _webui_wv_maximize(_webui_wv_win32_t* webView);
+static bool _webui_wv_minimize(_webui_wv_win32_t* webView);
 #elif __linux__
 // Linux
 static void _webui_wv_free();
@@ -630,6 +634,8 @@ static bool _webui_wv_set_size(_webui_wv_linux_t* webView, int windowWidth, int 
 static bool _webui_wv_show(_webui_window_t* win, char* url);
 static void _webui_wv_event_closed(void *widget, void *arg);
 static int _webui_wv_exit_schedule(void* arg);
+static bool _webui_wv_maximize(_webui_wv_linux_t* webView);
+static bool _webui_wv_minimize(_webui_wv_linux_t* webView);
 #else
 // macOS
 static void _webui_wv_free(_webui_wv_macos_t* webView);
@@ -639,6 +645,8 @@ static bool _webui_wv_set_position(_webui_wv_macos_t* webView, int x, int y);
 static bool _webui_wv_set_size(_webui_wv_macos_t* webView, int windowWidth, int windowHeight);
 static bool _webui_wv_show(_webui_window_t* win, char* url);
 static void _webui_wv_event_closed(int index);
+static bool _webui_wv_maximize(_webui_wv_macos_t* webView);
+static bool _webui_wv_minimize(_webui_wv_macos_t* webView);
 #endif
 
 #ifdef WEBUI_TLS
@@ -2717,6 +2725,44 @@ void webui_set_hide(size_t window, bool status) {
     _webui_window_t* win = _webui.wins[window];
 
     win->hide = status;
+}
+
+void webui_minimize(size_t window) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_minimize(%zu)\n", window);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    if(win->webView) {
+        _webui_wv_minimize(win->webView);
+    }
+}
+
+void webui_maximize(size_t window) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_minimize(%zu)\n", window);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    if(win->webView) {
+        _webui_wv_minimize(win->webView);
+    }
 }
 
 void webui_set_size(size_t window, unsigned int width, unsigned int height) {
@@ -11220,15 +11266,30 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         return (_webui.is_webview);
     };
 
+    static bool _webui_wv_minimize(_webui_wv_win32_t* webView) {
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_wv_minimize()\n");
+        #endif
+        if (webView) {
+            return ShowWindow(webView->hwnd, SW_MINIMIZE);
+        }
+        return false;
+    }
+
+    static bool _webui_wv_maximize(_webui_wv_win32_t* webView) {
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_wv_maximize()\n");
+        #endif
+        if (webView) {
+            return ShowWindow(webView->hwnd, SW_MAXIMIZE);
+        }
+        return false;
+    }
+
     static bool _webui_wv_set_size(_webui_wv_win32_t* webView, int windowWidth, int windowHeight) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wv_set_size(%d. %d)\n", windowWidth, windowHeight);
         #endif
-        // if (webView && webView->webviewController) {
-        //     RECT bounds = {0, 0, windowWidth, windowHeight};
-        //     HRESULT hr = webView->webviewController->lpVtbl->put_Bounds(webView->webviewController, bounds);
-        //     return SUCCEEDED(hr);
-        // }
         if (webView) {
             return (SetWindowPos(webView->hwnd, NULL, 0, 0, windowWidth, windowHeight, SWP_NOMOVE| SWP_NOREPOSITION));
         }
@@ -11339,8 +11400,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Set window style based on frameless flag
         DWORD style = WS_OVERLAPPEDWINDOW;
         if (win->webview_frameless) {
-            style = WS_POPUP | WS_VISIBLE; // Frameless mode
-            // style = WS_POPUP | WS_THICKFRAME | WS_VISIBLE; // Frameless mode + Resizing
+            // style = WS_POPUP | WS_VISIBLE; // Frameless mode
+            style = WS_POPUP | WS_THICKFRAME | WS_VISIBLE; // Frameless mode + Resizing
         }
 
         win->webView->hwnd = CreateWindowExA(
@@ -11535,6 +11596,28 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
         return false;
     };
+
+    static bool _webui_wv_minimize(_webui_wv_linux_t* webView) {
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_wv_maximize()\n");
+        #endif
+        if (webView && webView->gtk_win) {
+            // gtk_window_iconify(webView->gtk_win);
+            return true;
+        }
+        return false;
+    }
+    
+    static bool _webui_wv_maximize(_webui_wv_linux_t* webView) {
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_wv_maximize()\n");
+        #endif
+        if (webView && webView->gtk_win) {
+            // gtk_window_maximize(webView->gtk_win);
+            return true;
+        }
+        return false;
+    }    
 
     static bool _webui_wv_set_position(_webui_wv_linux_t* webView, int x, int y) {
         #ifdef WEBUI_LOG
@@ -12011,6 +12094,22 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         _webui_macos_wv_set_size(webView->index, windowWidth, windowHeight);
         return false;
     };
+
+    static bool _webui_wv_minimize(_webui_wv_macos_t* webView) {
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_wv_minimize()\n");
+        #endif
+        _webui_macos_wv_minimize(webView->index);
+        return true;
+    }
+
+    static bool _webui_wv_maximize(_webui_wv_macos_t* webView) {
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_wv_maximize()\n");
+        #endif
+        _webui_macos_wv_maximize(webView->index);
+        return true;
+    }
 
     static bool _webui_wv_set_position(_webui_wv_macos_t* webView, int x, int y) {
         #ifdef WEBUI_LOG
