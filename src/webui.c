@@ -11351,19 +11351,18 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             NULL, NULL, GetModuleHandle(NULL), NULL
         );
 
-       	{	// window size correction
-       		RECT rc;
-       		GetClientRect(win->webView->hwnd, &rc);
-       		win->webView->width	= rc.right - rc.left;
-       		win->webView->height = rc.bottom - rc.top;
-       	}
-
         if (!win->webView->hwnd) {
             _webui_wv_free(win->webView);
             win->webView = NULL;
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
+
+        // window size correction
+        RECT rc;
+        GetClientRect(win->webView->hwnd, &rc);
+        win->webView->width = rc.right - rc.left;
+        win->webView->height = rc.bottom - rc.top;
 
         SetWindowLongPtr(win->webView->hwnd, GWLP_USERDATA, (LONG_PTR)win);
         ShowWindow(win->webView->hwnd, SW_SHOW);
