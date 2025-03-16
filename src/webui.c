@@ -8925,10 +8925,10 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
             else {
 
                 // [invalid]
-				
-				#ifdef WEBUI_LOG
-				printf("[Core]\t\t_webui_http_handler() -> Not found\n");
-				#endif
+                
+                #ifdef WEBUI_LOG
+                printf("[Core]\t\t_webui_http_handler() -> Not found\n");
+                #endif
 
                 // No file or folder is found at this path
                 _webui_http_send_error(client, webui_html_res_not_available, 404);
@@ -11110,14 +11110,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 }
                 break;
             case WM_GETMINMAXINFO:
-            	if (win) {
-					if (win->minimum_size_set) {
-						LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
-						lpMMI->ptMinTrackSize.x = win->minimum_width;
-						lpMMI->ptMinTrackSize.y = win->minimum_height;
-					}
-				}
-				break;
+                if (win) {
+                    if (win->minimum_size_set) {
+                        LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+                        lpMMI->ptMinTrackSize.x = win->minimum_width;
+                        lpMMI->ptMinTrackSize.y = win->minimum_height;
+                    }
+                }
+                break;
             case WM_CLOSE:
                 if (win) {
                     // Stop the WebView thread, close the window
@@ -11326,8 +11326,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
         wc.cbClsExtra = 0;
         wc.cbWndExtra = 0;
-        wc.hIcon = LoadIcon(GetModuleHandle(NULL) ,MAKEINTRESOURCE(101));	// default user icon resouce : 101
-        if(!wc.hIcon) wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);			// if not existed, use system default icon
+        wc.hIcon = LoadIcon(GetModuleHandle(NULL) ,MAKEINTRESOURCE(101));    // default user icon resouce : 101
+        if(!wc.hIcon) wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);            // if not existed, use system default icon
 
         if (!RegisterClassA(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
             _webui_wv_free(win->webView);
@@ -11339,9 +11339,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Set window style based on frameless flag
         DWORD style = WS_OVERLAPPEDWINDOW;
         if (win->webview_frameless) {
-            // Frameless mode
-            style = WS_POPUP | WS_VISIBLE;
-            // TODO: Make Win32 WebView with CSS drag feature.
+            style = WS_POPUP | WS_VISIBLE; // Frameless mode
+            // style = WS_POPUP | WS_THICKFRAME | WS_VISIBLE; // Frameless mode + Resizing
         }
 
         win->webView->hwnd = CreateWindowExA(
@@ -11358,11 +11357,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             WEBUI_THREAD_RETURN
         }
 
-        // window size correction
+        // Window size correction
         RECT rc;
         GetClientRect(win->webView->hwnd, &rc);
         win->webView->width = rc.right - rc.left;
         win->webView->height = rc.bottom - rc.top;
+
+        // Transparency
+        // SetWindowLongA(win->webView->hwnd, GWL_EXSTYLE, GetWindowLongA(win->webView->hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+        // SetLayeredWindowAttributes(win->webView->hwnd, RGB(0, 255, 0), 0, LWA_COLORKEY); // Green
 
         SetWindowLongPtr(win->webView->hwnd, GWLP_USERDATA, (LONG_PTR)win);
         ShowWindow(win->webView->hwnd, SW_SHOW);
@@ -12401,7 +12404,7 @@ static void _webui_bridge_api_handler(webui_event_t* e) {
     printf("[Core]\t\t_webui_bridge_api_handler()\n");
     #endif
 
-	// This function gets called by `webui.js` to reach
+    // This function gets called by `webui.js` to reach
     // an internal core API. This is not a public user API.
 
     const char* api_name = webui_get_string(e);
