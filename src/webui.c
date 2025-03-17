@@ -94,6 +94,8 @@
 #define WEBUI_MAX_TIMEOUT    (60)    // Maximum startup timeout in seconds the user can set
 #define WEBUI_MIN_WIDTH      (100)   // Minimal window width
 #define WEBUI_MIN_HEIGHT     (100)   // Minimal window height
+#define WEBUI_DEF_WIDTH      (800)   // Default window width
+#define WEBUI_DEF_HEIGHT     (600)   // Default window height
 #define WEBUI_MAX_WIDTH      (3840)  // Maximal window width (4K Monitor)
 #define WEBUI_MAX_HEIGHT     (2160)  // Maximal window height (4K Monitor)
 #define WEBUI_MIN_X          (0)     // Minimal window X
@@ -1003,7 +1005,11 @@ size_t webui_new_window_id(size_t num) {
         WEBUI_SN_PRINTF_DYN(win->server_root_path, WEBUI_MAX_PATH, "%s", WEBUI_DEFAULT_PATH);
     else
         WEBUI_SN_PRINTF_DYN(win->server_root_path, WEBUI_MAX_PATH, "%s", _webui.default_server_root_path);
-    
+
+    // Default window dimensions
+    win->width = WEBUI_DEF_WIDTH;
+    win->height = WEBUI_DEF_HEIGHT;
+
     // Mutex Initialisation
     _webui_mutex_init(&win->mutex_win_exit_now);
     _webui_mutex_init(&win->mutex_webview_update);
@@ -2883,6 +2889,90 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
             win->webView->y = Y;
             win->webView->position = true;
             _webui_webview_update(win);
+        }
+    }
+}
+
+void webui_set_center(size_t window) {
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_center(%zu)\n", window);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    unsigned int screen_width = 0;
+    unsigned int screen_height = 0;
+
+    // Get screen dimensions
+    #ifdef _WIN32
+    screen_width = GetSystemMetrics(SM_CXSCREEN);
+    screen_height = GetSystemMetrics(SM_CYSCREEN);
+    #elif __APPLE__
+    CGRect screenRect = CGDisplayBounds(CGMainDisplayID());
+    screen_width = (unsigned int)screenRect.size.width;
+    screen_height = (unsigned int)screenRect.size.height;
+    #elif __linux__
+    if (getenv("WAYLAND_DISPLAY")) {
+        // Wayland environment
+
+        // init_wayland();
+        // screen_width = screen_width_wayland;
+        // screen_height = screen_height_wayland;
+        // cleanup_wayland();
+
+        // Note:
+        // This will make WebUI depend on Wayland dev libraries (libwayland-client-dev).
+        // Let's avoid Wayland to keep WebUI portable as possible.
+
+        #ifdef WEBUI_LOG
+        printf("[User] webui_set_center() -> Wayland is not supported.\n");
+        #endif
+    } else {
+        // X11 environment
+
+        // Display* display_x11 = XOpenDisplay(NULL);
+        // if (display_x11) {
+        //     Screen* screen = DefaultScreenOfDisplay(display_x11);
+        //     screen_width = XWidthOfScreen(screen);
+        //     screen_height = XHeightOfScreen(screen);
+        //     XCloseDisplay(display_x11);
+        // }
+
+        // Note:
+        // This will make WebUI depend on X11 dev libraries (libx11-dev).
+        // Let's avoid X11 to keep WebUI portable as possible.
+
+        #ifdef WEBUI_LOG
+        printf("[User] webui_set_center() -> X11 is not supported.\n");
+        #endif
+    }
+    #endif
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_center() -> Screen dimensions: width=%u, height=%u\n", screen_width, screen_height);
+    #endif
+
+    // Default window dimensions
+    win->width = (win->width > 0 ? win->width : WEBUI_DEF_WIDTH);
+    win->height = (win->height > 0 ? win->height : WEBUI_DEF_HEIGHT);
+
+    if (screen_width >= 100 && screen_height >= 100) {
+        if (win->width >= WEBUI_MIN_WIDTH && win->height >= WEBUI_MIN_HEIGHT) {
+            // Calculate center coordinates
+            unsigned int center_x = (screen_width - win->width) / 2;
+            unsigned int center_y = (screen_height - win->height) / 2;
+            #ifdef WEBUI_LOG
+            printf("[User] webui_set_center() -> Window dimensions: width=%u, height=%u\n", win->width, win->height);
+            printf("[User] webui_set_center() -> Calculated center positions: x=%u, y=%u\n", center_x, center_y);
+            #endif
+            // Set window center position
+            webui_set_position(window, center_x, center_y);
         }
     }
 }
@@ -11217,10 +11307,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Initializing the Win32 WebView struct
         _webui_wv_win32_t* webView = (_webui_wv_win32_t*) _webui_malloc(sizeof(_webui_wv_win32_t));
         webView->url = wURL;
-        webView->width = (win->width > 0 ? win->width : 800);
-        webView->height = (win->height > 0 ? win->height : 600);
-        webView->x = (win->x > 0 ? win->x : (int)((GetSystemMetrics(SM_CXSCREEN) - 800) / 2));
-        webView->y = (win->y > 0 ? win->y : (int)((GetSystemMetrics(SM_CYSCREEN) - 600) / 2));
+        webView->width = (win->width > 0 ? win->width : WEBUI_DEF_WIDTH);
+        webView->height = (win->height > 0 ? win->height : WEBUI_DEF_HEIGHT);
+        webView->x = (win->x > 0 ? win->x : (int)((GetSystemMetrics(SM_CXSCREEN) - webView->width) / 2));
+        webView->y = (win->y > 0 ? win->y : (int)((GetSystemMetrics(SM_CYSCREEN) - webView->height) / 2));
         win->webView = webView;
 
         // Note: To garantee all Microsoft WebView's operations ownership we should
@@ -11946,8 +12036,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Initializing the Linux WebView struct
         _webui_wv_linux_t* webView = (_webui_wv_linux_t*) _webui_malloc(sizeof(_webui_wv_linux_t));
         webView->url = url_copy;
-        webView->width = (win->width > 0 ? win->width : 800);
-        webView->height = (win->height > 0 ? win->height : 600);
+        webView->width = (win->width > 0 ? win->width : WEBUI_DEF_WIDTH);
+        webView->height = (win->height > 0 ? win->height : WEBUI_DEF_HEIGHT);
         webView->x = (win->x > 0 ? win->x : 0);
         webView->y = (win->y > 0 ? win->y : 0);
         win->webView = webView;
@@ -12205,8 +12295,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Initializing the macOS WebView struct
         _webui_wv_macos_t* webView = (_webui_wv_macos_t*) _webui_malloc(sizeof(_webui_wv_macos_t));
         webView->url = url_copy;
-        webView->width = (win->width > 0 ? win->width : 800);
-        webView->height = (win->height > 0 ? win->height : 600);
+        webView->width = (win->width > 0 ? win->width : WEBUI_DEF_WIDTH);
+        webView->height = (win->height > 0 ? win->height : WEBUI_DEF_HEIGHT);
         webView->x = (win->x > 0 ? win->x : 100);
         webView->y = (win->y > 0 ? win->y : 100);
         webView->index = win->num;

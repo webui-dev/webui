@@ -692,6 +692,17 @@ WEBUI_EXPORT void webui_set_minimum_size(size_t window, unsigned int width, unsi
 WEBUI_EXPORT void webui_set_position(size_t window, unsigned int x, unsigned int y);
 
 /**
+ * @brief Centers the window on the screen. Works better with 
+ * WebView. Does not work on Linux due to portability reasons. 
+ * Call this function before `webui_show()` for better results.
+ *
+ * @param window The window number
+ *
+ * @example webui_set_center(myWindow);
+ */
+WEBUI_EXPORT void webui_set_center(size_t window);
+
+/**
  * @brief Set the web browser profile to use. An empty `name` and `path` means
  * the default user profile. Need to be called before `webui_show()`.
  *
