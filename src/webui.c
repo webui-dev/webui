@@ -222,6 +222,7 @@ typedef struct webui_event_inf_t {
     typedef void (*gtk_window_close_func)(void *);
     typedef void (*gtk_window_resize_func)(void *, int, int);
     typedef void (*gtk_window_set_decorated_func)(void *, int);
+    typedef void (*gtk_window_set_resizable_func)(void *, int);
     typedef void (*gtk_window_set_position_func)(void *, int);
     typedef unsigned long (*g_signal_connect_data_func)(void *, const char *, void (*callback)(void), void *, void *, int);
     // GTK Symbol Initialization
@@ -240,6 +241,7 @@ typedef struct webui_event_inf_t {
     gtk_window_close_func gtk_window_close = NULL;
     gtk_window_resize_func gtk_window_resize = NULL;
     gtk_window_set_decorated_func gtk_window_set_decorated = NULL;
+    gtk_window_set_resizable_func gtk_window_set_resizable = NULL;
     gtk_window_set_position_func gtk_window_set_position = NULL;
     g_signal_connect_data_func g_signal_connect_data = NULL;
     g_idle_add_func g_idle_add = NULL;
@@ -11834,10 +11836,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Window Settings
         gtk_window_set_default_size(win->webView->gtk_win, win->webView->width, win->webView->height);
         gtk_container_add(win->webView->gtk_win, win->webView->gtk_wv);
-        if (win->frameless) {
-            // Frameless mode
-            gtk_window_set_decorated(GTK_WINDOW(win->webView->gtk_win), 0);
-        }
+        // Frameless mode | Resizable mode
+        gtk_window_set_decorated(GTK_WINDOW(win->webView->gtk_win), !win->frameless);
+        gtk_window_set_resizable(GTK_WINDOW(win->webView->gtk_win), win->resizable);
 
         // Window position
         // Note: The new positioning system it's not GTK's toolkit job anymore.
@@ -12007,6 +12008,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libgtk, "gtk_window_resize");
             gtk_window_set_decorated = (gtk_window_set_decorated_func)dlsym(
                 libgtk, "gtk_window_set_decorated");
+                gtk_window_set_resizable = (gtk_window_set_resizable_func)dlsym(
+                libgtk, "gtk_window_set_resizable");
             gtk_window_set_position = (gtk_window_set_position_func)dlsym(
                 libgtk, "gtk_window_set_position");
             g_signal_connect_data = (g_signal_connect_data_func)dlsym(
@@ -12029,7 +12032,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 || !gtk_window_set_title || !g_signal_connect_data || !gtk_main
                 || !gtk_main_quit || !gtk_widget_show_all || !gtk_main_iteration_do
                 || !g_timeout_add || !gtk_events_pending || !gtk_container_add
-                || !gtk_window_move || !gtk_window_set_decorated
+                || !gtk_window_move || !gtk_window_set_decorated || !gtk_window_set_resizable
                 || !gtk_window_set_position || !gtk_window_resize || !gtk_window_close
                 || !g_idle_add
                 // GTK v4
