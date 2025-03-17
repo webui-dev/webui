@@ -920,9 +920,9 @@ WEBUI_EXPORT void webui_set_event_blocking(size_t window, bool status);
  * @param window The window number
  * @param status The frameless status `true` or `false`
  *
- * @example webui_wv_set_frameless(myWindow, true);
+ * @example webui_set_frameless(myWindow, true);
  */
-WEBUI_EXPORT void webui_wv_set_frameless(size_t window, bool status);
+WEBUI_EXPORT void webui_set_frameless(size_t window, bool status);
 
 /**
  * @brief Get the HTTP mime type of a file.

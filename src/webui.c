@@ -2540,10 +2540,10 @@ void webui_set_config(webui_config option, bool status) {
     }
 }
 
-void webui_wv_set_frameless(size_t window, bool status) {
+void webui_set_frameless(size_t window, bool status) {
 
     #ifdef WEBUI_LOG
-    printf("[User] webui_wv_set_frameless([%zu], [%d])\n", window, status);
+    printf("[User] webui_set_frameless([%zu], [%d])\n", window, status);
     #endif
 
     // Initialization

@@ -87,7 +87,7 @@ int main() {
 	webui_bind(my_window, "maximize", maximize);
 	webui_bind(my_window, "close_win", close_win);
 	webui_set_position(my_window, 100, 100);
-	webui_wv_set_frameless(my_window, true);
+	webui_set_frameless(my_window, true);
 	webui_show_wv(my_window, html);
 	webui_wait();
 	return 0;
