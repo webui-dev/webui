@@ -270,7 +270,8 @@ typedef struct webui_event_inf_t {
         bool stop;
     } _webui_wv_linux_t;
 #else
-    extern bool _webui_macos_wv_new(int index, bool frameless);
+    extern bool _webui_macos_wv_new(int index, bool frameless, bool resizable);
+    extern void _webui_macos_wv_new_thread_safe(int index, bool frameless, bool resizable);
     extern bool _webui_macos_wv_show(int index, const char* urlString, int x, int y, int width, int height);
     extern bool _webui_macos_wv_close(int index);
     extern bool _webui_macos_wv_set_position(int index, int x, int y);
@@ -279,7 +280,6 @@ typedef struct webui_event_inf_t {
     extern void _webui_macos_wv_process();
     extern void _webui_macos_wv_stop();
     extern void _webui_macos_wv_set_close_cb(void (*cb)(int index));
-    extern void _webui_macos_wv_new_thread_safe(int index, bool frameless);
     extern void _webui_macos_wv_start();
     extern bool _webui_macos_wv_maximize(int index);
     extern bool _webui_macos_wv_minimize(int index);
@@ -12303,7 +12303,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             return false;
 
         if (!_webui.is_wkwebview_main_run) {
-            if (_webui_macos_wv_new(win->num, win->frameless)) {
+            if (_webui_macos_wv_new(win->num, win->frameless, win->resizable)) {
                 if (!_webui.is_webview) {
                     // Let `wait()` use safe main-thread WKWebView loop
                     _webui.is_webview = true;
@@ -12314,7 +12314,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
         else {
 
-            _webui_macos_wv_new_thread_safe(win->num, win->frameless);
+            _webui_macos_wv_new_thread_safe(win->num, win->frameless, win->resizable);
             _webui_sleep(250);
         }
 

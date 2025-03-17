@@ -151,9 +151,9 @@ void _webui_macos_wv_start() {
     }
 }
 
-bool _webui_macos_wv_new(int index, bool frameless) {
+bool _webui_macos_wv_new(int index, bool frameless, bool resizable) {
     #ifdef WEBUI_LOG
-    printf("[ObjC]\t\t\t_webui_macos_wv_new([%d], [%d])\n", index, frameless);
+    printf("[ObjC]\t\t\t_webui_macos_wv_new([%d], [%d], [%d])\n", index, frameless, resizable);
     #endif
 
     if (index < 0 || index >= WEBUI_MAX_IDS) {
@@ -175,9 +175,17 @@ bool _webui_macos_wv_new(int index, bool frameless) {
     NSRect frame = NSMakeRect(0, 0, 800, 600);
 
     // Set window style
-    NSWindowStyleMask windowStyle = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable;
+    NSWindowStyleMask windowStyle;
     if (frameless) {
         windowStyle = NSWindowStyleMaskBorderless;
+        if (resizable) {
+            windowStyle |= NSWindowStyleMaskResizable; // Allows programmatic resizing
+        }
+    } else {
+        windowStyle = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable;
+        if (resizable) {
+            windowStyle |= NSWindowStyleMaskResizable; // Allows user resizing
+        }
     }
 
     NSWindow *window = [[NSWindow alloc] initWithContentRect:frame
@@ -190,8 +198,11 @@ bool _webui_macos_wv_new(int index, bool frameless) {
         #endif
         return false;
     }
+
     if (!frameless) {
         [window setTitle:@"Loading..."];
+    } else {
+        [window setMovableByWindowBackground:YES]; // Allow moving frameless windows
     }
     [window setDelegate:delegate];
 
@@ -212,12 +223,12 @@ bool _webui_macos_wv_new(int index, bool frameless) {
     return true;
 }
 
-void _webui_macos_wv_new_thread_safe(int index, bool frameless) {
+void _webui_macos_wv_new_thread_safe(int index, bool frameless, bool resizable) {
     #ifdef WEBUI_LOG
     printf("[ObjC]\t\t\t_webui_macos_wv_new_thread_safe([%d])\n", index);
     #endif
     dispatch_async(dispatch_get_main_queue(), ^{
-        _webui_macos_wv_new(index, frameless);
+        _webui_macos_wv_new(index, frameless, resizable);
     });
 }
 
