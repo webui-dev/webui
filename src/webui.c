@@ -220,6 +220,9 @@ typedef struct webui_event_inf_t {
     typedef void (*gtk_window_set_title_func)(void *, const char *);
     typedef void (*gtk_window_move_func)(void *, int, int);
     typedef void (*gtk_window_close_func)(void *);
+    typedef void *(*gdk_display_get_default_func)(void);
+    typedef void *(*gdk_display_get_primary_monitor_func)(void *);
+    typedef void (*gdk_monitor_get_geometry_func)(void *, void *);
     typedef void (*gtk_window_resize_func)(void *, int, int);
     typedef void (*gtk_window_set_decorated_func)(void *, int);
     typedef void (*gtk_window_set_resizable_func)(void *, int);
@@ -239,12 +242,22 @@ typedef struct webui_event_inf_t {
     gtk_window_set_title_func gtk_window_set_title = NULL;
     gtk_window_move_func gtk_window_move = NULL;
     gtk_window_close_func gtk_window_close = NULL;
+    gdk_display_get_default_func gdk_display_get_default = NULL;
+    gdk_display_get_primary_monitor_func gdk_display_get_primary_monitor = NULL;
+    gdk_monitor_get_geometry_func gdk_monitor_get_geometry = NULL;
     gtk_window_resize_func gtk_window_resize = NULL;
     gtk_window_set_decorated_func gtk_window_set_decorated = NULL;
     gtk_window_set_resizable_func gtk_window_set_resizable = NULL;
     gtk_window_set_position_func gtk_window_set_position = NULL;
     g_signal_connect_data_func g_signal_connect_data = NULL;
     g_idle_add_func g_idle_add = NULL;
+    // GTK Structs
+    typedef struct {
+        int x;
+        int y;
+        int width;
+        int height;
+    } GdkRectangle;
     // WebKit Symbol Addresses
     typedef void *(*webkit_web_view_new_func)(void);
     typedef void (*webkit_web_view_load_uri_func)(void *, const char *);
@@ -641,6 +654,7 @@ static void _webui_wv_event_closed(void *widget, void *arg);
 static int _webui_wv_exit_schedule(void* arg);
 static bool _webui_wv_maximize(_webui_wv_linux_t* webView);
 static bool _webui_wv_minimize(_webui_wv_linux_t* webView);
+static bool _webui_load_gtk_and_webkit();
 #else
 // macOS
 static void _webui_wv_free(_webui_wv_macos_t* webView);
@@ -999,6 +1013,11 @@ size_t webui_new_window_id(size_t num) {
     _webui_window_t* win = (_webui_window_t* ) _webui_malloc(sizeof(_webui_window_t));
     _webui.wins[num] = win;
 
+    // Mutex Initialisation
+    _webui_mutex_init(&win->mutex_win_exit_now);
+    _webui_mutex_init(&win->mutex_webview_update);
+    _webui_condition_init(&win->condition_webview_update);
+
     // Initialisation
     win->ws_block = _webui.config.ws_block;
     win->num = num;
@@ -1016,10 +1035,8 @@ size_t webui_new_window_id(size_t num) {
     // Default window style
     win->resizable = true;
 
-    // Mutex Initialisation
-    _webui_mutex_init(&win->mutex_win_exit_now);
-    _webui_mutex_init(&win->mutex_webview_update);
-    _webui_condition_init(&win->condition_webview_update);
+    // Calculate center
+    webui_set_center(num);
 
     // Auto bind JavaScript-Bridge Core API Handler
     webui_bind(num, "__webui_core_api__", _webui_bridge_api_handler);
@@ -2894,25 +2911,29 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
     win->y = Y;
     win->position_set = true;
 
-    // Positioning the current window
-    if (!win->webView) {
+    // Check if there is atleast one window (UI) running.
+    if (_webui.ui) {
+        
+        // Positioning the current running window
+        if (!win->webView) {
 
-        // web-browser window
-        if (_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS)) {
-            char script[128];
-            WEBUI_SN_PRINTF_STATIC(script, sizeof(script), "window.moveTo(%u, %u);", X, Y);
-            webui_run(window, script);
+            // web-browser window
+            if (_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS)) {
+                char script[128];
+                WEBUI_SN_PRINTF_STATIC(script, sizeof(script), "window.moveTo(%u, %u);", X, Y);
+                webui_run(window, script);
+            }
         }
-    }
-    else {
+        else {
 
-        // WebView window
-        if (win->webView) {
-            win->webView->x = X;
-            win->webView->y = Y;
-            win->webView->position = true;
-            _webui_webview_update(win);
-        }
+            // WebView window
+            if (win->webView) {
+                win->webView->x = X;
+                win->webView->y = Y;
+                win->webView->position = true;
+                _webui_webview_update(win);
+            }
+        }        
     }
 }
 
@@ -2941,39 +2962,20 @@ void webui_set_center(size_t window) {
     screen_width = (unsigned int)screenRect.size.width;
     screen_height = (unsigned int)screenRect.size.height;
     #elif __linux__
-    if (getenv("WAYLAND_DISPLAY")) {
-        // Wayland environment
-
-        // init_wayland();
-        // screen_width = screen_width_wayland;
-        // screen_height = screen_height_wayland;
-        // cleanup_wayland();
-
-        // Note:
-        // This will make WebUI depend on Wayland dev libraries (libwayland-client-dev).
-        // Let's avoid Wayland to keep WebUI portable as possible.
-
-        #ifdef WEBUI_LOG
-        printf("[User] webui_set_center() -> Wayland is not supported.\n");
-        #endif
-    } else {
-        // X11 environment
-
-        // Display* display_x11 = XOpenDisplay(NULL);
-        // if (display_x11) {
-        //     Screen* screen = DefaultScreenOfDisplay(display_x11);
-        //     screen_width = XWidthOfScreen(screen);
-        //     screen_height = XHeightOfScreen(screen);
-        //     XCloseDisplay(display_x11);
-        // }
-
-        // Note:
-        // This will make WebUI depend on X11 dev libraries (libx11-dev).
-        // Let's avoid X11 to keep WebUI portable as possible.
-
-        #ifdef WEBUI_LOG
-        printf("[User] webui_set_center() -> X11 is not supported.\n");
-        #endif
+    // GTK and Webkit Dynamic Load
+    if (!libgtk || !libwebkit) {
+        if (_webui_load_gtk_and_webkit()) {
+            void* display = gdk_display_get_default();
+            if (display) {
+                void* monitor = gdk_display_get_primary_monitor(display);
+                if (monitor) {
+                    GdkRectangle geometry;
+                    gdk_monitor_get_geometry(monitor, &geometry);
+                    screen_width = (unsigned int)geometry.width;
+                    screen_height = (unsigned int)geometry.height;
+                }
+            }            
+        }
     }
     #endif
 
@@ -11839,15 +11841,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Frameless mode | Resizable mode
         gtk_window_set_decorated(GTK_WINDOW(win->webView->gtk_win), !win->frameless);
         gtk_window_set_resizable(GTK_WINDOW(win->webView->gtk_win), win->resizable);
-
         // Window position
         // Note: The new positioning system it's not GTK's toolkit job anymore.
-        // if ((win->x > 0) && (win->y > 0)) {
-        //     gtk_window_move(win->webView->gtk_win, win->webView->x, win->webView->y);
-        // }
-        // else {
-        //     gtk_window_set_position(win->webView->gtk_wv, 1);
-        // }
+        gtk_window_move(GTK_WINDOW(win->webView->gtk_win), win->webView->x, win->webView->y);
 
         // Events
         g_signal_connect_data(win->webView->gtk_wv, "notify::title", G_CALLBACK(
@@ -11918,25 +11914,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         return 1;
     }
 
-    static bool _webui_wv_show(_webui_window_t* win, char* url) {
-
-        #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_wv_show([%s])\n", url);
-        #endif
-
-        // Linux GTK WebView
-
-        #ifdef WEBUI_DYNAMIC
-        #ifdef WEBUI_LOG
-        printf("[Core]\t\t_webui_wv_show() -> WebUI dynamic version does not support Linux WebView\n");
-        #endif
-        return false;
-        #endif
-
-        if (_webui.is_browser_main_run)
-            return false;
-
-        // Dynamic Load
+    static bool _webui_load_gtk_and_webkit() {
         if (!libgtk || !libwebkit) {
 
             _webui.is_webview = false;
@@ -11947,7 +11925,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libgtk = dlopen(gtk_libs[i], RTLD_LAZY);
                 if (libgtk) {
                     #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_wv_show() -> GTK loaded [%s]\n", 
+                    printf("[Core]\t\t_webui_load_gtk_and_webkit() -> GTK loaded [%s]\n", 
                     gtk_libs[i]);
                     #endif
                     break;
@@ -11965,7 +11943,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libwebkit = dlopen(webkit_libs[i], RTLD_LAZY);
                 if (libwebkit) {
                     #ifdef WEBUI_LOG
-                    printf("[Core]\t\t_webui_wv_show() -> WebKit loaded [%s]\n", 
+                    printf("[Core]\t\t_webui_load_gtk_and_webkit() -> WebKit loaded [%s]\n", 
                     webkit_libs[i]);
                     #endif
                     break;
@@ -12004,11 +11982,17 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libgtk, "gtk_window_move");
             gtk_window_close = (gtk_window_close_func)dlsym(
                 libgtk, "gtk_window_close");
+            gdk_display_get_default = (gdk_display_get_default_func)dlsym(
+                libgtk, "gdk_display_get_default");
+            gdk_display_get_primary_monitor = (gdk_display_get_primary_monitor_func)dlsym(
+                libgtk, "gdk_display_get_primary_monitor");
+            gdk_monitor_get_geometry = (gdk_monitor_get_geometry_func)dlsym(
+                libgtk, "gdk_monitor_get_geometry");
             gtk_window_resize = (gtk_window_resize_func)dlsym(
                 libgtk, "gtk_window_resize");
             gtk_window_set_decorated = (gtk_window_set_decorated_func)dlsym(
                 libgtk, "gtk_window_set_decorated");
-                gtk_window_set_resizable = (gtk_window_set_resizable_func)dlsym(
+            gtk_window_set_resizable = (gtk_window_set_resizable_func)dlsym(
                 libgtk, "gtk_window_set_resizable");
             gtk_window_set_position = (gtk_window_set_position_func)dlsym(
                 libgtk, "gtk_window_set_position");
@@ -12034,13 +12018,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 || !g_timeout_add || !gtk_events_pending || !gtk_container_add
                 || !gtk_window_move || !gtk_window_set_decorated || !gtk_window_set_resizable
                 || !gtk_window_set_position || !gtk_window_resize || !gtk_window_close
+                || !gdk_display_get_default || !gdk_display_get_primary_monitor || !gdk_monitor_get_geometry
                 || !g_idle_add
                 // GTK v4
                 // ...
                 )
             {
                 #ifdef WEBUI_LOG
-                printf("[Core]\t\t[Thread .] _webui_webview_thread() -> GTK symbol addresses failed\n");
+                printf("[Core]\t\t_webui_load_gtk_and_webkit() -> GTK symbol addresses failed\n");
                 #endif
                 _webui_wv_free();
                 return false;
@@ -12049,7 +12034,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             // Check WebView
             if (!webkit_web_view_new || !webkit_web_view_load_uri || !webkit_web_view_get_title) {
                 #ifdef WEBUI_LOG
-                printf("[Core]\t\t[Thread .] _webui_webview_thread() -> WebKit symbol addresses failed\n");
+                printf("[Core]\t\t_webui_load_gtk_and_webkit() -> WebKit symbol addresses failed\n");
                 #endif
                 _webui_wv_free();
                 return false;
@@ -12057,6 +12042,35 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
             // Initialize GTK
             gtk_init(NULL, NULL);
+        }
+
+        // GTK and Webkit already loaded
+        return true;
+    }
+
+    static bool _webui_wv_show(_webui_window_t* win, char* url) {
+
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_wv_show([%s])\n", url);
+        #endif
+
+        // Linux GTK WebView
+
+        #ifdef WEBUI_DYNAMIC
+        #ifdef WEBUI_LOG
+        printf("[Core]\t\t_webui_wv_show() -> WebUI dynamic version does not support Linux WebView\n");
+        #endif
+        return false;
+        #endif
+
+        if (_webui.is_browser_main_run)
+            return false;
+
+        // GTK and Webkit Dynamic Load
+        if (!libgtk || !libwebkit) {
+            if (!_webui_load_gtk_and_webkit()) {
+                return false;
+            }
         }
 
         // Free old WebView
@@ -12332,8 +12346,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         webView->url = url_copy;
         webView->width = (win->width > 0 ? win->width : WEBUI_DEF_WIDTH);
         webView->height = (win->height > 0 ? win->height : WEBUI_DEF_HEIGHT);
-        webView->x = (win->x > 0 ? win->x : 100);
-        webView->y = (win->y > 0 ? win->y : 100);
+        webView->x = (win->x > 0 ? win->x : 0);
+        webView->y = (win->y > 0 ? win->y : 0);
         webView->index = win->num;
         win->webView = webView;
 
