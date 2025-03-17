@@ -341,6 +341,7 @@ typedef struct _webui_window_t {
     size_t runtime;
     bool kiosk_mode;
     bool disable_browser_high_contrast;
+    bool frame_resizable;
     bool hide;
     int width;
     int height;
@@ -1010,6 +1011,9 @@ size_t webui_new_window_id(size_t num) {
     win->width = WEBUI_DEF_WIDTH;
     win->height = WEBUI_DEF_HEIGHT;
 
+    // Default window style
+    win->frame_resizable = true;
+
     // Mutex Initialisation
     _webui_mutex_init(&win->mutex_win_exit_now);
     _webui_mutex_init(&win->mutex_webview_update);
@@ -1092,6 +1096,23 @@ void webui_set_custom_parameters(size_t window, char* params) {
     // Set new
     win->custom_parameters = (char*)_webui_malloc(len);
     WEBUI_STR_COPY_DYN(win->custom_parameters, len, params);
+}
+
+void webui_set_resizable(size_t window, bool status) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_resizable([%zu], [%d])\n", window, status);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    win->frame_resizable = status;
 }
 
 void webui_set_high_contrast(size_t window, bool status) {
@@ -11490,8 +11511,19 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Set window style based on frameless flag
         DWORD style = WS_OVERLAPPEDWINDOW;
         if (win->webview_frameless) {
-            // style = WS_POPUP | WS_VISIBLE; // Frameless mode
-            style = WS_POPUP | WS_THICKFRAME | WS_VISIBLE; // Frameless mode + Resizing
+            // Frameless mode
+            style = WS_POPUP | WS_VISIBLE;
+            if (win->frame_resizable) {
+                // + Resizing
+                style |= WS_THICKFRAME;
+            }
+        } else {
+            // Normal mode
+            style = WS_OVERLAPPEDWINDOW;
+            if (!win->frame_resizable) {
+                // Non-Resizing
+                style = WS_OVERLAPPED | WS_VISIBLE;
+            }
         }
 
         win->webView->hwnd = CreateWindowExA(

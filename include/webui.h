@@ -395,6 +395,17 @@ WEBUI_EXPORT void webui_set_custom_parameters(size_t window, char *params);
 WEBUI_EXPORT void webui_set_high_contrast(size_t window, bool status);
 
 /**
+ * @brief Sets whether the window frame is resizable or fixed. 
+ * Works only on WebView window.
+ *
+ * @param window The window number
+ * @param status True or False
+ *
+ * @example webui_set_resizable(myWindow, true);
+ */
+WEBUI_EXPORT void webui_set_resizable(size_t window, bool status);
+
+/**
  * @brief Get OS high contrast preference.
  *
  * @return Returns True if OS is using high contrast theme
