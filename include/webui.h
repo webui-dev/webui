@@ -107,6 +107,7 @@
     #include <sys/types.h>
     #include <sys/event.h>
     #include <unistd.h>
+    #include <CoreGraphics/CoreGraphics.h>
     #define WEBUI_GET_CURRENT_DIR getcwd
     #define WEBUI_FILE_EXIST      access
     #define WEBUI_POPEN           popen
