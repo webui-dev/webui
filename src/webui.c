@@ -341,7 +341,8 @@ typedef struct _webui_window_t {
     size_t runtime;
     bool kiosk_mode;
     bool disable_browser_high_contrast;
-    bool frame_resizable;
+    bool resizable;
+    bool frameless;
     bool hide;
     int width;
     int height;
@@ -369,7 +370,6 @@ typedef struct _webui_window_t {
     bool allow_webview;
     bool allow_browser;
     bool update_webview;
-    bool webview_frameless;
     webui_mutex_t mutex_webview_update;
     webui_condition_t condition_webview_update;
     #ifdef _WIN32
@@ -1012,7 +1012,7 @@ size_t webui_new_window_id(size_t num) {
     win->height = WEBUI_DEF_HEIGHT;
 
     // Default window style
-    win->frame_resizable = true;
+    win->resizable = true;
 
     // Mutex Initialisation
     _webui_mutex_init(&win->mutex_win_exit_now);
@@ -1112,7 +1112,7 @@ void webui_set_resizable(size_t window, bool status) {
         return;
     _webui_window_t* win = _webui.wins[window];
 
-    win->frame_resizable = status;
+    win->resizable = status;
 }
 
 void webui_set_high_contrast(size_t window, bool status) {
@@ -2554,7 +2554,7 @@ void webui_set_frameless(size_t window, bool status) {
         return;
     _webui_window_t* win = _webui.wins[window];
 
-    win->webview_frameless = status;
+    win->frameless = status;
 }
 
 void webui_set_event_blocking(size_t window, bool status) {
@@ -11510,17 +11510,17 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         // Set window style based on frameless flag
         DWORD style = WS_OVERLAPPEDWINDOW;
-        if (win->webview_frameless) {
+        if (win->frameless) {
             // Frameless mode
             style = WS_POPUP | WS_VISIBLE;
-            if (win->frame_resizable) {
+            if (win->resizable) {
                 // + Resizing
                 style |= WS_THICKFRAME;
             }
         } else {
             // Normal mode
             style = WS_OVERLAPPEDWINDOW;
-            if (!win->frame_resizable) {
+            if (!win->resizable) {
                 // Non-Resizing
                 style = WS_OVERLAPPED | WS_VISIBLE;
             }
@@ -11834,7 +11834,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Window Settings
         gtk_window_set_default_size(win->webView->gtk_win, win->webView->width, win->webView->height);
         gtk_container_add(win->webView->gtk_win, win->webView->gtk_wv);
-        if (win->webview_frameless) {
+        if (win->frameless) {
             // Frameless mode
             gtk_window_set_decorated(GTK_WINDOW(win->webView->gtk_win), 0);
         }
@@ -12300,7 +12300,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             return false;
 
         if (!_webui.is_wkwebview_main_run) {
-            if (_webui_macos_wv_new(win->num, win->webview_frameless)) {
+            if (_webui_macos_wv_new(win->num, win->frameless)) {
                 if (!_webui.is_webview) {
                     // Let `wait()` use safe main-thread WKWebView loop
                     _webui.is_webview = true;
@@ -12311,7 +12311,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
         else {
 
-            _webui_macos_wv_new_thread_safe(win->num, win->webview_frameless);
+            _webui_macos_wv_new_thread_safe(win->num, win->frameless);
             _webui_sleep(250);
         }
 
