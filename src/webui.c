@@ -11318,7 +11318,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     GetWindowPlacement(hwnd, &wp);
                     // Send new positions and dimensions
                     char buffer[512] = {0x00};
-                    WEBUI_SN_PRINTF_STATIC(buffer, sizeof(buffer), "%d,%d,%d,%d",
+                    WEBUI_SN_PRINTF_STATIC(buffer, sizeof(buffer), "%ld,%ld,%ld,%ld",
                     wp.rcNormalPosition.left, wp.rcNormalPosition.top, rect.right, rect.bottom);
                     // Packet Protocol Format:
                     // [...]
