@@ -41,7 +41,7 @@ const char* html =
 "      .button:hover { filter: brightness(120%); }"
 "      #content {"
 "        height: calc(100% - 40px);"
-"        background: linear-gradient(135deg, #8e2de2, #4a00e0);"
+"        background: rgba(0, 0, 0, 0.5);"
 "        display: flex;"
 "        align-items: center;"
 "        justify-content: center;"
@@ -82,12 +82,18 @@ void close_win(webui_event_t* e) {
 }
 
 int main() {
+
 	size_t my_window = webui_new_window();
+
 	webui_bind(my_window, "minimize", minimize);
 	webui_bind(my_window, "maximize", maximize);
 	webui_bind(my_window, "close_win", close_win);
-	webui_set_position(my_window, 100, 100);
+
 	webui_set_frameless(my_window, true);
+	webui_set_transparent(my_window, true);
+	webui_set_resizable(my_window, true);
+	webui_set_center(my_window);
+	
 	webui_show_wv(my_window, html);
 	webui_wait();
 	return 0;
