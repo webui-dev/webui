@@ -69,6 +69,7 @@
 #define WEBUI_CMD_MULTI      0xF6    // Command: Multi packet data
 #define WEBUI_CMD_CHECK_TK   0xF5    // Command: Check validity of a client's token
 #define WEBUI_CMD_WIN_DRAG   0xF4    // Command: Drag window (WebUI `-webkit-app-region: drag;` custom implementation)
+#define WEBUI_CMD_WIN_RESIZED 0xF3   // Command: Update window coordinates for WebUI `-webkit-app-region: drag;` custom implementation
 #define WEBUI_PROTOCOL_SIZE  (8)     // Protocol header size in bytes
 #define WEBUI_PROTOCOL_SIGN  (0)     // Protocol byte position: Signature (1 Byte)
 #define WEBUI_PROTOCOL_TOKEN (1)     // Protocol byte position: Token (4 Bytes)
@@ -11308,6 +11309,25 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 }
                 break;
             }
+            case WM_EXITSIZEMOVE: {
+                if (_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS)) {
+                    RECT rect;
+                    GetClientRect(hwnd, &rect);
+                    WINDOWPLACEMENT wp;
+                    wp.length = sizeof(WINDOWPLACEMENT);
+                    GetWindowPlacement(hwnd, &wp);
+                    // Send new positions and dimensions
+                    char buffer[512] = {0x00};
+                    WEBUI_SN_PRINTF_STATIC(buffer, sizeof(buffer), "%d,%d,%d,%d",
+                    wp.rcNormalPosition.left, wp.rcNormalPosition.top, rect.right, rect.bottom);
+                    // Packet Protocol Format:
+                    // [...]
+                    // [CMD]
+                    // Send the packet
+                    _webui_send_all(win, 0, WEBUI_CMD_WIN_RESIZED, buffer, _webui_strlen(buffer));
+                }
+                break;
+            }            
             case WM_GETMINMAXINFO: {
                 if (win) {
                     if (win->minimum_size_set) {

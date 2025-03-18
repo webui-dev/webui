@@ -65,6 +65,7 @@ class WebuiBridge {
 	#CMD_MULTI: number = 246;
 	#CMD_CHECK_TK: number = 245;
 	#CMD_WINDOW_DRAG: number = 244;
+	#CMD_WINDOW_RESIZED: number = 243;
 	#MULTI_CHUNK_SIZE: number = 65500;
 	#PROTOCOL_SIZE: number = 8; // Protocol header size in bytes
 	#PROTOCOL_SIGN: number = 0; // Protocol byte position: Signature (1 Byte)
@@ -249,6 +250,19 @@ class WebuiBridge {
 	#isTextBasedCommand(cmd: number): Boolean {
 		if (cmd !== this.#CMD_SEND_RAW) return true;
 		return false;
+	}
+	#parseDimensions(input: string): {x: number; y: number; width: number; height: number} {
+		try {
+			const parts = input.split(',');
+			if (parts.length !== 4) return {x: 0, y: 0, width: 0, height: 0};
+			const x = parseFloat(parts[0]),
+				y = parseFloat(parts[1]),
+				width = parseFloat(parts[2]),
+				height = parseFloat(parts[3]);
+			return [x, y, width, height].some(isNaN) ? {x: 0, y: 0, width: 0, height: 0} : {x, y, width, height};
+		} catch {
+			return {x: 0, y: 0, width: 0, height: 0};
+		}
 	}
 	#getDataStrFromPacket(buffer: Uint8Array, startIndex: number): string {
 		let stringBytes: number[] = [];
@@ -742,6 +756,20 @@ class WebuiBridge {
 					const url: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
 					if (this.#log) console.log(`WebUI -> CMD -> Navigation [${url}]`);
 					this.#close(this.#CMD_NAVIGATION, url);
+					break;
+				case this.#CMD_WINDOW_RESIZED:
+					// Protocol
+					// 0: [SIGNATURE]
+					// 1: [TOKEN]
+					// 2: [ID]
+					// 3: [CMD]
+					// 4: [x,y,width,height]
+					const widthAndHeight: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
+					const { x, y, width, height } = this.#parseDimensions(widthAndHeight);
+					// Update drag positions
+					this.#currentWindowX = x;
+					this.#currentWindowY = y;
+					if (this.#log) console.log(`WebUI -> CMD -> Window Resized [x: ${x}, y: ${y}, width: ${width}, height: ${height}]`);
 					break;
 				case this.#CMD_NEW_ID:
 					// Protocol
