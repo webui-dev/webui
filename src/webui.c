@@ -11606,7 +11606,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             0, wvClass, "", style,
             win->webView->x, win->webView->y, 
             win->webView->width, win->webView->height,
-            NULL, NULL, GetModuleHandle(NULL), (LONG_PTR)win
+            NULL, NULL, GetModuleHandle(NULL), (LPVOID)win
         );
 
         if (!win->webView->hwnd) {
