@@ -925,6 +925,16 @@ WEBUI_EXPORT void webui_set_event_blocking(size_t window, bool status);
 WEBUI_EXPORT void webui_set_frameless(size_t window, bool status);
 
 /**
+ * @brief Make a WebView window transparent.
+ *
+ * @param window The window number
+ * @param status The transparency status `true` or `false`
+ *
+ * @example webui_set_transparent(myWindow, true);
+ */
+WEBUI_EXPORT void webui_set_transparent(size_t window, bool status);
+
+/**
  * @brief Get the HTTP mime type of a file.
  *
  * @return Returns the HTTP mime string

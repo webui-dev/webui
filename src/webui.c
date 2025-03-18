@@ -358,6 +358,7 @@ typedef struct _webui_window_t {
     bool disable_browser_high_contrast;
     bool resizable;
     bool frameless;
+    bool transparent;
     bool hide;
     int width;
     int height;
@@ -2576,6 +2577,23 @@ void webui_set_frameless(size_t window, bool status) {
     win->frameless = status;
 }
 
+void webui_set_transparent(size_t window, bool status) {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_set_transparent([%zu], [%d])\n", window, status);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    win->transparent = status;
+}
+
 void webui_set_event_blocking(size_t window, bool status) {
     #ifdef WEBUI_LOG
     printf("[User] webui_set_event_blocking([%zu], [%d])\n", window, status);
@@ -3568,6 +3586,7 @@ void webui_wait(void) {
                 _webui_free_mem((void*) _webui.webview_cacheFolder);
                 _webui.webview_cacheFolder = NULL;
             }
+            CoUninitialize();
             _webui_sleep(750);
         }
     #elif __linux__
@@ -11257,11 +11276,29 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     };
 
     LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+
+        if (uMsg == WM_CREATE) {
+            // Set win ptr
+            CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam;
+            void* userData = pCreate->lpCreateParams;
+            SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)userData);
+        }
+
+        // Get win ptr
         void* ptr = (void*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
         _webui_window_t* win = _webui_dereference_win_ptr(ptr);
 
         switch (uMsg) {
-            case WM_SIZE:
+            case WM_CREATE: {
+                if (win) {
+                    if (win->transparent) {
+                        // New layer for background transparency
+                        SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED); 
+                    }
+                }
+                break;
+            }
+            case WM_SIZE: {
                 if (win) {
                     if (win->webView && win->webView->webviewController) {
                         RECT bounds;
@@ -11270,16 +11307,19 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     }
                 }
                 break;
-            case WM_GETMINMAXINFO:
+            }
+            case WM_GETMINMAXINFO: {
                 if (win) {
                     if (win->minimum_size_set) {
                         LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
                         lpMMI->ptMinTrackSize.x = win->minimum_width;
                         lpMMI->ptMinTrackSize.y = win->minimum_height;
+                        return 0;
                     }
                 }
                 break;
-            case WM_CLOSE:
+            }
+            case WM_CLOSE: {
                 if (win) {
                     // Stop the WebView thread, close the window
                     // and free resources.
@@ -11290,17 +11330,17 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     _webui_wv_event_closed(win);
                 }
                 break;
-            case WM_DESTROY:
-                if (win) {
-                    // Destroy message will be
-                    // sent by `webui_wait()`
-                    // Nothing to do here.
-                }
+            }
+            case WM_DESTROY: {
+                // Destroy message will be
+                // sent by `webui_wait()`
+                // Nothing to do here.
                 break;
-            default:
-                return DefWindowProc(hwnd, uMsg, wParam, lParam);
+            }
         }
-        return 0;
+
+        // Let Win32 window manager provide default processing
+        return DefWindowProc(hwnd, uMsg, wParam, lParam);
     };
 
     // Close Event
@@ -11480,6 +11520,18 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             WEBUI_THREAD_RETURN
         }
 
+        // Win32 Initialization
+        if (FAILED(CoInitializeEx(NULL, COINIT_APARTMENTTHREADED))) {
+            _webui_wv_free(win->webView);
+            win->webView = NULL;
+            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
+            WEBUI_THREAD_RETURN
+        }
+
+        if (win->transparent) {
+            SetEnvironmentVariable("WEBVIEW2_DEFAULT_BACKGROUND_COLOR", "0");
+        }
+
         // WebView Dynamic Library
         if (!_webui.webviewLib) {
             _webui.webviewLib = LoadLibraryA("WebView2Loader.dll");
@@ -11534,7 +11586,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             0, wvClass, "", style,
             win->webView->x, win->webView->y, 
             win->webView->width, win->webView->height,
-            NULL, NULL, GetModuleHandle(NULL), NULL
+            NULL, NULL, GetModuleHandle(NULL), (LONG_PTR)win
         );
 
         if (!win->webView->hwnd) {
@@ -11550,12 +11602,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         win->webView->width = rc.right - rc.left;
         win->webView->height = rc.bottom - rc.top;
 
-        // Transparency
-        // SetWindowLongA(win->webView->hwnd, GWL_EXSTYLE, GetWindowLongA(win->webView->hwnd, GWL_EXSTYLE) | WS_EX_LAYERED);
-        // SetLayeredWindowAttributes(win->webView->hwnd, RGB(0, 255, 0), 0, LWA_COLORKEY); // Green
-
-        SetWindowLongPtr(win->webView->hwnd, GWLP_USERDATA, (LONG_PTR)win);
+        // Show Win32 window
         ShowWindow(win->webView->hwnd, SW_SHOW);
+
+        // WebView Environment
         static CreateCoreWebView2EnvironmentWithOptionsFunc createEnv = NULL;
         createEnv = (CreateCoreWebView2EnvironmentWithOptionsFunc)(void*)GetProcAddress(
             _webui.webviewLib,
