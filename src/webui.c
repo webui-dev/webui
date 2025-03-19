@@ -183,7 +183,7 @@ typedef struct webui_event_inf_t {
     typedef struct _webui_wv_win32_t {
         // Win32 WebView
         ICoreWebView2Environment* webviewEnvironment;
-        ICoreWebView2Controller2* webviewController;
+        ICoreWebView2Controller* webviewController;
         ICoreWebView2* webviewWindow;
         HWND hwnd;
         void* titleChangedHandler;
@@ -11063,7 +11063,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     HRESULT STDMETHODCALLTYPE CreateWebViewControllerHandler_Invoke(
         ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, 
         HRESULT result, 
-        ICoreWebView2Controller2* controller
+        ICoreWebView2Controller* controller
     );
 
     HRESULT STDMETHODCALLTYPE QueryInterfaceEnvironment(
@@ -11188,7 +11188,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     HRESULT STDMETHODCALLTYPE CreateWebViewControllerHandler_Invoke(
         ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, HRESULT result, 
-        ICoreWebView2Controller2* controller) {
+        ICoreWebView2Controller* controller) {
         CreateWebViewControllerHandler* handler = (CreateWebViewControllerHandler*)This;
         _webui_wv_win32_t* webView = handler->webView;
         if (SUCCEEDED(result) && controller != NULL) {
