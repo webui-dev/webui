@@ -187,8 +187,11 @@ class WebuiBridge {
 			// Calculate window position relative to cursor movement
 			const deltaX = e.screenX - this.#initialMouseX;
 			const deltaY = e.screenY - this.#initialMouseY;
-			const newX = this.#initialWindowX + deltaX;
-			const newY = this.#initialWindowY + deltaY;
+			let newX = this.#initialWindowX + deltaX;
+			let newY = this.#initialWindowY + deltaY;
+			// Fix out of screen
+			if (newX < 0) newX = 0;
+			if (newY < 0) newY = 0;
 			// Move the window
 			this.#sendDrag(newX, newY);
 			// Update the last window position
