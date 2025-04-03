@@ -2269,6 +2269,26 @@ void webui_return_string(webui_event_t* e, const char* s) {
     }
 }
 
+size_t webui_get_last_error_number() {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_get_last_error_number()\n");
+    #endif
+
+    // TODO: Add error code.
+    return 0;
+}
+
+const char* webui_get_last_error_message() {
+
+    #ifdef WEBUI_LOG
+    printf("[User] webui_get_last_error_message()\n");
+    #endif
+
+    // TODO: Add error message.
+    return "Unknown error.";
+}
+
 void webui_return_bool(webui_event_t* e, bool b) {
 
     #ifdef WEBUI_LOG

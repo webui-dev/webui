@@ -1192,6 +1192,20 @@ WEBUI_EXPORT void webui_return_string(webui_event_t* e, const char* s);
  */
 WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
 
+/**
+ * @brief Get the last WebUI error code.
+ *
+ * @example int error_num = webui_get_last_error_number();
+ */
+WEBUI_EXPORT size_t webui_get_last_error_number();
+
+/**
+ * @brief Get the last WebUI error message.
+ *
+ * @example const char* error_msg = webui_get_last_error_message();
+ */
+WEBUI_EXPORT const char* webui_get_last_error_message();
+
 // -- Wrapper's Interface -------------
 
 /**
