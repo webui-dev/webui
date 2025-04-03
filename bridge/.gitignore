@@ -3,4 +3,4 @@ node_modules/
 *.json
 
 # Do not track js2c.py output files
-*.js
+webui.js
