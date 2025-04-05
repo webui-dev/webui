@@ -39,6 +39,10 @@ else()
     target_compile_definitions(webui PUBLIC NO_SSL)
 endif()
 
+if (WIN32)
+    target_link_libraries(webui PRIVATE ws2_32 user32 shell32 ole32)
+endif ()
+
 set_target_properties(webui PROPERTIES
     OUTPUT_NAME ${WEBUI_OUT_LIB_NAME}
     PREFIX "")
