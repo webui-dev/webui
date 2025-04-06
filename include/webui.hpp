@@ -367,6 +367,27 @@ namespace webui {
             webui_set_public(webui_window, status);
         }
 
+        // Enable or disable the window frame.
+        void set_frameless(bool status) const {
+            webui_set_frameless(webui_window, status);
+        }
+
+        // Enable or disable window background transparency.
+        // When enabled, the window background will be transparent (if supported).
+        void set_transparent(bool status) const {
+            webui_set_transparent(webui_window, status);
+        }
+
+        // Enable or disable window resizing by user.
+        void set_resizable(bool status) const {
+            webui_set_resizable(webui_window, status);
+        }
+
+        // Set window position to the center of the screen.
+        void set_center() const {
+            webui_set_center(webui_window);
+        }
+
         // Same as `webui_show()`. But start only the web server and return the URL. No window will be shown.
         std::string_view start_server(const std::string_view content) const {
             return std::string_view{webui_start_server(webui_window, content.data())};
