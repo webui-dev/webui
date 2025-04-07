@@ -15,9 +15,11 @@
 */
 
 //@ts-ignore use *.ts import real extension
-import { AsyncFunction, addRefreshableEventListener } from './utils.ts';
+import { AsyncFunction, addRefreshableEventListener, isWebkitAppRegionCompatible } from './utils.ts';
 
 type DataTypes = string | number | boolean | Uint8Array;
+
+const isWebKitAppRegionCompatible: boolean = isWebkitAppRegionCompatible();
 
 class WebuiBridge {
 	// WebUI Settings
@@ -171,16 +173,31 @@ class WebuiBridge {
 			}
 			if (!this.#isDragging) {
 				let target = e.target;
-				while (target) {
-					if (window.getComputedStyle(target).getPropertyValue("-webkit-app-region") === "drag") {
-						this.#initialMouseX = e.screenX;
-						this.#initialMouseY = e.screenY;
-						this.#initialWindowX = this.#currentWindowX;
-						this.#initialWindowY = this.#currentWindowY;
-						this.#isDragging = true;
-						break;
+				if (isWebKitAppRegionCompatible) {
+					while (target) {
+						if (window.getComputedStyle(target).getPropertyValue("-webkit-app-region") === "drag") {
+							this.#initialMouseX = e.screenX;
+							this.#initialMouseY = e.screenY;
+							this.#initialWindowX = this.#currentWindowX;
+							this.#initialWindowY = this.#currentWindowY;
+							this.#isDragging = true;
+							break;
+						}
+						target = target.parentElement;
 					}
-					target = target.parentElement;
+				} else {
+					/* To provide compatibility for browsers without `-webkit-app-region: drag;` */
+					while (target) {
+						if (target.id === "webui-draggable") {
+							this.#initialMouseX = e.screenX;
+							this.#initialMouseY = e.screenY;
+							this.#initialWindowX = this.#currentWindowX;
+							this.#initialWindowY = this.#currentWindowY;
+							this.#isDragging = true;
+							break;
+						}
+						target = target.parentElement;
+					}
 				}
 				return;
 			}

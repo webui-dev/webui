@@ -54,3 +54,7 @@ export function addRefreshableEventListener<K extends keyof HTMLElementEventMap>
  * Async function constructor
  */
 export const AsyncFunction = async function () {}.constructor;
+
+export function isWebkitAppRegionCompatible() {
+	return ('webkitAppRegion' in document.documentElement.style)
+}
