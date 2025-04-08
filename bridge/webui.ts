@@ -172,7 +172,14 @@ class WebuiBridge {
 			if (!this.#isDragging) {
 				let target = e.target;
 				while (target) {
-					if (window.getComputedStyle(target).getPropertyValue("-webkit-app-region") === "drag") {
+					let computedStyle = window.getComputedStyle(target);
+
+					let webkitComputed = computedStyle.getPropertyValue("-webkit-app-region").trim();
+
+					/* Compatibility for platforms without `-webkit-app-region` */
+					let webuiComputed = computedStyle.getPropertyValue("--webui-app-region").trim();
+
+					if (webkitComputed === "drag" || webuiComputed === "drag") {
 						this.#initialMouseX = e.screenX;
 						this.#initialMouseY = e.screenY;
 						this.#initialWindowX = this.#currentWindowX;
