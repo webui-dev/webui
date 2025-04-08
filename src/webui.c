@@ -2846,7 +2846,7 @@ void webui_maximize(size_t window) {
     _webui_window_t* win = _webui.wins[window];
 
     if(win->webView) {
-        _webui_wv_minimize(win->webView);
+        _webui_wv_maximize(win->webView);
     }
 }
 
