@@ -41,7 +41,7 @@ ifeq ($(OS),Windows_NT)
 	GUI_APP := -Wl,-subsystem=windows
 else
 	STATIC_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)-static -lpthread -lm -ldl
-	DYN_BUILD_FLAGS += -lpthread -lm
+	DYN_BUILD_FLAGS += -l$(WEBUI_LIB_NAME) -lpthread -lm -ldl
 	STATIC_OUT := main
 	DYN_OUT := main-dyn
 	ifeq ($(shell uname),Darwin)
@@ -49,13 +49,11 @@ else
 		PLATFORM := macos
 		CC = clang
 		COPY_LIB_CMD := @cp "$(LIB_DIR)/lib$(WEBUI_LIB_NAME).dylib" "lib$(WEBUI_LIB_NAME).dylib"
-		DYN_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)
 		WKWEBKIT_LINK_FLAGS := -framework Cocoa -framework WebKit
 	else
 		# Linux
 		PLATFORM := linux
 		COPY_LIB_CMD := @cp "$(LIB_DIR)/lib$(WEBUI_LIB_NAME).so" "lib$(WEBUI_LIB_NAME).so"
-		DYN_BUILD_FLAGS += -ldl -l$(WEBUI_LIB_NAME)
 		STRIP_OPT := --strip-all
 		ifeq ($(CC),clang)
 			LLVM_OPT := llvm-
