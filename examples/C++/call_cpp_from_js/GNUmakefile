@@ -40,7 +40,7 @@ ifeq ($(OS),Windows_NT)
 	CONSOLE_APP := -Wl,-subsystem=console
 	GUI_APP := -Wl,-subsystem=windows
 else
-	STATIC_BUILD_FLAGS += -lpthread -lm -l$(WEBUI_LIB_NAME)-static
+	STATIC_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)-static -lpthread -lm -ldl
 	DYN_BUILD_FLAGS += -lpthread -lm
 	STATIC_OUT := main
 	DYN_OUT := main-dyn
@@ -55,7 +55,6 @@ else
 		# Linux
 		PLATFORM := linux
 		COPY_LIB_CMD := @cp "$(LIB_DIR)/lib$(WEBUI_LIB_NAME).so" "lib$(WEBUI_LIB_NAME).so"
-		STATIC_BUILD_FLAGS += -ldl
 		DYN_BUILD_FLAGS += -ldl -l$(WEBUI_LIB_NAME)
 		STRIP_OPT := --strip-all
 		ifeq ($(CC),clang)
