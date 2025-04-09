@@ -202,7 +202,6 @@ typedef struct webui_event_inf_t {
         int x;
         int y;
         bool stop;
-        bool devtoolsEnabled;
     } _webui_wv_win32_t;
 #elif __linux__
     void* libgtk;
@@ -11226,7 +11225,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             /* Whether dev tools are enabled or not.
              * When WEBUI_LOG is defined, dev tools are enabled.
              * Otherwise, dev tools are disabled. */
-            settings->lpVtbl->put_AreDevToolsEnabled(settings, webView->devtoolsEnabled);
+            #ifndef WEBUI_LOG
+            settings->lpVtbl->put_AreDevToolsEnabled(settings, FALSE);
+            #endif
+
 
             RECT bounds = {0, 0, webView->width, webView->height};
             webView->webviewController->lpVtbl->put_Bounds(webView->webviewController, bounds);
@@ -11427,14 +11429,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         webView->height = (win->height > 0 ? win->height : WEBUI_DEF_HEIGHT);
         webView->x = (win->x > 0 ? win->x : (int)((GetSystemMetrics(SM_CXSCREEN) - webView->width) / 2));
         webView->y = (win->y > 0 ? win->y : (int)((GetSystemMetrics(SM_CYSCREEN) - webView->height) / 2));
-
-        #ifdef WEBUI_LOG
-        /* Enable devtools if is under debug mode */
-        webView->devtoolsEnabled = true;
-        #else
-        /* Disable devtools if is not under debug mode */
-        webView->devtoolsEnabled = false;
-        #endif
 
         win->webView = webView;
 
