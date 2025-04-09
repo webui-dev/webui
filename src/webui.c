@@ -11221,6 +11221,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             settings->lpVtbl->put_IsScriptEnabled(settings, TRUE);
             settings->lpVtbl->put_AreDefaultScriptDialogsEnabled(settings, TRUE);
             settings->lpVtbl->put_IsWebMessageEnabled(settings, TRUE);
+
+            /* Whether dev tools are enabled or not.
+             * When WEBUI_LOG is defined, dev tools are enabled.
+             * Otherwise, dev tools are disabled. */
+            #ifndef WEBUI_LOG
+            settings->lpVtbl->put_AreDevToolsEnabled(settings, FALSE);
+            #endif
+
+
             RECT bounds = {0, 0, webView->width, webView->height};
             webView->webviewController->lpVtbl->put_Bounds(webView->webviewController, bounds);
             TitleChangedHandler* titleChangedHandler = CreateTitleChangedHandler(webView);
@@ -11420,6 +11429,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         webView->height = (win->height > 0 ? win->height : WEBUI_DEF_HEIGHT);
         webView->x = (win->x > 0 ? win->x : (int)((GetSystemMetrics(SM_CXSCREEN) - webView->width) / 2));
         webView->y = (win->y > 0 ? win->y : (int)((GetSystemMetrics(SM_CYSCREEN) - webView->height) / 2));
+
         win->webView = webView;
 
         // Note: To garantee all Microsoft WebView's operations ownership we should
