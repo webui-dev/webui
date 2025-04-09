@@ -202,6 +202,7 @@ typedef struct webui_event_inf_t {
         int x;
         int y;
         bool stop;
+        bool devtoolsEnabled;
     } _webui_wv_win32_t;
 #elif __linux__
     void* libgtk;
@@ -11221,6 +11222,12 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             settings->lpVtbl->put_IsScriptEnabled(settings, TRUE);
             settings->lpVtbl->put_AreDefaultScriptDialogsEnabled(settings, TRUE);
             settings->lpVtbl->put_IsWebMessageEnabled(settings, TRUE);
+
+            /* Whether dev tools are enabled or not.
+             * When WEBUI_LOG is defined, dev tools are enabled.
+             * Otherwise, dev tools are disabled. */
+            settings->lpVtbl->put_AreDevToolsEnabled(settings, webView->devtoolsEnabled);
+
             RECT bounds = {0, 0, webView->width, webView->height};
             webView->webviewController->lpVtbl->put_Bounds(webView->webviewController, bounds);
             TitleChangedHandler* titleChangedHandler = CreateTitleChangedHandler(webView);
@@ -11420,6 +11427,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         webView->height = (win->height > 0 ? win->height : WEBUI_DEF_HEIGHT);
         webView->x = (win->x > 0 ? win->x : (int)((GetSystemMetrics(SM_CXSCREEN) - webView->width) / 2));
         webView->y = (win->y > 0 ? win->y : (int)((GetSystemMetrics(SM_CYSCREEN) - webView->height) / 2));
+
+        #ifdef WEBUI_LOG
+        /* Enable devtools if is under debug mode */
+        webView->devtoolsEnabled = true;
+        #else
+        /* Disable devtools if is not under debug mode */
+        webView->devtoolsEnabled = false;
+        #endif
+
         win->webView = webView;
 
         // Note: To garantee all Microsoft WebView's operations ownership we should
