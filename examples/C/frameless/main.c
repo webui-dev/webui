@@ -20,6 +20,7 @@ const char* html =
 "        padding: 0 15px;"
 "        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);"
 "        -webkit-app-region: drag;"
+"        --webui-app-region: drag;"
 "        font-family: Arial, sans-serif;"
 "      }"
 "      #title { font-size: 16px; font-weight: bold; }"

@@ -164,7 +164,7 @@ class WebuiBridge {
 		});
 		// Frameless Dragging
 		document.addEventListener("mousemove", (e) => {
-			// WebUI `-webkit-app-region: drag;` custom implementation
+			// WebUI Webkit App-Region Custom Implementation
 			if (e.buttons !== 1) {
 				this.#isDragging = false;
 				return;
@@ -172,7 +172,10 @@ class WebuiBridge {
 			if (!this.#isDragging) {
 				let target = e.target;
 				while (target) {
-					if (window.getComputedStyle(target).getPropertyValue("-webkit-app-region") === "drag") {
+					let computedStyle = window.getComputedStyle(target);
+					let webkitComputed = computedStyle.getPropertyValue("-webkit-app-region").trim();
+					let webuiComputed = computedStyle.getPropertyValue("--webui-app-region").trim();
+					if (webkitComputed === "drag" || webuiComputed === "drag") {
 						this.#initialMouseX = e.screenX;
 						this.#initialMouseY = e.screenY;
 						this.#initialWindowX = this.#currentWindowX;
