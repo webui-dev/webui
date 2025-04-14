@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project name
-project(WebUILibrary)
+project(WebUILibrary 
+  VERSION 2.5.0
+  DESCRIPTION "Use any web browser or WebView as GUI, with your preferred language in the backend and modern web technologies in the frontend, all in a lightweight portable library."
+  HOMEPAGE_URL "https://webui.me/")
 
 # Set C & C++ standard
 set(CMAKE_CXX_STANDARD 17)
