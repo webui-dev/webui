@@ -3,9 +3,11 @@ cmake_minimum_required(VERSION 3.10)
 # Project name
 project(WebUILibrary)
 
-# Set C++ standard
+# Set C & C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Variables for library names, source files, etc.
 set(WEBUI_DEFAULT_OUT_LIB_NAME "webui-2")
