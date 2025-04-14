@@ -54,7 +54,8 @@ install(FILES include/webui.h include/webui.hpp DESTINATION include)
 install(TARGETS webui
     EXPORT webui
     ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib)
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin)
 
 install(EXPORT webui
     FILE webui-config.cmake
