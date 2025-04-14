@@ -8,14 +8,21 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Variables for library names, source files, etc.
-set(WEBUI_OUT_LIB_NAME "webui-2")
+set(WEBUI_DEFAULT_OUT_LIB_NAME "webui-2")
 
 # Conditional compilation for TLS
 option(WEBUI_USE_TLS "Enable TLS support" OFF)
 if(WEBUI_USE_TLS)
   find_package(OpenSSL REQUIRED)
-  set(WEBUI_OUT_LIB_NAME "webui-2-secure")
+  set(WEBUI_DEFAULT_OUT_LIB_NAME "webui-2-secure")
 endif()
+
+if(NOT BUILD_SHARED_LIBS)
+  set(WEBUI_DEFAULT_OUT_LIB_NAME "${WEBUI_DEFAULT_OUT_LIB_NAME}-static")
+endif()
+
+# Output library name
+set(WEBUI_OUT_LIB_NAME "${WEBUI_DEFAULT_OUT_LIB_NAME}" CACHE STRING "Name of the output library")
 
 # Source files (already filled)
 set(SOURCE_FILES
@@ -44,8 +51,7 @@ if (WIN32)
 endif ()
 
 set_target_properties(webui PROPERTIES
-    OUTPUT_NAME ${WEBUI_OUT_LIB_NAME}
-    PREFIX "")
+    OUTPUT_NAME ${WEBUI_OUT_LIB_NAME})
 
 # Install headers
 install(FILES include/webui.h include/webui.hpp DESTINATION include)
