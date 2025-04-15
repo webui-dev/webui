@@ -45,7 +45,7 @@ endif()
 add_library(webui ${SOURCE_FILES})
 target_include_directories(webui PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 target_compile_definitions(webui PUBLIC NO_CACHING NO_CGI USE_WEBSOCKET 
-    $<$<CONFIG:Debug>:WEBUI_LOG> $<$<CONFIG:Release>:NDEBUG> $<$<CONFIG:MinSizeRel>:NDEBUG>)
+    "$<$<CONFIG:Debug>:WEBUI_LOG>" "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>")
 
 if (BUILD_SHARED_LIBS AND WIN32)
     target_compile_definitions(webui PRIVATE CIVETWEB_DLL_EXPORTS PUBLIC CIVETWEB_DLL_IMPORTS)
