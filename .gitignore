@@ -133,3 +133,7 @@ CMakeUserPresets.json
 **/conan-*
 **/cmake-build-*
 **/deactivate_conanbuildenv*
+
+# vcpkg
+vcpkg-manifest-install.log
+vcpkg_installed/
