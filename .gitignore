@@ -125,4 +125,15 @@ Thumbs.db
 **/cmake_install.cmake
 **/CMakeCache.txt
 **/CMakeFiles/
+CMakeUserPresets.json
 .zig-cache
+
+# Conan
+**/compressor
+**/conan-*
+**/cmake-build-*
+**/deactivate_conanbuildenv*
+
+# vcpkg
+vcpkg-manifest-install.log
+vcpkg_installed/
