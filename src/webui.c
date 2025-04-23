@@ -1975,7 +1975,7 @@ const char* webui_get_string_at(webui_event_t* e, size_t index) {
         return NULL;
 
     if (event_inf->event_data[index] != NULL) {
-        size_t len = _event_inf->event_size[index];
+        size_t len = event_inf->event_size[index];
         if (len > 0 && len <= WEBUI_MAX_BUF)
             return (const char*)event_inf->event_data[index];
     }
