@@ -6105,7 +6105,10 @@ static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
     }
     else if (browser == Brave) {
         executables[0] = "brave";
-        executables[1] = NULL;
+        executables[1] = "brave-browser-stable";
+        executables[2] = "brave-browser-nightly";
+        executables[3] = "brave-browser-beta";
+        executables[4] = NULL;
     }
     else if (browser == Firefox) {
         executables[0] = "firefox";
@@ -6576,6 +6579,21 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
         if (_webui_cmd_sync(win, "brave --version", false) == 0) {
 
             if(win) WEBUI_SN_PRINTF_DYN(win->browser_path, WEBUI_MAX_PATH, "brave");
+            BraveExist = true;
+            return true;
+        } else if (_webui_cmd_sync(win, "brave-browser-stable --version", false) == 0) {
+
+            if(win) WEBUI_SN_PRINTF_DYN(win->browser_path, WEBUI_MAX_PATH, "brave-browser-stable");
+            BraveExist = true;
+            return true;
+        } else if (_webui_cmd_sync(win, "brave-browser-nightly --version", false) == 0) {
+
+            if(win) WEBUI_SN_PRINTF_DYN(win->browser_path, WEBUI_MAX_PATH, "brave-browser-nightly");
+            BraveExist = true;
+            return true;
+        } else if (_webui_cmd_sync(win, "brave-browser-beta --version", false) == 0) {
+
+            if(win) WEBUI_SN_PRINTF_DYN(win->browser_path, WEBUI_MAX_PATH, "brave-browser-beta");
             BraveExist = true;
             return true;
         } else
