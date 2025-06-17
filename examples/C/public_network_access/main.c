@@ -23,10 +23,18 @@ void public_window_events(webui_event_t* e) {
 
 void private_window_events(webui_event_t* e) {
 	if (e->event_type == WEBUI_EVENT_CONNECTED) {
+		
+		// Get port of public window
+		size_t port = webui_get_port(public_window);
+
 		// Get URL of public window
-		const char* public_win_url = webui_get_url(public_window);
+		const char* url = webui_get_url(public_window);
+
+		// JavaScript
 		char javascript[1024];
-		sprintf(javascript, "document.getElementById('urlSpan').innerHTML = '%s';", public_win_url);
+		sprintf(javascript, "document.getElementById('urlSpan1').innerHTML = 'http://localhost:%zu';", port);
+		webui_run(private_window, javascript);
+		sprintf(javascript, "document.getElementById('urlSpan2').innerHTML = '%s';", url);
 		webui_run(private_window, javascript);
 	}
 }
@@ -70,13 +78,14 @@ int main() {
 		"  <body>"
 		"    <h1>WebUI - Public Network Access Example</h1>"
 		"    <br>"
-		"    The second public window is configured to be accessible from <br>"
-		"    any device in the public network. <br>"
+		"    The public window is configured to be accessible from <br>"
+		"    any device in the network. <br>"
 		"    <br>"
-		"    Second public window link: <br>"
-		"    <h1 id=\"urlSpan\" style=\"color:#c9913d\">...</h1>"
-		"    Second public window events: <br>"
-		"    <textarea id=\"Logs\" rows=\"4\" cols=\"50\" style=\"width:80%\"></textarea>"
+		"    Public window links: <br>"
+		"    <h1 id=\"urlSpan1\" style=\"color:#c9913d\">...</h1>"
+		"    <h1 id=\"urlSpan2\" style=\"color:#c9913d\">...</h1>"
+		"    Public window events: <br>"
+		"    <textarea id=\"Logs\" rows=\"4\" cols=\"50\" style=\"width:60%\"></textarea>"
 		"    <br>"
 		"    <button id=\"Exit\">Exit</button>"
 		"  </body>"
