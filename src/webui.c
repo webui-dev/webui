@@ -326,6 +326,7 @@ typedef struct _webui_window_t {
     bool connected; // Fast check
     size_t server_port;
     char* url;
+    char* public_url;
     const char* html;
     char* server_root_path;
     #ifdef _WIN32
@@ -632,6 +633,7 @@ static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client,
 static int _webui_external_file_handler(_webui_window_t* win, struct mg_connection* client, size_t client_id);
 static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* client, char* index, size_t client_id);
 static void _webui_webview_update(_webui_window_t* win);
+static const char* _webui_get_local_ip(void);
 // WebView
 #ifdef _WIN32
 // Microsoft Windows
@@ -3157,13 +3159,24 @@ const char* webui_get_url(size_t window) {
         return NULL;
     _webui_window_t* win = _webui.wins[window];
 
-    // Check if server is started
+    // Check if local server is started
     if (_webui_is_empty(win->url)) {
-        // Start server
+        // Start local server
+        bool backup = _webui.config.show_wait_connection;
+        _webui.config.show_wait_connection = true;
         webui_show_browser(window, "<html><head><script src=\"webui.js\"></script></head></html>", NoBrowser);
+        _webui.config.show_wait_connection = backup;
     }
 
-    return (const char*) win->url;
+    // Get local IP of first NIC
+    const char *ip = _webui_get_local_ip();
+    if (win->public_url != NULL)
+        _webui_free_mem((void*)win->public_url);
+    win->public_url = (char*)_webui_malloc(64); // [http][ip][port]
+    WEBUI_SN_PRINTF_DYN(win->public_url, 64, WEBUI_HTTP_PROTOCOL "%s:%zu", ip, win->server_port);
+    _webui_free_mem((void*)ip);
+
+    return (const char*) win->public_url;
 }
 
 void webui_set_public(size_t window, bool status) {
@@ -7901,6 +7914,121 @@ static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key
     return true;
 }
 #endif
+
+static const char* _webui_get_local_ip(void) {
+    char *buf = malloc(64);
+    if (!buf) return NULL;
+    #ifdef _WIN32
+    WSADATA wsa;
+    if (WSAStartup(MAKEWORD(2,2), &wsa) != 0) {
+        free(buf);
+        return NULL;
+    }
+    buf[0] = '\0';
+    // Approach 1: gethostname + getaddrinfo
+    char hostname[256] = {0};
+    if (gethostname(hostname, sizeof(hostname)) == 0) {
+        struct addrinfo hints = {0}, *res = NULL;
+        hints.ai_family = AF_INET;
+        if (getaddrinfo(hostname, NULL, &hints, &res) == 0) {
+            char first_ip[INET_ADDRSTRLEN] = {0};
+            for (struct addrinfo *p = res; p; p = p->ai_next) {
+                if (p->ai_family == AF_INET) {
+                    struct sockaddr_in *sa = (struct sockaddr_in*)p->ai_addr;
+                    char ip[INET_ADDRSTRLEN];
+                    if (inet_ntop(AF_INET, &sa->sin_addr, ip, sizeof(ip))) {
+                        if (strcmp(ip, "127.0.0.1")) {
+                            strncpy(buf, ip, 63);
+                            buf[63] = '\0';
+                            break;
+                        }
+                        if (!first_ip[0]) {
+                            strncpy(first_ip, ip, sizeof(first_ip)-1);
+                        }
+                    }
+                }
+            }
+            if (!buf[0] && first_ip[0]) {
+                strncpy(buf, first_ip, 63);
+                buf[63] = '\0';
+            }
+            freeaddrinfo(res);
+        }
+    }
+    if (buf[0]) {
+        WSACleanup();
+        return buf;
+    }
+    // Approach 2: WSAIoctl SIO_GET_INTERFACE_LIST
+    SOCKET s = socket(AF_INET, SOCK_DGRAM, 0);
+    if (s != INVALID_SOCKET) {
+        #define MAX_IFACES 32
+        INTERFACE_INFO ifaces[MAX_IFACES];
+        DWORD retlen;
+        if (!WSAIoctl(s, SIO_GET_INTERFACE_LIST, NULL, 0,
+                      ifaces, sizeof(ifaces), &retlen, NULL, NULL)) {
+            int n = retlen / sizeof(INTERFACE_INFO);
+            char first_ip[INET_ADDRSTRLEN] = {0};
+            for (int i = 0; i < n; i++) {
+                struct sockaddr_in *sa = (struct sockaddr_in*)&ifaces[i].iiAddress;
+                char ip[INET_ADDRSTRLEN];
+                if (inet_ntop(AF_INET, &sa->sin_addr, ip, sizeof(ip))) {
+                    if (!strcmp(ip, "0.0.0.0")) continue;
+                    if (strcmp(ip, "127.0.0.1")) {
+                        strncpy(buf, ip, 63);
+                        buf[63] = '\0';
+                        break;
+                    }
+                    if (!first_ip[0]) {
+                        strncpy(first_ip, ip, sizeof(first_ip)-1);
+                    }
+                }
+            }
+            if (!buf[0] && first_ip[0]) {
+                strncpy(buf, first_ip, 63);
+                buf[63] = '\0';
+            }
+        }
+        closesocket(s);
+    }
+    WSACleanup();
+    if (!buf[0]) {
+        free(buf);
+        return NULL;
+    }
+    return buf;
+    #else
+    struct ifaddrs *ifaddr = NULL, *ifa;
+    if (getifaddrs(&ifaddr) == -1) {
+        free(buf);
+        return NULL;
+    }
+    // first non-loopback IPv4
+    for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET &&
+            (ifa->ifa_flags & IFF_UP) && !(ifa->ifa_flags & IFF_LOOPBACK)) {
+            struct sockaddr_in *sa = (struct sockaddr_in*)ifa->ifa_addr;
+            if (inet_ntop(AF_INET, &sa->sin_addr, buf, 64)) {
+                freeifaddrs(ifaddr);
+                return buf;
+            }
+        }
+    }
+    // fallback first IPv4
+    for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET) {
+            struct sockaddr_in *sa = (struct sockaddr_in*)ifa->ifa_addr;
+            if (inet_ntop(AF_INET, &sa->sin_addr, buf, 64)) {
+                freeifaddrs(ifaddr);
+                return buf;
+            }
+        }
+    }
+    freeifaddrs(ifaddr);
+    free(buf);
+    return NULL;
+    #endif
+}
 
 static bool _webui_show_window(_webui_window_t* win, struct mg_connection* client, const char* content, int type, size_t browser) {
 
