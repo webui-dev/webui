@@ -111,6 +111,9 @@
     #include <sys/event.h>
     #include <unistd.h>
     #include <CoreGraphics/CoreGraphics.h>
+    #include <ifaddrs.h>
+    #include <arpa/inet.h>
+    #include <net/if.h>
     #define WEBUI_GET_CURRENT_DIR getcwd
     #define WEBUI_FILE_EXIST      access
     #define WEBUI_POPEN           popen
