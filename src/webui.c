@@ -3170,6 +3170,8 @@ const char* webui_get_url(size_t window) {
 
     // Get local IP of first NIC
     const char *ip = _webui_get_local_ip();
+    if (ip == NULL)
+        ip = "127.0.0.1";
     if (win->public_url != NULL)
         _webui_free_mem((void*)win->public_url);
     win->public_url = (char*)_webui_malloc(64); // [http][ip][port]

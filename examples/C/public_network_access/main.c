@@ -114,6 +114,7 @@ int main() {
 	// Public Window
 	webui_set_public(public_window, true); // Make URL accessible from public networks
 	webui_bind(public_window, "", public_window_events); // Bind all events
+	webui_set_port(public_window, 9000); // Custom port
 	webui_show_browser(public_window, public_html, NoBrowser); // Set public window HTML
 
 	// Private Window
