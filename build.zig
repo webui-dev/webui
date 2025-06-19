@@ -23,6 +23,7 @@ pub fn build(b: *Build) !void {
 
     const is_dynamic = b.option(bool, "dynamic", "build the dynamic library") orelse false;
     const enable_tls = b.option(bool, "enable-tls", "enable TLS support") orelse false;
+    const enable_webui_log = b.option(bool, "enable-webui-log", "Enable WebUI log output") orelse false;
     const verbose = b.option(std.log.Level, "verbose", "set verbose output") orelse .warn;
     global_log_level = verbose;
     // TODO: Support list of dependencies once support is limited to >0.13.0
@@ -52,7 +53,7 @@ pub fn build(b: *Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    try addLinkerFlags(b, webui, enable_tls, debug_dependencies);
+    try addLinkerFlags(b, webui, enable_tls, debug_dependencies, enable_webui_log);
 
     b.installArtifact(webui);
 
@@ -64,6 +65,7 @@ fn addLinkerFlags(
     webui: *Compile,
     enable_tls: bool,
     debug_dependencies: DebugDependencies,
+    enable_webui_log: bool,
 ) !void {
     const webui_target = webui.rootModuleTarget();
     const is_windows = webui_target.os.tag == .windows;
@@ -80,7 +82,7 @@ fn addLinkerFlags(
         "-Wno-error=date-time",
     };
 
-    if (debug) {
+    if (debug and enable_webui_log) {
         webui.root_module.addCMacro("WEBUI_LOG", "");
     }
     webui.addCSourceFile(.{
