@@ -2668,87 +2668,53 @@ size_t webui_get_child_process_id(size_t window) {
         return 0;
     _webui_window_t* win = _webui.wins[window];
 
-    #ifdef _WIN32
-    DWORD childProcessId = 0;
-    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (hSnapshot != INVALID_HANDLE_VALUE) {
-        PROCESSENTRY32 pe32;
-        pe32.dwSize = sizeof(PROCESSENTRY32);
-        if (Process32First(hSnapshot,&pe32)) {
-            do {
-                if (pe32.th32ParentProcessID == win->process_id) {
-                    childProcessId = pe32.th32ProcessID;
-                }
-            } while(Process32Next(hSnapshot,&pe32));
-        }
-        CloseHandle(hSnapshot);
-    }
-    return childProcessId;
-    #elif __linux__
-    DIR * dir;
-    struct dirent* entry;
-    pid_t lastChildPid = (pid_t) win->process_id;
-    dir = opendir("/proc");
-    if (!dir)
-        return win->process_id;
-    while((entry = readdir(dir)) != NULL) {
-        // Ensure we're looking at a process directory (directories that are just
-        // numbers)
-        if (entry->d_type == DT_DIR && strspn(entry->d_name, "0123456789") == _webui_strlen(entry->d_name)) {
-            char statFilepath[1024];
-            WEBUI_SN_PRINTF_STATIC(statFilepath, sizeof(statFilepath), "/proc/%s/stat", entry->d_name);
-            FILE * f;
-            WEBUI_FILE_OPEN(f, statFilepath, "r");
-            if (f) {
-                pid_t pid, ppid;
-                char comm[1024];
-                char state;
-                // Extract data from the stat file;fields are space-delimited
-                if (fscanf(f, "%d %s %c %d",&pid, comm,&state,&ppid) == 4) {
-                    if ((intmax_t) ppid == (intmax_t) win->process_id) {
-                        // Convert directory name (string) to integer PID
-                        lastChildPid = atoi(entry->d_name);
-                    }
-                }
-                fclose(f);
+    // Get PID
+    if (_webui.is_webview) {
+        // WebView Mode
+        #if defined(_WIN32)
+        return (size_t)GetCurrentProcessId();
+        #else
+        return (size_t)getpid();
+        #endif
+    } else {
+        // Web Browser Mode
+        // Filter process by WebUI's web server URL in CLI
+        char cmd[1024] = {0};
+        FILE* fp;
+        #if defined(_WIN32)
+        #define popen  _popen
+        #define pclose _pclose
+        snprintf(
+            cmd, sizeof(cmd),
+            "wmic process get ProcessId,CommandLine /FORMAT:CSV | findstr /c:\"%s\"",
+            win->url
+        );
+        fp = popen(cmd, "r");
+        #else
+        snprintf(cmd, sizeof(cmd), "pgrep -f \"%s\"", win->url);
+        fp = popen(cmd, "r");
+        #endif
+        if (!fp) return 0;
+        char line[4096] = {0};
+        while (fgets(line, sizeof(line), fp)) {
+            int pid = 0;
+            #if defined(_WIN32)
+            char* last_comma = strrchr(line, ',');
+            if (last_comma) {
+                pid = atoi(last_comma + 1);
+            }
+            #else
+            pid = atoi(line);
+            #endif
+            if (pid > 0) {
+                pclose(fp);
+                return pid;
             }
         }
+        pclose(fp);
     }
-    closedir(dir);
-    return lastChildPid;
-    #else
-    pid_t lastChildPid = -1;
-    // Get the size required to hold all process information
-    int mib[4] = {
-        CTL_KERN,
-        KERN_PROC,
-        KERN_PROC_ALL,
-        0
-    };
-    size_t size;
-    if (sysctl(mib, 3, NULL,&size, NULL, 0) < 0) {
-        return win->process_id;
-    }
-    // Allocate memory and get all process information
-    struct kinfo_proc * procList = (struct kinfo_proc * ) malloc(size);
-    if (!procList) {
-        return win->process_id;
-    }
-    if (sysctl(mib, 3, procList,&size, NULL, 0) < 0) {
-        free(procList);
-        return win->process_id;
-    }
-    // Calculate the number of processes from the returned data
-    int procCount = size / sizeof(struct kinfo_proc);
-    // Search for the last child process
-    for (int i = 0; i < procCount; i++) {
-        if ((intmax_t) procList[i].kp_eproc.e_ppid == (intmax_t) win->process_id) {
-            lastChildPid = procList[i].kp_proc.p_pid;
-        }
-    }
-    free(procList);
-    return (size_t) lastChildPid;
-    #endif
+
+    return 0;
 }
 
 void* webui_win32_get_hwnd(size_t window) {
