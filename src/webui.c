@@ -106,6 +106,7 @@
 #define WEBUI_PROFILE_NAME   "WebUI" // Default browser profile name (Used only for Firefox)
 #define WEBUI_COOKIES_LEN    (32)    // Authentification cookies len
 #define WEBUI_COOKIES_BUF    (64)    // Authentification cookies buffer size
+#define WEBUI_NATIVE_BROWSER (99)    // Internal ID used to avoid terminating the user's native browser on exit
 
 #ifdef WEBUI_TLS
 #define WEBUI_SECURE         "TLS-Encryption"
@@ -371,7 +372,6 @@ typedef struct _webui_window_t {
     int x;
     int y;
     bool position_set;
-    size_t process_id;
     const void*(*files_handler)(const char* filename, int* length);
     const void*(*files_handler_window)(size_t window, const char* filename, int* length);
     const void* file_handler_async_response;
@@ -634,6 +634,7 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
 static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* client, char* index, size_t client_id);
 static void _webui_webview_update(_webui_window_t* win);
 static const char* _webui_get_local_ip(void);
+static size_t _webui_get_child_process_id(_webui_window_t* win);
 // WebView
 #ifdef _WIN32
 // Microsoft Windows
@@ -2344,7 +2345,11 @@ size_t webui_get_parent_process_id(size_t window) {
         return 0;
     _webui_window_t* win = _webui.wins[window];
 
-    return win->process_id;
+    #if defined(_WIN32)
+    return (size_t)GetCurrentProcessId();
+    #else
+    return (size_t)getpid();
+    #endif
 }
 
 const char* webui_get_mime_type(const char* file) {
@@ -2668,53 +2673,7 @@ size_t webui_get_child_process_id(size_t window) {
         return 0;
     _webui_window_t* win = _webui.wins[window];
 
-    // Get PID
-    if (_webui.is_webview) {
-        // WebView Mode
-        #if defined(_WIN32)
-        return (size_t)GetCurrentProcessId();
-        #else
-        return (size_t)getpid();
-        #endif
-    } else {
-        // Web Browser Mode
-        // Filter process by WebUI's web server URL in CLI
-        char cmd[1024] = {0};
-        FILE* fp;
-        #if defined(_WIN32)
-        #define popen  _popen
-        #define pclose _pclose
-        snprintf(
-            cmd, sizeof(cmd),
-            "wmic process get ProcessId,CommandLine /FORMAT:CSV | findstr /c:\"%s\"",
-            win->url
-        );
-        fp = popen(cmd, "r");
-        #else
-        snprintf(cmd, sizeof(cmd), "pgrep -f \"%s\"", win->url);
-        fp = popen(cmd, "r");
-        #endif
-        if (!fp) return 0;
-        char line[4096] = {0};
-        while (fgets(line, sizeof(line), fp)) {
-            int pid = 0;
-            #if defined(_WIN32)
-            char* last_comma = strrchr(line, ',');
-            if (last_comma) {
-                pid = atoi(last_comma + 1);
-            }
-            #else
-            pid = atoi(line);
-            #endif
-            if (pid > 0) {
-                pclose(fp);
-                return pid;
-            }
-        }
-        pclose(fp);
-    }
-
-    return 0;
+    return _webui_get_child_process_id(win);
 }
 
 void* webui_win32_get_hwnd(size_t window) {
@@ -2739,7 +2698,7 @@ void* webui_win32_get_hwnd(size_t window) {
         }
     } else {
         // Web Browser Window
-        size_t child_pid = webui_get_child_process_id(window);
+        size_t child_pid = _webui_get_child_process_id(win);
         if (child_pid == 0) {
             return NULL;
         }
@@ -7452,6 +7411,58 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     return true;
 }
 
+static size_t _webui_get_child_process_id(_webui_window_t* win) {
+    if (win) {
+        // Get PID
+        if (_webui.is_webview) {
+            // WebView Mode
+            #if defined(_WIN32)
+            return (size_t)GetCurrentProcessId();
+            #else
+            return (size_t)getpid();
+            #endif
+        } else {
+            // Web Browser Mode
+            // Filter process by WebUI's web server URL in process CLI
+            char cmd[1024] = {0};
+            FILE* fp;
+            #if defined(_WIN32)
+            #define popen  _popen
+            #define pclose _pclose
+            snprintf(
+                cmd, sizeof(cmd),
+                "wmic process get ProcessId,CommandLine /FORMAT:CSV | findstr /c:\"%s\"",
+                win->url
+            );
+            fp = popen(cmd, "r");
+            #else
+            snprintf(cmd, sizeof(cmd), "pgrep -f \"%s\"", win->url);
+            fp = popen(cmd, "r");
+            #endif
+            if (!fp) return 0;
+            char line[4096] = {0};
+            while (fgets(line, sizeof(line), fp)) {
+                int pid = 0;
+                #if defined(_WIN32)
+                char* last_comma = strrchr(line, ',');
+                if (last_comma) {
+                    pid = atoi(last_comma + 1);
+                }
+                #else
+                pid = atoi(line);
+                #endif
+                if (pid > 0) {
+                    pclose(fp);
+                    return (size_t)pid;
+                }
+            }
+            pclose(fp);
+        }
+    }
+
+    return 0;
+}
+
 static bool _webui_is_process_running(const char* process_name) {
 
     #ifdef WEBUI_LOG
@@ -8192,6 +8203,8 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
                             printf("[Core]\t\t_webui_show_window() -> Native browser succeeded\n");
                             #endif
                             runBrowser = true;
+                            // To avoid terminating the user's native browser on exit
+                            _webui.current_browser = WEBUI_NATIVE_BROWSER;
                         }
                         else {
                             #ifdef WEBUI_LOG
@@ -9745,6 +9758,16 @@ static WEBUI_THREAD_SERVER_START {
 
     _webui_mutex_is_connected(win, WEBUI_MUTEX_SET_FALSE);
 
+    // Kill Process
+    #ifndef WEBUI_LOG
+    if (!_webui.is_webview) {
+        if (_webui.current_browser != WEBUI_NATIVE_BROWSER) {
+            // Terminating the web browser window process
+            _webui_kill_pid(_webui_get_child_process_id(win));
+        }
+    }
+    #endif
+
     // Clean WebView
     if (win->webView) {
         win->webView->stop = true;
@@ -9757,10 +9780,6 @@ static WEBUI_THREAD_SERVER_START {
     win->server_port = 0;
     _webui_free_mem((void*)server_port);
     // _webui_client_cookies_free_all(win);
-
-    // Kill Process
-    // _webui_kill_pid(win->process_id);
-    // win->process_id = 0;
 
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_server_thread([%zu]) -> Server stopped.\n", win->num);
@@ -10079,20 +10098,22 @@ static bool _webui_connection_get_id(_webui_window_t* win, struct mg_connection*
     #endif
 
     // Find a ws client
-    _webui_mutex_lock(&_webui.mutex_client);
-    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-        if (_webui.clients[i] == client) {
-            *connection_id = i;
-            _webui_mutex_unlock(&_webui.mutex_client);
-            return true;
+    if (client) {
+        _webui_mutex_lock(&_webui.mutex_client);
+        for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+            if (_webui.clients[i] == client) {
+                *connection_id = i;
+                _webui_mutex_unlock(&_webui.mutex_client);
+                return true;
+            }
         }
+        _webui_mutex_unlock(&_webui.mutex_client);
     }
 
     // Client not found
     #ifdef WEBUI_LOG
     printf("[Core]\t\t_webui_connection_get_id() -> Client not found\n");
     #endif
-    _webui_mutex_unlock(&_webui.mutex_client);
     return false;
 }
 
@@ -11100,10 +11121,6 @@ static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show) {
         // CreateProcess failed
         _webui_free_mem((void*)wcmd);
         return -1;
-    }
-
-    if (win) {
-        win->process_id = (size_t)pi.dwProcessId;
     }
     
     SetFocus(pi.hProcess);
