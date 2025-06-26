@@ -828,8 +828,7 @@ WEBUI_EXPORT void webui_delete_all_profiles(void);
 WEBUI_EXPORT void webui_delete_profile(size_t window);
 
 /**
- * @brief Get the ID of the parent process (The web browser may re-create
- * another new process).
+ * @brief Get the parent process ID, which refers to the current backend application process.
  *
  * @param window The window number
  *
@@ -840,7 +839,10 @@ WEBUI_EXPORT void webui_delete_profile(size_t window);
 WEBUI_EXPORT size_t webui_get_parent_process_id(size_t window);
 
 /**
- * @brief Get the ID of the last child process.
+ * @brief Get the child process ID created by the parent, which refers to the web browser window.
+ * 
+ * Note: In WebView mode, this will return the parent process ID because the backend and the
+ * WebView window run in the same process.
  *
  * @param window The window number
  *
