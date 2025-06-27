@@ -5214,13 +5214,13 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* cli
                 #ifdef _WIN32
                 WEBUI_SN_PRINTF_DYN(
                     cmd, bf_len,
-                    "Set NO_COLOR=1&Set DENO_NO_UPDATE_CHECK=1&deno run --quiet --allow-all --unstable-ffi --allow-ffi \"%s\" \"%s\"",
+                    "Set NO_COLOR=1&Set DENO_NO_UPDATE_CHECK=1&deno run --quiet --allow-read --allow-write --allow-net --allow-env --allow-ffi \"%s\" \"%s\"",
                     full_path, query
                 );
                 #else
                 WEBUI_SN_PRINTF_DYN(
                     cmd, bf_len,
-                    "NO_COLOR=1;DENO_NO_UPDATE_CHECK=1;deno run --quiet --allow-all --unstable-ffi --allow-ffi \"%s\" \"%s\"",
+                    "NO_COLOR=1;DENO_NO_UPDATE_CHECK=1;deno run --quiet --allow-read --allow-write --allow-net --allow-env --allow-ffi \"%s\" \"%s\"",
                     full_path, query
                 );
                 #endif
