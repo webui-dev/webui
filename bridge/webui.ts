@@ -676,10 +676,17 @@ class WebuiBridge {
 						const scriptSanitize = script.replace(/(?:\r\n|\r|\n)/g, '\n');
 						if (this.#log) console.log(`WebUI -> CMD -> JS [${scriptSanitize}]`);
 						// Get callback result
-						let FunReturn = 'undefined';
+						let FunReturn: string | Uint8Array = 'undefined';
 						let FunError = false;
+						let isBinaryReturn = false;
 						try {
-							FunReturn = await AsyncFunction(scriptSanitize)();
+							const result = await AsyncFunction(scriptSanitize)();
+							if (result instanceof Uint8Array) {
+								FunReturn = result;
+								isBinaryReturn = true;
+							} else {
+								FunReturn = String(result);
+							}
 						} catch (e) {
 							FunError = true;
 							FunReturn = e.message;
@@ -691,8 +698,20 @@ class WebuiBridge {
 							FunReturn = 'undefined';
 						}
 						// Logging
-						if (this.#log && !FunError) console.log(`WebUI -> CMD -> JS -> Return Success [${FunReturn}]`);
-						if (this.#log && FunError) console.log(`WebUI -> CMD -> JS -> Return Error [${FunReturn}]`);
+						if (this.#log && !FunError) {
+							if (isBinaryReturn) {
+								const binaryData = FunReturn as Uint8Array;
+								const hexPreview = Array.from(binaryData.slice(0, 64)).map(b => `0x${b.toString(16).padStart(2, '0')}`).join(', ');
+								console.log(`WebUI -> CMD -> JS -> Return Success (${binaryData.length} Bytes) [${hexPreview}${binaryData.length > 64 ? '...' : ''}]`);
+							} else {
+								const stringData = String(FunReturn);
+								console.log(`WebUI -> CMD -> JS -> Return Success (${new TextEncoder().encode(stringData).length} Bytes) [${stringData.substring(0, 64)}${stringData.length > 64 ? '...' : ''}]`);
+							}
+						}
+						else if (this.#log && FunError) {
+							const errorString = String(FunReturn);
+							console.log(`WebUI -> CMD -> JS -> Return Error [${errorString.substring(0, 64)}${errorString.length > 64 ? '...' : ''}]`);
+						}
 						// Protocol
 						// 0: [SIGNATURE]
 						// 1: [TOKEN]
@@ -724,7 +743,11 @@ class WebuiBridge {
 						packetPush(new Uint8Array([0, 0])); // ID (2 Bytes)
 						packetPush(new Uint8Array([this.#CMD_JS]));
 						packetPush(new Uint8Array(FunError ? [1] : [0]));
-						packetPushStr(FunReturn);
+						if (isBinaryReturn) {
+							packetPush(FunReturn as Uint8Array);
+						} else {
+							packetPushStr(FunReturn as string);
+						}
 						packetPush(new Uint8Array([0]));
 						this.#addToken(packet, this.#token, this.#PROTOCOL_TOKEN);
 						this.#addID(packet, callId, this.#PROTOCOL_ID);

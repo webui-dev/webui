@@ -915,7 +915,7 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
             _webui.run_userBufferLen[run_id]
         );
         printf(
-            "[User] webui_script -> Response found. User buffer data: [%s] \n",
+            "[User] webui_script -> Response found. User buffer data (ASCII): [%s] \n",
             _webui.run_userBuffer[run_id]
         );
         #endif
@@ -10281,9 +10281,9 @@ static void _webui_ws_process(
                                 if ((unsigned char)packet[WEBUI_PROTOCOL_DATA] == 0x00)
                                     error = false;
 
-                                // Get data part
+                                // Get data part as binary (last byte is an extras null byte for string terminator)
                                 char* data = (char*)&packet[WEBUI_PROTOCOL_DATA + 1];
-                                size_t data_len = _webui_strlen(data);
+                                size_t data_len = len - (WEBUI_PROTOCOL_SIZE + 1 + 1); // [Total packet size - (Header + error byte + null byte)]
 
                                 #ifdef WEBUI_LOG
                                 printf(
@@ -10303,29 +10303,24 @@ static void _webui_ws_process(
                                     recvNum, data_len
                                 );
                                 printf(
-                                    "[Core]\t\t_webui_ws_process(%zu) -> data = [%s] @ 0x%p\n",
-                                    recvNum, data, data
+                                    "[Core]\t\t_webui_ws_process(%zu) -> data (Hex) = [",
+                                    recvNum
                                 );
+                                _webui_print_hex(data, data_len);
+                                printf("] @ 0x%p\n", data);
                                 #endif
 
                                 // Set pipe
                                 _webui.run_error[packet_id] = error;
                                 if (data_len > 0) {
 
-                                    // Copy response to the user's response buffer
-                                    // directly
+                                    // Copy response to the user's response buffer directly
                                     size_t response_len = data_len + 1;
-                                    size_t bytes_to_cpy =
-                                        (response_len <=
-                                            _webui
-                                            .run_userBufferLen[packet_id] ?
-                                            response_len :
-                                            _webui
-                                            .run_userBufferLen[packet_id]);
-                                    memcpy(
-                                        _webui.run_userBuffer[packet_id], data,
-                                        bytes_to_cpy
+                                    size_t bytes_to_cpy = (
+                                        response_len <= _webui.run_userBufferLen[packet_id] ?
+                                            response_len : _webui.run_userBufferLen[packet_id]
                                     );
+                                    memcpy(_webui.run_userBuffer[packet_id], data, bytes_to_cpy);
                                 } else {
 
                                     // Empty Result
