@@ -20,6 +20,16 @@
 
 </div>
 
+## Ask Any Question About the WebUI – Powered by ChatGPT
+
+<div align="center">
+
+![GPT](https://github.com/user-attachments/assets/70455739-94c9-410e-9519-2b0318129b4a)
+
+</div>
+
+- [WebUI GPT - C](https://chatgpt.com/g/g-685b01d42208819185a5a7c8ed74fa23-webui-c)
+
 ## Download
 
 - [Latest Stable Release](https://github.com/webui-dev/webui/releases)
