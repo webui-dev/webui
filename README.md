@@ -20,15 +20,13 @@
 
 </div>
 
-## Ask Any Question About the WebUI – Powered by ChatGPT
-
 <div align="center">
 
 ![GPT](https://github.com/user-attachments/assets/70455739-94c9-410e-9519-2b0318129b4a)
 
-### [WebUI GPT - C](https://chatgpt.com/g/g-685b01d42208819185a5a7c8ed74fa23-webui-c)
+### _Ask AI Any Question About the WebUI_
 
-### WebUI GPT - C++ (_Coming Soon_)
+### [WebUI GPT - C/C++](https://chatgpt.com/g/g-685b01d42208819185a5a7c8ed74fa23-webui-c-c)
 
 </div>
 
