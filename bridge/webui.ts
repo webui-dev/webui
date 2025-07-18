@@ -537,6 +537,20 @@ class WebuiBridge {
 			}
 		}
 	}
+	#getScriptUrl() {
+		try {
+			throw new Error();
+		} catch (e) {
+			var stackLines = e.stack.split('\n');
+			for (var i = 0; i < stackLines.length; i++) {
+				var match = stackLines[i].match(/(http[^)]+)/);
+				if (match) {
+					return new URL(match[1]);
+				}
+			}
+		}
+		return null;
+	}
 	#callPromise(fn: string, ...args: DataTypes[]) {
 		--this.#callPromiseID[0];
 		const callId = this.#toUint16(this.#callPromiseID[0]);
@@ -609,7 +623,8 @@ class WebuiBridge {
 			this.#ws.close();
 		}
 		this.#TokenAccepted = false;
-		const host = window.location.hostname;
+		const scriptUrl = this.#getScriptUrl();
+		const host = scriptUrl !== null ? scriptUrl.hostname : window.location.hostname;
 		const url = this.#secure ? ('wss://' + host) : ('ws://' + host);
 		this.#ws = new WebSocket(`${url}:${this.#port}/_webui_ws_connect`);
 		this.#ws.binaryType = 'arraybuffer';
