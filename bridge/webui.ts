@@ -538,18 +538,10 @@ class WebuiBridge {
 		}
 	}
 	#getScriptUrl() {
-		try {
-			throw new Error();
-		} catch (e) {
-			var stackLines = e.stack.split('\n');
-			for (var i = 0; i < stackLines.length; i++) {
-				var match = stackLines[i].match(/(http[^)]+)/);
-				if (match) {
-					return new URL(match[1]);
-				}
-			}
-		}
-		return null;
+		const scripts = Array.from(document.scripts)
+			.filter(s => s.src !== null && s.src.startsWith('http') && s.src.endsWith('webui.js'))
+			.map(s => s.src);
+		return scripts.length === 0 ? null : new URL(scripts[0]);
 	}
 	#callPromise(fn: string, ...args: DataTypes[]) {
 		--this.#callPromiseID[0];
