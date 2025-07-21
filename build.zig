@@ -43,7 +43,7 @@ pub fn build(b: *Build) !void {
         log(.info, .WebUI, "Done.", .{});
     }
 
-    const webui = if (is_dynamic) b.addSharedLibrary(.{
+    const webui = if (builtin.zig_version.minor == 14) (if (is_dynamic) b.addSharedLibrary(.{
         .name = lib_name,
         .target = target,
         .optimize = optimize,
@@ -52,7 +52,18 @@ pub fn build(b: *Build) !void {
         .name = lib_name,
         .target = target,
         .optimize = optimize,
+    })) else b.addLibrary(.{
+        .name = lib_name,
+        .linkage = if (is_dynamic) .dynamic else .static,
+        .root_module = b.createModule(.{
+            // not, pic enabled, zig will not allow to build a static library
+            // .pic = is_dynamic,
+            .pic = if (is_dynamic) is_dynamic else true,
+            .target = target,
+            .optimize = optimize,
+        }),
     });
+
     try addLinkerFlags(b, webui, enable_tls, debug_dependencies, enable_webui_log);
 
     b.installArtifact(webui);
@@ -132,10 +143,12 @@ fn addLinkerFlags(
     for (webui.root_module.link_objects.items) |lo| {
         switch (lo) {
             .c_source_file => |csf| {
-                log(.debug, .WebUI, "{s} linker flags: {s}", .{
+                log(.debug, .WebUI, "{s} linker flags:\n", .{
                     csf.file.src_path.sub_path,
-                    csf.flags,
                 });
+                for (csf.flags) |flag| {
+                    log(.debug, .WebUI, "  {s}", .{flag});
+                }
             },
             else => {},
         }
@@ -165,10 +178,17 @@ fn build_examples(b: *Build, webui: *Compile) !void {
         }
         const example_name = val.name;
 
-        const exe = b.addExecutable(.{
+        const exe = b.addExecutable(if (builtin.zig_version.minor == 14) .{
             .name = example_name,
             .target = target,
             .optimize = optimize,
+        } else .{
+            .name = example_name,
+            .root_module = b.createModule(.{
+                .target = target,
+                .optimize = optimize,
+                .pic = true,
+            }),
         });
         const path = try std.fmt.allocPrint(b.allocator, "examples/C/{s}/main.c", .{example_name});
         defer b.allocator.free(path);
