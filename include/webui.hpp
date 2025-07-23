@@ -320,7 +320,7 @@ namespace webui {
 
         // Set custom browser folder path.
         bool set_browser_folder(const std::string_view path) const {
-            return webui_set_browser_folder(webui_window, path.data());
+            return webui_set_browser_folder(path.data());
         }
 
         // Set a custom handler to serve files. This custom handler should return full HTTP header and body.
