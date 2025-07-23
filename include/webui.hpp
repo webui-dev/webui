@@ -449,6 +449,11 @@ namespace webui {
         return webui_set_default_root_folder(path.data());
     }
 
+    // Set custom browser folder path.
+    inline void set_browser_folder(const std::string_view path) {
+        webui_set_browser_folder(path.data());
+    }
+
     // Get OS high contrast preference.
     inline bool is_high_contrast() {
         return webui_is_high_contrast();
