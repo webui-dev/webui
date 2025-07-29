@@ -77,6 +77,7 @@ class WebuiBridge {
 	#Ping: Boolean = true;
 	// Events
 	#eventsCallback: ((event: number) => void) | null = null;
+	#lastEvent: number = -1;
 	event = {
 		// TODO: Make `event` static and solve the ESBUILD `_WebuiBridge` issue.
         CONNECTED: 0,
@@ -127,7 +128,7 @@ class WebuiBridge {
 		}
 		// WebSocket
 		if (!('WebSocket' in window)) {
-			alert('Sorry. WebSocket is not supported by your web browser.');
+			this.#showWarning('WebSocket is not supported by your web browser');
 			if (!this.#log) globalThis.close();
 		}
 		// Connect to the backend application
@@ -210,7 +211,7 @@ class WebuiBridge {
 		};
 		setTimeout(() => {
 			if (!this.#wsWasConnected) {
-				alert('Sorry. WebUI failed to connect to the backend application. Please try again.');
+				this.#showWarning('Failed to connect to the backend application');
 			}
 		}, 1500);
 	}
@@ -222,30 +223,37 @@ class WebuiBridge {
 			this.#ws.close();
 		}
 	}
-	#freezeUi() {
+	#showWarning(msg: string) {
 		setTimeout(() => {
 			if (!this.#wsIsConnected()) {
 				if (document.getElementById('webui-error-connection-lost')) return;
 				const div = document.createElement('div');
 				div.id = 'webui-error-connection-lost';
 				Object.assign(div.style, {
-					position: 'relative',
+					position: 'fixed',
 					top: '0',
 					left: '0',
 					width: '100%',
-					backgroundColor: '#ff4d4d',
+					backgroundColor: 'rgb(191 125 30 / 84%)',
 					color: '#fff',
 					textAlign: 'center',
-					padding: '2px 0',
+					padding: '4px 0',
 					fontFamily: 'Arial, sans-serif',
-					fontSize: '14px',
-					zIndex: '1000',
+					fontSize: '16px',
+					zIndex: '9000',
 					lineHeight: '1'
 				});
-				div.innerText = 'WebUI Error: Connection with the backend is lost.';
+				div.innerHTML = '<strong>Error:</strong> ' + msg + ' - <em>WebUI 2.5.0-beta.4</em>';
 				document.body.insertBefore(div, document.body.firstChild);
 			}
 		}, 1000);
+	}
+	#freezeUi() {
+		if (this.#eventsCallback == null) {
+			// Show default WebUI warning as we
+			// don't have a user event callback.
+			this.#showWarning('Connection with the backend is lost');
+		}
 	}
 	#unfreezeUI() {
 		const div = document.getElementById('webui-error-connection-lost');
@@ -657,10 +665,16 @@ class WebuiBridge {
 			}
 		}
 		// Event Callback
-		if (this.#eventsCallback) {
-			this.#eventsCallback(this.event.DISCONNECTED);
-		}
+		this.#userEventCallback(this.event.DISCONNECTED);
 	};
+	#userEventCallback = (e: number) => {
+		if (this.#eventsCallback) {
+			if (e != this.#lastEvent) {
+				this.#lastEvent = e;
+				this.#eventsCallback(e);
+			}
+		}
+	}
 	#wsOnMessage = async (event: MessageEvent) => {
 		const buffer8 = new Uint8Array(event.data);
 		if (buffer8.length < this.#PROTOCOL_SIZE) return;
@@ -859,9 +873,7 @@ class WebuiBridge {
 						// Generate objects
 						this.#updateBindsList();
 						// User event callback
-						if (this.#eventsCallback) {
-							this.#eventsCallback(this.event.CONNECTED);
-						}
+						this.#userEventCallback(this.event.CONNECTED);
 					}
 					else {
 						if (this.#log) console.log(`WebUI -> CMD -> Token [${tokenHex}] Not Accepted. Reload page...`);
