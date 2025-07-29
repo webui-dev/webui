@@ -7415,39 +7415,50 @@ static size_t _webui_get_child_process_id(_webui_window_t* win) {
         } else {
             // Web Browser Mode
             // Filter process by WebUI's web server URL in process CLI
-            char cmd[1024] = {0};
-            FILE* fp;
             #if defined(_WIN32)
-            #define popen  _popen
-            #define pclose _pclose
-            snprintf(
-                cmd, sizeof(cmd),
-                "wmic process get ProcessId,CommandLine /FORMAT:CSV | findstr /c:\"%s\"",
-                win->url
-            );
-            fp = popen(cmd, "r");
+            char* out = NULL;
+            char cmd[1024] = {0};
+            WEBUI_SN_PRINTF_STATIC(cmd, sizeof(cmd),
+            "cmd.exe /c wmic process where \"CommandLine like '%c%s%c'\" get ProcessId,CommandLine /format:csv 2>&1",
+            '%', win->url, '%');
+            _webui_system_win32_out(cmd, &out, false);
+            size_t process_id = 0;
+            if (out) {
+                char* line_start = out;
+                char* found_url_ptr = NULL;
+                while ((line_start = strstr(line_start, "\n")) != NULL) {
+                    line_start++; // Move past the newline
+                    found_url_ptr = strstr(line_start, win->url);
+                    if (found_url_ptr) {
+                        char* comma_ptr = strchr(found_url_ptr, ',');
+                        if (comma_ptr) {
+                            comma_ptr++;
+                            while (*comma_ptr == ' ' || *comma_ptr == '\t') comma_ptr++;
+                            process_id = (size_t)atoi(comma_ptr);
+                        }
+                        break;
+                    }
+                }
+                free(out);
+            }
+            return process_id;
             #else
+            char cmd[1024] = {0};
             snprintf(cmd, sizeof(cmd), "pgrep -f \"%s\"", win->url);
+            FILE* fp;
             fp = popen(cmd, "r");
-            #endif
             if (!fp) return 0;
             char line[4096] = {0};
             while (fgets(line, sizeof(line), fp)) {
                 int pid = 0;
-                #if defined(_WIN32)
-                char* last_comma = strrchr(line, ',');
-                if (last_comma) {
-                    pid = atoi(last_comma + 1);
-                }
-                #else
                 pid = atoi(line);
-                #endif
                 if (pid > 0) {
                     pclose(fp);
                     return (size_t)pid;
                 }
             }
             pclose(fp);
+            #endif
         }
     }
 
