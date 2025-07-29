@@ -107,6 +107,7 @@
 #define WEBUI_COOKIES_LEN    (32)    // Authentification cookies len
 #define WEBUI_COOKIES_BUF    (64)    // Authentification cookies buffer size
 #define WEBUI_NATIVE_BROWSER (99)    // Internal ID used to avoid terminating the user's native browser on exit
+#define WEBUI_SYS_CMD_TIMEOUT (1500) // Max time to wait for a system command to run
 
 #ifdef WEBUI_TLS
 #define WEBUI_SECURE         "TLS-Encryption"
@@ -471,16 +472,6 @@ typedef struct _webui_core_t {
 }
 _webui_core_t;
 
-typedef struct _webui_cb_arg_t {
-    // Event
-    _webui_window_t* window;
-    size_t event_type;
-    char* element;
-    char* data;
-    size_t event_number;
-}
-_webui_cb_arg_t;
-
 typedef struct _webui_recv_arg_t {
     _webui_window_t* win;
     void * ptr;
@@ -491,12 +482,6 @@ typedef struct _webui_recv_arg_t {
     size_t connection_id;
 }
 _webui_recv_arg_t;
-
-typedef struct _webui_cmd_async_t {
-    _webui_window_t* win;
-    char* cmd;
-}
-_webui_cmd_async_t;
 
 // -- Definitions ---------------------
 #ifdef _WIN32
@@ -3395,7 +3380,13 @@ void webui_exit(void) {
 
     // Let's give other threads more time to
     // safely exit and finish cleaning up.
-    _webui_sleep(500);
+    for (size_t i = 0; i < 4; i++) {
+        _webui_sleep(500);
+        if (_webui.servers < 1) { // TODO: Add mutex here
+            // No more server threads are running
+            break;
+        }
+    }
 
     // Fire the mutex condition for wait()
     _webui_condition_signal(&_webui.condition_wait);
@@ -10996,7 +10987,7 @@ static int _webui_system_win32_out(const char* cmd, char ** output, bool show) {
     CloseHandle(stdout_write);
 
     SetFocus(pi.hProcess);
-    WaitForSingleObject(pi.hProcess, INFINITE);
+    WaitForSingleObject(pi.hProcess, WEBUI_SYS_CMD_TIMEOUT);
     GetExitCodeProcess(pi.hProcess,&Return);
 
     DWORD bytes_read;
@@ -11121,7 +11112,7 @@ static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show) {
     SetFocus(pi.hProcess);
     // EnumWindows(_webui_enum_windows_proc_win32, (LPARAM)(pi.dwProcessId));
     // AssignProcessToJobObject(JobObject, pi.hProcess);
-    WaitForSingleObject(pi.hProcess, INFINITE);
+    WaitForSingleObject(pi.hProcess, WEBUI_SYS_CMD_TIMEOUT);
     GetExitCodeProcess(pi.hProcess,&Return);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
