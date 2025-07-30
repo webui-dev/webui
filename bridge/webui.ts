@@ -212,7 +212,7 @@ class WebuiBridge {
 			if (!this.#wsWasConnected) {
 				alert('Sorry. WebUI failed to connect to the backend application. Please try again.');
 			}
-		}, 1500);
+		}, 5000);
 	}
 	// Methods
 	#close(reason = 0, value = '') {
