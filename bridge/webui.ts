@@ -213,7 +213,7 @@ class WebuiBridge {
 			if (!this.#wsWasConnected) {
 				this.#showWarning('Failed to connect to the backend application');
 			}
-		}, 1500);
+		}, 5000);
 	}
 	// Methods
 	#close(reason = 0, value = '') {
