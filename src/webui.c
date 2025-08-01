@@ -4346,8 +4346,10 @@ static void _webui_free_all_mem(void) {
 
     // Makes sure we run this once
     static bool freed = false;
-    if (freed)
+    if (freed) {
+        _webui_mutex_unlock(&_webui.mutex_mem);
         return;
+    }
     freed = true;
 
     // Free all pointers in the list
