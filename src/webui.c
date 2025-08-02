@@ -11728,6 +11728,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Window class
         const char wvClass[] = "WebViewWindow";
         WNDCLASSA wc;
+        ZeroMemory(&wc, sizeof(WNDCLASSA));
         wc.lpfnWndProc = WndProc;
         wc.hInstance = GetModuleHandle(NULL);
         wc.lpszClassName = wvClass;
