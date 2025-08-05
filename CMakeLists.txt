@@ -86,3 +86,35 @@ install(EXPORT webui
     NAMESPACE webui::
     DESTINATION share/webui
 )
+
+
+#//////////////////////////
+# Build examples 
+#//////////////////////////
+
+message(STATUS "Source directory is " ${CMAKE_SOURCE_DIR})
+message(STATUS "Build directory is " ${CMAKE_BINARY_DIR})
+
+if (MSVC)
+  include_directories(${CMAKE_SOURCE_DIR}/include)
+elseif(APPLE)
+elseif(LINUX)
+endif()
+
+add_executable(minimal ${CMAKE_SOURCE_DIR}/examples/C++/minimal/main.cpp)
+add_executable(call_js_from_cpp ${CMAKE_SOURCE_DIR}/examples/C++/call_js_from_cpp/main.cpp)
+add_executable(call_js_from_c ${CMAKE_SOURCE_DIR}/examples/C/call_js_from_c/main.c)
+
+target_link_libraries(minimal webui)
+target_link_libraries(call_js_from_cpp webui)
+target_link_libraries(call_js_from_c webui)
+
+if (MSVC)
+  set_target_properties(minimal PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
+  set_target_properties(call_js_from_cpp PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
+  set_target_properties(call_js_from_c PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
+endif()
+
+if (MSVC)
+  set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT call_js_from_cpp)
+endif()
