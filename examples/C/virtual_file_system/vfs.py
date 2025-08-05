@@ -29,16 +29,21 @@ def generate_vfs_header(directory, output_header):
         header.write('    int length;\n')
         header.write('} VirtualFile;\n\n')
 
-        header.write('static const VirtualFile virtual_files[] = {\n')
+        for i, (relative_path, filepath) in enumerate(files):
+            with open(filepath, 'rb') as f:
+                data = f.read()
+                header.write(f'static const unsigned char FILE_{i}[] = {{')
+                header.write(','.join(f'0x{byte:02x}' for byte in data))
+                header.write('};\n\n')
 
-        for relative_path, filepath in files:
+        header.write('\nstatic const VirtualFile virtual_files[] = {\n')
+
+        for i, (relative_path, filepath) in enumerate(files):
             with open(filepath, 'rb') as f:
                 data = f.read()
                 header.write('    {\n')
                 header.write(f'        "{relative_path}",\n')
-                header.write('        (const unsigned char[]){')
-                header.write(','.join(f'0x{byte:02x}' for byte in data))
-                header.write('},\n')
+                header.write(f'        FILE_{i},\n')
                 header.write(f'        {len(data)}\n')
                 header.write('    },\n')
 
