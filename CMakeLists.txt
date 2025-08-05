@@ -95,11 +95,7 @@ install(EXPORT webui
 message(STATUS "Source directory is " ${CMAKE_SOURCE_DIR})
 message(STATUS "Build directory is " ${CMAKE_BINARY_DIR})
 
-if (MSVC)
-  include_directories(${CMAKE_SOURCE_DIR}/include)
-elseif(APPLE)
-elseif(LINUX)
-endif()
+include_directories(${CMAKE_SOURCE_DIR}/include)
 
 add_executable(minimal ${CMAKE_SOURCE_DIR}/examples/C++/minimal/main.cpp)
 add_executable(call_js_from_cpp ${CMAKE_SOURCE_DIR}/examples/C++/call_js_from_cpp/main.cpp)
