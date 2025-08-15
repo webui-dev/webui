@@ -1891,7 +1891,7 @@ size_t webui_bind(size_t window, const char* element, void(*func)(webui_event_t*
             win->has_all_events = true;
             win->cb[index] = func;
             #ifdef WEBUI_LOG
-            printf("[User] webui_bind() -> Save bind (all events) at %zu\n", index);
+            printf("[User] webui_bind() -> Save bind (all events) index %zu, address 0x%p\n", index, func);
             #endif
         }
         return index;
@@ -1902,7 +1902,7 @@ size_t webui_bind(size_t window, const char* element, void(*func)(webui_event_t*
         if (func != NULL) {
             win->cb[index] = func;
             #ifdef WEBUI_LOG
-            printf("[User] webui_bind() -> Save bind at %zu\n", index);
+            printf("[User] webui_bind() -> Save bind index %zu, address 0x%p\n", index, func);
             #endif
 
             // Send to all connected clients the new binding ID
@@ -3761,7 +3761,7 @@ static void _webui_interface_bind_handler_all(webui_event_t* e) {
             #endif
             // Call all-events cb
             #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_interface_bind_handler_all() -> Calling user all-events callback\n[Call]\n");
+            printf("[Core]\t\t_webui_interface_bind_handler_all() -> Calling user all-events callback at address 0x%p\n[Call]\n", win->cb_interface[events_cb_index]);
             #endif
             win->cb_interface[events_cb_index](e->window, e->event_type, e->element, e->event_number, e->bind_id);
         }
@@ -3799,7 +3799,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
             #endif
             // Call cb
             #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user callback\n[Call]\n");
+            printf("[Core]\t\t_webui_interface_bind_handler() -> Calling user callback at address 0x%p\n[Call]\n", win->cb_interface[cb_index]);
             #endif
             win->cb_interface[cb_index](e->window, e->event_type, e->element, e->event_number, e->bind_id);
         }
@@ -3811,6 +3811,9 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
 
         // Async response wait
         if (_webui.config.asynchronous_response) {
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_interface_bind_handler() -> Waiting for asynchronous response...\n");
+            #endif
             bool done = false;
             while (!done) {
                 _webui_sleep(10);
@@ -4020,7 +4023,7 @@ void webui_interface_set_response_file_handler(size_t window, const void* respon
 bool webui_interface_is_app_running(void) {
 
     #ifdef WEBUI_LOG
-    // printf("[User] webui_is_app_running()\n");
+    // printf("[User] webui_interface_is_app_running()\n");
     #endif
 
     // Stop if already flagged
@@ -4041,7 +4044,7 @@ bool webui_interface_is_app_running(void) {
 
     #ifdef WEBUI_LOG
     if (!app_is_running)
-        printf("[User] webui_is_app_running() -> App Stopped\n");
+        printf("[User] webui_interface_is_app_running() -> App Stopped\n");
     #endif
 
     return app_is_running;
@@ -4851,7 +4854,8 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
         // Files handler callback
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_external_file_handler() -> Path [%s]\n", url);
-        printf("[Core]\t\t_webui_external_file_handler() -> Calling custom files handler callback\n");
+        printf("[Core]\t\t_webui_external_file_handler() -> Calling custom files handler callback at address 0x%p\n",
+            (win->files_handler_window != NULL ? win->files_handler_window : win->files_handler));
         printf("[Call]\n");
         #endif
 
@@ -4874,6 +4878,9 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
         if (_webui.config.asynchronous_response) {
             // `callback_resp` is NULL now, we need to
             // wait for the response that will come later.
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_external_file_handler() -> Waiting for asynchronous response...\n");
+            #endif
             bool done = false;
             while (!done) {
                 _webui_sleep(10);
@@ -8393,7 +8400,7 @@ static void _webui_window_event(
         if (exist && win->cb[events_cb_index] != NULL) {
             // Call user all-events cb
             #ifdef WEBUI_LOG
-            printf("[Core]\t\t_webui_window_event() -> Calling all-events user callback\n");
+            printf("[Core]\t\t_webui_window_event() -> Calling all-events user callback at address 0x%p\n", win->cb[events_cb_index]);
             printf("[Call]\n");
             #endif
             e.bind_id = events_cb_index;
@@ -8409,7 +8416,7 @@ static void _webui_window_event(
             if (exist && win->cb[cb_index] != NULL) {
                 // Call user cb
                 #ifdef WEBUI_LOG
-                printf("[Core]\t\t_webui_window_event() -> Calling user callback\n");
+                printf("[Core]\t\t_webui_window_event() -> Calling user callback at address 0x%p\n", win->cb[cb_index]);
                 printf("[Call]\n");
                 #endif
                 e.bind_id = cb_index;
@@ -8424,6 +8431,9 @@ static void _webui_window_event(
 
         // Async response wait
         if (_webui.config.asynchronous_response) {
+            #ifdef WEBUI_LOG
+            printf("[Core]\t\t_webui_window_event() -> Waiting for asynchronous response...\n");
+            #endif
             bool done = false;
             while (!done) {
                 _webui_sleep(10);
@@ -10487,8 +10497,8 @@ static void _webui_ws_process(
                                 // Call user cb
                                 #ifdef WEBUI_LOG
                                 printf(
-                                    "[Core]\t\t_webui_ws_process(%zu) -> Calling user callback\n[Call]\n",
-                                    recvNum
+                                    "[Core]\t\t_webui_ws_process(%zu) -> Calling user callback at address 0x%p\n[Call]\n",
+                                    recvNum, win->cb[cb_index]
                                 );
                                 #endif
                                 e.bind_id = cb_index;
@@ -10496,6 +10506,9 @@ static void _webui_ws_process(
 
                                 // Async response wait
                                 if (_webui.config.asynchronous_response) {
+                                    #ifdef WEBUI_LOG
+                                    printf("[Core]\t\t_webui_ws_process(%zu) -> Waiting for asynchronous response...\n", recvNum);
+                                    #endif
                                     bool done = false;
                                     while (!done) {
                                         _webui_sleep(10);
