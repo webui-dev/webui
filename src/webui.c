@@ -4853,7 +4853,10 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
 
         // Files handler callback
         #ifdef WEBUI_LOG
-        void* pt = (win->files_handler_window != NULL ? win->files_handler_window : win->files_handler);
+        void* pt = win->files_handler;
+        if(win->files_handler_window) {
+            pt = win->files_handler_window;
+        }        
         printf("[Core]\t\t_webui_external_file_handler() -> Path [%s]\n", url);
         printf("[Core]\t\t_webui_external_file_handler() -> Calling custom files handler callback at address 0x%p\n", pt);
         printf("[Call]\n");
