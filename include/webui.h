@@ -206,6 +206,19 @@ typedef struct webui_event_t {
     char* cookies;          // Client's full cookies
 } webui_event_t;
 
+// -- Other types ---------------------
+
+// custom log handler type
+typedef enum {
+    log_debug = 1,
+    log_info,
+    log_warning,
+    log_error,
+    log_fatal
+} webui_log_level_t;
+
+typedef void(*webui_custom_log_handler_t)(webui_log_level_t level, const char *);
+
 // -- Definitions ---------------------
 
 /**
@@ -908,6 +921,21 @@ WEBUI_EXPORT size_t webui_get_free_port(void);
  * @example webui_set_config(show_wait_connection, false);
  */
 WEBUI_EXPORT void webui_set_config(webui_config option, bool status);
+
+/**
+ * @brief Set a custom logger function. The standard logger uses 'printf' to log debug information.
+ *
+ * @param logger function of type void (*custom_logger)(webui_log_level_t, const char *msg).
+ * 
+ * a value of NULL for logger_f, will reset the webui logger to the default log handler.
+ *
+ * @example void my_logger(webui_log_level_t level, const char *msg) {
+ *             fprintf(stderr, "%d:%s", level, msg);
+ *          }
+ *          (...)
+ *			webui_set_custom_logger(my_logger); 
+ */
+WEBUI_EXPORT void webui_set_custom_logger(webui_custom_log_handler_t logger_f);
 
 /**
  * @brief Control if UI events comming from this window should be processed
