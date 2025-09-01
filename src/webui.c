@@ -373,6 +373,7 @@ typedef struct _webui_window_t {
     int x;
     int y;
     bool position_set;
+    bool (*close_handler)(size_t window);
     const void*(*files_handler)(const char* filename, int* length);
     const void*(*files_handler_window)(size_t window, const char* filename, int* length);
     const void* file_handler_async_response;
@@ -836,6 +837,25 @@ void webui_run(size_t window, const char* script) {
 
     // Send the packet to all clients because no need for client's response
     _webui_send_all(win, 0, WEBUI_CMD_JS_QUICK, script, js_len);
+}
+
+void webui_set_close_handler(size_t window, bool(*close_handler)(size_t window)) {
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return;
+
+    _webui_window_t* win = _webui.wins[window];
+
+#ifdef WEBUI_LOG
+    webui_log_debug("[User]webui_set_close_handler(%zu, %p)", window, close_handler);
+#endif
+
+    // Set the close handler
+    win->close_handler = close_handler;
 }
 
 void webui_set_file_handler(size_t window, const void*(*handler)(const char* filename, int* length)) {
@@ -11599,13 +11619,26 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
             case WM_CLOSE: {
                 if (win) {
-                    // Stop the WebView thread, close the window
-                    // and free resources.
-                    if (win->webView) {
-                        win->webView->stop = true;
-                        _webui_webview_update(win);
-                    }                    
-                    _webui_wv_event_closed(win);
+                    bool can_close = true;
+                    if (win->close_handler != NULL) {
+                        can_close = win->close_handler(win->num);
+                        #ifdef WEBUI_LOG
+                        webui_log_debug("[Core]\t\tClose Handler installed for %zu, result = %d\n", win->num, can_close);
+                        #endif
+                    }
+
+                    if (can_close) {
+                        // Stop the WebView thread, close the window
+                        // and free resources.
+                        if (win->webView) {
+                            win->webView->stop = true;
+                            _webui_webview_update(win);
+                        }
+                        _webui_wv_event_closed(win);
+                    } else {
+                        // Do not close the window, no default processing
+                        return 0;
+                    }
                 }
                 break;
             }
