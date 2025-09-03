@@ -716,6 +716,7 @@ static const char* webui_def_icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" w
 // -- Functions -----------------------
 
 static webui_custom_log_handler_t custom_logger = NULL;
+static void *custom_logger_data = NULL;
 
 static void webui_log(webui_log_level_t level, const char *format, va_list args)
 {
@@ -742,16 +743,16 @@ static void webui_log(webui_log_level_t level, const char *format, va_list args)
         if (n >= buffer_size) {
             char *buf = (char *) malloc(n + 1);
             if (buf == NULL) {
-                custom_logger(level, buffer);
+                custom_logger(level, buffer, custom_logger_data);
             } else {
                 free(buffer);
                 buffer = buf;
                 buffer_size = n + 1;
                 vsnprintf(buffer, buffer_size, format, args);
-                custom_logger(level, buffer);
+                custom_logger(level, buffer, custom_logger_data);
             }
         } else {
-            custom_logger(level, buffer);
+            custom_logger(level, buffer, custom_logger_data);
         }
     }
 }
@@ -770,10 +771,10 @@ static void webui_log_fatal(const char *format, ...)
     webui_log(log_fatal, format, args);
 }
 
-void webui_set_custom_logger(webui_custom_log_handler_t logger_f)
+void webui_set_custom_logger(webui_custom_log_handler_t logger_f, void *user_data)
 {
-    fprintf(stderr, "Setting custom logger to %p", logger_f);
     custom_logger = logger_f;
+	custom_logger_data = user_data;
 }
 
 

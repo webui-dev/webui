@@ -217,7 +217,7 @@ typedef enum {
     log_fatal
 } webui_log_level_t;
 
-typedef void(*webui_custom_log_handler_t)(webui_log_level_t level, const char *);
+typedef void(*webui_custom_log_handler_t)(webui_log_level_t level, const char *, void *data);
 
 // -- Definitions ---------------------
 
@@ -951,17 +951,18 @@ WEBUI_EXPORT void webui_set_config(webui_config option, bool status);
 /**
  * @brief Set a custom logger function. The standard logger uses 'printf' to log debug information.
  *
- * @param logger function of type void (*custom_logger)(webui_log_level_t, const char *msg).
+ * @param logger function of type void (*custom_logger)(webui_log_level_t, const char *msg, void *user_data).
  * 
  * a value of NULL for logger_f, will reset the webui logger to the default log handler.
  *
- * @example void my_logger(webui_log_level_t level, const char *msg) {
- *             fprintf(stderr, "%d:%s", level, msg);
+ * @example void my_logger(webui_log_level_t level, const char *msg, void *user_data) {
+ *             FILE *log_fh = static_cast<FILE *>(user_data);
+ *             fprintf(log_fh, "%d:%s", level, msg);
  *          }
  *          (...)
  *			webui_set_custom_logger(my_logger); 
  */
-WEBUI_EXPORT void webui_set_custom_logger(webui_custom_log_handler_t logger_f);
+WEBUI_EXPORT void webui_set_custom_logger(webui_custom_log_handler_t logger_f, void *user_data);
 
 /**
  * @brief Control if UI events comming from this window should be processed
