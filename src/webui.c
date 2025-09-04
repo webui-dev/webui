@@ -429,6 +429,7 @@ typedef struct _webui_core_t {
     bool run_error[WEBUI_MAX_IDS];
     uint16_t run_last_id;
     bool initialized;
+    bool cleaned;                                   // To make webui restartable, we need to store the cleaned flag here and not as static.
     char* executable_path;
     void * ptr_list[WEBUI_MAX_IDS * 2];
     size_t ptr_last_pos;
@@ -6886,10 +6887,9 @@ static void _webui_clean(void) {
     webui_log_debug("[Core]\t\t_webui_clean()\n");
     #endif
 
-    static bool cleaned = false;
-    if (cleaned)
+    if (_webui.cleaned)
         return;
-    cleaned = true;
+    _webui.cleaned = true;
 
     // Make sure app is stopped
     webui_exit();
@@ -6914,6 +6914,10 @@ static void _webui_clean(void) {
     _webui_mutex_destroy(&_webui.mutex_mem);
     _webui_mutex_destroy(&_webui.mutex_token);
     _webui_condition_destroy(&_webui.condition_wait);
+
+    // Make webui re-initializable, after we've cleaned up.
+    _webui.initialized = false;
+
 
     #ifdef WEBUI_LOG
     webui_log_debug("[Core]\t\tWebUI exit successfully\n");
