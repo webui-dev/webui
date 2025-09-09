@@ -758,6 +758,13 @@ static void webui_log(webui_log_level_t level, const char *format, va_list args)
     }
 }
 
+static void webui_log_debug_detail(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    webui_log(log_debug_detail, format, args);
+}
+
 static void webui_log_debug(const char *format, ...)
 {
     va_list args;
@@ -8768,16 +8775,16 @@ static bool _webui_get_cb_index(_webui_window_t* win, const char* element, size_
 #ifdef WEBUI_LOG
 static void _webui_print_hex(const char* data, size_t len) {
     for (size_t i = 0; i < len; i++) {
-        webui_log_debug("0x%02X ", (unsigned char)* data);
+        webui_log_debug_detail("0x%02X ", (unsigned char)* data);
         data++;
     }
 }
 static void _webui_print_ascii(const char* data, size_t len) {
     for (size_t i = 0; i < len; i++) {
         if ((unsigned char)* data == 0x00)
-            webui_log_debug("%c", 0xCF);
+            webui_log_debug_detail("%c", 0xCF);
         else
-            webui_log_debug("%c", (unsigned char)* data);
+            webui_log_debug_detail("%c", (unsigned char)* data);
         data++;
     }
 }

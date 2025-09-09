@@ -210,7 +210,8 @@ typedef struct webui_event_t {
 
 // custom log handler type
 typedef enum {
-    log_debug = 1,
+    log_debug_detail = 1,
+    log_debug,
     log_info,
     log_warning,
     log_error,
