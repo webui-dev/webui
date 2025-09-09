@@ -730,31 +730,34 @@ static void webui_log(webui_log_level_t level, const char *format, va_list args)
             break;
         }
     } else {
-        static char* buffer      = NULL;
-        static int   buffer_size = 0;
-        if (buffer == NULL) {
-            buffer_size = 256;
-            buffer = (char *) malloc(buffer_size);
-            if (buffer == NULL) {           // Last resort if buffer cannot be allocated
-                custom_logger = NULL;
-                webui_log(level, format, args);
-            }
-        }
-        int n = vsnprintf(buffer, buffer_size, format, args);
-        if (n >= buffer_size) {
-            char *buf = (char *) malloc(n + 1);
-            if (buf == NULL) {
-                custom_logger(level, buffer, custom_logger_data);
-            } else {
-                free(buffer);
-                buffer = buf;
-                buffer_size = n + 1;
-                vsnprintf(buffer, buffer_size, format, args);
-                custom_logger(level, buffer, custom_logger_data);
-            }
+        int   buffer_size = 1024;
+        char *buffer = (char *) malloc(1024);
+        if (buffer == NULL) {      // Last resort if buffer cannot be allocated
+            custom_logger = NULL;
+            webui_log(level, format, args);
         } else {
-            custom_logger(level, buffer, custom_logger_data);
+            int n = vsnprintf(buffer, buffer_size, format, args);
+            if (n < 0) {
+                strcpy(buffer, "vsnprintf - encoding error");
+                custom_logger(level, buffer, custom_logger_data);
+            } else if (n >= buffer_size) {
+                char *buf = (char *) malloc(n + 1);
+                if (buf == NULL) {
+                    custom_logger(level, buffer, custom_logger_data);
+                } else {
+                    free(buffer);
+                    buffer = buf;
+                    buffer_size = n + 1;
+                    vsnprintf(buffer, buffer_size, format, args);
+                    buffer[n] = '\0';
+                    custom_logger(level, buffer, custom_logger_data);
+                }
+            } else {
+                buffer[n] = '\0';
+                custom_logger(level, buffer, custom_logger_data);
+            }
         }
+        free(buffer);
     }
 }
 
@@ -763,6 +766,7 @@ static void webui_log_debug_detail(const char *format, ...)
     va_list args;
     va_start(args, format);
     webui_log(log_debug_detail, format, args);
+    va_end(args);
 }
 
 static void webui_log_debug(const char *format, ...)
