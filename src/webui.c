@@ -4804,10 +4804,23 @@ static char* _webui_get_full_path(_webui_window_t* win, const char* file) {
 
 static size_t _webui_new_event_inf(_webui_window_t* win, webui_event_inf_t** event_inf) {
     (*event_inf) = (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
-    if (win->events_count > WEBUI_MAX_ARG)
-        win->events_count = 0;
-    size_t event_num = win->events_count++;
+
+    size_t event_num = win->events_count;
+
+    // Lock memory and search for next empty event entry
+    _webui_mutex_lock(&_webui.mutex_mem);
+
+    do {
+       event_num++;
+       if (win->events_count >= WEBUI_MAX_IDS)
+          event_num = 0;
+    } while (win->events[event_num] != NULL);
+
+    _webui_mutex_unlock(&_webui.mutex_mem);
+
+    win->events_count = event_num;
     win->events[event_num] = (*event_inf);
+
     return event_num;
 }
 
