@@ -905,6 +905,18 @@ WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
 WEBUI_EXPORT void* webui_win32_get_hwnd(size_t window);
 
 /**
+ * @brief Gets Gtk Window, only available with the Gtk WebView
+ * mode.
+ *
+ * @param window The window number
+ *
+ * @return Returns the `GtkWindow *` pointer as `void*`
+ *
+ * @example GtkWindow *w = webui_gtk_get_window(myWindow);
+ */
+WEBUI_EXPORT void* webui_gtk_get_window(size_t window);
+
+/**
  * @brief Get the network port of a running window.
  * This can be useful to determine the HTTP link of `webui.js`
  *

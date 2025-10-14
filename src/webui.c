@@ -232,28 +232,28 @@ typedef struct webui_event_inf_t {
     typedef void (*gtk_window_set_position_func)(void *, int);
     typedef unsigned long (*g_signal_connect_data_func)(void *, const char *, void (*callback)(void), void *, void *, int);
     // GTK Symbol Initialization
-    gtk_init_func gtk_init = NULL;
-    gtk_widget_show_all_func gtk_widget_show_all = NULL;
-    gtk_main_iteration_do_func gtk_main_iteration_do = NULL;
-    gtk_main_func gtk_main = NULL;
-    gtk_main_quit_func gtk_main_quit = NULL;
-    g_timeout_add_func g_timeout_add = NULL;
-    gtk_events_pending_func gtk_events_pending = NULL;
-    gtk_container_add_func gtk_container_add = NULL;
-    gtk_window_new_func gtk_window_new = NULL;
-    gtk_window_set_default_size_func gtk_window_set_default_size = NULL;
-    gtk_window_set_title_func gtk_window_set_title = NULL;
-    gtk_window_move_func gtk_window_move = NULL;
-    gtk_window_close_func gtk_window_close = NULL;
-    gdk_display_get_default_func gdk_display_get_default = NULL;
-    gdk_display_get_primary_monitor_func gdk_display_get_primary_monitor = NULL;
-    gdk_monitor_get_geometry_func gdk_monitor_get_geometry = NULL;
-    gtk_window_resize_func gtk_window_resize = NULL;
-    gtk_window_set_decorated_func gtk_window_set_decorated = NULL;
-    gtk_window_set_resizable_func gtk_window_set_resizable = NULL;
-    gtk_window_set_position_func gtk_window_set_position = NULL;
-    g_signal_connect_data_func g_signal_connect_data = NULL;
-    g_idle_add_func g_idle_add = NULL;
+    static gtk_init_func gtk_init = NULL;
+    static gtk_widget_show_all_func gtk_widget_show_all = NULL;
+    static gtk_main_iteration_do_func gtk_main_iteration_do = NULL;
+    static gtk_main_func gtk_main = NULL;
+    static gtk_main_quit_func gtk_main_quit = NULL;
+    static g_timeout_add_func g_timeout_add = NULL;
+    static gtk_events_pending_func gtk_events_pending = NULL;
+    static gtk_container_add_func gtk_container_add = NULL;
+    static gtk_window_new_func gtk_window_new = NULL;
+    static gtk_window_set_default_size_func gtk_window_set_default_size = NULL;
+    static gtk_window_set_title_func gtk_window_set_title = NULL;
+    static gtk_window_move_func gtk_window_move = NULL;
+    static gtk_window_close_func gtk_window_close = NULL;
+    static gdk_display_get_default_func gdk_display_get_default = NULL;
+    static gdk_display_get_primary_monitor_func gdk_display_get_primary_monitor = NULL;
+    static gdk_monitor_get_geometry_func gdk_monitor_get_geometry = NULL;
+    static gtk_window_resize_func gtk_window_resize = NULL;
+    static gtk_window_set_decorated_func gtk_window_set_decorated = NULL;
+    static gtk_window_set_resizable_func gtk_window_set_resizable = NULL;
+    static gtk_window_set_position_func gtk_window_set_position = NULL;
+    static g_signal_connect_data_func g_signal_connect_data = NULL;
+    static g_idle_add_func g_idle_add = NULL;
     // GTK Structs
     typedef struct {
         int x;
@@ -716,6 +716,8 @@ static const char* webui_def_icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" w
 
 // -- Functions -----------------------
 
+#include <stdarg.h>
+
 static webui_custom_log_handler_t custom_logger = NULL;
 static void *custom_logger_data = NULL;
 
@@ -736,6 +738,8 @@ static void webui_log(webui_log_level_t level, const char *format, va_list args)
             custom_logger = NULL;
             webui_log(level, format, args);
         } else {
+            va_list args2;
+            va_copy(args2, args);
             int n = vsnprintf(buffer, buffer_size, format, args);
             if (n < 0) {
                 strcpy(buffer, "vsnprintf - encoding error");
@@ -747,8 +751,8 @@ static void webui_log(webui_log_level_t level, const char *format, va_list args)
                 } else {
                     free(buffer);
                     buffer = buf;
-                    buffer_size = n + 1;
-                    vsnprintf(buffer, buffer_size, format, args);
+                    buffer_size = n;
+                    vsnprintf(buffer, buffer_size, format, args2);
                     buffer[n] = '\0';
                     custom_logger(level, buffer, custom_logger_data);
                 }
@@ -2803,6 +2807,30 @@ void* webui_win32_get_hwnd(size_t window) {
     return NULL;
 }
 
+void* webui_gtk_get_window(size_t window) {
+
+    // Initialization
+    _webui_init();
+
+    //Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return NULL;
+
+    _webui_window_t* win = _webui.wins[window];
+
+#ifdef __linux
+    if (_webui.is_webview) {
+        if (win->webView) {
+            return win->webView->gtk_win;
+        }
+        return NULL;
+    }
+#endif
+
+    // This API is only available on Linux
+    return NULL;
+}
+
 void webui_set_hide(size_t window, bool status) {
 
     #ifdef WEBUI_LOG
@@ -3563,7 +3591,7 @@ void webui_wait(void) {
             // Linux Web browser main loop
 
             #ifdef WEBUI_LOG
-            webui_log("[Loop] webui_wait() -> Linux web browser loop\n");
+            webui_log_debug("[Loop] webui_wait() -> Linux web browser loop\n");
             #endif
 
             _webui.is_browser_main_run = true;
@@ -3575,7 +3603,7 @@ void webui_wait(void) {
             // Linux WebView main loop
 
             #ifdef WEBUI_LOG
-            webui_log("[Loop] webui_wait() -> Linux WebView loop\n");
+            webui_log_debug("[Loop] webui_wait() -> Linux WebView loop\n");
             #endif
 
             _webui.is_gtk_main_run = true;
@@ -6121,16 +6149,18 @@ static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
         }
     }
     #else
-    #define MAX_BROWSER_FILES (2)
+    #define MAX_BROWSER_FILES (5)
     char* executable = NULL;
     char* executables[MAX_BROWSER_FILES] = {0};
     if (browser == Chrome) {
         executables[0] = "google-chrome";
         executables[1] = "google-chrome-stable";
+        executables[2] = NULL;
     }
     else if (browser == Edge) {
         executables[0] = "microsoft-edge-stable";
         executables[1] = "microsoft-edge-beta";
+        executables[2] = NULL;
     }
     else if (browser == Epic) {
         executables[0] = "epic";
@@ -6139,6 +6169,7 @@ static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
     else if (browser == Vivaldi) {
         executables[0] = "vivaldi";
         executables[1] = "vivaldi-stable";
+        executables[2] = NULL;
     }
     else if (browser == Brave) {
         executables[0] = "brave";
@@ -6158,6 +6189,7 @@ static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
     else if (browser == Chromium) {
         executables[0] = "chromium-browser";
         executables[1] = "chromium";
+        executables[2] = NULL;
     }
     else return false;
     if (_webui_folder_exist(_webui.custom_browser_folder_path)) {
@@ -6958,7 +6990,7 @@ static int _webui_cmd_sync(_webui_window_t* win, char* cmd, bool show) {
     // Using: _CMD_
     WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "%s >>/dev/null 2>>/dev/null", cmd);
     #ifdef WEBUI_LOG
-    webui_log("[Core]\t\t_webui_cmd_sync() -> Running [%s] \n", buf);
+    webui_log_debug("[Core]\t\t_webui_cmd_sync() -> Running [%s] \n", buf);
     #endif
     int r = system(buf);
     r = (r != -1 && r != 127 && WIFEXITED(r)) ? WEXITSTATUS(r) : -1;
@@ -6989,7 +7021,7 @@ static int _webui_cmd_async(_webui_window_t* win, char* cmd, bool show) {
     // Using: _CMD_ &
     WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "%s >>/dev/null 2>>/dev/null &", cmd);
     #ifdef WEBUI_LOG
-    webui_log("[Core]\t\t_webui_cmd_async() -> Running [%s] \n", buf);
+    webui_log_debug("[Core]\t\t_webui_cmd_async() -> Running [%s] \n", buf);
     #endif
     int r = system(buf);
     r = (r != -1 && r != 127 && WIFEXITED(r)) ? WEXITSTATUS(r) : -1;
@@ -9482,7 +9514,7 @@ static void _webui_ws_ready_handler(struct mg_connection* client, void * _win) {
 static int _webui_ws_data_handler(struct mg_connection* client, int opcode, char* data, size_t datasize, void * _win) {
     (void)client;
     #ifdef WEBUI_LOG
-    webui_log_debug("[Core]\t\t_webui_ws_data_handler()\n");
+    webui_log_debug("[Core]\t\t_webui_ws_data_handler(%d)\n", opcode);
     #endif
 
     if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || datasize < WEBUI_PROTOCOL_SIZE)
@@ -10962,7 +10994,7 @@ static void _webui_kill_pid(size_t pid) {
 static void _webui_kill_pid(size_t pid) {
 
     #ifdef WEBUI_LOG
-    webui_log("[Core]\t\t_webui_kill_pid(%zu)\n", pid);
+    webui_log_debug("[Core]\t\t_webui_kill_pid(%zu)\n", pid);
     #endif
 
     if (pid < 1)
@@ -12062,7 +12094,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     // Title Event
     static void _webui_wv_event_title(void *web_view, void *pspec, void *arg) {
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_event_title()\n");
+        webui_log_debug("[Core]\t\t_webui_wv_event_title()\n");
         #endif
         _webui_window_t* win = (_webui_window_t *)arg;
         webkit_web_view_get_title_func webkit_web_view_get_title = (
@@ -12078,7 +12110,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     // Close Event
     static void _webui_wv_event_closed(void *widget, void *arg) {
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_event_closed()\n");
+        webui_log_debug("[Core]\t\t_webui_wv_event_closed()\n");
         #endif
         _webui_window_t* win = _webui_dereference_win_ptr(arg);
         if (win) {
@@ -12091,7 +12123,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     static bool _webui_wv_set_size(_webui_wv_linux_t* webView, int windowWidth, int windowHeight) {
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_set_size(%d. %d)\n", windowWidth, windowHeight);
+        webui_log_debug("[Core]\t\t_webui_wv_set_size(%d, %d)\n", windowWidth, windowHeight);
         #endif
         if (webView) {
             if (webView->gtk_win) {
@@ -12104,7 +12136,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     static bool _webui_wv_minimize(_webui_wv_linux_t* webView) {
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_maximize()\n");
+        webui_log_debug("[Core]\t\t_webui_wv_maximize()\n");
         #endif
         if (webView && webView->gtk_win) {
             // gtk_window_iconify(webView->gtk_win);
@@ -12115,7 +12147,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     
     static bool _webui_wv_maximize(_webui_wv_linux_t* webView) {
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_maximize()\n");
+        webui_log_debug("[Core]\t\t_webui_wv_maximize()\n");
         #endif
         if (webView && webView->gtk_win) {
             // gtk_window_maximize(webView->gtk_win);
@@ -12126,7 +12158,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     static bool _webui_wv_set_position(_webui_wv_linux_t* webView, int x, int y) {
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_set_position(%d. %d)\n", x, y);
+        webui_log_debug("[Core]\t\t_webui_wv_set_position(%d. %d)\n", x, y);
         #endif
         if (webView) {
             if (webView->gtk_win) {
@@ -12143,7 +12175,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     static bool _webui_wv_navigate(_webui_wv_linux_t* webView, char* url) {
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_navigate([%s])\n", url);
+        webui_log_debug("[Core]\t\t_webui_wv_navigate([%s])\n", url);
         #endif
         if (webView) {
             if (webView->gtk_win) {
@@ -12156,7 +12188,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     static void _webui_wv_close(_webui_wv_linux_t* webView) {
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_close()\n");
+        webui_log_debug("[Core]\t\t_webui_wv_close()\n");
         #endif
 
         if (webView) {
@@ -12166,7 +12198,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 webView->open = false;
 
                 #ifdef WEBUI_LOG
-                webui_log("[Core]\t\t_webui_wv_close() -> Closing WebView window\n");
+                webui_log_debug("[Core]\t\t_webui_wv_close() -> Closing WebView window\n");
                 #endif
                 gtk_window_close(webView->gtk_win);
             }
@@ -12178,13 +12210,13 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     static void _webui_wv_free() {
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_free()\n");
+        webui_log_debug("[Core]\t\t_webui_wv_free()\n");
         #endif
 
         if (libwebkit) {
 
             #ifdef WEBUI_LOG
-            webui_log("[Core]\t\t_webui_wv_free() -> Unload WebKit\n");
+            webui_log_debug("[Core]\t\t_webui_wv_free() -> Unload WebKit\n");
             #endif
             dlclose(libwebkit);
         }
@@ -12192,7 +12224,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         if (libgtk) {
 
             #ifdef WEBUI_LOG
-            webui_log("[Core]\t\t_webui_wv_free() -> Unload GTK\n");
+            webui_log_debug("[Core]\t\t_webui_wv_free() -> Unload GTK\n");
             #endif
             dlclose(libgtk);
         }
@@ -12205,7 +12237,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     static void _webui_wv_create(_webui_window_t* win) {
 
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_create()\n");
+        webui_log_debug("[Core]\t\t_webui_wv_create()\n");
         #endif
 
         // Initialize GTK Window
@@ -12261,7 +12293,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     static int _webui_wv_create_schedule(void* arg) {
 
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_create_schedule()\n");
+        webui_log_debug("[Core]\t\t_webui_wv_create_schedule()\n");
         #endif
 
         // This callback is fired by GTK. so it's safe
@@ -12284,7 +12316,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
             if (_webui.is_gtk_main_run) {
                 #ifdef WEBUI_LOG
-                webui_log("[Core]\t\t_webui_wv_exit_schedule() -> Quit GTK Main Loop...\n");
+                webui_log_debug("[Core]\t\t_webui_wv_exit_schedule() -> Quit GTK Main Loop...\n");
                 #endif
                 gtk_main_quit();
             }
@@ -12304,7 +12336,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libgtk = dlopen(gtk_libs[i], RTLD_LAZY);
                 if (libgtk) {
                     #ifdef WEBUI_LOG
-                    webui_log("[Core]\t\t_webui_load_gtk_and_webkit() -> GTK loaded [%s]\n",
+                    webui_log_debug("[Core]\t\t_webui_load_gtk_and_webkit() -> GTK loaded [%s]\n",
                     gtk_libs[i]);
                     #endif
                     break;
@@ -12322,7 +12354,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libwebkit = dlopen(webkit_libs[i], RTLD_LAZY);
                 if (libwebkit) {
                     #ifdef WEBUI_LOG
-                    webui_log("[Core]\t\t_webui_load_gtk_and_webkit() -> WebKit loaded [%s]\n",
+                    webui_log_debug("[Core]\t\t_webui_load_gtk_and_webkit() -> WebKit loaded [%s]\n",
                     webkit_libs[i]);
                     #endif
                     break;
@@ -12404,7 +12436,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 )
             {
                 #ifdef WEBUI_LOG
-                webui_log("[Core]\t\t_webui_load_gtk_and_webkit() -> GTK symbol addresses failed\n");
+                webui_log_debug("[Core]\t\t_webui_load_gtk_and_webkit() -> GTK symbol addresses failed\n");
                 #endif
                 _webui_wv_free();
                 return false;
@@ -12413,7 +12445,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             // Check WebView
             if (!webkit_web_view_new || !webkit_web_view_load_uri || !webkit_web_view_get_title) {
                 #ifdef WEBUI_LOG
-                webui_log("[Core]\t\t_webui_load_gtk_and_webkit() -> WebKit symbol addresses failed\n");
+                webui_log_debug("[Core]\t\t_webui_load_gtk_and_webkit() -> WebKit symbol addresses failed\n");
                 #endif
                 _webui_wv_free();
                 return false;
@@ -12430,14 +12462,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     static bool _webui_wv_show(_webui_window_t* win, char* url) {
 
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_show([%s])\n", url);
+        webui_log_debug("[Core]\t\t_webui_wv_show([%s])\n", url);
         #endif
 
         // Linux GTK WebView
 
         #ifdef WEBUI_DYNAMIC
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_show() -> WebUI dynamic version does not support Linux WebView\n");
+        webui_log_debug("[Core]\t\t_webui_wv_show() -> WebUI dynamic version does not support Linux WebView\n");
         #endif
         return false;
         #endif
@@ -12477,7 +12509,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             // window in the main thread `webui_wait()`
 
             #ifdef WEBUI_LOG
-            webui_log("[Core]\t\t_webui_wv_show() -> Schedule the creation of the new WebView window\n");
+            webui_log_debug("[Core]\t\t_webui_wv_show() -> Schedule the creation of the new WebView window\n");
             #endif
 
             g_idle_add(_webui_wv_create_schedule, (void*)win);
@@ -12517,7 +12549,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t_webui_wv_show() -> Return [%d]\n", (_webui.is_webview == true));
+        webui_log_debug("[Core]\t\t_webui_wv_show() -> Return [%d]\n", (_webui.is_webview == true));
         #endif
 
         return (_webui.is_webview);
@@ -12525,7 +12557,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
     static WEBUI_THREAD_WEBVIEW {
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t[Thread .] _webui_webview_thread()\n");
+        webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread()\n");
         #endif
 
         _webui_window_t* win = _webui_dereference_win_ptr(arg);
@@ -12547,7 +12579,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         if (win->webView->gtk_win && win->webView->gtk_wv) {
 
             #ifdef WEBUI_LOG
-            webui_log("[Core]\t\t[Thread .] _webui_webview_thread() -> Started\n");
+            webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> Started\n");
             #endif
 
             // Success
@@ -12589,7 +12621,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t[Thread .] _webui_webview_thread() -> Cleaning\n");
+        webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> Cleaning\n");
         #endif
 
         // Clean
@@ -12597,7 +12629,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         win->webView = NULL;
 
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t[Thread .] _webui_webview_thread() -> End\n");
+        webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> End\n");
         #endif
 
         WEBUI_THREAD_RETURN
@@ -12915,27 +12947,27 @@ static WEBUI_THREAD_MONITOR {
         int fd = inotify_init();
         if (fd < 0) {
             #ifdef WEBUI_LOG
-            webui_log("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> inotify_init error\n");
+            webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> inotify_init error\n");
             #endif
             WEBUI_THREAD_RETURN
         }
         int wd = inotify_add_watch(fd, win->server_root_path, IN_MODIFY | IN_CREATE | IN_DELETE);
         if (wd < 0) {
             #ifdef WEBUI_LOG
-            webui_log("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> inotify_add_watch error\n");
+            webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> inotify_add_watch error\n");
             #endif
             close(fd);
             WEBUI_THREAD_RETURN
         }
         #ifdef WEBUI_LOG
-        webui_log("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Monitoring [%s]\n", win->server_root_path);
+        webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Monitoring [%s]\n", win->server_root_path);
         #endif
         char buffer[1024];
         while (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
             int length = read(fd, buffer, sizeof(buffer));
             if (length < 0) {
                 #ifdef WEBUI_LOG
-                webui_log("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> read error\n");
+                webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> read error\n");
                 #endif
                 break;
             }
@@ -12945,7 +12977,7 @@ static WEBUI_THREAD_MONITOR {
                 if (event->len) {
                     if (event->mask&(IN_CREATE | IN_DELETE | IN_MODIFY)) {
                         #ifdef WEBUI_LOG
-                        webui_log("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Folder updated\n");
+                        webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Folder updated\n");
                         #endif
                         // Loop trough all connected clients in this window
                         for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
