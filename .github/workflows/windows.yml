@@ -13,7 +13,7 @@ on:
 
 jobs:
   setup:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - name: Bundle WebUI Bridge
@@ -25,7 +25,7 @@ jobs:
 
   build:
     needs: setup
-    runs-on: windows-latest
+    runs-on: windows-2022
     permissions:
       contents: write
     strategy:
@@ -39,8 +39,8 @@ jobs:
       fail-fast: false
     env:
       ARTIFACT: webui-windows-${{ matrix.cc }}-x64
-      WEBUI_TLS_INCLUDE: "C:\\Program Files\\OpenSSL-Win64\\include"
-      WEBUI_TLS_LIB: "C:\\Program Files\\OpenSSL-Win64\\lib"
+      WEBUI_TLS_INCLUDE: "C:\\Program Files\\OpenSSL\\include"
+      WEBUI_TLS_LIB: "C:\\Program Files\\OpenSSL\\lib"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache/restore@v4
