@@ -265,9 +265,17 @@ typedef struct webui_event_inf_t {
     typedef void *(*webkit_web_view_new_func)(void);
     typedef void (*webkit_web_view_load_uri_func)(void *, const char *);
     typedef const char *(*webkit_web_view_get_title_func)(void *);
-    webkit_web_view_new_func webkit_web_view_new = NULL;
-    webkit_web_view_load_uri_func webkit_web_view_load_uri = NULL;
-    webkit_web_view_get_title_func webkit_web_view_get_title = NULL;
+    typedef void (*webkit_1ptr_arg_func)(void *);
+    typedef int (*webkit_1ptr_arg_2int_func)(void *);
+    typedef void *(*webkit_1ptr_arg_2ptr_func)(void *);
+    typedef const char *(*webkit_1ptr_arg_2str_func)(void *);
+    static webkit_web_view_new_func webkit_web_view_new = NULL;
+    static webkit_web_view_load_uri_func webkit_web_view_load_uri = NULL;
+    static webkit_web_view_get_title_func webkit_web_view_get_title = NULL;
+    static webkit_1ptr_arg_func webkit_policy_decision_ignore = NULL;
+    static webkit_1ptr_arg_2int_func webkit_navigation_policy_decision_get_navigation_type = NULL;
+    static webkit_1ptr_arg_2ptr_func webkit_navigation_policy_decision_get_request = NULL;
+    static webkit_1ptr_arg_2str_func webkit_uri_request_get_uri = NULL;
     
     typedef struct _webui_wv_linux_t {
         // Linux WebView
@@ -374,6 +382,7 @@ typedef struct _webui_window_t {
     int y;
     bool position_set;
     bool (*close_handler)(size_t window);
+    bool (*may_navigate_handler)(size_t window);
     const void*(*files_handler)(const char* filename, int* length);
     const void*(*files_handler_window)(size_t window, const char* filename, int* length);
     const void* file_handler_async_response;
@@ -643,6 +652,7 @@ static bool _webui_wv_set_position(_webui_wv_linux_t* webView, int x, int y);
 static bool _webui_wv_set_size(_webui_wv_linux_t* webView, int windowWidth, int windowHeight);
 static bool _webui_wv_show(_webui_window_t* win, char* url);
 static void _webui_wv_event_closed(void *widget, void *arg);
+static bool _webui_wv_event_on_close(void *widget, void *event, void *arg);
 static int _webui_wv_exit_schedule(void* arg);
 static bool _webui_wv_maximize(_webui_wv_linux_t* webView);
 static bool _webui_wv_minimize(_webui_wv_linux_t* webView);
@@ -873,6 +883,25 @@ void webui_set_close_handler(size_t window, bool(*close_handler)(size_t window))
 
     // Set the close handler
     win->close_handler = close_handler;
+}
+
+void webui_set_navigation_handler(size_t window, bool (*may_navigate_handler)(size_t window))
+{
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return;
+
+    _webui_window_t* win = _webui.wins[window];
+
+#ifdef WEBUI_LOG
+    webui_log_debug("[User]webui_set_navigation_handler(%zu, %p)", window, may_navigate_handler);
+#endif
+
+    // Set the close handler
+    win->may_navigate_handler = may_navigate_handler;
 }
 
 void webui_set_file_handler(size_t window, const void*(*handler)(const char* filename, int* length)) {
@@ -12121,6 +12150,96 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
     }
 
+    // Delete Event (implement on close handling)
+    static bool _webui_wv_event_on_close(void *widget, void *evt, void *arg) {
+        #ifdef WEBUI_LOG
+        webui_log_debug("[Core]\t\t_webui_wv_event_on_close()\n");
+        #endif
+        _webui_window_t* win = _webui_dereference_win_ptr(arg);
+        if (win) {
+            if (win->close_handler) {
+                bool can_close = win->close_handler(win->num);
+                webui_log_debug("can_close = %d", can_close);
+                return !can_close;
+            }
+        }
+        return false;
+    }
+
+    // Decision Event
+    #define WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION 0
+    #define WEBKIT_NAVIGATION_TYPE_LINK_CLICKED     0
+    #define WEBKIT_NAVIGATION_TYPE_FORM_SUBMITTED   1
+    #define WEBKIT_NAVIGATION_TYPE_BACK_FORWARD     2
+    #define WEBKIT_NAVIGATION_TYPE_RELOAD           3
+    #define WEBKIT_NAVIGATION_TYPE_FORM_RESUBMITTED 4
+    #define WEBKIT_NAVIGATION_TYPE_OTHER            5
+    static bool _webui_wv_event_decision(void *widget, void *decision, int decision_type, void *user_data) {
+        switch(decision_type) {
+            case WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION: {
+
+                int navigation_type = webkit_navigation_policy_decision_get_navigation_type(decision);
+                bool intercept_navigation = false;
+
+                _webui_window_t* win = _webui_dereference_win_ptr(user_data);
+                if (win->may_navigate_handler) {
+                    intercept_navigation = !(win->may_navigate_handler(win->num));
+                }
+
+                if (intercept_navigation) {
+                    webkit_policy_decision_ignore(decision);
+
+                    void *uri_request = webkit_navigation_policy_decision_get_request(decision);
+                    const char *webkit_uri = webkit_uri_request_get_uri(uri_request);
+
+                    size_t s = strlen(webkit_uri) + 1;
+                    char *uri = (char *) _webui_malloc(s);
+                    strlcpy(uri, webkit_uri, s);
+
+                    char buf[20];
+                    snprintf(buf, 20, "%d", navigation_type);
+                    size_t nt_s = strlen(buf) + 1;
+                    char *type = (char *) _webui_malloc(nt_s);
+                    strlcpy(type, buf, nt_s);
+
+
+                    webui_event_inf_t* event_inf = NULL;
+                    size_t event_num = _webui_new_event_inf(win, &event_inf);
+
+                    int connection_id = 0;
+                    struct mg_connection* client = win->single_client;
+
+                    event_inf->client = client;
+                    event_inf->connection_id = connection_id;
+
+                    // Event Info Extras
+                    event_inf->event_data[0] = uri;
+                    event_inf->event_size[0] = strlen(uri);
+                    event_inf->event_data[1] = type;
+                    event_inf->event_size[1] = strlen(type);
+
+                    _webui_window_event(
+                        win, // Event -> Window
+                        connection_id, // Event -> Client Unique ID
+                        WEBUI_EVENT_NAVIGATION, // Event -> Type of this event
+                        "", // Event -> HTML Element
+                        event_num, // Event -> Event Number
+                        _webui_client_get_id(win, client), // Event -> Client ID
+                        _webui_get_cookies_full(client) // Event -> Full cookies
+                    );
+
+                    // Free event
+                    _webui_free_event_inf(win, event_num);
+
+                    // Return that this event is handled.
+                    return true;
+                }
+            }
+            break;
+        }
+        return false;
+    }
+
     static bool _webui_wv_set_size(_webui_wv_linux_t* webView, int windowWidth, int windowHeight) {
         #ifdef WEBUI_LOG
         webui_log_debug("[Core]\t\t_webui_wv_set_size(%d, %d)\n", windowWidth, windowHeight);
@@ -12259,8 +12378,13 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Events
         g_signal_connect_data(win->webView->gtk_wv, "notify::title", G_CALLBACK(
             _webui_wv_event_title), (void *)win, NULL, 0);
+        g_signal_connect_data(win->webView->gtk_win, "delete-event", G_CALLBACK(
+            _webui_wv_event_on_close), (void *)win, NULL, 0);
         g_signal_connect_data(win->webView->gtk_win, "destroy", G_CALLBACK(
             _webui_wv_event_closed), (void *)win, NULL, 0);
+
+        g_signal_connect_data(win->webView->gtk_wv, "decide-policy", G_CALLBACK(
+            _webui_wv_event_decision), (void *)win, NULL, 0);
         
         // Linux GTK WebView Auto JS Inject
         if (_webui.config.show_auto_js_inject) {
@@ -12419,6 +12543,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libwebkit, "webkit_web_view_load_uri");
             webkit_web_view_get_title = (webkit_web_view_get_title_func)dlsym(
                 libwebkit, "webkit_web_view_get_title");
+            webkit_policy_decision_ignore = (webkit_1ptr_arg_func)dlsym(
+                libwebkit, "webkit_policy_decision_ignore");
+            webkit_navigation_policy_decision_get_navigation_type = (webkit_1ptr_arg_2int_func)dlsym(
+                libwebkit, "webkit_navigation_policy_decision_get_navigation_type");
+            webkit_navigation_policy_decision_get_request = (webkit_1ptr_arg_2ptr_func)dlsym(
+                libwebkit, "webkit_navigation_policy_decision_get_request");
+            webkit_uri_request_get_uri = (webkit_1ptr_arg_2str_func)dlsym(
+                libwebkit, "webkit_uri_request_get_uri");
+
 
             // Check GTK
             if (
@@ -12443,7 +12576,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
 
             // Check WebView
-            if (!webkit_web_view_new || !webkit_web_view_load_uri || !webkit_web_view_get_title) {
+            if (!webkit_web_view_new || !webkit_web_view_load_uri || !webkit_web_view_get_title ||
+                    !webkit_policy_decision_ignore || !webkit_navigation_policy_decision_get_navigation_type ||
+                    !webkit_uri_request_get_uri || !webkit_navigation_policy_decision_get_request
+                    ) {
                 #ifdef WEBUI_LOG
                 webui_log_debug("[Core]\t\t_webui_load_gtk_and_webkit() -> WebKit symbol addresses failed\n");
                 #endif
