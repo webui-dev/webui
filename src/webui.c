@@ -11485,6 +11485,21 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 }
                 break;
             }
+            case WM_MOVE: {
+                if (win) {
+                    if (win->webView && win->webView->webviewController) {
+                        RECT bounds;
+                        GetClientRect(hwnd, &bounds);
+
+                        // Because WebView2 does not do anything if the size has not changed...and still we want to be able to register moves
+                        bounds.right -= 1;
+                        win->webView->webviewController->lpVtbl->put_Bounds(win->webView->webviewController, bounds);
+                        bounds.right += 1;
+                        win->webView->webviewController->lpVtbl->put_Bounds(win->webView->webviewController, bounds);
+                    }
+                }
+                break;
+            }
             case WM_SIZE: {
                 if (win) {
                     if (win->webView && win->webView->webviewController) {
