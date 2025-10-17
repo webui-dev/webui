@@ -18,6 +18,7 @@
 // -- WebView -------------------------
 #ifdef _WIN32
     #include "webview/WebView2.h"
+    #include "webview/win32_wv2.hpp"
 #elif __linux__
     #include <dlfcn.h>
 #else
@@ -183,27 +184,8 @@ typedef struct webui_event_inf_t {
 // WebView
 #ifdef _WIN32
     typedef struct _webui_wv_win32_t {
-        // Win32 WebView
-        ICoreWebView2Environment* webviewEnvironment;
-        ICoreWebView2Controller* webviewController;
-        ICoreWebView2* webviewWindow;
-        HWND hwnd;
-        void* titleChangedHandler;
-        void* titleChangedHandler_lpVtbl;
-        void* createWebViewEnvironmentHandler;
-        void* createWebViewEnvironmentHandler_lpVtbl;
-        void* createWebViewControllerHandler;
-        void* createWebViewControllerHandler_lpVtbl;
-        // WebUI Window
-        wchar_t* url;
-        bool navigate;
-        bool size;
-        bool position;
-        int width;
-        int height;
-        int x;
-        int y;
-        bool stop;
+        // Win32 WebView2 C++ handle
+        _webui_win32_wv2_handle cpp_handle;
     } _webui_wv_win32_t;
 #elif __linux__
     void* libgtk;
@@ -1279,8 +1261,15 @@ void webui_close(size_t window) {
     else {
         // Stop WebView thread if any
         if (win->webView) {
+            #ifdef _WIN32
+            if (win->webView->cpp_handle) {
+                _webui_win32_wv2_set_stop(win->webView->cpp_handle, true);
+                _webui_webview_update(win);
+            }
+            #else
             win->webView->stop = true;
             _webui_webview_update(win);
+            #endif
         }
     }
 }
@@ -1480,19 +1469,21 @@ void webui_navigate(size_t window, const char* url) {
     }
     else {
         // WebView
-        _webui_free_mem((void*) win->webView->url);
-
         #ifdef _WIN32
-        wchar_t* wURL = NULL;
-        _webui_str_to_wide(url, &wURL);
-        win->webView->url = wURL;
+        if (win->webView->cpp_handle) {
+            wchar_t* wURL = NULL;
+            _webui_str_to_wide(url, &wURL);
+            _webui_win32_wv2_set_url(win->webView->cpp_handle, wURL);
+            _webui_win32_wv2_set_navigate_flag(win->webView->cpp_handle, true);
+            _webui_webview_update(win);
+        }
         #else
+        _webui_free_mem((void*) win->webView->url);
         char* url_cp = _webui_str_dup(url);
         win->webView->url = url_cp;
-        #endif
-
         win->webView->navigate = true;
         _webui_webview_update(win);
+        #endif
     }
 }
 
@@ -2699,8 +2690,8 @@ void* webui_win32_get_hwnd(size_t window) {
     #ifdef _WIN32
     if (_webui.is_webview) {
         // WebView Window
-        if (win->webView) {
-            return win->webView->hwnd;
+        if (win->webView && win->webView->cpp_handle) {
+            return _webui_win32_wv2_get_hwnd(win->webView->cpp_handle);
         }
     } else {
         // Web Browser Window
@@ -2822,10 +2813,20 @@ void webui_set_size(size_t window, unsigned int width, unsigned int height) {
 
         // webView window
         if (win->webView) {
+            #ifdef _WIN32
+            if (win->webView->cpp_handle) {
+                int x, y, w, h;
+                _webui_win32_wv2_get_dimensions(win->webView->cpp_handle, &x, &y, &w, &h);
+                _webui_win32_wv2_set_dimensions(win->webView->cpp_handle, x, y, width, height);
+                _webui_win32_wv2_set_size_flag(win->webView->cpp_handle, true);
+                _webui_webview_update(win);
+            }
+            #else
             win->webView->width = width;
             win->webView->height = height;
             win->webView->size = true;
             _webui_webview_update(win);
+            #endif
         }
     }
 }
@@ -2900,10 +2901,20 @@ void webui_set_position(size_t window, unsigned int x, unsigned int y) {
 
             // WebView window
             if (win->webView) {
+                #ifdef _WIN32
+                if (win->webView->cpp_handle) {
+                    int x, y, w, h;
+                    _webui_win32_wv2_get_dimensions(win->webView->cpp_handle, &x, &y, &w, &h);
+                    _webui_win32_wv2_set_dimensions(win->webView->cpp_handle, X, Y, w, h);
+                    _webui_win32_wv2_set_position_flag(win->webView->cpp_handle, true);
+                    _webui_webview_update(win);
+                }
+                #else
                 win->webView->x = X;
                 win->webView->y = Y;
                 win->webView->position = true;
                 _webui_webview_update(win);
+                #endif
             }
         }        
     }
@@ -3388,8 +3399,15 @@ void webui_exit(void) {
 
                     // Stop WebView thread if any
                     if (_webui.wins[i]->webView) {
+                        #ifdef _WIN32
+                        if (_webui.wins[i]->webView->cpp_handle) {
+                            _webui_win32_wv2_set_stop(_webui.wins[i]->webView->cpp_handle, true);
+                            _webui_webview_update(_webui.wins[i]);
+                        }
+                        #else
                         _webui.wins[i]->webView->stop = true;
                         _webui_webview_update(_webui.wins[i]);
+                        #endif
                     }        
                 }
             }
@@ -9819,8 +9837,15 @@ static WEBUI_THREAD_SERVER_START {
 
     // Clean WebView
     if (win->webView) {
+        #ifdef _WIN32
+        if (win->webView->cpp_handle) {
+            _webui_win32_wv2_set_stop(win->webView->cpp_handle, true);
+            _webui_webview_update(win);
+        }
+        #else
         win->webView->stop = true;
         _webui_webview_update(win);
+        #endif
     }
 
     // Clean
@@ -11229,259 +11254,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 #ifdef _WIN32
     // Microsoft Windows
 
-    typedef HRESULT (__stdcall *CreateCoreWebView2EnvironmentWithOptionsFunc)(
-        PCWSTR browserExecutableFolder, PCWSTR userDataFolder, ICoreWebView2EnvironmentOptions* environmentOptions,
-        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* environment_created_handler
-    );
-
-    typedef struct {
-        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandlerVtbl* lpVtbl;
-        ULONG refCount;
-        _webui_wv_win32_t* webView;
-    } CreateWebViewEnvironmentHandler;
-
-    typedef struct {
-        ICoreWebView2CreateCoreWebView2ControllerCompletedHandlerVtbl* lpVtbl;
-        ULONG refCount;
-        _webui_wv_win32_t* webView;
-    } CreateWebViewControllerHandler;
-
-    typedef struct {
-        ICoreWebView2DocumentTitleChangedEventHandlerVtbl* lpVtbl;
-        ULONG refCount;
-        _webui_wv_win32_t* webView;
-    } TitleChangedHandler;
-
-    HRESULT STDMETHODCALLTYPE CreateWebViewEnvironmentHandler_Invoke(
-        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, 
-        HRESULT result, 
-        ICoreWebView2Environment* env
-    );
-
-    HRESULT STDMETHODCALLTYPE CreateWebViewControllerHandler_Invoke(
-        ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, 
-        HRESULT result, 
-        ICoreWebView2Controller* controller
-    );
-
-    HRESULT STDMETHODCALLTYPE QueryInterfaceEnvironment(
-        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, 
-        REFIID riid, 
-        void** ppvObject
-    );
-
-    HRESULT STDMETHODCALLTYPE QueryInterfaceController(
-        ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, 
-        REFIID riid, 
-        void** ppvObject
-    );
-
-    ULONG STDMETHODCALLTYPE AddRefEnvironment(
-        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This
-    );
-
-    ULONG STDMETHODCALLTYPE AddRefController(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This);
-    ULONG STDMETHODCALLTYPE ReleaseEnvironment(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This);
-    ULONG STDMETHODCALLTYPE ReleaseController(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This);
-
-    HRESULT STDMETHODCALLTYPE TitleChanged_Invoke(
-        ICoreWebView2DocumentTitleChangedEventHandler* This, ICoreWebView2* sender, IUnknown* args) {
-        (void)args;
-        TitleChangedHandler* handler = (TitleChangedHandler*)This;
-        _webui_wv_win32_t* webView = handler->webView;
-        LPWSTR newTitle = NULL;
-        sender->lpVtbl->get_DocumentTitle(sender, &newTitle);
-        SetWindowTextW(webView->hwnd, newTitle);
-        CoTaskMemFree(newTitle);
-        return S_OK;
-    };
-
-    ULONG STDMETHODCALLTYPE TitleChanged_AddRef(ICoreWebView2DocumentTitleChangedEventHandler* This) {
-        TitleChangedHandler* handler = (TitleChangedHandler*)This;
-        return ++handler->refCount;
-    };
-
-    ULONG STDMETHODCALLTYPE TitleChanged_Release(ICoreWebView2DocumentTitleChangedEventHandler* This) {
-        TitleChangedHandler* handler = (TitleChangedHandler*)This;
-        if (--handler->refCount == 0) {
-            _webui_free_mem((void*) handler->lpVtbl);
-            _webui_free_mem((void*) handler);
-            return 0;
-        }
-        return handler->refCount;
-    };
-
-    TitleChangedHandler* CreateTitleChangedHandler(_webui_wv_win32_t* webView) {
-        TitleChangedHandler* handler = _webui_malloc(sizeof(TitleChangedHandler));
-        handler->lpVtbl = _webui_malloc(sizeof(ICoreWebView2DocumentTitleChangedEventHandlerVtbl));
-        handler->lpVtbl->Invoke = TitleChanged_Invoke;
-        handler->lpVtbl->AddRef = TitleChanged_AddRef;
-        handler->lpVtbl->Release = TitleChanged_Release;
-        handler->refCount = 1;
-        handler->webView = webView;
-
-        // Save pointers to be freed by `_webui_wv_free()`
-        webView->titleChangedHandler = handler;
-        webView->titleChangedHandler_lpVtbl = handler->lpVtbl;
-        return handler;
-    };
-
-    CreateWebViewEnvironmentHandler* CreateEnvironmentHandler(_webui_wv_win32_t* webView) {
-        CreateWebViewEnvironmentHandler* handler = _webui_malloc(sizeof(CreateWebViewEnvironmentHandler));
-        if (!handler) return NULL;
-        handler->lpVtbl = _webui_malloc(sizeof(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandlerVtbl));
-        if (!handler->lpVtbl) {
-            _webui_free_mem((void*) handler);
-            return NULL;
-        }
-        handler->lpVtbl->QueryInterface = QueryInterfaceEnvironment;
-        handler->lpVtbl->AddRef = AddRefEnvironment;
-        handler->lpVtbl->Release = ReleaseEnvironment;
-        handler->lpVtbl->Invoke = CreateWebViewEnvironmentHandler_Invoke;
-        handler->refCount = 1;
-        handler->webView = webView;
-
-        // Save pointers to be freed by `_webui_wv_free()`
-        webView->createWebViewEnvironmentHandler = handler;
-        webView->createWebViewEnvironmentHandler_lpVtbl = handler->lpVtbl;
-        return handler;
-    };
-
-    CreateWebViewControllerHandler* CreateControllerHandler(_webui_wv_win32_t* webView) {
-        CreateWebViewControllerHandler* handler = _webui_malloc(sizeof(CreateWebViewControllerHandler));
-        if (!handler) return NULL;
-        handler->lpVtbl = _webui_malloc(sizeof(ICoreWebView2CreateCoreWebView2ControllerCompletedHandlerVtbl));
-        if (!handler->lpVtbl) {
-            _webui_free_mem((void*) handler);
-            return NULL;
-        }
-        handler->lpVtbl->QueryInterface = QueryInterfaceController;
-        handler->lpVtbl->AddRef = AddRefController;
-        handler->lpVtbl->Release = ReleaseController;
-        handler->lpVtbl->Invoke = CreateWebViewControllerHandler_Invoke;
-        handler->refCount = 1;
-        handler->webView = webView;
-
-        // Save pointers to be freed by `_webui_wv_free()`
-        webView->createWebViewControllerHandler = handler;
-        webView->createWebViewControllerHandler_lpVtbl = handler->lpVtbl;
-        return handler;
-    };
-
-    HRESULT STDMETHODCALLTYPE CreateWebViewEnvironmentHandler_Invoke(
-        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, HRESULT result, 
-        ICoreWebView2Environment* env
-    ) {
-        CreateWebViewEnvironmentHandler* handler = (CreateWebViewEnvironmentHandler*)This;
-        _webui_wv_win32_t* webView = handler->webView;
-        if (SUCCEEDED(result)) {
-            CreateWebViewControllerHandler* controllerHandler = CreateControllerHandler(webView);
-            if (controllerHandler) {
-                env->lpVtbl->CreateCoreWebView2Controller(env, webView->hwnd, 
-                (ICoreWebView2CreateCoreWebView2ControllerCompletedHandler*)controllerHandler);
-            }
-        }
-        return S_OK;
-    };
-
-    HRESULT STDMETHODCALLTYPE CreateWebViewControllerHandler_Invoke(
-        ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, HRESULT result, 
-        ICoreWebView2Controller* controller) {
-        CreateWebViewControllerHandler* handler = (CreateWebViewControllerHandler*)This;
-        _webui_wv_win32_t* webView = handler->webView;
-        if (SUCCEEDED(result) && controller != NULL) {
-            webView->webviewController = controller;
-            webView->webviewController->lpVtbl->get_CoreWebView2(webView->webviewController, 
-            &webView->webviewWindow);
-            webView->webviewController->lpVtbl->AddRef(webView->webviewController);
-            ICoreWebView2Settings* settings;
-            webView->webviewWindow->lpVtbl->get_Settings(webView->webviewWindow, &settings);
-            settings->lpVtbl->put_IsScriptEnabled(settings, TRUE);
-            settings->lpVtbl->put_AreDefaultScriptDialogsEnabled(settings, TRUE);
-            settings->lpVtbl->put_IsWebMessageEnabled(settings, TRUE);
-
-            /* Whether dev tools are enabled or not.
-             * When WEBUI_LOG is defined, dev tools are enabled.
-             * Otherwise, dev tools are disabled. */
-            #ifndef WEBUI_LOG
-            settings->lpVtbl->put_AreDevToolsEnabled(settings, FALSE);
-            #endif
-
-
-            RECT bounds = {0, 0, webView->width, webView->height};
-            webView->webviewController->lpVtbl->put_Bounds(webView->webviewController, bounds);
-            TitleChangedHandler* titleChangedHandler = CreateTitleChangedHandler(webView);
-            EventRegistrationToken tk;
-            webView->webviewWindow->lpVtbl->add_DocumentTitleChanged(webView->webviewWindow, 
-            (ICoreWebView2DocumentTitleChangedEventHandler*)titleChangedHandler, &tk);
-            webView->webviewWindow->lpVtbl->Navigate(webView->webviewWindow, webView->url);
-            // Microsoft WebView2 Auto JS Inject
-            if (_webui.config.show_auto_js_inject) {
-                // HRESULT AutoInject = webView->webviewWindow->lpVtbl->AddScriptToExecuteOnDocumentCreated(
-                //     webView->webviewWindow, L"var script = document.createElement('script');"
-                //     "script.src = 'webui.js';document.head.appendChild(script);", 
-                //     NULL
-                // );
-                // if (FAILED(AutoInject)) {
-                //     #ifdef WEBUI_LOG
-                //     printf("[Core]\t\t[Thread .] _webui_webview_thread() -> Auto Inject creation failed\n");
-                //     #endif
-                // }
-                // else {
-                //     #ifdef WEBUI_LOG
-                //     printf("[Core]\t\t[Thread .] _webui_webview_thread() -> Auto Inject creation succeeds\n");
-                //     #endif
-                // }
-            }
-        } else return S_FALSE;
-        return S_OK;
-    };
-
-    HRESULT STDMETHODCALLTYPE QueryInterfaceEnvironment(
-        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, REFIID riid, void** ppvObject) {
-        (void)This;
-        (void)riid;
-        *ppvObject = NULL;
-        return E_NOINTERFACE;
-    };
-
-    HRESULT STDMETHODCALLTYPE QueryInterfaceController(
-        ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, REFIID riid, void** ppvObject) {
-        (void)This;
-        (void)riid;
-        *ppvObject = NULL;
-        return E_NOINTERFACE;
-    };
-
-    ULONG STDMETHODCALLTYPE AddRefEnvironment(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This) {
-        CreateWebViewEnvironmentHandler* handler = (CreateWebViewEnvironmentHandler*)This;
-        return ++handler->refCount;
-    };
-
-    ULONG STDMETHODCALLTYPE AddRefController(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This) {
-        CreateWebViewControllerHandler* handler = (CreateWebViewControllerHandler*)This;
-        return ++handler->refCount;
-    };
-
-    ULONG STDMETHODCALLTYPE ReleaseEnvironment(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This) {
-        CreateWebViewEnvironmentHandler* handler = (CreateWebViewEnvironmentHandler*)This;
-        if (--handler->refCount == 0) {
-            _webui_free_mem((void*) handler->lpVtbl);
-            _webui_free_mem((void*) handler);
-            return 0;
-        }
-        return handler->refCount;
-    };
-
-    ULONG STDMETHODCALLTYPE ReleaseController(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This) {
-        CreateWebViewControllerHandler* handler = (CreateWebViewControllerHandler*)This;
-        if (--handler->refCount == 0) {
-            _webui_free_mem((void*) handler->lpVtbl);
-            _webui_free_mem((void*) handler);
-            return 0;
-        }
-        return handler->refCount;
-    };
+    // Old C WebView2 handler code removed - now using C++ API
 
     LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
@@ -11508,25 +11281,33 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
             case WM_MOVE: {
                 if (win) {
-                    if (win->webView && win->webView->webviewController) {
-                        RECT bounds;
-                        GetClientRect(hwnd, &bounds);
+                    if (win->webView && win->webView->cpp_handle) {
+                        void* controller = _webui_win32_wv2_get_controller(win->webView->cpp_handle);
+                        if (controller) {
+                            ICoreWebView2Controller* webviewController = (ICoreWebView2Controller*)controller;
+                            RECT bounds;
+                            GetClientRect(hwnd, &bounds);
 
-                        // Because WebView2 does not do anything if the size has not changed...and still we want to be able to register moves
-                        bounds.right -= 1;
-                        win->webView->webviewController->lpVtbl->put_Bounds(win->webView->webviewController, bounds);
-                        bounds.right += 1;
-                        win->webView->webviewController->lpVtbl->put_Bounds(win->webView->webviewController, bounds);
+                            // Because WebView2 does not do anything if the size has not changed...and still we want to be able to register moves
+                            bounds.right -= 1;
+                            webviewController->lpVtbl->put_Bounds(webviewController, bounds);
+                            bounds.right += 1;
+                            webviewController->lpVtbl->put_Bounds(webviewController, bounds);
+                        }
                     }
                 }
                 break;
             }
             case WM_SIZE: {
                 if (win) {
-                    if (win->webView && win->webView->webviewController) {
-                        RECT bounds;
-                        GetClientRect(hwnd, &bounds);
-                        win->webView->webviewController->lpVtbl->put_Bounds(win->webView->webviewController, bounds);
+                    if (win->webView && win->webView->cpp_handle) {
+                        void* controller = _webui_win32_wv2_get_controller(win->webView->cpp_handle);
+                        if (controller) {
+                            ICoreWebView2Controller* webviewController = (ICoreWebView2Controller*)controller;
+                            RECT bounds;
+                            GetClientRect(hwnd, &bounds);
+                            webviewController->lpVtbl->put_Bounds(webviewController, bounds);
+                        }
                     }
                 }
                 break;
@@ -11577,8 +11358,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     if (can_close) {
                         // Stop the WebView thread, close the window
                         // and free resources.
-                        if (win->webView) {
-                            win->webView->stop = true;
+                        if (win->webView && win->webView->cpp_handle) {
+                            _webui_win32_wv2_set_stop(win->webView->cpp_handle, true);
                             _webui_webview_update(win);
                         }
                         _webui_wv_event_closed(win);
@@ -11627,13 +11408,26 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         wchar_t* wURL = NULL;
         _webui_str_to_wide(url, &wURL);
 
+        // Calculate dimensions
+        int width = (win->width > 0 ? win->width : WEBUI_DEF_WIDTH);
+        int height = (win->height > 0 ? win->height : WEBUI_DEF_HEIGHT);
+        int x = (win->x > 0 ? win->x : (int)((GetSystemMetrics(SM_CXSCREEN) - width) / 2));
+        int y = (win->y > 0 ? win->y : (int)((GetSystemMetrics(SM_CYSCREEN) - height) / 2));
+
         // Initializing the Win32 WebView struct
         _webui_wv_win32_t* webView = (_webui_wv_win32_t*) _webui_malloc(sizeof(_webui_wv_win32_t));
-        webView->url = wURL;
-        webView->width = (win->width > 0 ? win->width : WEBUI_DEF_WIDTH);
-        webView->height = (win->height > 0 ? win->height : WEBUI_DEF_HEIGHT);
-        webView->x = (win->x > 0 ? win->x : (int)((GetSystemMetrics(SM_CXSCREEN) - webView->width) / 2));
-        webView->y = (win->y > 0 ? win->y : (int)((GetSystemMetrics(SM_CYSCREEN) - webView->height) / 2));
+        webView->cpp_handle = _webui_win32_wv2_create();
+
+        if (!webView->cpp_handle) {
+            _webui_free_mem((void*) wURL);
+            _webui_free_mem((void*) webView);
+            return false;
+        }
+
+        // Set URL and dimensions in C++ handle
+        _webui_win32_wv2_set_url(webView->cpp_handle, wURL);
+        _webui_win32_wv2_set_dimensions(webView->cpp_handle, x, y, width, height);
+        _webui_win32_wv2_set_navigate_flag(webView->cpp_handle, true);
 
         win->webView = webView;
 
@@ -11641,7 +11435,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // process all the WebView's operations in one single thread for each window.
 
         // Initializing
-        // Expecting `_webui_webview_thread` to change `mutex_is_webview_update` 
+        // Expecting `_webui_webview_thread` to change `mutex_is_webview_update`
         // to `false` when initialization is done, and `_webui.is_webview`
         // to `true` if loading the WebView is succeeded.
         _webui_webview_update(win);
@@ -11656,7 +11450,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         pthread_create(&thread, NULL, &_webui_webview_thread, (void*)win);
         pthread_detach(thread);
         #endif
-        
+
         // Wait for WebView thread to start
         _webui_timer_t timer;
         _webui_timer_start(&timer);
@@ -11684,8 +11478,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wv_minimize()\n");
         #endif
-        if (webView) {
-            return ShowWindow(webView->hwnd, SW_MINIMIZE);
+        if (webView && webView->cpp_handle) {
+            return _webui_win32_wv2_minimize(webView->cpp_handle);
         }
         return false;
     }
@@ -11694,8 +11488,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wv_maximize()\n");
         #endif
-        if (webView) {
-            return ShowWindow(webView->hwnd, SW_MAXIMIZE);
+        if (webView && webView->cpp_handle) {
+            return _webui_win32_wv2_maximize(webView->cpp_handle);
         }
         return false;
     }
@@ -11704,8 +11498,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wv_set_size(%d. %d)\n", windowWidth, windowHeight);
         #endif
-        if (webView) {
-            return (SetWindowPos(webView->hwnd, NULL, 0, 0, windowWidth, windowHeight, SWP_NOMOVE| SWP_NOREPOSITION));
+        if (webView && webView->cpp_handle) {
+            return _webui_win32_wv2_set_size(webView->cpp_handle, windowWidth, windowHeight);
         }
         return false;
     };
@@ -11714,8 +11508,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wv_set_position(%d. %d)\n", x, y);
         #endif
-        if (webView) {
-            SetWindowPos(webView->hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+        if (webView && webView->cpp_handle) {
+            return _webui_win32_wv2_set_position(webView->cpp_handle, x, y);
         }
         return false;
     };
@@ -11724,9 +11518,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wv_navigate([%ls])\n", url);
         #endif
-        if (webView && webView->webviewWindow) {
-            HRESULT hr = webView->webviewWindow->lpVtbl->Navigate(webView->webviewWindow, url);
-            return SUCCEEDED(hr);
+        if (webView && webView->cpp_handle) {
+            return _webui_win32_wv2_navigate(webView->cpp_handle, url);
         }
         return false;
     };
@@ -11736,26 +11529,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         printf("[Core]\t\t_webui_wv_free()\n");
         #endif
         if (webView != NULL) {
-            if (webView->webviewWindow) {
-                webView->webviewWindow->lpVtbl->Release(webView->webviewWindow);
+            if (webView->cpp_handle) {
+                _webui_win32_wv2_free(webView->cpp_handle);
             }
-            if (webView->webviewController) {
-                webView->webviewController->lpVtbl->Release(webView->webviewController);
-            }
-            if (webView->webviewEnvironment) {
-                webView->webviewEnvironment->lpVtbl->Release(webView->webviewEnvironment);
-            }
+            _webui_free_mem((void*) webView);
         }
-
-        _webui_free_mem((void*) webView->titleChangedHandler_lpVtbl);
-        _webui_free_mem((void*) webView->titleChangedHandler);
-        _webui_free_mem((void*) webView->createWebViewEnvironmentHandler_lpVtbl);
-        _webui_free_mem((void*) webView->createWebViewEnvironmentHandler);
-        _webui_free_mem((void*) webView->createWebViewControllerHandler_lpVtbl);
-        _webui_free_mem((void*) webView->createWebViewControllerHandler);
-
-        _webui_free_mem((void*) webView->url);
-        _webui_free_mem((void*) webView);
     };
 
     static void _webui_wv_close(_webui_wv_win32_t *webView) {
@@ -11772,9 +11550,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #endif
 
         _webui_window_t* win = _webui_dereference_win_ptr(arg);
-        if (win == NULL) {
-            _webui_wv_free(win->webView);
-            win->webView = NULL;
+        if (win == NULL || win->webView == NULL || win->webView->cpp_handle == NULL) {
+            if (win && win->webView) {
+                _webui_wv_free(win->webView);
+                win->webView = NULL;
+            }
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
@@ -11789,17 +11569,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         if (win->transparent) {
             SetEnvironmentVariable("WEBVIEW2_DEFAULT_BACKGROUND_COLOR", "0");
-        }
-
-        // WebView Dynamic Library
-        if (!_webui.webviewLib) {
-            _webui.webviewLib = LoadLibraryA("WebView2Loader.dll");
-            if (!_webui.webviewLib) {
-                _webui_wv_free(win->webView);
-                win->webView = NULL;
-                _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
-                WEBUI_THREAD_RETURN
-            }
         }
 
         // Window class
@@ -11824,6 +11593,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             WEBUI_THREAD_RETURN
         }
 
+        // Get dimensions from C++ handle
+        int x, y, width, height;
+        _webui_win32_wv2_get_dimensions(win->webView->cpp_handle, &x, &y, &width, &height);
+
         // Set window style based on frameless flag
         DWORD style = WS_OVERLAPPEDWINDOW;
         if (win->frameless) {
@@ -11842,74 +11615,47 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
         }
 
-        win->webView->hwnd = CreateWindowExA(
+        HWND hwnd = CreateWindowExA(
             0, wvClass, "", style,
-            win->webView->x, win->webView->y, 
-            win->webView->width, win->webView->height,
+            x, y, width, height,
             NULL, NULL, GetModuleHandle(NULL), (LPVOID)win
         );
 
-        if (!win->webView->hwnd) {
+        if (!hwnd) {
             _webui_wv_free(win->webView);
             win->webView = NULL;
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
 
-        // Window size correction
-        RECT rc;
-        GetClientRect(win->webView->hwnd, &rc);
-        win->webView->width = rc.right - rc.left;
-        win->webView->height = rc.bottom - rc.top;
+        // Set HWND in C++ handle
+        _webui_win32_wv2_set_hwnd(win->webView->cpp_handle, hwnd);
 
         // Show Win32 window
-        ShowWindow(win->webView->hwnd, SW_SHOW);
+        ShowWindow(hwnd, SW_SHOW);
 
-        // WebView Environment
-        static CreateCoreWebView2EnvironmentWithOptionsFunc createEnv = NULL;
-        createEnv = (CreateCoreWebView2EnvironmentWithOptionsFunc)(void*)GetProcAddress(
-            _webui.webviewLib,
-            "CreateCoreWebView2EnvironmentWithOptions"
-        );
-
-        if (!createEnv) {
-            _webui_wv_free(win->webView);
-            win->webView = NULL;
-            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
-            WEBUI_THREAD_RETURN
-        }
-
-        CreateWebViewEnvironmentHandler* environmentHandler = CreateEnvironmentHandler(win->webView);
-        if (!environmentHandler) {
-            _webui_wv_free(win->webView);
-            win->webView = NULL;
-            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
-            WEBUI_THREAD_RETURN
-        }
-
-        // Get temp chache folder path
+        // Get temp cache folder path
         if (!_webui.webview_cacheFolder) {
             const char* temp = _webui_get_temp_path();
             _webui.webview_cacheFolder = (char*)_webui_malloc(WEBUI_MAX_PATH);
-            WEBUI_SN_PRINTF_DYN(_webui.webview_cacheFolder, WEBUI_MAX_PATH, 
+            WEBUI_SN_PRINTF_DYN(_webui.webview_cacheFolder, WEBUI_MAX_PATH,
                 "%s%s.WebUI%sWebUIWebViewCache_%"PRIu32, temp, os_sep, os_sep,
                 _webui_generate_random_uint32());
         }
 
-        // Convert chache folder path to wide
+        // Convert cache folder path to wide
         wchar_t* cacheFolderW = NULL;
         _webui_str_to_wide(_webui.webview_cacheFolder, &cacheFolderW);
 
-        HRESULT hr = createEnv(NULL, cacheFolderW, NULL, 
-            (ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*)environmentHandler
-        );
+        // Create WebView2 environment using C++ API
+        bool env_created = _webui_win32_wv2_create_environment(win->webView->cpp_handle, cacheFolderW);
 
-        if (SUCCEEDED(hr)) {
+        if (env_created) {
 
             // Success
             // Let `wait()` use safe main-thread WebView2 loop
             _webui.is_webview = true;
-            
+
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
             MSG msg;
             while (true) {
@@ -11921,8 +11667,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     DispatchMessageW(&msg);
                     // Window manually closed
                     if (msg.message == WM_QUIT) {
-                        if (win->webView) {
-                            DestroyWindow(win->webView->hwnd);
+                        HWND current_hwnd = _webui_win32_wv2_get_hwnd(win->webView->cpp_handle);
+                        if (current_hwnd) {
+                            DestroyWindow(current_hwnd);
                         }
                         break;
                     }
@@ -11934,26 +11681,36 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
                     if (_webui_mutex_is_webview_update(win, WEBUI_MUTEX_GET_STATUS)) {
                         _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
-                        if (win->webView) {
+                        if (win->webView && win->webView->cpp_handle) {
                             // Stop this thread
-                            if (win->webView->stop) {
-                                DestroyWindow(win->webView->hwnd);
+                            if (_webui_win32_wv2_get_stop(win->webView->cpp_handle)) {
+                                HWND current_hwnd = _webui_win32_wv2_get_hwnd(win->webView->cpp_handle);
+                                if (current_hwnd) {
+                                    DestroyWindow(current_hwnd);
+                                }
                                 break;
                             }
                             // Window Size
-                            if (win->webView->size) {
-                                win->webView->size = false;
-                                _webui_wv_set_size(win->webView, win->webView->width, win->webView->height);
+                            if (_webui_win32_wv2_get_size_flag(win->webView->cpp_handle)) {
+                                _webui_win32_wv2_set_size_flag(win->webView->cpp_handle, false);
+                                int w, h;
+                                _webui_win32_wv2_get_dimensions(win->webView->cpp_handle, NULL, NULL, &w, &h);
+                                _webui_wv_set_size(win->webView, w, h);
                             }
                             // Window Position
-                            if (win->webView->position) {
-                                win->webView->position = false;
-                                _webui_wv_set_position(win->webView, win->webView->x, win->webView->y);
+                            if (_webui_win32_wv2_get_position_flag(win->webView->cpp_handle)) {
+                                _webui_win32_wv2_set_position_flag(win->webView->cpp_handle, false);
+                                int px, py;
+                                _webui_win32_wv2_get_dimensions(win->webView->cpp_handle, &px, &py, NULL, NULL);
+                                _webui_wv_set_position(win->webView, px, py);
                             }
                             // Navigation
-                            if (win->webView->navigate) {
-                                win->webView->navigate = false;
-                                _webui_wv_navigate(win->webView, win->webView->url);
+                            if (_webui_win32_wv2_get_navigate_flag(win->webView->cpp_handle)) {
+                                _webui_win32_wv2_set_navigate_flag(win->webView->cpp_handle, false);
+                                wchar_t* url = _webui_win32_wv2_get_url(win->webView->cpp_handle);
+                                if (url) {
+                                    _webui_wv_navigate(win->webView, url);
+                                }
                             }
                         }
                     }
