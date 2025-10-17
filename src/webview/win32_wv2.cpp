@@ -13,10 +13,43 @@
 
 #include "win32_wv2.hpp"
 #include "WebView2.h"
-#include <wrl.h>
 #include <cstdio>
 
-using namespace Microsoft::WRL;
+#ifdef _MSC_VER
+    // MSVC: Use Windows Runtime Library
+    #include <wrl.h>
+    using namespace Microsoft::WRL;
+#else
+    // MinGW: Define our own ComPtr template
+    template<typename T>
+    class ComPtr {
+        T* ptr;
+    public:
+        ComPtr() : ptr(nullptr) {}
+        ~ComPtr() { Reset(); }
+        ComPtr(const ComPtr&) = delete;
+        ComPtr& operator=(const ComPtr&) = delete;
+
+        void Reset() {
+            if (ptr) {
+                ptr->Release();
+                ptr = nullptr;
+            }
+        }
+
+        T* Get() const { return ptr; }
+        T** GetAddressOf() { Reset(); return &ptr; }
+        T* operator->() const { return ptr; }
+        operator bool() const { return ptr != nullptr; }
+
+        ComPtr& operator=(T* p) {
+            Reset();
+            ptr = p;
+            if (ptr) ptr->AddRef();
+            return *this;
+        }
+    };
+#endif
 
 class WebView2Instance {
 public:
@@ -37,73 +70,219 @@ public:
     }
 };
 
-class TitleChangedHandler : public RuntimeClass<RuntimeClassFlags<ClassicCom>, ICoreWebView2DocumentTitleChangedEventHandler> {
-    WebView2Instance* instance;
-public:
-    TitleChangedHandler(WebView2Instance* inst) : instance(inst) {}
-    HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2* sender, IUnknown* args) override {
-        (void)args;
-        if (sender && instance->hwnd) {
-            LPWSTR newTitle = nullptr;
-            sender->get_DocumentTitle(&newTitle);
-            if (newTitle) {
-                SetWindowTextW(instance->hwnd, newTitle);
-                CoTaskMemFree(newTitle);
+#ifdef _MSC_VER
+    // MSVC: Use WRL RuntimeClass
+    class TitleChangedHandler : public RuntimeClass<RuntimeClassFlags<ClassicCom>, ICoreWebView2DocumentTitleChangedEventHandler> {
+        WebView2Instance* instance;
+    public:
+        TitleChangedHandler(WebView2Instance* inst) : instance(inst) {}
+        HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2* sender, IUnknown* args) override {
+            (void)args;
+            if (sender && instance->hwnd) {
+                LPWSTR newTitle = nullptr;
+                sender->get_DocumentTitle(&newTitle);
+                if (newTitle) {
+                    SetWindowTextW(instance->hwnd, newTitle);
+                    CoTaskMemFree(newTitle);
+                }
             }
+            return S_OK;
         }
-        return S_OK;
-    }
-};
+    };
+#else
+    // MinGW: Manual COM implementation
+    class TitleChangedHandler : public ICoreWebView2DocumentTitleChangedEventHandler {
+        ULONG refCount;
+        WebView2Instance* instance;
+    public:
+        TitleChangedHandler(WebView2Instance* inst) : refCount(1), instance(inst) {}
 
-class ControllerCompletedHandler : public RuntimeClass<RuntimeClassFlags<ClassicCom>, ICoreWebView2CreateCoreWebView2ControllerCompletedHandler> {
-    WebView2Instance* instance;
-public:
-    ControllerCompletedHandler(WebView2Instance* inst) : instance(inst) {}
-    HRESULT STDMETHODCALLTYPE Invoke(HRESULT result, ICoreWebView2Controller* controller) override {
-        if (SUCCEEDED(result) && controller) {
-            instance->webviewController = controller;
-            controller->get_CoreWebView2(&instance->webviewWindow);
-
-            ComPtr<ICoreWebView2Settings> settings;
-            if (SUCCEEDED(instance->webviewWindow->get_Settings(&settings))) {
-                settings->put_IsScriptEnabled(TRUE);
-                settings->put_AreDefaultScriptDialogsEnabled(TRUE);
-                settings->put_IsWebMessageEnabled(TRUE);
-                #ifdef WEBUI_LOG
-                settings->put_AreDevToolsEnabled(TRUE);
-                #else
-                settings->put_AreDevToolsEnabled(FALSE);
-                #endif
+        HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
+            if (!ppvObject) return E_POINTER;
+            *ppvObject = nullptr;
+            if (riid == IID_IUnknown || riid == __uuidof(ICoreWebView2DocumentTitleChangedEventHandler)) {
+                *ppvObject = static_cast<ICoreWebView2DocumentTitleChangedEventHandler*>(this);
+                AddRef();
+                return S_OK;
             }
+            return E_NOINTERFACE;
+        }
 
-            RECT bounds = {0, 0, instance->width, instance->height};
-            controller->put_Bounds(bounds);
+        ULONG STDMETHODCALLTYPE AddRef() override {
+            return ++refCount;
+        }
 
-            auto titleHandler = Make<TitleChangedHandler>(instance);
-            EventRegistrationToken token;
-            instance->webviewWindow->add_DocumentTitleChanged(titleHandler.Get(), &token);
+        ULONG STDMETHODCALLTYPE Release() override {
+            ULONG count = --refCount;
+            if (count == 0) delete this;
+            return count;
+        }
 
-            if (instance->url) {
-                instance->webviewWindow->Navigate(instance->url);
+        HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2* sender, IUnknown* args) override {
+            (void)args;
+            if (sender && instance->hwnd) {
+                LPWSTR newTitle = nullptr;
+                sender->get_DocumentTitle(&newTitle);
+                if (newTitle) {
+                    SetWindowTextW(instance->hwnd, newTitle);
+                    CoTaskMemFree(newTitle);
+                }
             }
+            return S_OK;
         }
-        return S_OK;
-    }
-};
+    };
+#endif
 
-class EnvironmentCompletedHandler : public RuntimeClass<RuntimeClassFlags<ClassicCom>, ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler> {
-    WebView2Instance* instance;
-public:
-    EnvironmentCompletedHandler(WebView2Instance* inst) : instance(inst) {}
-    HRESULT STDMETHODCALLTYPE Invoke(HRESULT result, ICoreWebView2Environment* env) override {
-        if (SUCCEEDED(result) && env) {
-            instance->webviewEnvironment = env;
-            auto controllerHandler = Make<ControllerCompletedHandler>(instance);
-            env->CreateCoreWebView2Controller(instance->hwnd, controllerHandler.Get());
+#ifdef _MSC_VER
+    class ControllerCompletedHandler : public RuntimeClass<RuntimeClassFlags<ClassicCom>, ICoreWebView2CreateCoreWebView2ControllerCompletedHandler> {
+        WebView2Instance* instance;
+    public:
+        ControllerCompletedHandler(WebView2Instance* inst) : instance(inst) {}
+        HRESULT STDMETHODCALLTYPE Invoke(HRESULT result, ICoreWebView2Controller* controller) override {
+            if (SUCCEEDED(result) && controller) {
+                instance->webviewController = controller;
+                controller->get_CoreWebView2(&instance->webviewWindow);
+
+                ComPtr<ICoreWebView2Settings> settings;
+                if (SUCCEEDED(instance->webviewWindow->get_Settings(&settings))) {
+                    settings->put_IsScriptEnabled(TRUE);
+                    settings->put_AreDefaultScriptDialogsEnabled(TRUE);
+                    settings->put_IsWebMessageEnabled(TRUE);
+                    #ifdef WEBUI_LOG
+                    settings->put_AreDevToolsEnabled(TRUE);
+                    #else
+                    settings->put_AreDevToolsEnabled(FALSE);
+                    #endif
+                }
+
+                RECT bounds = {0, 0, instance->width, instance->height};
+                controller->put_Bounds(bounds);
+
+                auto titleHandler = Make<TitleChangedHandler>(instance);
+                EventRegistrationToken token;
+                instance->webviewWindow->add_DocumentTitleChanged(titleHandler.Get(), &token);
+
+                if (instance->url) {
+                    instance->webviewWindow->Navigate(instance->url);
+                }
+            }
+            return S_OK;
         }
-        return S_OK;
-    }
-};
+    };
+#else
+    class ControllerCompletedHandler : public ICoreWebView2CreateCoreWebView2ControllerCompletedHandler {
+        ULONG refCount;
+        WebView2Instance* instance;
+    public:
+        ControllerCompletedHandler(WebView2Instance* inst) : refCount(1), instance(inst) {}
+
+        HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
+            if (!ppvObject) return E_POINTER;
+            *ppvObject = nullptr;
+            if (riid == IID_IUnknown || riid == __uuidof(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler)) {
+                *ppvObject = static_cast<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler*>(this);
+                AddRef();
+                return S_OK;
+            }
+            return E_NOINTERFACE;
+        }
+
+        ULONG STDMETHODCALLTYPE AddRef() override {
+            return ++refCount;
+        }
+
+        ULONG STDMETHODCALLTYPE Release() override {
+            ULONG count = --refCount;
+            if (count == 0) delete this;
+            return count;
+        }
+
+        HRESULT STDMETHODCALLTYPE Invoke(HRESULT result, ICoreWebView2Controller* controller) override {
+            if (SUCCEEDED(result) && controller) {
+                instance->webviewController = controller;
+                controller->get_CoreWebView2(instance->webviewWindow.GetAddressOf());
+
+                ICoreWebView2Settings* settings = nullptr;
+                if (SUCCEEDED(instance->webviewWindow->get_Settings(&settings)) && settings) {
+                    settings->put_IsScriptEnabled(TRUE);
+                    settings->put_AreDefaultScriptDialogsEnabled(TRUE);
+                    settings->put_IsWebMessageEnabled(TRUE);
+                    #ifdef WEBUI_LOG
+                    settings->put_AreDevToolsEnabled(TRUE);
+                    #else
+                    settings->put_AreDevToolsEnabled(FALSE);
+                    #endif
+                    settings->Release();
+                }
+
+                RECT bounds = {0, 0, instance->width, instance->height};
+                controller->put_Bounds(bounds);
+
+                TitleChangedHandler* titleHandler = new TitleChangedHandler(instance);
+                EventRegistrationToken token;
+                instance->webviewWindow->add_DocumentTitleChanged(titleHandler, &token);
+
+                if (instance->url) {
+                    instance->webviewWindow->Navigate(instance->url);
+                }
+            }
+            return S_OK;
+        }
+    };
+#endif
+
+#ifdef _MSC_VER
+    class EnvironmentCompletedHandler : public RuntimeClass<RuntimeClassFlags<ClassicCom>, ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler> {
+        WebView2Instance* instance;
+    public:
+        EnvironmentCompletedHandler(WebView2Instance* inst) : instance(inst) {}
+        HRESULT STDMETHODCALLTYPE Invoke(HRESULT result, ICoreWebView2Environment* env) override {
+            if (SUCCEEDED(result) && env) {
+                instance->webviewEnvironment = env;
+                auto controllerHandler = Make<ControllerCompletedHandler>(instance);
+                env->CreateCoreWebView2Controller(instance->hwnd, controllerHandler.Get());
+            }
+            return S_OK;
+        }
+    };
+#else
+    class EnvironmentCompletedHandler : public ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler {
+        ULONG refCount;
+        WebView2Instance* instance;
+    public:
+        EnvironmentCompletedHandler(WebView2Instance* inst) : refCount(1), instance(inst) {}
+
+        HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
+            if (!ppvObject) return E_POINTER;
+            *ppvObject = nullptr;
+            if (riid == IID_IUnknown || riid == __uuidof(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler)) {
+                *ppvObject = static_cast<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*>(this);
+                AddRef();
+                return S_OK;
+            }
+            return E_NOINTERFACE;
+        }
+
+        ULONG STDMETHODCALLTYPE AddRef() override {
+            return ++refCount;
+        }
+
+        ULONG STDMETHODCALLTYPE Release() override {
+            ULONG count = --refCount;
+            if (count == 0) delete this;
+            return count;
+        }
+
+        HRESULT STDMETHODCALLTYPE Invoke(HRESULT result, ICoreWebView2Environment* env) override {
+            if (SUCCEEDED(result) && env) {
+                instance->webviewEnvironment = env;
+                ControllerCompletedHandler* controllerHandler = new ControllerCompletedHandler(instance);
+                env->CreateCoreWebView2Controller(instance->hwnd, controllerHandler);
+            }
+            return S_OK;
+        }
+    };
+#endif
 
 extern "C" {
 
@@ -248,13 +427,22 @@ bool _webui_win32_wv2_create_environment(_webui_win32_wv2_handle handle, wchar_t
         return false;
     }
 
-    auto environmentHandler = Make<EnvironmentCompletedHandler>(instance);
-    if (!environmentHandler) {
-        FreeLibrary(webviewLib);
-        return false;
-    }
+    #ifdef _MSC_VER
+        auto environmentHandler = Make<EnvironmentCompletedHandler>(instance);
+        if (!environmentHandler) {
+            FreeLibrary(webviewLib);
+            return false;
+        }
+        HRESULT hr = createEnv(NULL, cacheFolder, NULL, environmentHandler.Get());
+    #else
+        EnvironmentCompletedHandler* environmentHandler = new EnvironmentCompletedHandler(instance);
+        if (!environmentHandler) {
+            FreeLibrary(webviewLib);
+            return false;
+        }
+        HRESULT hr = createEnv(NULL, cacheFolder, NULL, environmentHandler);
+    #endif
 
-    HRESULT hr = createEnv(NULL, cacheFolder, NULL, environmentHandler.Get());
     return SUCCEEDED(hr);
 }
 
