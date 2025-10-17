@@ -35,6 +35,9 @@ if (WEBUI_USE_TLS)
     set(WEBUI_DEFAULT_OUT_LIB_NAME "webui-2-secure")
 endif()
 
+# Option to build example projects
+option(WEBUI_BUILD_EXAMPLES "Build WebUI examples" ON)
+
 if (NOT BUILD_SHARED_LIBS)
     set(WEBUI_DEFAULT_OUT_LIB_NAME "${WEBUI_DEFAULT_OUT_LIB_NAME}-static")
 endif()
@@ -105,25 +108,27 @@ install(EXPORT webui
 # Build examples 
 #//////////////////////////
 
-message(STATUS "Source directory is " ${CMAKE_SOURCE_DIR})
-message(STATUS "Build directory is " ${CMAKE_BINARY_DIR})
+if (WEBUI_BUILD_EXAMPLES)
+    message(STATUS "WebUI Source directory is " ${CMAKE_CURRENT_SOURCE_DIR})
+    message(STATUS "WebUI Build directory is " ${CMAKE_BINARY_DIR})
 
-include_directories(${CMAKE_SOURCE_DIR}/include)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_executable(minimal ${CMAKE_SOURCE_DIR}/examples/C++/minimal/main.cpp)
-add_executable(call_js_from_cpp ${CMAKE_SOURCE_DIR}/examples/C++/call_js_from_cpp/main.cpp)
-add_executable(call_js_from_c ${CMAKE_SOURCE_DIR}/examples/C/call_js_from_c/main.c)
+    add_executable(minimal ${CMAKE_CURRENT_SOURCE_DIR}/examples/C++/minimal/main.cpp)
+    add_executable(call_js_from_cpp ${CMAKE_CURRENT_SOURCE_DIR}/examples/C++/call_js_from_cpp/main.cpp)
+    add_executable(call_js_from_c ${CMAKE_CURRENT_SOURCE_DIR}/examples/C/call_js_from_c/main.c)
 
-target_link_libraries(minimal webui)
-target_link_libraries(call_js_from_cpp webui)
-target_link_libraries(call_js_from_c webui)
+    target_link_libraries(minimal webui)
+    target_link_libraries(call_js_from_cpp webui)
+    target_link_libraries(call_js_from_c webui)
 
-if (MSVC)
-  set_target_properties(minimal PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
-  set_target_properties(call_js_from_cpp PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
-  set_target_properties(call_js_from_c PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
-endif()
+    if (MSVC)
+        set_target_properties(minimal PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
+        set_target_properties(call_js_from_cpp PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
+        set_target_properties(call_js_from_c PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
+    endif()
 
-if (MSVC)
-  set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT call_js_from_cpp)
+    if (MSVC)
+        set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT call_js_from_cpp)
+    endif()
 endif()
