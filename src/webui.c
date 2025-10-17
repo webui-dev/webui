@@ -214,28 +214,28 @@ typedef struct webui_event_inf_t {
     typedef void (*gtk_window_set_position_func)(void *, int);
     typedef unsigned long (*g_signal_connect_data_func)(void *, const char *, void (*callback)(void), void *, void *, int);
     // GTK Symbol Initialization
-    gtk_init_func gtk_init = NULL;
-    gtk_widget_show_all_func gtk_widget_show_all = NULL;
-    gtk_main_iteration_do_func gtk_main_iteration_do = NULL;
-    gtk_main_func gtk_main = NULL;
-    gtk_main_quit_func gtk_main_quit = NULL;
-    g_timeout_add_func g_timeout_add = NULL;
-    gtk_events_pending_func gtk_events_pending = NULL;
-    gtk_container_add_func gtk_container_add = NULL;
-    gtk_window_new_func gtk_window_new = NULL;
-    gtk_window_set_default_size_func gtk_window_set_default_size = NULL;
-    gtk_window_set_title_func gtk_window_set_title = NULL;
-    gtk_window_move_func gtk_window_move = NULL;
-    gtk_window_close_func gtk_window_close = NULL;
-    gdk_display_get_default_func gdk_display_get_default = NULL;
-    gdk_display_get_primary_monitor_func gdk_display_get_primary_monitor = NULL;
-    gdk_monitor_get_geometry_func gdk_monitor_get_geometry = NULL;
-    gtk_window_resize_func gtk_window_resize = NULL;
-    gtk_window_set_decorated_func gtk_window_set_decorated = NULL;
-    gtk_window_set_resizable_func gtk_window_set_resizable = NULL;
-    gtk_window_set_position_func gtk_window_set_position = NULL;
-    g_signal_connect_data_func g_signal_connect_data = NULL;
-    g_idle_add_func g_idle_add = NULL;
+    static gtk_init_func gtk_init = NULL;
+    static gtk_widget_show_all_func gtk_widget_show_all = NULL;
+    static gtk_main_iteration_do_func gtk_main_iteration_do = NULL;
+    static gtk_main_func gtk_main = NULL;
+    static gtk_main_quit_func gtk_main_quit = NULL;
+    static g_timeout_add_func g_timeout_add = NULL;
+    static gtk_events_pending_func gtk_events_pending = NULL;
+    static gtk_container_add_func gtk_container_add = NULL;
+    static gtk_window_new_func gtk_window_new = NULL;
+    static gtk_window_set_default_size_func gtk_window_set_default_size = NULL;
+    static gtk_window_set_title_func gtk_window_set_title = NULL;
+    static gtk_window_move_func gtk_window_move = NULL;
+    static gtk_window_close_func gtk_window_close = NULL;
+    static gdk_display_get_default_func gdk_display_get_default = NULL;
+    static gdk_display_get_primary_monitor_func gdk_display_get_primary_monitor = NULL;
+    static gdk_monitor_get_geometry_func gdk_monitor_get_geometry = NULL;
+    static gtk_window_resize_func gtk_window_resize = NULL;
+    static gtk_window_set_decorated_func gtk_window_set_decorated = NULL;
+    static gtk_window_set_resizable_func gtk_window_set_resizable = NULL;
+    static gtk_window_set_position_func gtk_window_set_position = NULL;
+    static g_signal_connect_data_func g_signal_connect_data = NULL;
+    static g_idle_add_func g_idle_add = NULL;
     // GTK Structs
     typedef struct {
         int x;
@@ -247,9 +247,9 @@ typedef struct webui_event_inf_t {
     typedef void *(*webkit_web_view_new_func)(void);
     typedef void (*webkit_web_view_load_uri_func)(void *, const char *);
     typedef const char *(*webkit_web_view_get_title_func)(void *);
-    webkit_web_view_new_func webkit_web_view_new = NULL;
-    webkit_web_view_load_uri_func webkit_web_view_load_uri = NULL;
-    webkit_web_view_get_title_func webkit_web_view_get_title = NULL;
+    static webkit_web_view_new_func webkit_web_view_new = NULL;
+    static webkit_web_view_load_uri_func webkit_web_view_load_uri = NULL;
+    static webkit_web_view_get_title_func webkit_web_view_get_title = NULL;
     
     typedef struct _webui_wv_linux_t {
         // Linux WebView
