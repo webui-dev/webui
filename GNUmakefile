@@ -48,6 +48,7 @@ ARCH_TARGET ?=
 CIVETWEB_BUILD_FLAGS := -o civetweb.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/civetweb/civetweb.c" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG) -w
 CIVETWEB_DEFINE_FLAGS = -DNDEBUG -DNO_CACHING -DNO_CGI -DUSE_WEBSOCKET $(TLS_CFLAG)
 WEBUI_BUILD_FLAGS := -o webui.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webui.c" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG)
+WIN32_WV2_BUILD_FLAGS := -o win32_wv2.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webview/win32_wv2.cpp" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG)
 WARNING_RELEASE := -w
 WARNING_LOG := -Wall -Wno-unused
 
@@ -63,7 +64,9 @@ ifeq ($(DETECTED_OS),Windows)
 	PLATFORM := windows
 	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).dll
 	LWS2_OPT := -lws2_32 -lole32
+	WIN32_WV2_OBJ := win32_wv2.o
 	CIVETWEB_DEFINE_FLAGS += -DMUST_IMPLEMENT_CLOCK_GETTIME
+	CXX ?= g++
 else ifeq ($(DETECTED_OS),Darwin)
 	# MacOS
 	PLATFORM := macos
@@ -120,19 +123,25 @@ ifeq ($(DETECTED_OS),Darwin)
 	&& echo "Build WebUI Objective-C WKWebKit ($(CC) $(TARGET) debug)..." \
 	&& $(CC) $(TARGET) $(WKWEBKIT_BUILD_FLAGS) -g -DWEBUI_LOG
 endif
+#	Build Win32 WebView2 C++
+ifeq ($(DETECTED_OS),Windows)
+	@cd "$(BUILD_DIR)/debug" \
+	&& echo "Build WebUI Win32 WebView2 ($(CXX) $(TARGET) debug)..." \
+	&& $(CXX) $(TARGET) $(WIN32_WV2_BUILD_FLAGS) $(WARNING_LOG) -g -DWEBUI_LOG
+endif
 #	Static with Debug info
 	@cd "$(BUILD_DIR)/debug" \
 	&& echo "Build WebUI library ($(CC) $(TARGET) debug static)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_LOG) -g -DWEBUI_LOG \
-	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o $(WEBKIT_OBJ) \
+	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) \
 	&& $(LLVM_OPT)ranlib $(LIB_STATIC_OUT)
 #	Dynamic with Debug info
 	@cd "$(BUILD_DIR)/debug" \
 	&& echo "Build WebUI library ($(CC) $(TARGET) debug dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_LOG) -g -fPIC -DWEBUI_LOG -DWEBUI_DYNAMIC \
-	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
 ifeq ($(PLATFORM),windows)
 	@cd "$(BUILD_DIR)/debug" && del *.o >nul 2>&1
 else
@@ -153,19 +162,25 @@ ifeq ($(DETECTED_OS),Darwin)
 	&& echo "Build WebUI Objective-C WKWebKit ($(CC) $(TARGET) release)..." \
 	&& $(CC) $(TARGET) $(WKWEBKIT_BUILD_FLAGS) -Os
 endif
+#	Build Win32 WebView2 C++
+ifeq ($(DETECTED_OS),Windows)
+	@cd "$(BUILD_DIR)" \
+	&& echo "Build WebUI Win32 WebView2 ($(CXX) $(TARGET) release)..." \
+	&& $(CXX) $(TARGET) $(WIN32_WV2_BUILD_FLAGS) $(WARNING_RELEASE) -Os
+endif
 #	Static Release
 	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(CC) $(TARGET) release static)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_RELEASE) -Os \
-	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o $(WEBKIT_OBJ) \
+	&& $(LLVM_OPT)ar rc $(LIB_STATIC_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) \
 	&& $(LLVM_OPT)ranlib $(LIB_STATIC_OUT)
 #	Dynamic Release
 	@cd "$(BUILD_DIR)" \
 	&& echo "Build WebUI library ($(CC) $(TARGET) release dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_RELEASE) -O3 -fPIC -DWEBUI_DYNAMIC \
-	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@strip --strip-unneeded $(BUILD_DIR)/$(LIB_DYN_OUT)

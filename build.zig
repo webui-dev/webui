@@ -101,6 +101,15 @@ fn addLinkerFlags(
         .flags = if (enable_tls) tls_flags else no_tls_flags,
     });
 
+    // Add Win32 WebView2 C++ support on Windows
+    if (is_windows) {
+        webui.addCSourceFile(.{
+            .file = b.path("src/webview/win32_wv2.cpp"),
+            .flags = if (enable_tls) tls_flags else no_tls_flags,
+        });
+        webui.linkLibCpp();
+    }
+
     const civetweb_debug = debug and debug_dependencies.contains(.civetweb);
     webui.addCSourceFile(.{
         .file = b.path("src/civetweb/civetweb.c"),
