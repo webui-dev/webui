@@ -11571,7 +11571,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     if (win->close_handler_wv != NULL) {
                         can_close = win->close_handler_wv(win->num);
                         #ifdef WEBUI_LOG
-                        webui_log_debug("[Core]\t\tClose handler installed for %zu, result = %d\n", win->num, can_close);
+                        printf("[Core]\t\tClose handler installed for %zu, result = %d\n", win->num, can_close);
                         #endif
                     }
                     if (can_close) {
