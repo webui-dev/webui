@@ -8,6 +8,8 @@
   Canada.
 */
 
+#define webui_log_debug printf
+
 // 64Mb max dynamic memory allocation
 #define WEBUI_MAX_BUF (64000000)
 
@@ -373,6 +375,7 @@ typedef struct _webui_window_t {
     int x;
     int y;
     bool position_set;
+    bool (*close_handler)(size_t window);
     const void*(*files_handler)(const char* filename, int* length);
     const void*(*files_handler_window)(size_t window, const char* filename, int* length);
     const void* file_handler_async_response;
@@ -641,6 +644,7 @@ static bool _webui_wv_set_position(_webui_wv_linux_t* webView, int x, int y);
 static bool _webui_wv_set_size(_webui_wv_linux_t* webView, int windowWidth, int windowHeight);
 static bool _webui_wv_show(_webui_window_t* win, char* url);
 static void _webui_wv_event_closed(void *widget, void *arg);
+static bool _webui_wv_event_on_close(void *widget, void *event, void *arg);
 static int _webui_wv_exit_schedule(void* arg);
 static bool _webui_wv_maximize(_webui_wv_linux_t* webView);
 static bool _webui_wv_minimize(_webui_wv_linux_t* webView);
@@ -773,6 +777,25 @@ void webui_run(size_t window, const char* script) {
 
     // Send the packet to all clients because no need for client's response
     _webui_send_all(win, 0, WEBUI_CMD_JS_QUICK, script, js_len);
+}
+
+void webui_set_close_handler(size_t window, bool(*close_handler)(size_t window)) {
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return;
+
+    _webui_window_t* win = _webui.wins[window];
+
+#ifdef WEBUI_LOG
+    webui_log_debug("[User]webui_set_close_handler(%zu, %p)", window, close_handler);
+#endif
+
+    // Set the close handler
+    win->close_handler = close_handler;
 }
 
 void webui_set_file_handler(size_t window, const void*(*handler)(const char* filename, int* length)) {
@@ -11531,13 +11554,26 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
             case WM_CLOSE: {
                 if (win) {
-                    // Stop the WebView thread, close the window
-                    // and free resources.
-                    if (win->webView) {
-                        win->webView->stop = true;
-                        _webui_webview_update(win);
-                    }                    
-                    _webui_wv_event_closed(win);
+                    bool can_close = true;
+                    if (win->close_handler != NULL) {
+                        can_close = win->close_handler(win->num);
+                        #ifdef WEBUI_LOG
+                            webui_log_debug("[Core]\t\tClose Handler installed for %zu, result = %d\n", win->num, can_close);
+                        #endif
+                    }
+
+                    if (can_close) {
+                        // Stop the WebView thread, close the window
+                        // and free resources.
+                        if (win->webView) {
+                            win->webView->stop = true;
+                            _webui_webview_update(win);
+                        }
+                        _webui_wv_event_closed(win);
+                    } else {
+                        // Do not close the window, no default processing
+                        return 0;
+                    }
                 }
                 break;
             }
@@ -11972,6 +12008,24 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
     }
 
+#if __linux__
+    // Delete Event (implement on close handling)
+    static bool _webui_wv_event_on_close(void *widget, void *evt, void *arg) {
+            #ifdef WEBUI_LOG
+            webui_log_debug("[Core]\t\t_webui_wv_event_on_close()\n");
+            #endif
+            _webui_window_t* win = _webui_dereference_win_ptr(arg);
+            if (win) {
+                if (win->close_handler) {
+                    bool can_close = win->close_handler(win->num);
+                    webui_log_debug("can_close = %d", can_close);
+                    return !can_close;
+                }
+            }
+            return false;
+    }
+#endif
+
     static bool _webui_wv_set_size(_webui_wv_linux_t* webView, int windowWidth, int windowHeight) {
         #ifdef WEBUI_LOG
         printf("[Core]\t\t_webui_wv_set_size(%d. %d)\n", windowWidth, windowHeight);
@@ -12110,6 +12164,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Events
         g_signal_connect_data(win->webView->gtk_wv, "notify::title", G_CALLBACK(
             _webui_wv_event_title), (void *)win, NULL, 0);
+        g_signal_connect_data(win->webView->gtk_win, "delete-event", G_CALLBACK(
+                   _webui_wv_event_on_close), (void *)win, NULL, 0);
         g_signal_connect_data(win->webView->gtk_win, "destroy", G_CALLBACK(
             _webui_wv_event_closed), (void *)win, NULL, 0);
         
