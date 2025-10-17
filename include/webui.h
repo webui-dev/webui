@@ -519,6 +519,33 @@ WEBUI_EXPORT void webui_set_browser_folder(const char* path);
  */
 WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
 
+
+
+/**
+ * @brief Set a callback function on the given window to allow navigations.
+ * Must return false if navigation is not allowed, true, otherwise.
+ *
+ * A 'NULL' navigation handler will remove the current navigation_handler.
+ *
+ * NB. This currently works only for GtkWebKit WebView implementations.
+ * Because GtkWebKit allways navigates, i.e. doesnt react to
+ * webui_bind(_webui_win, "", webui_event_handler) which is supposed to
+ * catch navigation requests.
+ *
+ * Also, although bind(win, "", evt_handler) does not work for GtkWebKit,
+ * this implementation will always fire an event on navigation, unless
+ * mayNavigate() returns true (which is the default, when the callback is not set).
+ *
+ * @example
+ * bool mayNavigate(size_t window)
+ * {
+ *  if (_just_called_show_with_url) { return true; }
+ *  else { return false; } // expect a navigation event to be handled
+ * }
+ */
+WEBUI_EXPORT void webui_set_navigation_handler(size_t window, bool (*may_navigate_handler)(size_t window));
+
+
 /**
  * @brief Set a custom handler to serve files. This custom handler should
  * return full HTTP header and body.
