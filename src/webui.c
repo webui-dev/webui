@@ -12008,7 +12008,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
     }
 
-#if __linux__
     // Delete Event (implement on close handling)
     static bool _webui_wv_event_on_close(void *widget, void *evt, void *arg) {
             #ifdef WEBUI_LOG
@@ -12024,7 +12023,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
             return false;
     }
-#endif
 
     static bool _webui_wv_set_size(_webui_wv_linux_t* webView, int windowWidth, int windowHeight) {
         #ifdef WEBUI_LOG
