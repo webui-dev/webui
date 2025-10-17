@@ -8,8 +8,6 @@
   Canada.
 */
 
-#define webui_log_debug printf
-
 // 64Mb max dynamic memory allocation
 #define WEBUI_MAX_BUF (64000000)
 
@@ -375,7 +373,7 @@ typedef struct _webui_window_t {
     int x;
     int y;
     bool position_set;
-    bool (*close_handler)(size_t window);
+    bool (*close_handler_wv)(size_t window);
     const void*(*files_handler)(const char* filename, int* length);
     const void*(*files_handler_window)(size_t window, const char* filename, int* length);
     const void* file_handler_async_response;
@@ -779,7 +777,7 @@ void webui_run(size_t window, const char* script) {
     _webui_send_all(win, 0, WEBUI_CMD_JS_QUICK, script, js_len);
 }
 
-void webui_set_close_handler(size_t window, bool(*close_handler)(size_t window)) {
+void webui_set_close_handler_wv(size_t window, bool(*close_handler)(size_t window)) {
 
     // Initialization
     _webui_init();
@@ -790,12 +788,12 @@ void webui_set_close_handler(size_t window, bool(*close_handler)(size_t window))
 
     _webui_window_t* win = _webui.wins[window];
 
-#ifdef WEBUI_LOG
-    webui_log_debug("[User]webui_set_close_handler(%zu, %p)", window, close_handler);
-#endif
+    #ifdef WEBUI_LOG
+    printf("[User]webui_set_close_handler(%zu, %p)", window, close_handler);
+    #endif
 
     // Set the close handler
-    win->close_handler = close_handler;
+    win->close_handler_wv = close_handler;
 }
 
 void webui_set_file_handler(size_t window, const void*(*handler)(const char* filename, int* length)) {
@@ -11555,13 +11553,12 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             case WM_CLOSE: {
                 if (win) {
                     bool can_close = true;
-                    if (win->close_handler != NULL) {
-                        can_close = win->close_handler(win->num);
+                    if (win->close_handler_wv != NULL) {
+                        can_close = win->close_handler_wv(win->num);
                         #ifdef WEBUI_LOG
-                            webui_log_debug("[Core]\t\tClose Handler installed for %zu, result = %d\n", win->num, can_close);
+                        webui_log_debug("[Core]\t\tClose handler installed for %zu, result = %d\n", win->num, can_close);
                         #endif
                     }
-
                     if (can_close) {
                         // Stop the WebView thread, close the window
                         // and free resources.
@@ -12011,13 +12008,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     // Delete Event (implement on close handling)
     static bool _webui_wv_event_on_close(void *widget, void *evt, void *arg) {
             #ifdef WEBUI_LOG
-            webui_log_debug("[Core]\t\t_webui_wv_event_on_close()\n");
+            printf("[Core]\t\t_webui_wv_event_on_close()\n");
             #endif
             _webui_window_t* win = _webui_dereference_win_ptr(arg);
             if (win) {
-                if (win->close_handler) {
-                    bool can_close = win->close_handler(win->num);
-                    webui_log_debug("can_close = %d", can_close);
+                if (win->close_handler_wv) {
+                    bool can_close = win->close_handler_wv(win->num);
+                    #ifdef WEBUI_LOG
+                    printf("[Core]\t\t_webui_wv_event_on_close() -> can_close = %d\n", can_close);
+                    #endif
                     return !can_close;
                 }
             }
