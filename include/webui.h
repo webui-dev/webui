@@ -206,6 +206,20 @@ typedef struct webui_event_t {
     char* cookies;          // Client's full cookies
 } webui_event_t;
 
+// -- Other types ---------------------
+
+// custom log handler type
+typedef enum {
+    log_debug_detail = 1,
+    log_debug,
+    log_info,
+    log_warning,
+    log_error,
+    log_fatal
+} webui_log_level_t;
+
+typedef void(*webui_custom_log_handler_t)(webui_log_level_t level, const char *, void *data);
+
 // -- Definitions ---------------------
 
 /**
@@ -518,6 +532,57 @@ WEBUI_EXPORT void webui_set_browser_folder(const char* path);
  * @example webui_set_default_root_folder("/home/Foo/Bar/");
  */
 WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
+
+/**
+ * @brief Set a callback function on the given window to catch the
+ * close button of this window.
+ * Must return false, if the window cannot close, true, otherwis.
+ *
+ * This gives the possibility to check e.g. for non saved files in the
+ * backend.
+ *
+ * A 'NULL' close_handler function pointer will remove the
+ * current close_handler.
+ *
+ * NB. This works only for webview implementations, not for
+ * browsers.
+ *
+ * @example
+ * bool canClose(size_t window)
+ * {
+ *    my_internal_window_data *data = getMyInternalWindowData(window);
+ *    bool cc = AskUserForClosePermission(data);
+ *    return cc;
+ * }
+ * (...)
+ * webui_set_close_handler(myWindow, canClose);
+ */
+WEBUI_EXPORT void webui_set_close_handler(size_t window, bool (*close_handler)(size_t window));
+
+
+/**
+ * @brief Set a callback function on the given window to allow navigations.
+ * Must return false if navigation is not allowed, true, otherwise.
+ *
+ * A 'NULL' navigation handler will remove the current navigation_handler.
+ *
+ * NB. This currently works only for GtkWebKit WebView implementations.
+ * Because GtkWebKit allways navigates, i.e. doesnt react to
+ * webui_bind(_webui_win, "", webui_event_handler) which is supposed to
+ * catch navigation requests.
+ *
+ * Also, although bind(win, "", evt_handler) does not work for GtkWebKit,
+ * this implementation will always fire an event on navigation, unless
+ * mayNavigate() returns true (which is the default, when the callback is not set).
+ *
+ * @example
+ * bool mayNavigate(size_t window)
+ * {
+ *  if (_just_called_show_with_url) { return true; }
+ *  else { return false; } // expect a navigation event to be handled
+ * }
+ */
+WEBUI_EXPORT void webui_set_navigation_handler(size_t window, bool (*may_navigate_handler)(size_t window));
 
 /**
  * @brief Set a custom handler to serve files. This custom handler should
@@ -865,6 +930,18 @@ WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
 WEBUI_EXPORT void* webui_win32_get_hwnd(size_t window);
 
 /**
+ * @brief Gets Gtk Window, only available with the Gtk WebView
+ * mode.
+ *
+ * @param window The window number
+ *
+ * @return Returns the `GtkWindow *` pointer as `void*`
+ *
+ * @example GtkWindow *w = webui_gtk_get_window(myWindow);
+ */
+WEBUI_EXPORT void* webui_gtk_get_window(size_t window);
+
+/**
  * @brief Get the network port of a running window.
  * This can be useful to determine the HTTP link of `webui.js`
  *
@@ -908,6 +985,22 @@ WEBUI_EXPORT size_t webui_get_free_port(void);
  * @example webui_set_config(show_wait_connection, false);
  */
 WEBUI_EXPORT void webui_set_config(webui_config option, bool status);
+
+/**
+ * @brief Set a custom logger function. The standard logger uses 'printf' to log debug information.
+ *
+ * @param logger function of type void (*custom_logger)(webui_log_level_t, const char *msg, void *user_data).
+ * 
+ * a value of NULL for logger_f, will reset the webui logger to the default log handler.
+ *
+ * @example void my_logger(webui_log_level_t level, const char *msg, void *user_data) {
+ *             FILE *log_fh = static_cast<FILE *>(user_data);
+ *             fprintf(log_fh, "%d:%s", level, msg);
+ *          }
+ *          (...)
+ *			webui_set_custom_logger(my_logger); 
+ */
+WEBUI_EXPORT void webui_set_custom_logger(webui_custom_log_handler_t logger_f, void *user_data);
 
 /**
  * @brief Control if UI events comming from this window should be processed
