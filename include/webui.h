@@ -11,6 +11,10 @@
 #ifndef _WEBUI_H
 #define _WEBUI_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define WEBUI_VERSION "2.5.0-beta.4"
 
 // Max windows, servers and threads
@@ -1416,5 +1420,9 @@ WEBUI_EXPORT void webui_interface_run_client(size_t window, size_t event_number,
  * @example bool err = webui_script_client(e, "return 4 + 6;", 0, myBuffer, myBufferSize);
  */
 WEBUI_EXPORT bool webui_interface_script_client(size_t window, size_t event_number, const char* script, size_t timeout, char* buffer, size_t buffer_length);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _WEBUI_H */
