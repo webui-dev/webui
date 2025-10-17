@@ -6108,11 +6108,9 @@ static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
     }
     else if (browser == Firefox) {
         executables[0] = "firefox";
-        executables[1] = NULL;
     }
     else if (browser == Yandex) {
         executables[0] = "yandex-browser";
-        executables[1] = NULL;
     }
     else if (browser == Chromium) {
         executables[0] = "chromium-browser";
