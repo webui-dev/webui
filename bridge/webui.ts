@@ -30,6 +30,7 @@ class WebuiBridge {
 	#winW: number;
 	#winH: number;
 	// Frameless Dragging
+	#enableCustomDragging: boolean = false;
 	#isDragging: boolean = false;
 	#initialMouseX: number = 0;
 	#initialMouseY: number = 0;
@@ -164,48 +165,50 @@ class WebuiBridge {
 			if (event.key === 'F5') event.preventDefault();
 		});
 		// Frameless Dragging
-		document.addEventListener("mousemove", (e) => {
-			// WebUI Webkit App-Region Custom Implementation
-			if (e.buttons !== 1) {
-				this.#isDragging = false;
-				return;
-			}
-			if (!this.#isDragging) {
-				let target = e.target;
-				while (target) {
-					let computedStyle = window.getComputedStyle(target);
-					let webkitComputed = computedStyle.getPropertyValue("-webkit-app-region").trim();
-					let webuiComputed = computedStyle.getPropertyValue("--webui-app-region").trim();
-					if (webkitComputed === "drag" || webuiComputed === "drag") {
-						this.#initialMouseX = e.screenX;
-						this.#initialMouseY = e.screenY;
-						this.#initialWindowX = this.#currentWindowX;
-						this.#initialWindowY = this.#currentWindowY;
-						this.#isDragging = true;
-						break;
-					}
-					target = target.parentElement;
+		if (this.#enableCustomDragging) {
+			document.addEventListener("mousemove", (e) => {
+				// WebUI Webkit App-Region Custom Implementation
+				if (e.buttons !== 1) {
+					this.#isDragging = false;
+					return;
 				}
-				return;
-			}
-			// Calculate window position relative to cursor movement
-			const deltaX = e.screenX - this.#initialMouseX;
-			const deltaY = e.screenY - this.#initialMouseY;
-			let newX = this.#initialWindowX + deltaX;
-			let newY = this.#initialWindowY + deltaY;
-			// Fix out of screen
-			if (newX < 0) newX = 0;
-			if (newY < 0) newY = 0;
-			// Move the window
-			this.#sendDrag(newX, newY);
-			// Update the last window position
-			this.#currentWindowX = newX;
-			this.#currentWindowY = newY;
-		});
-		// Stop frameless dragging on mouse release
-		document.addEventListener("mouseup", () => {
-			this.#isDragging = false;
-		});
+				if (!this.#isDragging) {
+					let target = e.target;
+					while (target) {
+						let computedStyle = window.getComputedStyle(target);
+						let webkitComputed = computedStyle.getPropertyValue("-webkit-app-region").trim();
+						let webuiComputed = computedStyle.getPropertyValue("--webui-app-region").trim();
+						if (webkitComputed === "drag" || webuiComputed === "drag") {
+							this.#initialMouseX = e.screenX;
+							this.#initialMouseY = e.screenY;
+							this.#initialWindowX = this.#currentWindowX;
+							this.#initialWindowY = this.#currentWindowY;
+							this.#isDragging = true;
+							break;
+						}
+						target = target.parentElement;
+					}
+					return;
+				}
+				// Calculate window position relative to cursor movement
+				const deltaX = e.screenX - this.#initialMouseX;
+				const deltaY = e.screenY - this.#initialMouseY;
+				let newX = this.#initialWindowX + deltaX;
+				let newY = this.#initialWindowY + deltaY;
+				// Fix out of screen
+				if (newX < 0) newX = 0;
+				if (newY < 0) newY = 0;
+				// Move the window
+				this.#sendDrag(newX, newY);
+				// Update the last window position
+				this.#currentWindowX = newX;
+				this.#currentWindowY = newY;
+			});
+			// Stop frameless dragging on mouse release
+			document.addEventListener("mouseup", () => {
+				this.#isDragging = false;
+			});
+		}
 		onbeforeunload = () => {
 			this.#close();
 		};
