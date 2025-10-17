@@ -137,3 +137,5 @@ CMakeUserPresets.json
 # vcpkg
 vcpkg-manifest-install.log
 vcpkg_installed/
+/.claude
+CLAUDE.md
