@@ -520,32 +520,17 @@ WEBUI_EXPORT void webui_set_browser_folder(const char* path);
 WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
 
 /**
- * @brief Set a callback function on the given window to catch the
- * close button of this window.
- * Must return false, if the window cannot close, true, otherwis.
- *
- * This gives the possibility to check e.g. for non saved files in the
- * backend.
- *
- * A 'NULL' close_handler function pointer will remove the
- * current close_handler.
- *
- * NB. This works only for webview implementations, not for
- * browsers.
+ * @brief Set a callback to catch the close event of the WebView window.
+ * Must return `false` to prevent the close event, `true` otherwise.
  *
  * @example
- * bool canClose(size_t window)
- * {
- *    my_internal_window_data *data = getMyInternalWindowData(window);
- *    bool cc = AskUserForClosePermission(data);
- *    return cc;
+ * bool myCloseEvent(size_t window) {
+ *    // Prevent WebView window close event
+ *    return false;
  * }
- * (...)
- * webui_set_close_handler(myWindow, canClose);
+ * webui_set_close_handler(myWindow, myCloseEvent);
  */
-WEBUI_EXPORT void webui_set_close_handler(size_t window, bool (*close_handler)(size_t window));
-
-
+WEBUI_EXPORT void webui_set_close_handler_wv(size_t window, bool (*close_handler)(size_t window));
 
 /**
  * @brief Set a custom handler to serve files. This custom handler should
