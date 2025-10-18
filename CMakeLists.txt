@@ -73,7 +73,6 @@ endif()
 
 if (WIN32)
     target_link_libraries(webui PRIVATE ws2_32 user32 shell32 ole32)
-    if (
 elseif (APPLE)
     # link required frameworks
     find_library(COCOA_FRAMEWORK Cocoa REQUIRED)
