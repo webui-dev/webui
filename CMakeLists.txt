@@ -71,12 +71,12 @@ endif()
 if (WIN32)
     target_link_libraries(webui PRIVATE ws2_32 user32 shell32 ole32)
 
-    #if ("${CMAKE_CXX_COMPILER}" STREQUAL "GNU")
+    if ("${CMAKE_CXX_COMPILER}" STREQUAL "GNU")
         message("Adding stdc++ as library")
         target_link_libraries(webui stdc++)
-    #else()
-    #    message("Not a windows GNU target")
-    #endif()
+    else()
+        message("Not a windows GNU target")
+    endif()
 
 elseif (APPLE)
     # link required frameworks
