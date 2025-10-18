@@ -42,12 +42,6 @@ if (WIN32)
     set(SOURCE_FILES ${SOURCE_FILES}
                      src/webview/win32_wv2.cpp
         )
-    #if ("${CMAKE_CXX_COMPILER}" STREQUAL "GNU")
-        message("Adding stdc++ as library")
-        target_link_libraries(webui stdc++)
-    #else()
-    #    message("Not a windows GNU target")
-    #endif()
 endif()
 
 if (APPLE)
@@ -76,6 +70,14 @@ endif()
 
 if (WIN32)
     target_link_libraries(webui PRIVATE ws2_32 user32 shell32 ole32)
+
+    #if ("${CMAKE_CXX_COMPILER}" STREQUAL "GNU")
+        message("Adding stdc++ as library")
+        target_link_libraries(webui stdc++)
+    #else()
+    #    message("Not a windows GNU target")
+    #endif()
+
 elseif (APPLE)
     # link required frameworks
     find_library(COCOA_FRAMEWORK Cocoa REQUIRED)
