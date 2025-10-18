@@ -42,7 +42,7 @@ if (WIN32)
     set(SOURCE_FILES ${SOURCE_FILES}
                      src/webview/win32_wv2.cpp
         )
-    if (CMAKE_CXX_COMPILER STREQUAL "GNU")
+    if ("${CMAKE_CXX_COMPILER}" STREQUAL "GNU")
         message("Adding stdc++ as library")
         target_link_libraries(webui stdc++)
     else()
