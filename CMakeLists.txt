@@ -37,6 +37,13 @@ set(SOURCE_FILES
     src/civetweb/civetweb.c
     src/webui.c
 )
+
+if (MSVC)
+    set(SOURCE_FILES ${SOURCE_FILES}
+                     src/webview/win32_wv2.cpp
+        )
+endif()
+
 if (APPLE)
     # enable macos webview
     enable_language(OBJC)
