@@ -38,10 +38,13 @@ set(SOURCE_FILES
     src/webui.c
 )
 
-if (MSVC)
+if (WIN32)
     set(SOURCE_FILES ${SOURCE_FILES}
                      src/webview/win32_wv2.cpp
         )
+    if (CMAKE_CXX_COMPILER STREQUAL "GNU")
+        target_link_libraries(webui stdc++)
+    endif()
 endif()
 
 if (APPLE)
@@ -70,6 +73,7 @@ endif()
 
 if (WIN32)
     target_link_libraries(webui PRIVATE ws2_32 user32 shell32 ole32)
+    if (
 elseif (APPLE)
     # link required frameworks
     find_library(COCOA_FRAMEWORK Cocoa REQUIRED)
