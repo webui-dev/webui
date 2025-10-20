@@ -51,7 +51,7 @@ jobs:
       - name: Install OpenSSL
         shell: pwsh
         run: |
-          irm https://raw.githubusercontent.com/actions/runner-images/main/images/win/scripts/Installers/Install-OpenSSL.ps1 | iex
+          irm https://raw.githubusercontent.com/actions/runner-images/refs/heads/main/images/windows/scripts/build/Install-OpenSSL.ps1 | iex
       - name: Verify OpenSSL
         shell: pwsh
         run: dir "C:\Program Files\OpenSSL\lib"
