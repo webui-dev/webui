@@ -101,7 +101,7 @@ public:
         HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
             if (!ppvObject) return E_POINTER;
             *ppvObject = nullptr;
-            if (riid == IID_IUnknown || riid == __uuidof(ICoreWebView2DocumentTitleChangedEventHandler)) {
+            if (IsEqualIID(riid, IID_IUnknown) || IsEqualIID(riid, IID_ICoreWebView2DocumentTitleChangedEventHandler)) {
                 *ppvObject = static_cast<ICoreWebView2DocumentTitleChangedEventHandler*>(this);
                 AddRef();
                 return S_OK;
@@ -181,7 +181,7 @@ public:
         HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
             if (!ppvObject) return E_POINTER;
             *ppvObject = nullptr;
-            if (riid == IID_IUnknown || riid == __uuidof(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler)) {
+            if (IsEqualIID(riid, IID_IUnknown) || IsEqualIID(riid, IID_ICoreWebView2CreateCoreWebView2ControllerCompletedHandler)) {
                 *ppvObject = static_cast<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler*>(this);
                 AddRef();
                 return S_OK;
@@ -258,7 +258,7 @@ public:
         HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
             if (!ppvObject) return E_POINTER;
             *ppvObject = nullptr;
-            if (riid == IID_IUnknown || riid == __uuidof(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler)) {
+            if (IsEqualIID(riid, IID_IUnknown) || IsEqualIID(riid, IID_ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler)) {
                 *ppvObject = static_cast<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*>(this);
                 AddRef();
                 return S_OK;

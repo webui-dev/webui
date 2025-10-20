@@ -65,7 +65,7 @@ ifeq ($(DETECTED_OS),Windows)
 	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).dll
 	LWS2_OPT := -lws2_32 -lole32
 	WIN32_WV2_OBJ := win32_wv2.o
-	CPP_FLAGS := -lstdc++
+	CPP_FLAGS := -lstdc++ -luuid
 	CIVETWEB_DEFINE_FLAGS += -DMUST_IMPLEMENT_CLOCK_GETTIME
 	CXX ?= g++
 else ifeq ($(DETECTED_OS),Darwin)
