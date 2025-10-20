@@ -96,6 +96,7 @@ public:
         WebView2Instance* instance;
     public:
         TitleChangedHandler(WebView2Instance* inst) : refCount(1), instance(inst) {}
+        virtual ~TitleChangedHandler() = default;
 
         HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
             if (!ppvObject) return E_POINTER;
@@ -175,6 +176,7 @@ public:
         WebView2Instance* instance;
     public:
         ControllerCompletedHandler(WebView2Instance* inst) : refCount(1), instance(inst) {}
+        virtual ~ControllerCompletedHandler() = default;
 
         HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
             if (!ppvObject) return E_POINTER;
@@ -251,6 +253,7 @@ public:
         WebView2Instance* instance;
     public:
         EnvironmentCompletedHandler(WebView2Instance* inst) : refCount(1), instance(inst) {}
+        virtual ~EnvironmentCompletedHandler() = default;
 
         HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override {
             if (!ppvObject) return E_POINTER;
