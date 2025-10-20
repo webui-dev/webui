@@ -210,19 +210,11 @@ typedef struct webui_event_t {
     char* cookies;          // Client's full cookies
 } webui_event_t;
 
-// -- Other types ---------------------
-
-// custom log handler type
-typedef enum {
-    log_debug_detail = 1,
-    log_debug,
-    log_info,
-    log_warning,
-    log_error,
-    log_fatal
-} webui_log_level_t;
-
-typedef void(*webui_custom_log_handler_t)(webui_log_level_t level, const char *, void *data);
+enum webui_logger_level {
+    WEBUI_LOGGER_LEVEL_DEBUG = 0, // 0. All logs with all details
+    WEBUI_LOGGER_LEVEL_INFO, // 1. Only general logs
+    WEBUI_LOGGER_LEVEL_ERROR, // 2. Only fatal error logs
+};
 
 // -- Definitions ---------------------
 
@@ -930,22 +922,16 @@ WEBUI_EXPORT bool webui_set_port(size_t window, size_t port);
  */
 WEBUI_EXPORT size_t webui_get_free_port(void);
 
-
 /**
-  * @brief Set a custom logger function. The standard logger uses 'printf' to log debug information.
-  *
-  * @param logger function of type void (*custom_logger)(webui_log_level_t, const char *msg, void *user_data).
-  *
-  * a value of NULL for logger_f, will reset the webui logger to the default log handler.
-  *
-  * @example void my_logger(webui_log_level_t level, const char *msg, void *user_data) {
-  *             FILE *log_fh = static_cast<FILE *>(user_data);
-  *             fprintf(log_fh, "%d:%s", level, msg);
-  *          }
-  *          (...)
-  *			webui_set_custom_logger(my_logger);
-  */
-WEBUI_EXPORT void webui_set_custom_logger(webui_custom_log_handler_t logger_f, void *user_data);
+ * @brief Set a custom logger function.
+ *
+ * @example
+ * void myLogger(size_t level, const char* log, void* user_data) {
+ *   printf("myLogger (%d): %s", level, log);
+ * }
+ * webui_set_logger(myLogger, NULL);
+ */
+WEBUI_EXPORT void webui_set_logger(void (*func)(size_t level, const char* log, void* user_data), void *user_data);
 
 /**
  * @brief Control the WebUI behaviour. It's recommended to be called at the beginning.
