@@ -524,6 +524,19 @@ WEBUI_EXPORT void webui_set_browser_folder(const char* path);
 WEBUI_EXPORT bool webui_set_default_root_folder(const char* path);
 
 /**
+ * @brief Set a callback to catch the navigation event of the WebView window.
+ * Must return `false` to prevent the navigation event, `true` otherwise.
+ *
+ * @example
+ * bool myNavigationEvent(size_t window) {
+ *    // Prevent WebView window navigation event
+ *    return false;
+ * }
+ * webui_set_navigation_handler_wv(myWindow, myNavigationEvent);
+ */
+WEBUI_EXPORT void webui_set_navigation_handler_wv(size_t window, bool (*navigate_handler)(size_t window));
+
+/**
  * @brief Set a callback to catch the close event of the WebView window.
  * Must return `false` to prevent the close event, `true` otherwise.
  *
