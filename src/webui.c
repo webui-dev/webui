@@ -709,7 +709,7 @@ static const char* webui_def_icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" w
 
 // -- Logs ----------------------------
 
-static void _webui_log(webui_log_level_t level, const char *format, va_list args) {
+static void _webui_log(size_t level, const char *format, va_list args) {
     if (_webui.logger_func == NULL) {
         // Print log directly
         if (level == WEBUI_LOGGER_LEVEL_ERROR) {
@@ -734,7 +734,7 @@ static void _webui_log(webui_log_level_t level, const char *format, va_list args
         }
         vsnprintf(buffer, needed_size + 1, format, args);
         _webui.logger_func(level, buffer, _webui.logger_user_data);
-        _webui_free(buffer);
+        _webui_free_mem((void*)buffer);
     }
 }
 
@@ -827,7 +827,7 @@ void webui_run(size_t window, const char* script) {
 
 void webui_set_navigation_handler_wv(size_t window, bool (*navigate_handler)(size_t window)) {
     #ifdef WEBUI_LOG
-    webui_log_debug("[User]webui_set_navigation_handler_wv(%zu, %p)", window, navigate_handler);
+    _webui_log_info("[User]webui_set_navigation_handler_wv(%zu, %p)", window, navigate_handler);
     #endif
 
     // Dereference
@@ -979,11 +979,11 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
     if (js_status) {
 
         #ifdef WEBUI_LOG
-        _webui_log(
+        _webui_log_info(
             "[User] webui_script -> Response found. User buffer len: %zu bytes \n",
             _webui.run_userBufferLen[run_id]
         );
-        _webui_log(
+        _webui_log_info(
             "[User] webui_script -> Response found. User buffer data (ASCII): [%s] \n",
             _webui.run_userBuffer[run_id]
         );
@@ -2608,8 +2608,8 @@ bool webui_set_tls_certificate(const char* certificate_pem, const char* private_
 
         #ifdef WEBUI_LOG
         _webui_log_info("[User] webui_set_tls_certificate() -> SSL/TLS Certificate:\n");
-        _webui_log("%s\n", (const char*)_webui.ssl_cert);
-        _webui_log("%s\n", (const char*)_webui.ssl_key);
+        _webui_log_info("%s\n", (const char*)_webui.ssl_cert);
+        _webui_log_info("%s\n", (const char*)_webui.ssl_key);
         #endif
 
         return true;
@@ -3518,7 +3518,7 @@ void webui_exit(void) {
 void webui_wait(void) {
 
     #ifdef WEBUI_LOG
-    _webui_log("[Loop] webui_wait()\n");
+    _webui_log_debug("[Loop] webui_wait()\n");
     #endif
 
     // Initialization
@@ -3534,13 +3534,13 @@ void webui_wait(void) {
         if (!_webui.ui) {
 
             #ifdef WEBUI_LOG
-            _webui_log("[Loop] webui_wait() -> No window is found. Stop\n");
+            _webui_log_debug("[Loop] webui_wait() -> No window is found. Stop\n");
             #endif
             return;
         }
 
         #ifdef WEBUI_LOG
-        _webui_log("[Loop] webui_wait() -> Waiting (Timeout in %zu seconds)\n",
+        _webui_log_debug("[Loop] webui_wait() -> Waiting (Timeout in %zu seconds)\n",
             _webui.startup_timeout);
         #endif
 
@@ -3550,7 +3550,7 @@ void webui_wait(void) {
     } else {
 
         #ifdef WEBUI_LOG
-        _webui_log("[Loop] webui_wait() -> Infinite waiting\n");
+        _webui_log_debug("[Loop] webui_wait() -> Infinite waiting\n");
         #endif
 
         // The mutex conditional signal will
@@ -3564,7 +3564,7 @@ void webui_wait(void) {
             // Windows Web browser main loop
 
             #ifdef WEBUI_LOG
-            _webui_log("[Loop] webui_wait() -> Windows web browser loop\n");
+            _webui_log_debug("[Loop] webui_wait() -> Windows web browser loop\n");
             #endif
 
             _webui.is_browser_main_run = true;
@@ -3576,7 +3576,7 @@ void webui_wait(void) {
             // Windows WebView main loop
 
             #ifdef WEBUI_LOG
-            _webui_log("[Loop] webui_wait() -> Windows WebView loop\n");
+            _webui_log_debug("[Loop] webui_wait() -> Windows WebView loop\n");
             #endif
 
             _webui_mutex_lock(&_webui.mutex_wait);
@@ -3587,7 +3587,7 @@ void webui_wait(void) {
             // Linux Web browser main loop
 
             #ifdef WEBUI_LOG
-            _webui_log("[Loop] webui_wait() -> Linux web browser loop\n");
+            _webui_log_debug("[Loop] webui_wait() -> Linux web browser loop\n");
             #endif
 
             _webui.is_browser_main_run = true;
@@ -3599,7 +3599,7 @@ void webui_wait(void) {
             // Linux WebView main loop
 
             #ifdef WEBUI_LOG
-            _webui_log("[Loop] webui_wait() -> Linux WebView loop\n");
+            _webui_log_debug("[Loop] webui_wait() -> Linux WebView loop\n");
             #endif
 
             _webui.is_gtk_main_run = true;
@@ -3614,7 +3614,7 @@ void webui_wait(void) {
             // macOS Web browser main loop
 
             #ifdef WEBUI_LOG
-            _webui_log("[Loop] webui_wait() -> macOS web browser loop\n");
+            _webui_log_debug("[Loop] webui_wait() -> macOS web browser loop\n");
             #endif
 
             _webui.is_browser_main_run = true;
@@ -3626,7 +3626,7 @@ void webui_wait(void) {
             // macOS WebView main loop
 
             #ifdef WEBUI_LOG
-            _webui_log("[Loop] webui_wait() -> macOS WebView loop\n");
+            _webui_log_debug("[Loop] webui_wait() -> macOS WebView loop\n");
             #endif
 
             _webui.is_wkwebview_main_run = true;
@@ -3639,7 +3639,7 @@ void webui_wait(void) {
     #endif
 
     #ifdef WEBUI_LOG
-    _webui_log("[Loop] webui_wait() -> Cleaning\n");
+    _webui_log_debug("[Loop] webui_wait() -> Cleaning\n");
     #endif
 
     // Clean
@@ -3704,7 +3704,7 @@ void webui_wait(void) {
     #endif
 
     #ifdef WEBUI_LOG
-    _webui_log("[Loop] webui_wait() -> Main loop exit successfully\n");
+    _webui_log_debug("[Loop] webui_wait() -> Main loop exit successfully\n");
     #endif
 
     _webui_mutex_unlock(&_webui.mutex_wait);
@@ -3870,7 +3870,7 @@ static void _webui_interface_bind_handler_all(webui_event_t* e) {
         if (exist && win->cb_interface[events_cb_index] != NULL) {
             // Call user all-events cb
             #ifdef WEBUI_LOG
-            _webui_log(
+            _webui_log_debug(
                 "[Core]\t\t_webui_interface_bind_handler_all() -> User all-events callback @ 0x%p\n",
                 win->cb_interface[events_cb_index]
             );
@@ -3908,7 +3908,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
         bool exist = _webui_get_cb_index(win, e->element, &cb_index);
         if (exist && win->cb_interface[cb_index] != NULL) {
             #ifdef WEBUI_LOG
-            _webui_log(
+            _webui_log_debug(
                 "[Core]\t\t_webui_interface_bind_handler() -> User callback @ 0x%p\n",
                 win->cb_interface[cb_index]
             );
@@ -3945,7 +3945,7 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
 
         #ifdef WEBUI_LOG
         // Print cb response
-        _webui_log(
+        _webui_log_debug(
             "[Core]\t\t_webui_interface_bind_handler() -> user-callback response [%s]\n",
             event_inf->response
         );
@@ -4497,7 +4497,7 @@ static void _webui_panic(char* msg) {
     _webui_log_debug("[Core]\t\t_webui_panic() -> %s.\n", msg);
     #endif
 
-    webui_log_fatal("WebUI Error: %s.\n", msg);
+    _webui_log_error("WebUI Error: %s.\n", msg);
     webui_exit();
 }
 
@@ -4992,7 +4992,7 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
         }        
         _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> Path [%s]\n", url);
         _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> Calling custom files handler callback at address 0x%p\n", pt);
-        _webui_log("[Call]\n");
+        _webui_log_debug("[Call]\n");
         #endif
 
         // Async response ini
@@ -5043,9 +5043,9 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
             #endif
 
             #ifdef WEBUI_LOG
-            _webui_log("---[ External File Handler ]--------\n");
+            _webui_log_debug("---[ External File Handler ]--------\n");
             _webui_print_ascii((const char*)callback_resp, length);
-            _webui_log("\n------------------------------------\n");
+            _webui_log_debug("\n------------------------------------\n");
             #endif
 
             // Send user data (Header + Body)
@@ -5652,7 +5652,7 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
     }
 
     #ifdef WEBUI_LOG
-    _webui_log(
+    _webui_log_debug(
         "[Core]\t\t_webui_browser_create_new_profile(%zu) -> Generating WebUI profile\n",
         browser
     );
@@ -5748,7 +5748,7 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
                 temp, os_sep, os_sep, ff) >= WEBUI_MAX_PATH) {
                 // Generated path is too big
                 #ifdef WEBUI_LOG
-                _webui_log(
+                _webui_log_debug(
                     "[Core]\t\t_webui_browser_create_new_profile(%zu) -> "
                     "Generated Firefox profile folder path is too big\n",
                     browser
@@ -7802,7 +7802,7 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
             strstr(content_cpy, "<!Doctype")) {
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t_webui_show() -> Embedded HTML:\n");
-        _webui_log("- - -[HTML]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", content_cpy);
+        _webui_log_debug("- - -[HTML]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", content_cpy);
         #endif
         return _webui_show_window(win, client, content_cpy, WEBUI_SHOW_HTML, browser);
     }
@@ -8182,7 +8182,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
             unsigned long err = ERR_get_error();
             char err_buf[1024];
             ERR_error_string_n(err, err_buf, sizeof(err_buf));
-            _webui_log(
+            _webui_log_debug(
                 "[Core]\t\t_webui_show_window() -> Generating self-signed TLS "
                 "certificate failed:\n%s\n",
                 err_buf
@@ -8204,10 +8204,10 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t_webui_show_window() -> Self-signed SSL/TLS "
             "Certificate:\nRoot:\n");
-        _webui_log("%s\n", (const char*)_webui.root_cert);
-        _webui_log("%s\nServer:\n", (const char*)_webui.root_key);
-        _webui_log("%s\n", (const char*)_webui.ssl_cert);
-        _webui_log("%s\n", (const char*)_webui.ssl_key);
+        _webui_log_debug("%s\n", (const char*)_webui.root_cert);
+        _webui_log_debug("%s\nServer:\n", (const char*)_webui.root_key);
+        _webui_log_debug("%s\n", (const char*)_webui.ssl_cert);
+        _webui_log_debug("%s\n", (const char*)_webui.ssl_key);
         #endif
     }
     #endif
@@ -8533,7 +8533,7 @@ static void _webui_window_event(
             // Call user all-events cb
             #ifdef WEBUI_LOG
             _webui_log_debug("[Core]\t\t_webui_window_event() -> Calling all-events user callback at address 0x%p\n", win->cb[events_cb_index]);
-            _webui_log("[Call]\n");
+            _webui_log_debug("[Call]\n");
             #endif
             e.bind_id = events_cb_index;
             win->cb[events_cb_index](&e);
@@ -8549,7 +8549,7 @@ static void _webui_window_event(
                 // Call user cb
                 #ifdef WEBUI_LOG
                 _webui_log_debug("[Core]\t\t_webui_window_event() -> Calling user callback at address 0x%p\n", win->cb[cb_index]);
-                _webui_log("[Call]\n");
+                _webui_log_debug("[Call]\n");
                 #endif
                 e.bind_id = cb_index;
                 win->cb[cb_index](&e);
@@ -8590,7 +8590,7 @@ static void _webui_send_client_ws(_webui_window_t* win, struct mg_connection* cl
     _webui_log_debug("[Core]\t\t_webui_send_client_ws() -> Packet size: %zu bytes \n", packets_size);
     _webui_log_debug("[Core]\t\t_webui_send_client_ws() -> Packet hex : [ ");
         _webui_print_hex(packet, packets_size);
-    _webui_log("]\n");
+    _webui_log_debug("]\n");
     #endif
 
     if (win == NULL || client == NULL) {
@@ -8809,16 +8809,16 @@ static bool _webui_get_cb_index(_webui_window_t* win, const char* element, size_
 #ifdef WEBUI_LOG
 static void _webui_print_hex(const char* data, size_t len) {
     for (size_t i = 0; i < len; i++) {
-        _webui_log_detail("0x%02X ", (unsigned char)* data);
+        _webui_log_debug("0x%02X ", (unsigned char)* data);
         data++;
     }
 }
 static void _webui_print_ascii(const char* data, size_t len) {
     for (size_t i = 0; i < len; i++) {
         if ((unsigned char)* data == 0x00)
-            _webui_log_detail("%c", 0xCF);
+            _webui_log_debug("%c", 0xCF);
         else
-            _webui_log_detail("%c", (unsigned char)* data);
+            _webui_log_debug("%c", (unsigned char)* data);
         data++;
     }
 }
@@ -8908,9 +8908,9 @@ static void _webui_http_send_header(
     }
 
     #ifdef WEBUI_LOG
-    _webui_log("---[ HTTP Header ]-----------------\n");
-    _webui_log("%s", buffer);
-    _webui_log("\n-----------------------------------\n");
+    _webui_log_debug("---[ HTTP Header ]-----------------\n");
+    _webui_log_debug("%s", buffer);
+    _webui_log_debug("\n-----------------------------------\n");
     #endif
 
     // Send
@@ -9244,9 +9244,9 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                 #endif
 
                 #ifdef WEBUI_LOG
-                _webui_log("---[ HTML (%zu bytes)]--------------\n", _webui_strlen(win->html));
-                _webui_log("%s", win->html);
-                _webui_log("\n------------------------------------\n");
+                _webui_log_debug("---[ HTML (%zu bytes)]--------------\n", _webui_strlen(win->html));
+                _webui_log_debug("%s", win->html);
+                _webui_log_debug("\n------------------------------------\n");
                 #endif
 
                 // Send 200
@@ -9678,7 +9678,7 @@ static WEBUI_THREAD_SERVER_START {
                     // UI is not connected
 
                     #ifdef WEBUI_LOG
-                    _webui_log(
+                    _webui_log_debug(
                         "[Core]\t\t_webui_server_thread([%zu]) -> Waiting for connection\n",
                         win->num
                     );
@@ -9716,7 +9716,7 @@ static WEBUI_THREAD_SERVER_START {
 
                         do {
                             #ifdef WEBUI_LOG
-                            _webui_log(
+                            _webui_log_debug(
                                 "[Core]\t\t_webui_server_thread([%zu]) -> Waiting more for connection\n",
                                 win->num
                             );
@@ -9755,7 +9755,7 @@ static WEBUI_THREAD_SERVER_START {
                     win->is_closed = false;
 
                     #ifdef WEBUI_LOG
-                    _webui_log(
+                    _webui_log_debug(
                         "[Core]\t\t_webui_server_thread([%zu]) -> Window Connected.\n",
                         win->num
                     );
@@ -9791,7 +9791,7 @@ static WEBUI_THREAD_SERVER_START {
                             // The UI is just get disconnected
 
                             #ifdef WEBUI_LOG
-                            _webui_log(
+                            _webui_log_debug(
                                 "[Core]\t\t_webui_server_thread([%zu]) -> Window disconnected\n",
                                 win->num
                             );
@@ -9804,7 +9804,7 @@ static WEBUI_THREAD_SERVER_START {
 
                                 do {
                                     #ifdef WEBUI_LOG
-                                    _webui_log(
+                                    _webui_log_debug(
                                         "[Core]\t\t_webui_server_thread([%zu]) -> Waiting for reconnection\n",
                                         win->num
                                     );
@@ -10027,7 +10027,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
                 // Update window connection status
                 _webui_mutex_is_connected(win, WEBUI_MUTEX_SET_TRUE);
                 #ifdef WEBUI_LOG
-                _webui_log(
+                _webui_log_debug(
                     "[Core]\t\t_webui_receive(%zu) -> Connection #%zu registered\n",
                     recvNum, connection_id
                 );
@@ -10043,7 +10043,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
         // Connection close
         _webui_connection_remove(win, client);
         #ifdef WEBUI_LOG
-        _webui_log(
+        _webui_log_debug(
             "[Core]\t\t_webui_receive(%zu) -> Connection #%zu Closed\n",
             recvNum, connection_id
         );
@@ -10055,7 +10055,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
         if ((multi_receive + len) > multi_expect) {
             // Received more data than expected
             #ifdef WEBUI_LOG
-            _webui_log(
+            _webui_log_debug(
                 "[Core]\t\t_webui_receive() -> Multi packet received more data than expected (%zu + %zu > %zu).\n",
                 multi_receive, len, multi_expect
             );
@@ -10083,7 +10083,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
                 size_t expect_len = (size_t) strtoul(&((const char*)data)[WEBUI_PROTOCOL_DATA], NULL, 10);
                 if (expect_len > 0 && expect_len <= WEBUI_MAX_BUF) {
                     #ifdef WEBUI_LOG
-                    _webui_log(
+                    _webui_log_debug(
                         "[Core]\t\t_webui_receive() -> Multi packet started, Expecting %zu bytes\n",
                         expect_len
                     );
@@ -10289,32 +10289,32 @@ static void _webui_ws_process(
             uint16_t packet_id = _webui_get_id(packet);
 
             #ifdef WEBUI_LOG
-            _webui_log(
+            _webui_log_debug(
                 "[Core]\t\t_webui_ws_process(%zu) -> Data received\n",
                 recvNum
             );
-            _webui_log(
+            _webui_log_debug(
                 "[Core]\t\t_webui_ws_process(%zu) -> Packet Size : %zu bytes\n",
                 recvNum, len
             );
-            _webui_log(
+            _webui_log_debug(
                 "[Core]\t\t_webui_ws_process(%zu) -> Packet Header : [ ",
                 recvNum
             );
             _webui_print_hex(packet, WEBUI_PROTOCOL_SIZE);
-            _webui_log("]\n");
-            _webui_log(
+            _webui_log_debug("]\n");
+            _webui_log_debug(
                 "[Core]\t\t_webui_ws_process(%zu) -> Packet Token: 0x%08X (%" PRIu32 ")\n",
                 recvNum, packet_token, packet_token
             );
-            _webui_log(
+            _webui_log_debug(
                 "[Core]\t\t_webui_ws_process(%zu) -> Packet ID: 0x%04X (%u)\n",
                 recvNum, packet_id, packet_id
             );
             _webui_log_debug("[Core]\t\t_webui_ws_process(%zu) -> Packet Data: [", recvNum);
                 // _webui_print_ascii(&packet[WEBUI_PROTOCOL_DATA], (len -
                 // WEBUI_PROTOCOL_SIZE));
-            _webui_log("]\n");
+            _webui_log_debug("]\n");
             #endif
 
             if ((len >= WEBUI_PROTOCOL_SIZE) &&
@@ -10378,15 +10378,15 @@ static void _webui_ws_process(
                         size_t element_len = _webui_strlen(element);
 
                         #ifdef WEBUI_LOG
-                        _webui_log(
+                        _webui_log_debug(
                             "[Core]\t\t_webui_ws_process(%zu) -> WEBUI_CMD_CLICK \n",
                             recvNum
                         );
-                        _webui_log(
+                        _webui_log_debug(
                             "[Core]\t\t_webui_ws_process(%zu) -> Element size: %zu bytes \n",
                             recvNum, element_len
                         );
-                        _webui_log(
+                        _webui_log_debug(
                             "[Core]\t\t_webui_ws_process(%zu) -> Element : [%s] \n",
                             recvNum, element
                         );
@@ -10437,28 +10437,28 @@ static void _webui_ws_process(
                                 size_t data_len = len - (WEBUI_PROTOCOL_SIZE + 1 + 1); // [Total packet size - (Header + error byte + null byte)]
 
                                 #ifdef WEBUI_LOG
-                                _webui_log(
+                                _webui_log_debug(
                                     "[Core]\t\t_webui_ws_process(%zu) -> WEBUI_CMD_JS \n",
                                     recvNum
                                 );
-                                _webui_log(
+                                _webui_log_debug(
                                     "[Core]\t\t_webui_ws_process(%zu) -> run_id = 0x%02x (%u) \n",
                                     recvNum, packet_id, packet_id
                                 );
-                                _webui_log(
+                                _webui_log_debug(
                                     "[Core]\t\t_webui_ws_process(%zu) -> error = %s \n",
                                     recvNum, error ? "true" : "false"
                                 );
-                                _webui_log(
+                                _webui_log_debug(
                                     "[Core]\t\t_webui_ws_process(%zu) -> %zu bytes of data\n",
                                     recvNum, data_len
                                 );
-                                _webui_log(
+                                _webui_log_debug(
                                     "[Core]\t\t_webui_ws_process(%zu) -> data (Hex) = [",
                                     recvNum
                                 );
                                 _webui_print_hex(data, data_len);
-                                _webui_log("] @ 0x%p\n", data);
+                                _webui_log_debug("] @ 0x%p\n", data);
                                 #endif
 
                                 // Set pipe
@@ -10500,15 +10500,15 @@ static void _webui_ws_process(
                             size_t url_len = _webui_strlen(url);
 
                             #ifdef WEBUI_LOG
-                            _webui_log(
+                            _webui_log_debug(
                                 "[Core]\t\t_webui_ws_process(%zu) -> WEBUI_CMD_NAVIGATION \n",
                                 recvNum
                             );
-                            _webui_log(
+                            _webui_log_debug(
                                 "[Core]\t\t_webui_ws_process(%zu) -> URL size: %zu bytes \n",
                                 recvNum, url_len
                             );
-                            _webui_log(
+                            _webui_log_debug(
                                 "[Core]\t\t_webui_ws_process(%zu) -> URL: [%s] \n",
                                 recvNum, url
                             );
@@ -10550,15 +10550,15 @@ static void _webui_ws_process(
                         size_t element_len = _webui_strlen(element);
 
                         #ifdef WEBUI_LOG
-                        _webui_log(
+                        _webui_log_debug(
                             "[Core]\t\t_webui_ws_process(%zu) -> WEBUI_CMD_CALL_FUNC \n",
                             recvNum
                         );
-                        _webui_log(
+                        _webui_log_debug(
                             "[Core]\t\t_webui_ws_process(%zu) -> Call ID: [%u] \n",
                             recvNum, packet_id
                         );
-                        _webui_log(
+                        _webui_log_debug(
                             "[Core]\t\t_webui_ws_process(%zu) -> Element: [%s] \n",
                             recvNum, element
                         );
@@ -10589,7 +10589,7 @@ static void _webui_ws_process(
                             }
 
                             #ifdef WEBUI_LOG
-                            _webui_log(
+                            _webui_log_debug(
                                 "[Core]\t\t_webui_ws_process(%zu) -> Argument %zu: %zu bytes\n",
                                 recvNum, tk_num, arg_len
                             );
@@ -10612,7 +10612,7 @@ static void _webui_ws_process(
                         if (data_size_expected == data_size_recv) {
 
                             #ifdef WEBUI_LOG
-                            _webui_log(
+                            _webui_log_debug(
                                 "[Core]\t\t_webui_ws_process(%zu) -> Expected and received %zu bytes of data.\n",
                                 recvNum, data_size_expected
                             );
@@ -10635,7 +10635,7 @@ static void _webui_ws_process(
 
                                 // Call user cb
                                 #ifdef WEBUI_LOG
-                                _webui_log(
+                                _webui_log_debug(
                                     "[Core]\t\t_webui_ws_process(%zu) -> Calling user callback at address 0x%p\n[Call]\n",
                                     recvNum, win->cb[cb_index]
                                 );
@@ -10663,7 +10663,7 @@ static void _webui_ws_process(
                                 event_inf->response = NULL;
 
                             #ifdef WEBUI_LOG
-                            _webui_log(
+                            _webui_log_debug(
                                 "[Core]\t\t_webui_ws_process(%zu) -> user-callback response [%s]\n",
                                 recvNum, event_inf->response
                             );
@@ -10686,7 +10686,7 @@ static void _webui_ws_process(
 
                             // WebSocket/Civetweb did not send all the data as expected.
                             #ifdef WEBUI_LOG
-                            _webui_log(
+                            _webui_log_debug(
                                 "[Core]\t\t_webui_ws_process(%zu) -> No enough data received. "
                                 "Expected %zu bytes, received %zu bytes.\n",
                                 recvNum, data_size_expected, data_size_recv
@@ -10716,7 +10716,7 @@ static void _webui_ws_process(
                         // [Header]
 
                         #ifdef WEBUI_LOG
-                        _webui_log(
+                        _webui_log_debug(
                             "[Core]\t\t_webui_ws_process(%zu) -> WEBUI_CMD_CHECK_TK \n",
                             recvNum
                         );
@@ -10731,7 +10731,7 @@ static void _webui_ws_process(
                             _webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_SET_TRUE, connection_id);
 
                             #ifdef WEBUI_LOG
-                            _webui_log(
+                            _webui_log_debug(
                                 "[Core]\t\t_webui_ws_process(%zu) -> Token accepted. Sending bind list\n",
                                 recvNum
                             );
@@ -10808,7 +10808,7 @@ static void _webui_ws_process(
                         }
                         else {
                             #ifdef WEBUI_LOG
-                            _webui_log(
+                            _webui_log_debug(
                                 "[Core]\t\t_webui_ws_process(%zu) -> Token not accepted.\n",
                                 recvNum
                             );
@@ -10831,7 +10831,7 @@ static void _webui_ws_process(
                     }
                     #ifdef WEBUI_LOG
                     else {
-                        _webui_log(
+                        _webui_log_debug(
                             "[Core]\t\t_webui_ws_process(%zu) -> Unknown command "
                             "[0x%02x]\n",
                             recvNum, (unsigned char)packet[WEBUI_PROTOCOL_CMD]
@@ -10841,7 +10841,7 @@ static void _webui_ws_process(
                 }
                 #ifdef WEBUI_LOG
                 else {
-                    _webui_log(
+                    _webui_log_debug(
                         "[Core]\t\t_webui_ws_process(%zu) -> Window is not connected.\n",
                         recvNum
                     );
@@ -10857,7 +10857,7 @@ static void _webui_ws_process(
             } else {
 
                 #ifdef WEBUI_LOG
-                _webui_log(
+                _webui_log_debug(
                     "[Core]\t\t_webui_ws_process(%zu) -> Invalid Packet.\n",
                     recvNum
                 );
@@ -10882,7 +10882,7 @@ static void _webui_ws_process(
             // New connection
 
             #ifdef WEBUI_LOG
-            _webui_log(
+            _webui_log_debug(
                 "[Core]\t\t_webui_ws_process(%zu) -> WEBUI_WS_OPEN \n",
                 recvNum
             );
@@ -10917,7 +10917,7 @@ static void _webui_ws_process(
             // Connection close
 
             #ifdef WEBUI_LOG
-            _webui_log(
+            _webui_log_debug(
                 "[Core]\t\t_webui_ws_process(%zu) -> WEBUI_WS_CLOSE \n",
                 recvNum
             );
@@ -10948,7 +10948,7 @@ static void _webui_ws_process(
         }
         #ifdef WEBUI_LOG
         else {
-            _webui_log(
+            _webui_log_debug(
                 "[Core]\t\t_webui_ws_process(%zu) -> UNKNOWN EVENT "
                 "TYPE (%d)\n",
                 recvNum, event_type
