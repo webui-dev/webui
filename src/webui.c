@@ -6080,11 +6080,6 @@ static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
     #define MAX_BROWSER_FILES (5)
     char* executable = NULL;
     char* executables[MAX_BROWSER_FILES] = {0};
-    {
-        int i;
-        for(i = 0; i < MAX_BROWSER_FILES; i++)
-            executables[i] = NULL;
-    }
     if (browser == Chrome) {
         executables[0] = "google-chrome";
         executables[1] = "google-chrome-stable";
