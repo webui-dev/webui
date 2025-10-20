@@ -444,8 +444,8 @@ typedef struct _webui_core_t {
     char* default_server_root_path;
     bool ui;
     char* custom_browser_folder_path;
-    const void*(*logger_func)(size_t level, const char* log, void* user_data);
-    const void* logger_user_data;
+    void (*logger_func)(size_t level, const char* log, void* user_data);
+    void* logger_user_data;
     #ifdef WEBUI_TLS
     char* root_cert;
     char* root_key;
