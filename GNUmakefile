@@ -65,6 +65,7 @@ ifeq ($(DETECTED_OS),Windows)
 	LIB_DYN_OUT := $(WEBUI_OUT_LIB_NAME).dll
 	LWS2_OPT := -lws2_32 -lole32
 	WIN32_WV2_OBJ := win32_wv2.o
+	CPP_FLAGS := -lstdc++
 	CIVETWEB_DEFINE_FLAGS += -DMUST_IMPLEMENT_CLOCK_GETTIME
 	CXX ?= g++
 else ifeq ($(DETECTED_OS),Darwin)
@@ -73,12 +74,14 @@ else ifeq ($(DETECTED_OS),Darwin)
 	CC = clang
 	LIB_DYN_OUT := lib$(WEBUI_OUT_LIB_NAME).dylib
 	WEBKIT_OBJ := wkwebview.o
+	CPP_FLAGS :=
 	WKWEBKIT_BUILD_FLAGS := -o wkwebview.o -c "$(MAKEFILE_DIR)/src/webview/wkwebview.m"
 	WKWEBKIT_LINK_FLAGS := -framework Cocoa -framework WebKit
 else
 	# Linux
 	PLATFORM := linux
 	LIB_DYN_OUT := lib$(WEBUI_OUT_LIB_NAME).so
+	CPP_FLAGS :=
 	ifeq ($(CC),clang)
 		LLVM_OPT := llvm-
 	endif
@@ -141,7 +144,7 @@ endif
 	&& echo "Build WebUI library ($(CC) $(TARGET) debug dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_LOG) -g -fPIC -DWEBUI_LOG -DWEBUI_DYNAMIC \
-	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) $(CPP_FLAGS)
 ifeq ($(PLATFORM),windows)
 	@cd "$(BUILD_DIR)/debug" && del *.o >nul 2>&1
 else
@@ -180,7 +183,7 @@ endif
 	&& echo "Build WebUI library ($(CC) $(TARGET) release dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_RELEASE) -O3 -fPIC -DWEBUI_DYNAMIC \
-	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS)
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) $(CPP_FLAGS)
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@strip --strip-unneeded $(BUILD_DIR)/$(LIB_DYN_OUT)
