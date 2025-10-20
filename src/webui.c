@@ -11840,7 +11840,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
                     _webui_window_event(
                         win, // Event -> Window
-                        connection_id, // Event -> Client Unique ID
+                        0, // Event -> Client Unique ID | This is a WebKitGTK Event, so we don't have any WebSocket client unique ID
                         WEBUI_EVENT_NAVIGATION, // Event -> Type of this event
                         "", // Event -> HTML Element
                         event_num, // Event -> Event Number
