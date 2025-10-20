@@ -6158,7 +6158,7 @@ static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
         }
     }
     #else
-    #define MAX_BROWSER_FILES (2)
+    #define MAX_BROWSER_FILES (5)
     char* executable = NULL;
     char* executables[MAX_BROWSER_FILES] = {0};
     if (browser == Chrome) {
@@ -6171,7 +6171,6 @@ static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
     }
     else if (browser == Epic) {
         executables[0] = "epic";
-        executables[1] = NULL;
     }
     else if (browser == Vivaldi) {
         executables[0] = "vivaldi";
@@ -6182,15 +6181,12 @@ static bool _webui_custom_browser_exist(_webui_window_t* win, size_t browser) {
         executables[1] = "brave-browser-stable";
         executables[2] = "brave-browser-nightly";
         executables[3] = "brave-browser-beta";
-        executables[4] = NULL;
     }
     else if (browser == Firefox) {
         executables[0] = "firefox";
-        executables[1] = NULL;
     }
     else if (browser == Yandex) {
         executables[0] = "yandex-browser";
-        executables[1] = NULL;
     }
     else if (browser == Chromium) {
         executables[0] = "chromium-browser";
