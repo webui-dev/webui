@@ -48,10 +48,10 @@ jobs:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
           fail-on-cache-miss: true
-      - name: Install OpenSSL
-        shell: pwsh
-        run: |
-          irm https://raw.githubusercontent.com/actions/runner-images/refs/heads/main/images/windows/scripts/build/Install-OpenSSL.ps1 | iex
+      # - name: Install OpenSSL
+      #   shell: pwsh
+      #   run: |
+      #     irm https://raw.githubusercontent.com/actions/runner-images/refs/heads/main/images/windows/scripts/build/Install-OpenSSL.ps1 | iex
       - name: Verify OpenSSL
         shell: pwsh
         run: dir "C:\Program Files\OpenSSL\lib"
