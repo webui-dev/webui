@@ -51,6 +51,7 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdarg.h>
 
 // -- Windows -------------------------
 #ifdef _WIN32
