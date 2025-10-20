@@ -13,9 +13,7 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 
-# In order to be able to link on Linux to other shared libraries,
-# while compiling e.g. a static webui library, the -fPIC
-# is necessary. This has been tested on Linux.
+# In order to be able to link with other shared libraries on Linux we may need `-fPIC`.
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   # using Clang
   add_compile_options(-fPIC)
