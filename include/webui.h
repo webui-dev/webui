@@ -210,6 +210,12 @@ typedef struct webui_event_t {
     char* cookies;          // Client's full cookies
 } webui_event_t;
 
+enum webui_logger_level {
+    WEBUI_LOGGER_LEVEL_DEBUG = 0, // 0. All logs with all details
+    WEBUI_LOGGER_LEVEL_INFO, // 1. Only general logs
+    WEBUI_LOGGER_LEVEL_ERROR, // 2. Only fatal error logs
+};
+
 // -- Definitions ---------------------
 
 /**
@@ -928,6 +934,17 @@ WEBUI_EXPORT bool webui_set_port(size_t window, size_t port);
  * @example size_t port = webui_get_free_port();
  */
 WEBUI_EXPORT size_t webui_get_free_port(void);
+
+/**
+ * @brief Set a custom logger function.
+ *
+ * @example
+ * void myLogger(size_t level, const char* log, void* user_data) {
+ *   printf("myLogger (%d): %s", level, log);
+ * }
+ * webui_set_logger(myLogger, NULL);
+ */
+WEBUI_EXPORT void webui_set_logger(void (*func)(size_t level, const char* log, void* user_data), void *user_data);
 
 /**
  * @brief Control the WebUI behaviour. It's recommended to be called at the beginning.
