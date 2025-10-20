@@ -8,8 +8,6 @@
   Canada.
 */
 
-#define webui_log_debug printf
-
 // 64Mb max dynamic memory allocation
 #define WEBUI_MAX_BUF (64000000)
 
@@ -365,7 +363,7 @@ typedef struct _webui_window_t {
     int x;
     int y;
     bool position_set;
-    bool (*may_navigate_handler)(size_t window);
+    bool (*navigation_handler_wv)(size_t window);
     bool (*close_handler_wv)(size_t window);
     const void*(*files_handler)(const char* filename, int* length);
     const void*(*files_handler_window)(size_t window, const char* filename, int* length);
@@ -770,9 +768,9 @@ void webui_run(size_t window, const char* script) {
     _webui_send_all(win, 0, WEBUI_CMD_JS_QUICK, script, js_len);
 }
 
-void webui_set_navigation_handler(size_t window, bool (*may_navigate_handler)(size_t window)) {
+void webui_set_navigation_handler_wv(size_t window, bool (*navigate_handler)(size_t window)) {
     #ifdef WEBUI_LOG
-        webui_log_debug("[User]webui_set_navigation_handler(%zu, %p)", window, may_navigate_handler);
+    webui_log_debug("[User]webui_set_navigation_handler_wv(%zu, %p)", window, navigate_handler);
     #endif
 
     // Dereference
@@ -782,7 +780,7 @@ void webui_set_navigation_handler(size_t window, bool (*may_navigate_handler)(si
     _webui_window_t* win = _webui.wins[window];
 
     // Set the navigation handler
-    win->may_navigate_handler = may_navigate_handler;
+    win->navigation_handler_wv = navigate_handler;
 }
 
 void webui_set_close_handler_wv(size_t window, bool(*close_handler)(size_t window)) {
@@ -11806,8 +11804,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 bool intercept_navigation = false;
 
                 _webui_window_t* win = _webui_dereference_win_ptr(user_data);
-                if (win->may_navigate_handler) {
-                    intercept_navigation = !(win->may_navigate_handler(win->num));
+                if (win->navigate_handler) {
+                    intercept_navigation = !(win->navigate_handler(win->num));
                 }
 
                 if (intercept_navigation) {
@@ -11827,18 +11825,13 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     char *type = (char *) _webui_malloc(nt_s);
                     strncpy(uri, buf, nt_s - 1);
                     uri[nt_s] = '\0';
-
+                  
+                    // Event Info
                     webui_event_inf_t* event_inf = NULL;
                     size_t event_num = _webui_new_event_inf(win, &event_inf);
-
-                    // TODO: Not sure how this works and if the right connection_id is taken.
-                    int connection_id = 0;
-                    // TODO: Not sure if this is the way to get the client.
-                    struct mg_connection* client = win->single_client;
-
-                    event_inf->client = client;
-                    event_inf->connection_id = connection_id;
-
+                    event_inf->client = NULL; // This is a WebKitGTK Event, so we don't have any WebSocket client
+                    event_inf->connection_id = 0; // This is a WebKitGTK Event, so we don't have any WebSocket connection ID
+    
                     // Event Info Extras
                     event_inf->event_data[0] = uri;
                     event_inf->event_size[0] = strlen(uri);
@@ -11851,8 +11844,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                         WEBUI_EVENT_NAVIGATION, // Event -> Type of this event
                         "", // Event -> HTML Element
                         event_num, // Event -> Event Number
-                        _webui_client_get_id(win, client), // Event -> Client ID
-                        _webui_get_cookies_full(client) // Event -> Full cookies
+                        0, // Event -> Client ID | This is a WebKitGTK Event, so we don't have any WebSocket client ID
+                        NULL // Event -> Full cookies | TODO: Get cookies using WebKKitGTK APIs
                     );
 
                     // Free event
