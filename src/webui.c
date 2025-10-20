@@ -11857,8 +11857,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 bool intercept_navigation = false;
 
                 _webui_window_t* win = _webui_dereference_win_ptr(user_data);
-                if (win->navigate_handler) {
-                    intercept_navigation = !(win->navigate_handler(win->num));
+                if (win->navigation_handler_wv) {
+                    intercept_navigation = !(win->navigation_handler_wv(win->num));
                 }
 
                 if (intercept_navigation) {
