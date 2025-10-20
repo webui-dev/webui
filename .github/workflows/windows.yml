@@ -48,6 +48,13 @@ jobs:
           path: bridge/webui_bridge.h
           key: ${{ runner.os }}-${{ github.sha }}-bridge
           fail-on-cache-miss: true
+      - name: Install OpenSSL
+        shell: pwsh
+        run: |
+          irm https://raw.githubusercontent.com/actions/runner-images/main/images/win/scripts/Installers/Install-OpenSSL.ps1 | iex
+      - name: Verify OpenSSL
+        shell: pwsh
+        run: dir "C:\Program Files\OpenSSL\lib"
       - uses: microsoft/setup-msbuild@v2
       - uses: ilammy/msvc-dev-cmd@v1
         if: matrix.cc == 'msvc'
