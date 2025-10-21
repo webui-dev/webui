@@ -205,8 +205,8 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 | Compiler | Type    | Command |
 |----------|--------|---------|
-| GCC      | Static  | `gcc -Os -Wl,-subsystem=windows my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-static -lws2_32 -Wall -luser32 -static -lole32 -o my_application.exe` |
-| GCC      | Dynamic | `gcc -Wl,-subsystem=windows my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" "webui-2.dll" -lws2_32 -Wall -luser32 -lole32 -o my_application.exe` |
+| GCC      | Static  | `gcc -Os -Wl,-subsystem=windows my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-static -lws2_32 -Wall -luser32 -static -lole32 -lstdc++ -luuid -o my_application.exe` |
+| GCC      | Dynamic | `gcc -Wl,-subsystem=windows my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" "webui-2.dll" -lws2_32 -Wall -luser32 -lole32 -o -lstdc++ -luuid my_application.exe` |
 | MSVC     | Static  | `cl my_application.c /I"_PATH_TO_WEBUI_INCLUDE_" /link /LIBPATH:"_PATH_TO_WEBUI_LIB_" /SUBSYSTEM:WINDOWS webui-2-static.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:my_application.exe` |
 | MSVC     | Dynamic | `cl my_application.c /I"_PATH_TO_WEBUI_INCLUDE_" /link /LIBPATH:"_PATH_TO_WEBUI_LIB_" /SUBSYSTEM:WINDOWS webui-2.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:my_application.exe` |
 
@@ -215,8 +215,8 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
   
   | Compiler | Type    | Command |
   |----------|--------|---------|
-  | GCC      | Static  | `gcc -Os -Wl,-subsystem=windows my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-secure-static -lws2_32 -Wall -luser32 -static -lole32 -o my_application.exe` |
-  | GCC      | Dynamic | `gcc -Wl,-subsystem=windows my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" "webui-2-secure.dll" -lws2_32 -Wall -luser32 -lole32 -o my_application.exe` |
+  | GCC      | Static  | `gcc -Os -Wl,-subsystem=windows my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" -lwebui-2-secure-static -lws2_32 -Wall -luser32 -static -lole32 -lstdc++ -luuid -o my_application.exe` |
+  | GCC      | Dynamic | `gcc -Wl,-subsystem=windows my_application.c -I"_PATH_TO_WEBUI_INCLUDE_" -L"_PATH_TO_WEBUI_LIB_" "webui-2-secure.dll" -lws2_32 -Wall -luser32 -lole32 -lstdc++ -luuid -o my_application.exe` |
   | MSVC     | Static  | `cl my_application.c /I"_PATH_TO_WEBUI_INCLUDE_" /link /LIBPATH:"_PATH_TO_WEBUI_LIB_" /SUBSYSTEM:WINDOWS webui-2-secure-static.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:my_application.exe` |
   | MSVC     | Dynamic | `cl my_application.c /I"_PATH_TO_WEBUI_INCLUDE_" /link /LIBPATH:"_PATH_TO_WEBUI_LIB_" /SUBSYSTEM:WINDOWS webui-2-secure.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:my_application.exe` |
 </details>
