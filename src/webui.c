@@ -2814,7 +2814,7 @@ void* webui_get_hwnd(size_t window) {
     #endif
   
     #ifdef _WIN32
-    return webui_win32_get_hwnd(size_t window);
+    return webui_win32_get_hwnd(window);
     #elif __linux__
 
     // Initialization
