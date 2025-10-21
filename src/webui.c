@@ -2800,6 +2800,35 @@ void* webui_win32_get_hwnd(size_t window) {
     return NULL;
 }
 
+void* webui_get_native_window_handle_wv(size_t window)
+{
+#ifdef _WIN32
+    return webui_win32_get_hwnd(size_t window);
+#elif __linux__
+    #ifdef WEBUI_LOG
+    _webui_log_info("[User] webui_gtk_get_window_wv([%zu])\n", window);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return NULL;
+
+    _webui_window_t* win = _webui.wins[window];
+
+    if (_webui.is_webview) {
+        return win->webView->gtk_win;
+    }
+
+    return NULL;
+
+#else // MACOS
+    return NULL;    // Don't know how to support on MacOS (yet).
+#endif
+}
+
 void webui_set_hide(size_t window, bool status) {
 
     #ifdef WEBUI_LOG

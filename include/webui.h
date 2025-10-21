@@ -902,6 +902,24 @@ WEBUI_EXPORT size_t webui_get_child_process_id(size_t window);
 WEBUI_EXPORT void* webui_win32_get_hwnd(size_t window);
 
 /**
+ * @brief Gets the handle to the native window of the specific WebUI implementation
+ * `GtkWindow *` for the Gtk WebView on Linux, HWND for win32.
+ * Won't work with a web browser window on Linux, see also webui_win32_gt_hwnd.
+ *
+ * @param window The window number
+ *
+ * @return Returns the native window handle (`GtkWindow *`, `hwnd`) as `void*`
+ *
+ * @example
+ * #if __linux__
+ * GtkWindow *w = static_cast<GtkWindow *>(webui_get_native_window_handle_wv(myWindow);
+ * #elif _WIN32
+ * HWND h = webui_get_native_window_handle_wv(myWindow);
+ * #endif
+ */
+WEBUI_EXPORT void* webui_get_native_window_handle_wv(size_t window);
+
+/**
  * @brief Get the network port of a running window.
  * This can be useful to determine the HTTP link of `webui.js`
  *
