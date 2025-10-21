@@ -11903,9 +11903,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     snprintf(buf, 20, "%d", navigation_type);
                     size_t nt_s = strlen(buf) + 1;
                     char *type = (char *) _webui_malloc(nt_s);
-                    strncpy(uri, buf, nt_s - 1);
-                    uri[nt_s] = '\0';
-                  
+                    strncpy(type, buf, nt_s - 1);
+                    type[nt_s] = '\0';
+
                     // Event Info
                     webui_event_inf_t* event_inf = NULL;
                     size_t event_num = _webui_new_event_inf(win, &event_inf);
