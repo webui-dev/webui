@@ -363,7 +363,6 @@ typedef struct _webui_window_t {
     int x;
     int y;
     bool position_set;
-    bool (*navigation_handler_wv)(size_t window);
     bool (*close_handler_wv)(size_t window);
     const void*(*files_handler)(const char* filename, int* length);
     const void*(*files_handler_window)(size_t window, const char* filename, int* length);
@@ -832,21 +831,6 @@ void webui_run(size_t window, const char* script) {
 
     // Send the packet to all clients because no need for client's response
     _webui_send_all(win, 0, WEBUI_CMD_JS_QUICK, script, js_len);
-}
-
-void webui_set_navigation_handler_wv(size_t window, bool (*navigate_handler)(size_t window)) {
-    #ifdef WEBUI_LOG
-    _webui_log_info("[User]webui_set_navigation_handler_wv(%zu, %p)", window, navigate_handler);
-    #endif
-
-    // Dereference
-    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
-        return;
-
-    _webui_window_t* win = _webui.wins[window];
-
-    // Set the navigation handler
-    win->navigation_handler_wv = navigate_handler;
 }
 
 void webui_set_close_handler_wv(size_t window, bool(*close_handler)(size_t window)) {
@@ -11893,61 +11877,48 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     static bool _webui_wv_event_decision(void *widget, void *decision, int decision_type, void *user_data) {
         switch(decision_type) {
             case WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION: {
-
-                int navigation_type = webkit_navigation_policy_decision_get_navigation_type(decision);
-                bool intercept_navigation = false;
-
+                
+                webkit_policy_decision_ignore(decision);
+                
                 _webui_window_t* win = _webui_dereference_win_ptr(user_data);
-                if (win->navigation_handler_wv) {
-                    intercept_navigation = !(win->navigation_handler_wv(win->num));
-                }
+                int navigation_type = webkit_navigation_policy_decision_get_navigation_type(decision);
+                void *uri_request = webkit_navigation_policy_decision_get_request(decision);
+                const char *webkit_uri = webkit_uri_request_get_uri(uri_request);
 
-                if (intercept_navigation) {
-                    webkit_policy_decision_ignore(decision);
+                // URI
+                char* uri = _webui_str_dup(webkit_uri);
 
-                    void *uri_request = webkit_navigation_policy_decision_get_request(decision);
-                    const char *webkit_uri = webkit_uri_request_get_uri(uri_request);
+                // Type
+                char* type = (char*)_webui_malloc(20);
+                WEBUI_SN_PRINTF_DYN(type, 20, "%d", navigation_type);
 
-                    size_t s = strlen(webkit_uri) + 1;
-                    char *uri = (char *) _webui_malloc(s);
-                    strncpy(uri, webkit_uri, s - 1);
-                    uri[s] = '\0';
+                // Event Info
+                webui_event_inf_t* event_inf = NULL;
+                size_t event_num = _webui_new_event_inf(win, &event_inf);
+                event_inf->client = NULL; // This is a WebKitGTK Event, so we don't have any WebSocket client
+                event_inf->connection_id = 0; // This is a WebKitGTK Event, so we don't have any WebSocket connection ID
 
-                    char buf[20];
-                    snprintf(buf, 20, "%d", navigation_type);
-                    size_t nt_s = strlen(buf) + 1;
-                    char *type = (char *) _webui_malloc(nt_s);
-                    strncpy(uri, buf, nt_s - 1);
-                    uri[nt_s] = '\0';
-                  
-                    // Event Info
-                    webui_event_inf_t* event_inf = NULL;
-                    size_t event_num = _webui_new_event_inf(win, &event_inf);
-                    event_inf->client = NULL; // This is a WebKitGTK Event, so we don't have any WebSocket client
-                    event_inf->connection_id = 0; // This is a WebKitGTK Event, so we don't have any WebSocket connection ID
-    
-                    // Event Info Extras
-                    event_inf->event_data[0] = uri;
-                    event_inf->event_size[0] = strlen(uri);
-                    event_inf->event_data[1] = type;
-                    event_inf->event_size[1] = strlen(type);
+                // Event Info Extras
+                event_inf->event_data[0] = uri;
+                event_inf->event_size[0] = strlen(uri);
+                event_inf->event_data[1] = type;
+                event_inf->event_size[1] = strlen(type);
 
-                    _webui_window_event(
-                        win, // Event -> Window
-                        0, // Event -> Client Unique ID | This is a WebKitGTK Event, so we don't have any WebSocket client unique ID
-                        WEBUI_EVENT_NAVIGATION, // Event -> Type of this event
-                        "", // Event -> HTML Element
-                        event_num, // Event -> Event Number
-                        0, // Event -> Client ID | This is a WebKitGTK Event, so we don't have any WebSocket client ID
-                        NULL // Event -> Full cookies | TODO: Get cookies using WebKKitGTK APIs
-                    );
+                _webui_window_event(
+                    win, // Event -> Window
+                    0, // Event -> Client Unique ID | This is a WebKitGTK Event, so we don't have any WebSocket client unique ID
+                    WEBUI_EVENT_NAVIGATION, // Event -> Type of this event
+                    "", // Event -> HTML Element
+                    event_num, // Event -> Event Number
+                    0, // Event -> Client ID | This is a WebKitGTK Event, so we don't have any WebSocket client ID
+                    NULL // Event -> Full cookies | TODO: Get cookies using WebKKitGTK APIs
+                );
 
-                    // Free event
-                    _webui_free_event_inf(win, event_num);
+                // Free event
+                _webui_free_event_inf(win, event_num);
 
-                    // Return that this event is handled.
-                    return true;
-                }
+                // Return that this event is handled.
+                return true;
             }
             break;
         }
@@ -12125,9 +12096,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         g_signal_connect_data(win->webView->gtk_wv, "notify::title", G_CALLBACK(
             _webui_wv_event_title), (void *)win, NULL, 0);
         g_signal_connect_data(win->webView->gtk_win, "delete-event", G_CALLBACK(
-                   _webui_wv_event_on_close), (void *)win, NULL, 0);
+            _webui_wv_event_on_close), (void *)win, NULL, 0);
         g_signal_connect_data(win->webView->gtk_win, "destroy", G_CALLBACK(
             _webui_wv_event_closed), (void *)win, NULL, 0);
+        g_signal_connect_data(win->webView->gtk_wv, "decide-policy", G_CALLBACK(
+            _webui_wv_event_decision), (void *)win, NULL, 0);
         
         // Linux GTK WebView Auto JS Inject
         if (_webui.config.show_auto_js_inject) {
