@@ -731,14 +731,16 @@ static void _webui_log(size_t level, const char *format, va_list args) {
             _webui_log_data.logger_func(WEBUI_LOGGER_LEVEL_ERROR, "Log formatting error", _webui_log_data.logger_user_data);
             return;
         }
-        char *buffer = _webui_malloc(needed_size + 1);
+
+        char buf[256];
+        char *buffer = (needed_size > 255) ? _webui_malloc(needed_size + 1) : buf;
         if (buffer == NULL) {
             _webui_log_data.logger_func(WEBUI_LOGGER_LEVEL_ERROR, "Memory allocation failed for log", _webui_log_data.logger_user_data);
             return;
         }
         vsnprintf(buffer, needed_size + 1, format, args);
         _webui_log_data.logger_func(level, buffer, _webui_log_data.logger_user_data);
-        _webui_free_mem((void*)buffer);
+        if (buffer != buf) _webui_free_mem((void*)buffer);
     }
 }
 
