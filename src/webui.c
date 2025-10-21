@@ -444,8 +444,6 @@ typedef struct _webui_core_t {
     char* default_server_root_path;
     bool ui;
     char* custom_browser_folder_path;
-    void (*logger_func)(size_t level, const char* log, void* user_data);
-    void* logger_user_data;
     #ifdef WEBUI_TLS
     char* root_cert;
     char* root_key;
@@ -465,6 +463,11 @@ typedef struct _webui_core_t {
     #endif
 }
 _webui_core_t;
+
+typedef struct _webui_log_t {
+    void (*logger_func)(size_t level, const char* log, void* user_data);
+    void* logger_user_data;
+} _webui_log_t;
 
 typedef struct _webui_recv_arg_t {
     _webui_window_t* win;
@@ -694,6 +697,7 @@ static WEBUI_THREAD_MONITOR;
 
 // -- Heap ----------------------------
 static _webui_core_t _webui;
+static _webui_log_t  _webui_log_data = { NULL, NULL };
 static const char* webui_html_served = "<html><head><title>Access Denied</title><script src=\"/webui.js\"></script><style>"
 "body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-"
 "gradient(225deg,#FF3CAC 0%,#784BA0 45%,#2B86C5 100%);font-family:sans-serif;margin:20px;color:#fff}a{color:#fff}</style>"
@@ -710,7 +714,7 @@ static const char* webui_def_icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" w
 // -- Logs ----------------------------
 
 static void _webui_log(size_t level, const char *format, va_list args) {
-    if (_webui.logger_func == NULL) {
+    if (_webui_log_data.logger_func == NULL) {
         // Print log directly
         if (level == WEBUI_LOGGER_LEVEL_ERROR) {
           vfprintf(stderr, format, args);
@@ -724,14 +728,14 @@ static void _webui_log(size_t level, const char *format, va_list args) {
         int needed_size = vsnprintf(NULL, 0, format, args_copy);
         va_end(args_copy);
         if (needed_size < 0) {
-            _webui.logger_func(WEBUI_LOGGER_LEVEL_ERROR, "Log formatting error", _webui.logger_user_data);
+            _webui_log_data.logger_func(WEBUI_LOGGER_LEVEL_ERROR, "Log formatting error", _webui_log_data.logger_user_data);
             return;
         }
 
         char buf[256];
         char *buffer = (needed_size > 255) ? _webui_malloc(needed_size + 1) : buf;
         if (buffer == NULL) {
-            _webui.logger_func(WEBUI_LOGGER_LEVEL_ERROR, "Memory allocation failed for log", _webui.logger_user_data);
+            _webui_log_data.logger_func(WEBUI_LOGGER_LEVEL_ERROR, "Memory allocation failed for log", _webui_log_data.logger_user_data);
             return;
         }
         vsnprintf(buffer, needed_size + 1, format, args);
@@ -744,23 +748,26 @@ static void _webui_log_debug(const char *format, ...) {
      va_list args;
      va_start(args, format);
      _webui_log(WEBUI_LOGGER_LEVEL_DEBUG, format, args);
+     va_end(args);
 }
 
 static void _webui_log_info(const char *format, ...) {
      va_list args;
      va_start(args, format);
      _webui_log(WEBUI_LOGGER_LEVEL_INFO, format, args);
+     va_end(args);
 }
 
 static void _webui_log_error(const char *format, ...) {
      va_list args;
      va_start(args, format);
      _webui_log(WEBUI_LOGGER_LEVEL_ERROR, format, args);
+     va_end(args);
 }
 
 void webui_set_logger(void (*func)(size_t level, const char* log, void* user_data), void *user_data) {
-    _webui.logger_func = func;
-    _webui.logger_user_data = user_data;
+    _webui_log_data.logger_func = func;
+    _webui_log_data.logger_user_data = user_data;
 }
 
 // -- Functions -----------------------
@@ -2800,6 +2807,38 @@ void* webui_win32_get_hwnd(size_t window) {
 
     // This API is only available on Windows
     return NULL;
+}
+
+void* webui_get_hwnd(size_t window) {
+
+    #ifdef WEBUI_LOG
+    _webui_log_info("[User] webui_get_hwnd([%zu])\n", window);
+    #endif
+  
+    #ifdef _WIN32
+    return webui_win32_get_hwnd(window);
+    #elif __linux__
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return NULL;
+    _webui_window_t* win = _webui.wins[window];
+
+    if (_webui.is_webview) {
+      if (win->webView) {
+        return win->webView->gtk_win;
+      }
+    }
+
+    return NULL;
+
+    #else
+    // macOS
+    return NULL; // TODO: Return window handler
+    #endif
 }
 
 void webui_set_hide(size_t window, bool status) {
