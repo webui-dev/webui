@@ -2800,6 +2800,38 @@ void* webui_win32_get_hwnd(size_t window) {
     return NULL;
 }
 
+void* webui_get_hwnd(size_t window) {
+
+    #ifdef WEBUI_LOG
+    _webui_log_info("[User] webui_get_hwnd([%zu])\n", window);
+    #endif
+  
+    #ifdef _WIN32
+    return webui_win32_get_hwnd(size_t window);
+    #elif __linux__
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return NULL;
+    _webui_window_t* win = _webui.wins[window];
+
+    if (_webui.is_webview) {
+      if (win->webView) {
+        return win->webView->gtk_win;
+      }
+    }
+
+    return NULL;
+
+    #else
+    // macOS
+    return NULL; // TODO: Return window handler
+    #endif
+}
+
 void webui_set_hide(size_t window, bool status) {
 
     #ifdef WEBUI_LOG
