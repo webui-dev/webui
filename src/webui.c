@@ -2819,7 +2819,8 @@ void* webui_get_native_window_handle_wv(size_t window)
     _webui_window_t* win = _webui.wins[window];
 
     if (_webui.is_webview) {
-        return win->webView->gtk_win;
+        if (win->webView)   // prevent sigsegfault when standard browser is used
+            return win->webView->gtk_win;
     }
 
     return NULL;
