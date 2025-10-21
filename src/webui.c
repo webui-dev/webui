@@ -269,6 +269,7 @@ typedef struct webui_event_inf_t {
         bool navigate;
         bool size;
         bool position;
+        bool in_show;
         unsigned int width;
         unsigned int height;
         unsigned int x;
@@ -823,21 +824,6 @@ void webui_run(size_t window, const char* script) {
 
     // Send the packet to all clients because no need for client's response
     _webui_send_all(win, 0, WEBUI_CMD_JS_QUICK, script, js_len);
-}
-
-void webui_set_navigation_handler_wv(size_t window, bool (*navigate_handler)(size_t window)) {
-    #ifdef WEBUI_LOG
-    _webui_log_info("[User]webui_set_navigation_handler_wv(%zu, %p)", window, navigate_handler);
-    #endif
-
-    // Dereference
-    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
-        return;
-
-    _webui_window_t* win = _webui.wins[window];
-
-    // Set the navigation handler
-    win->navigation_handler_wv = navigate_handler;
 }
 
 void webui_set_close_handler_wv(size_t window, bool(*close_handler)(size_t window)) {
@@ -1954,6 +1940,26 @@ void webui_set_context(size_t window, const char* element, void* context) {
     #endif
 }
 
+
+#if __linux__
+static bool _webui_may_navigate_gtk_wv(size_t window)
+{
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return true;
+
+    _webui_window_t* win = _webui.wins[window];
+    if (win->webView) {
+        bool in_show = win->webView->in_show;
+        if (in_show) {
+            win->webView->in_show = false;
+        }
+        return in_show;
+    }
+
+    return true;
+}
+#endif
+
 size_t webui_bind(size_t window, const char* element, void(*func)(webui_event_t* e)) {
 
     #ifdef WEBUI_LOG
@@ -1986,7 +1992,18 @@ size_t webui_bind(size_t window, const char* element, void(*func)(webui_event_t*
             #ifdef WEBUI_LOG
             _webui_log_info("[User] webui_bind() -> Save bind (all events) index %zu, address 0x%p\n", index, func);
             #endif
+
+#if __linux__
+            if (win->navigation_handler_wv == NULL) {
+                win->navigation_handler_wv = _webui_may_navigate_gtk_wv;
+            }
+#endif
         }
+#if __linux__
+        else {
+            win->navigation_handler_wv = NULL;
+        }
+#endif
         return index;
     } else {
         // Non-empty Element ID Binding (New / Update)
@@ -8150,6 +8167,12 @@ static const char* _webui_get_local_ip(void) {
     #endif
 }
 
+#if __linux__
+#define IN_SHOW(yes) if (win->webView) win->webView->in_show = true;
+#else
+#define IN_SHOW(yes)
+#endif
+
 static bool _webui_show_window(_webui_window_t* win, struct mg_connection* client, const char* content, int type, size_t browser) {
 
     #ifdef WEBUI_LOG
@@ -8162,6 +8185,8 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
     else
         _webui_log_debug("[Core]\t\t_webui_show_window(FILE, [%zu])\n", browser);
     #endif
+
+    IN_SHOW(true)
 
     #ifdef WEBUI_TLS
     // TLS
@@ -8193,6 +8218,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
             _webui_free_mem((void*)ssl_cert);
             _webui_free_mem((void*)ssl_key);
             WEBUI_ASSERT("Generating self-signed TLS certificate failed");
+            IN_SHOW(false)
             return false;
         }
 
@@ -8377,6 +8403,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
                 _webui_free_mem((void*)win->url);
                 _webui_free_port(win->server_port);
                 win->server_port = 0;
+                IN_SHOW(false)
                 return false;
             }            
         }
@@ -12087,13 +12114,16 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                    _webui_wv_event_on_close), (void *)win, NULL, 0);
         g_signal_connect_data(win->webView->gtk_win, "destroy", G_CALLBACK(
             _webui_wv_event_closed), (void *)win, NULL, 0);
-        
+        g_signal_connect_data(win->webView->gtk_wv, "decide-policy", G_CALLBACK(
+                   _webui_wv_event_decision), (void *)win, NULL, 0);
+
         // Linux GTK WebView Auto JS Inject
         if (_webui.config.show_auto_js_inject) {
             // ...
         }
 
         // Show
+        IN_SHOW(true)
         webkit_web_view_load_uri(win->webView->gtk_wv, win->webView->url);
         gtk_widget_show_all(win->webView->gtk_win);
         win->webView->open = true;
