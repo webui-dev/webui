@@ -30,9 +30,9 @@ ifeq ($(OS),Windows_NT)
 	# Windows
 	PLATFORM := windows
 	SHELL := CMD
-	STATIC_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)-static -lws2_32 -Wall -luser32 -lstdc++ -static
+	STATIC_BUILD_FLAGS += -l$(WEBUI_LIB_NAME)-static -lws2_32 -Wall -luser32 -lstdc++ -luuid -static
 	COPY_LIB_CMD := @copy "$(LIB_DIR)\$(WEBUI_LIB_NAME).dll" "$(WEBUI_LIB_NAME).dll"
-	DYN_BUILD_FLAGS += "$(WEBUI_LIB_NAME).dll" -lws2_32 -Wall -luser32 -lstdc++
+	DYN_BUILD_FLAGS += "$(WEBUI_LIB_NAME).dll" -lws2_32 -Wall -luser32 -lstdc++ -luuid
 	STATIC_OUT := main.exe
 	DYN_OUT := main-dyn.exe
 	LWS2_OPT := -lws2_32 -lole32
