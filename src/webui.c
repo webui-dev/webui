@@ -739,7 +739,7 @@ static void _webui_log(size_t level, const char *format, va_list args) {
             return;
         }
         vsnprintf(buffer, needed_size + 1, format, args);
-        _webui.logger_func(level, buffer, _webui.logger_user_data);
+        _webui_log_data.logger_func(level, buffer, _webui.logger_user_data);
         if (buffer != buf) _webui_free_mem((void*)buffer);
     }
 }
