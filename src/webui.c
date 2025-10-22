@@ -264,6 +264,7 @@ typedef struct webui_event_inf_t {
         void* gtk_win;
         void* gtk_wv;
         bool open;
+        bool in_show;
         // WebUI Window
         char* url;
         bool navigate;
@@ -275,6 +276,7 @@ typedef struct webui_event_inf_t {
         unsigned int y;
         bool stop;
     } _webui_wv_linux_t;
+
 #else
     extern bool _webui_macos_wv_new(int index, bool frameless, bool resizable);
     extern void _webui_macos_wv_new_thread_safe(int index, bool frameless, bool resizable);
@@ -11849,6 +11851,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     #define GTK_RUNTIME_ARR { "libgtk-3.so.0" } // TODO: Add GTK v4 APIs "libgtk-4.so.1"
     #define WEBKIT_RUNTIME_ARR { "libwebkit2gtk-4.1.so.0", "libwebkit2gtk-4.0.so.37" }
 
+    // Decision Event
+    #define WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION 0
+    #define WEBKIT_NAVIGATION_TYPE_LINK_CLICKED     0
+    #define WEBKIT_NAVIGATION_TYPE_FORM_SUBMITTED   1
+    #define WEBKIT_NAVIGATION_TYPE_BACK_FORWARD     2
+    #define WEBKIT_NAVIGATION_TYPE_RELOAD           3
+    #define WEBKIT_NAVIGATION_TYPE_FORM_RESUBMITTED 4
+    #define WEBKIT_NAVIGATION_TYPE_OTHER            5
+
     // Title Event
     static void _webui_wv_event_title(void *web_view, void *pspec, void *arg) {
         #ifdef WEBUI_LOG
@@ -11865,22 +11876,40 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
     }
 
-    // Decision Event
-    #define WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION 0
-    #define WEBKIT_NAVIGATION_TYPE_LINK_CLICKED     0
-    #define WEBKIT_NAVIGATION_TYPE_FORM_SUBMITTED   1
-    #define WEBKIT_NAVIGATION_TYPE_BACK_FORWARD     2
-    #define WEBKIT_NAVIGATION_TYPE_RELOAD           3
-    #define WEBKIT_NAVIGATION_TYPE_FORM_RESUBMITTED 4
-    #define WEBKIT_NAVIGATION_TYPE_OTHER            5
+    static inline void _webui_wv_gtk_set_show(_webui_window_t* win, bool status) {
+        if (win) {
+            if (win->webView && win->has_all_events) {
+                win->webView->in_show = status;
+            }
+        }
+    }
+
+    static inline bool _webui_wv_gtk_is_show(_webui_window_t* win) {
+        if (win) {
+            if (win->webView && win->has_all_events) {
+                return win->webView->in_show;
+            }
+        }
+        return true;
+    }
 
     static bool _webui_wv_event_decision(void *widget, void *decision, int decision_type, void *user_data) {
         switch(decision_type) {
             case WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION: {
                 
-                webkit_policy_decision_ignore(decision);
-                
                 _webui_window_t* win = _webui_dereference_win_ptr(user_data);
+
+                if (!win->has_all_events) {
+                    return false;
+                }
+
+                if (_webui_wv_gtk_is_show(win)) {
+                    _webui_wv_gtk_set_show(win, false);
+                    return false;
+                }
+
+                webkit_policy_decision_ignore(decision);
+
                 int navigation_type = webkit_navigation_policy_decision_get_navigation_type(decision);
                 void *uri_request = webkit_navigation_policy_decision_get_request(decision);
                 const char *webkit_uri = webkit_uri_request_get_uri(uri_request);
@@ -12108,6 +12137,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         // Show
+        _webui_wv_gtk_set_show(win, true); // TODO: Check if we need this here because we are about to load a URI
         webkit_web_view_load_uri(win->webView->gtk_wv, win->webView->url);
         gtk_widget_show_all(win->webView->gtk_win);
         win->webView->open = true;
@@ -12397,6 +12427,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 // Timeout. WebView thread failed.
                 break;
             }
+        }
+
+        if (_webui.is_webview) {
+            // We have a Linux WebKitGTK WebView running
+            _webui_wv_gtk_set_show(win, true);
+        } else {
+            // Failed to start the Linux WebKitGTK
+            _webui_wv_gtk_set_show(win, false);
         }
 
         #ifdef WEBUI_LOG
