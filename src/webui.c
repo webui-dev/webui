@@ -264,7 +264,6 @@ typedef struct webui_event_inf_t {
         void* gtk_win;
         void* gtk_wv;
         bool open;
-        bool in_show;
         // WebUI Window
         char* url;
         bool navigate;
@@ -276,6 +275,8 @@ typedef struct webui_event_inf_t {
         unsigned int y;
         bool stop;
     } _webui_wv_linux_t;
+
+    #define GTK_WEBVIEW_SET_IN_SHOW(win, status) if (win && win->has_all_events) { win->in_show = status; }
 
 #else
     extern bool _webui_macos_wv_new(int index, bool frameless, bool resizable);
@@ -387,6 +388,7 @@ typedef struct _webui_window_t {
     #ifdef _WIN32
     _webui_wv_win32_t* webView;
     #elif __linux__
+    bool in_show;
     _webui_wv_linux_t* webView;
     #else
     _webui_wv_macos_t* webView;
@@ -8190,6 +8192,10 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
         _webui_log_debug("[Core]\t\t_webui_show_window(FILE, [%zu])\n", browser);
     #endif
 
+    #if __linux__
+        GTK_WEBVIEW_SET_IN_SHOW(win, true)
+    #endif
+
     #ifdef WEBUI_TLS
     // TLS
     if (_webui_is_empty(_webui.ssl_cert) || _webui_is_empty(_webui.ssl_key)) {
@@ -11876,35 +11882,19 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
     }
 
-    static inline void _webui_wv_gtk_set_show(_webui_window_t* win, bool status) {
-        if (win) {
-            if (win->webView && win->has_all_events) {
-                win->webView->in_show = status;
-            }
-        }
-    }
-
-    static inline bool _webui_wv_gtk_is_show(_webui_window_t* win) {
-        if (win) {
-            if (win->webView && win->has_all_events) {
-                return win->webView->in_show;
-            }
-        }
-        return true;
-    }
-
     static bool _webui_wv_event_decision(void *widget, void *decision, int decision_type, void *user_data) {
         switch(decision_type) {
             case WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION: {
                 
                 _webui_window_t* win = _webui_dereference_win_ptr(user_data);
 
-                if (!win->has_all_events) {
-                    return false;
-                }
-
-                if (_webui_wv_gtk_is_show(win)) {
-                    _webui_wv_gtk_set_show(win, false);
+                // If all events are handled, check in_show
+                if (win->has_all_events) {
+                    if (win->in_show) { // Don't catch navigation event
+                        GTK_WEBVIEW_SET_IN_SHOW(win, false)
+                        return false;
+                    }
+                } else { // Don't catch navigation event
                     return false;
                 }
 
@@ -12137,7 +12127,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         // Show
-        _webui_wv_gtk_set_show(win, true); // TODO: Check if we need this here because we are about to load a URI
+
         webkit_web_view_load_uri(win->webView->gtk_wv, win->webView->url);
         gtk_widget_show_all(win->webView->gtk_win);
         win->webView->open = true;
@@ -12427,14 +12417,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 // Timeout. WebView thread failed.
                 break;
             }
-        }
-
-        if (_webui.is_webview) {
-            // We have a Linux WebKitGTK WebView running
-            _webui_wv_gtk_set_show(win, true);
-        } else {
-            // Failed to start the Linux WebKitGTK
-            _webui_wv_gtk_set_show(win, false);
         }
 
         #ifdef WEBUI_LOG
