@@ -11894,6 +11894,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 
                 _webui_window_t* win = _webui_dereference_win_ptr(user_data);
 
+                if (!win->has_all_events) {
+                    return false;
+                }
+
                 if (IS_IN_SHOW(win)) {
                     CHECK_IN_SHOW(win, false)
                     return false;
