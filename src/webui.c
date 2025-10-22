@@ -277,7 +277,7 @@ typedef struct webui_event_inf_t {
         bool stop;
     } _webui_wv_linux_t;
 
-    #define GTK_SET_SHOW (win, status) if (win->webView && win->has_all_events) win->webView->in_show = status;
+    #define GTK_SET_SHOW (win, status) if (win->webView && win->has_all_events) win->webView->in_show = status
     #define GTK_IS_SHOW  (win) ((win->webView && win->has_all_events) ? win->webView->in_show : true)
 
 #else
@@ -11890,7 +11890,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 }
 
                 if (GTK_IS_SHOW(win)) {
-                    GTK_SET_SHOW(win, false)
+                    GTK_SET_SHOW(win, false);
                     return false;
                 }
 
@@ -12123,7 +12123,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         // Show
-        GTK_SET_SHOW(win, true) // TODO: Check if we need this here because we are about to load a URI
+        GTK_SET_SHOW(win, true); // TODO: Check if we need this here because we are about to load a URI
         webkit_web_view_load_uri(win->webView->gtk_wv, win->webView->url);
         gtk_widget_show_all(win->webView->gtk_win);
         win->webView->open = true;
@@ -12417,10 +12417,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         if (_webui.is_webview) {
             // We have a Linux WebKitGTK WebView running
-            GTK_SET_SHOW(win, true)
+            GTK_SET_SHOW(win, true);
         } else {
             // Failed to start the Linux WebKitGTK
-            GTK_SET_SHOW(win, false)
+            GTK_SET_SHOW(win, false);
         }
 
         #ifdef WEBUI_LOG
