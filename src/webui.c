@@ -8848,10 +8848,16 @@ static void _webui_print_hex(const char* data, size_t len) {
 }
 static void _webui_print_ascii(const char* data, size_t len) {
     for (size_t i = 0; i < len; i++) {
-        if ((unsigned char)* data == 0x00)
-            _webui_log_debug("%c", 0xCF);
-        else
-            _webui_log_debug("%c", (unsigned char)* data);
+        if ((unsigned char)* data == 0x00) {
+            _webui_log_debug("0x%02X", 0xCF);
+        } else {
+            register unsigned char c = (unsigned char)* data;
+            if (c < 32 || c > 126) {
+                _webui_log_debug("0x%02X", c);
+            } else {
+                _webui_log_debug("%c", c);
+            }
+        }
         data++;
     }
 }
