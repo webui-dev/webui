@@ -264,6 +264,7 @@ typedef struct webui_event_inf_t {
         void* gtk_win;
         void* gtk_wv;
         bool open;
+        bool in_show;
         // WebUI Window
         char* url;
         bool navigate;
@@ -8175,6 +8176,15 @@ static const char* _webui_get_local_ip(void) {
     #endif
 }
 
+
+#if __linux__
+#define CHECK_IN_SHOW(win, check) if (win->webView && win->has_all_events) win->webView->in_show = check;
+#define IS_IN_SHOW(win) ((win->webView && win->has_all_events) ? win->webView->in_show : true)
+#else
+#define CHECK_IN_SHOW(win, check)
+#define IS_IN_SHOW(win)
+#endif
+
 static bool _webui_show_window(_webui_window_t* win, struct mg_connection* client, const char* content, int type, size_t browser) {
 
     #ifdef WEBUI_LOG
@@ -8187,6 +8197,8 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
     else
         _webui_log_debug("[Core]\t\t_webui_show_window(FILE, [%zu])\n", browser);
     #endif
+
+    CHECK_IN_SHOW(win, true)
 
     #ifdef WEBUI_TLS
     // TLS
@@ -8218,6 +8230,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
             _webui_free_mem((void*)ssl_cert);
             _webui_free_mem((void*)ssl_key);
             WEBUI_ASSERT("Generating self-signed TLS certificate failed");
+            CHECK_IN_SHOW(win, false)
             return false;
         }
 
@@ -8402,6 +8415,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
                 _webui_free_mem((void*)win->url);
                 _webui_free_port(win->server_port);
                 win->server_port = 0;
+                CHECK_IN_SHOW(win, false)
                 return false;
             }            
         }
@@ -11878,9 +11892,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         switch(decision_type) {
             case WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION: {
                 
-                webkit_policy_decision_ignore(decision);
-                
                 _webui_window_t* win = _webui_dereference_win_ptr(user_data);
+
+                if (IS_IN_SHOW(win)) {
+                    CHECK_IN_SHOW(win, false)
+                    return false;
+                }
+
+                webkit_policy_decision_ignore(decision);
+
                 int navigation_type = webkit_navigation_policy_decision_get_navigation_type(decision);
                 void *uri_request = webkit_navigation_policy_decision_get_request(decision);
                 const char *webkit_uri = webkit_uri_request_get_uri(uri_request);
@@ -12108,6 +12128,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         // Show
+        CHECK_IN_SHOW(win, true)
         webkit_web_view_load_uri(win->webView->gtk_wv, win->webView->url);
         gtk_widget_show_all(win->webView->gtk_win);
         win->webView->open = true;
