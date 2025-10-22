@@ -12338,8 +12338,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         // Linux GTK WebView
 
-        GTK_WEBVIEW_SET_IN_SHOW(win, true)
-
         #ifdef WEBUI_DYNAMIC
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t_webui_wv_show() -> WebUI dynamic version does not support Linux WebView\n");
