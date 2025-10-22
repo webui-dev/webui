@@ -277,8 +277,8 @@ typedef struct webui_event_inf_t {
         bool stop;
     } _webui_wv_linux_t;
 
-    #define GTK_SET_SHOW (win, status) if (win->webView && win->has_all_events) win->webView->in_show = status
-    #define GTK_IS_SHOW  (win) ((win->webView && win->has_all_events) ? win->webView->in_show : true)
+    #define GTK_SET_SHOW(win, status) (if (win->webView && win->has_all_events) win->webView->in_show = status)
+    #define GTK_IS_SHOW(win) ((win->webView && win->has_all_events) ? win->webView->in_show : true)
 
 #else
     extern bool _webui_macos_wv_new(int index, bool frameless, bool resizable);
