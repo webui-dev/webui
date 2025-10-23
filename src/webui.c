@@ -8847,11 +8847,19 @@ static void _webui_print_hex(const char* data, size_t len) {
     }
 }
 static void _webui_print_ascii(const char* data, size_t len) {
+    // This function is used to print the protocol binary packets. the packet 
+    // may have ASCII and `0x00` inside text, as well as other non-ascii bytes
     for (size_t i = 0; i < len; i++) {
-        if ((unsigned char)* data == 0x00)
-            _webui_log_debug("%c", 0xCF);
-        else
-            _webui_log_debug("%c", (unsigned char)* data);
+        register unsigned char c = (unsigned char)* data;
+        if (c == 0x00) {
+            _webui_log_debug("%c", 0xCF); // Print `¤` | TODO: Maybe we can simply print a blank space?
+        } else {
+            if (c < 32 || c > 126) {
+                _webui_log_debug("[0x%02X]", c);
+            } else {
+                _webui_log_debug("%c", c);
+            }
+        }
         data++;
     }
 }
