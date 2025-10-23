@@ -48,6 +48,10 @@ jobs:
             arch: arm
           - cc: gcc
             arch: arm64
+          - cc: clang
+            arch: arm
+          - cc: clang
+            arch: arm64
       fail-fast: false
     env:
       ARTIFACT: webui-linux-${{ matrix.cc }}-${{ matrix.arch }}
@@ -60,11 +64,19 @@ jobs:
           fail-on-cache-miss: true
       - name: Setup
         run: |
+          sudo apt update
+          if [ "${{ matrix.cc }}" == "clang" ]; then
+            sudo apt install -y clang lld
+          fi
+
           CC=${{ matrix.cc }}
           if [ "${{ matrix.arch }}" == "arm64" ]; then
-            sudo apt update
             sudo apt install -y gcc-aarch64-linux-gnu
-            CC=aarch64-linux-gnu-gcc
+            if [ "$CC" = "clang" ]; then
+              CC="clang --target=aarch64-linux-gnu"
+            else
+              CC=aarch64-linux-gnu-gcc
+            fi
             wget https://github.com/openssl/openssl/releases/download/openssl-3.3.1/openssl-3.3.1.tar.gz
             tar -xzf openssl-3.3.1.tar.gz
             cd openssl-3.3.1
@@ -72,9 +84,12 @@ jobs:
             make
             sudo make install
           elif [ "${{ matrix.arch }}" == "arm" ]; then
-            sudo apt update
             sudo apt install -y gcc-arm-linux-gnueabi
-            CC=arm-linux-gnueabi-gcc
+            if [ "$CC" = "clang" ]; then
+              CC="clang --target=arm-linux-gnueabi"
+            else
+              CC=arm-linux-gnueabi-gcc
+            fi
             wget https://github.com/openssl/openssl/releases/download/openssl-3.3.1/openssl-3.3.1.tar.gz
             tar -xzf openssl-3.3.1.tar.gz
             cd openssl-3.3.1
