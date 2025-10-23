@@ -666,7 +666,7 @@ static bool _webui_check_certificate(const char* certificate_pem, const char* pr
 #endif
 #ifdef WEBUI_LOG
 static void _webui_print_hex(const char* data, size_t len);
-static void _webui_print_ascii(const char* data, size_t len);
+static void (const char* data, size_t len);
 static int _webui_http_log(const struct mg_connection* client, const char* message);
 #endif
 static WEBUI_THREAD_SERVER_START;
@@ -8847,13 +8847,15 @@ static void _webui_print_hex(const char* data, size_t len) {
     }
 }
 static void _webui_print_ascii(const char* data, size_t len) {
+    // This function is used to print the protocol binary packets. the packet 
+    // may have ASCII and `0x00` inside text, as well as other non-ascii bytes
     for (size_t i = 0; i < len; i++) {
-        if ((unsigned char)* data == 0x00) {
-            _webui_log_debug("0x%02X", 0xCF);
+        register unsigned char c = (unsigned char)* data;
+        if (c == 0x00) {
+            _webui_log_debug("%c", 0xCF); // Print `¤` | TODO: Maybe we can simply print a blank space?
         } else {
-            register unsigned char c = (unsigned char)* data;
             if (c < 32 || c > 126) {
-                _webui_log_debug("0x%02X", c);
+                _webui_log_debug("[0x%02X]", c);
             } else {
                 _webui_log_debug("%c", c);
             }
