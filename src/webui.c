@@ -666,7 +666,7 @@ static bool _webui_check_certificate(const char* certificate_pem, const char* pr
 #endif
 #ifdef WEBUI_LOG
 static void _webui_print_hex(const char* data, size_t len);
-static void (const char* data, size_t len);
+static void _webui_print_ascii(const char* data, size_t len);
 static int _webui_http_log(const struct mg_connection* client, const char* message);
 #endif
 static WEBUI_THREAD_SERVER_START;
