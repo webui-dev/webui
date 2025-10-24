@@ -953,6 +953,13 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
             _webui_mutex_lock(&_webui.mutex_js_run);
             js_status = _webui.run_done[run_id];
             _webui_mutex_unlock(&_webui.mutex_js_run);
+            #if __linux__
+            if (_webui.is_webview) {
+                while (gtk_events_pending()) {
+                   gtk_main_iteration_do(0);
+                }
+            }
+            #endif
             if (js_status)
                 break;
         }
@@ -966,6 +973,13 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
             _webui_mutex_lock(&_webui.mutex_js_run);
             js_status = _webui.run_done[run_id];
             _webui_mutex_unlock(&_webui.mutex_js_run);
+            #if __linux__
+            if (_webui.is_webview) {
+                while (gtk_events_pending()) {
+                   gtk_main_iteration_do(0);
+                }
+            }
+            #endif
             if (js_status)
                 break;
             if (_webui_timer_is_end(&timer, (timeout * 1000)))
