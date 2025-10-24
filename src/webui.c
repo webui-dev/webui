@@ -8851,14 +8851,10 @@ static void _webui_print_ascii(const char* data, size_t len) {
     // may have ASCII and `0x00` inside text, as well as other non-ascii bytes
     for (size_t i = 0; i < len; i++) {
         register unsigned char c = (unsigned char)* data;
-        if (c == 0x00) {
-            _webui_log_debug("%c", 0xCF); // Print `¤` | TODO: Maybe we can simply print a blank space?
+        if (c < 32 || c > 126) {
+            _webui_log_debug("[0x%02X]", c);
         } else {
-            if (c < 32 || c > 126) {
-                _webui_log_debug("[0x%02X]", c);
-            } else {
-                _webui_log_debug("%c", c);
-            }
+            _webui_log_debug("%c", c);
         }
         data++;
     }
