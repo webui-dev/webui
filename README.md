@@ -18,6 +18,8 @@
 
 ![Screenshot](https://raw.githubusercontent.com/webui-dev/webui-logo/main/screenshot.png)
 
+![Screenshot](/examples/C/frameless/webui_frameless.png)
+
 </div>
 
 <div align="center">
