@@ -19,7 +19,23 @@ import { AsyncFunction, addRefreshableEventListener } from './utils.ts';
 
 type DataTypes = string | number | boolean | Uint8Array;
 
-class WebuiBridge {
+/** The signature of a WebUI callback. */
+export type CallbackSignature = {
+	/** The arguments of a callback. */
+  args: Array<DataTypes>;
+
+  /** The return value of a callback. */
+	output: DataTypes | void;
+};
+
+/** Extensions of WebuiBridge. */
+export type Extensions = {
+	/** Callbacks that are callable from the frontend. */
+  callbacks: Record<string, CallbackSignature>;
+  // More entries maybe
+};
+
+class WebuiBridge<Ext extends Extensions = Extensions> {
 	// WebUI Settings
 	#secure: boolean;
 	#token: number;
@@ -920,7 +936,10 @@ class WebuiBridge {
 	 * @return - Response of the backend callback string
 	 * @example - const res = await webui.call("myID", 123, true, "Hi", new Uint8Array([0x42, 0x43, 0x44]))
 	 */
-	async call(fn: string, ...args: DataTypes[]): Promise<DataTypes> {
+	async call<K extends keyof Ext["callbacks"]>(
+    fn: K,
+    ...args: Ext["callbacks"][K]["args"]
+  ): Promise<Ext["callbacks"][K]["output"]> {
 		if (!fn) return Promise.reject(new SyntaxError('No binding name is provided'));
 
 		if (!this.#wsIsConnected()) return Promise.reject(new Error('WebSocket is not connected'));
