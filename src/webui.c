@@ -11555,7 +11555,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Set URL and dimensions in C++ handle
         _webui_win32_wv2_set_url(webView->cpp_handle, wURL);
         _webui_win32_wv2_set_dimensions(webView->cpp_handle, x, y, width, height);
-        _webui_win32_wv2_set_navigate_flag(webView->cpp_handle, true);
+        //_webui_win32_wv2_set_navigate_flag(webView->cpp_handle, true); // This will solve issue #664
 
         win->webView = webView;
 
