@@ -17,21 +17,23 @@
 //@ts-ignore use *.ts import real extension
 import { AsyncFunction, addRefreshableEventListener } from './utils.ts';
 
-type DataTypes = string | number | boolean | Uint8Array;
+export type DataTypes = string | number | boolean | Uint8Array;
+export type Params = Array<DataTypes>;
+export type Output = DataTypes | void;
 
-/** The signature of a WebUI callback. */
-export type CallbackSignature = {
-	/** The arguments of a callback. */
-  args: Array<DataTypes>;
+/** Attributes of a user defined bridge callback. */
+export type Callback<P extends Params = Params, O extends Output = Output> = {
+	/** The parameters of the callback. */
+  parameters: P;
 
-  /** The return value of a callback. */
-	output: DataTypes | void;
+  /** The return value of the callback. */
+	output: O;
 };
 
 /** Extensions of WebuiBridge. */
 export type Extensions = {
 	/** Callbacks that are callable from the frontend. */
-  callbacks: Record<string, CallbackSignature>;
+  callbacks: Record<string, Callback>;
   // More entries maybe
 };
 
@@ -938,7 +940,7 @@ class WebuiBridge<Ext extends Extensions = Extensions> {
 	 */
 	async call<K extends keyof Ext["callbacks"]>(
     fn: K,
-    ...args: Ext["callbacks"][K]["args"]
+    ...args: Ext["callbacks"][K]["parameters"]
   ): Promise<Ext["callbacks"][K]["output"]> {
 		if (!fn) return Promise.reject(new SyntaxError('No binding name is provided'));
 
