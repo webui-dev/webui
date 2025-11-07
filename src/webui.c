@@ -5570,11 +5570,27 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win, struct mg_con
     #else
     const char* TLS = "false";
     #endif
+
+    #ifdef _WIN32
+        // WebView2 provides its own window dragging via `webkit-app-region`,
+        // so our custom JavaScript implementation is not needed.
+        #define CUSTOM_WEBUI_WINDOW_DRAG "false"
+    #elif __linux__
+        // The Linux WebKit GTK backend does not support this feature,
+        // so we'll use our custom JavaScript window dragging implementation via `--webui-app-region`.
+        #define CUSTOM_WEBUI_WINDOW_DRAG "true"
+    #else
+        // macOS WKWebView does not support this feature,
+        // but `wkwebview.m` is already configured to allow full-window dragging,
+        // so our custom JavaScript implementation is unnecessary.
+        #define CUSTOM_WEBUI_WINDOW_DRAG "false"
+    #endif
+
     int c = WEBUI_SN_PRINTF_DYN(
         js, len,
         "%s\n document.addEventListener(\"DOMContentLoaded\",function(){ globalThis.webui = "
-        "new WebuiBridge({ secure: %s, token: %" PRIu32 ", port: %zu, log: %s, ",
-        webui_javascript_bridge, TLS, token, win->server_port, log
+        "new WebuiBridge({ secure: %s, token: %" PRIu32 ", port: %zu, log: %s, customWindowDrag: %s, ",
+        webui_javascript_bridge, TLS, token, win->server_port, log, CUSTOM_WEBUI_WINDOW_DRAG
     );
     // Window Size
     if (win->size_set)

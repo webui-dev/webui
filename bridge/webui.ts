@@ -29,6 +29,7 @@ class WebuiBridge {
 	#winY: number;
 	#winW: number;
 	#winH: number;
+	#customWindowDrag: boolean;
 	// Frameless Dragging
 	#enableCustomDragging: boolean = false;
 	#isDragging: boolean = false;
@@ -94,6 +95,7 @@ class WebuiBridge {
 		winY = 0,
 		winW = 0,
 		winH = 0,
+		customWindowDrag = false
 	}: {
 		secure: boolean;
 		token: number;
@@ -103,6 +105,7 @@ class WebuiBridge {
 		winY: number;
 		winW: number;
 		winH: number;
+		customWindowDrag: boolean;
 	}) {
 		// Constructor arguments are injected by webui.c
 		this.#secure = secure;
@@ -113,6 +116,7 @@ class WebuiBridge {
 		this.#winY = winY;
 		this.#winW = winW;
 		this.#winH = winH;
+		this.#enableCustomDragging = customWindowDrag;
 		// Token
 		this.#Token[0] = this.#token;
 		// Instance
@@ -176,9 +180,8 @@ class WebuiBridge {
 					let target = e.target;
 					while (target) {
 						let computedStyle = window.getComputedStyle(target);
-						let webkitComputed = computedStyle.getPropertyValue("-webkit-app-region").trim();
 						let webuiComputed = computedStyle.getPropertyValue("--webui-app-region").trim();
-						if (webkitComputed === "drag" || webuiComputed === "drag") {
+						if (webuiComputed === "drag") {
 							this.#initialMouseX = e.screenX;
 							this.#initialMouseY = e.screenY;
 							this.#initialWindowX = this.#currentWindowX;
