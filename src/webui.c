@@ -213,6 +213,10 @@ typedef struct webui_event_inf_t {
     typedef void (*gtk_window_set_resizable_func)(void *, int);
     typedef void (*gtk_window_set_position_func)(void *, int);
     typedef unsigned long (*g_signal_connect_data_func)(void *, const char *, void (*callback)(void), void *, void *, int);
+    typedef void (*gtk_widget_set_visual_func)(void *, void *);
+    typedef void *(*gtk_widget_get_screen_func)(void *);
+    typedef void *(*gdk_screen_get_rgba_visual_func)(void *);
+    typedef void (*gtk_widget_set_app_paintable_func)(void *, int);
     // GTK Symbol Initialization
     static gtk_init_func gtk_init = NULL;
     static gtk_widget_show_all_func gtk_widget_show_all = NULL;
@@ -236,6 +240,10 @@ typedef struct webui_event_inf_t {
     static gtk_window_set_position_func gtk_window_set_position = NULL;
     static g_signal_connect_data_func g_signal_connect_data = NULL;
     static g_idle_add_func g_idle_add = NULL;
+    static gtk_widget_set_visual_func gtk_widget_set_visual = NULL;
+    static gtk_widget_get_screen_func gtk_widget_get_screen = NULL;
+    static gdk_screen_get_rgba_visual_func gdk_screen_get_rgba_visual = NULL;
+    static gtk_widget_set_app_paintable_func gtk_widget_set_app_paintable = NULL;
     // GTK Structs
     typedef struct {
         int x;
@@ -251,6 +259,7 @@ typedef struct webui_event_inf_t {
     typedef int (*webkit_1ptr_arg_2int_func)(void *);
     typedef void *(*webkit_1ptr_arg_2ptr_func)(void *);
     typedef const char *(*webkit_1ptr_arg_2str_func)(void *);
+    typedef void (*webkit_web_view_set_background_color_func)(void *, void *);
     static webkit_web_view_new_func webkit_web_view_new = NULL;
     static webkit_web_view_load_uri_func webkit_web_view_load_uri = NULL;
     static webkit_web_view_get_title_func webkit_web_view_get_title = NULL;
@@ -258,6 +267,7 @@ typedef struct webui_event_inf_t {
     static webkit_1ptr_arg_2int_func webkit_navigation_policy_decision_get_navigation_type = NULL;
     static webkit_1ptr_arg_2ptr_func webkit_navigation_policy_decision_get_request = NULL;
     static webkit_1ptr_arg_2str_func webkit_uri_request_get_uri = NULL;
+    static webkit_web_view_set_background_color_func webkit_web_view_set_background_color = NULL;
 
     typedef struct _webui_wv_linux_t {
         // Linux WebView
@@ -5560,11 +5570,27 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win, struct mg_con
     #else
     const char* TLS = "false";
     #endif
+
+    #ifdef _WIN32
+        // WebView2 provides its own window dragging via `webkit-app-region`,
+        // so our custom JavaScript implementation is not needed.
+        #define CUSTOM_WEBUI_WINDOW_DRAG "false"
+    #elif __linux__
+        // The Linux WebKit GTK backend does not support this feature,
+        // so we'll use our custom JavaScript window dragging implementation via `--webui-app-region`.
+        #define CUSTOM_WEBUI_WINDOW_DRAG "true"
+    #else
+        // macOS WKWebView does not support this feature,
+        // but `wkwebview.m` is already configured to allow full-window dragging,
+        // so our custom JavaScript implementation is unnecessary.
+        #define CUSTOM_WEBUI_WINDOW_DRAG "false"
+    #endif
+
     int c = WEBUI_SN_PRINTF_DYN(
         js, len,
         "%s\n document.addEventListener(\"DOMContentLoaded\",function(){ globalThis.webui = "
-        "new WebuiBridge({ secure: %s, token: %" PRIu32 ", port: %zu, log: %s, ",
-        webui_javascript_bridge, TLS, token, win->server_port, log
+        "new WebuiBridge({ secure: %s, token: %" PRIu32 ", port: %zu, log: %s, customWindowDrag: %s, ",
+        webui_javascript_bridge, TLS, token, win->server_port, log, CUSTOM_WEBUI_WINDOW_DRAG
     );
     // Window Size
     if (win->size_set)
@@ -11555,7 +11581,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Set URL and dimensions in C++ handle
         _webui_win32_wv2_set_url(webView->cpp_handle, wURL);
         _webui_win32_wv2_set_dimensions(webView->cpp_handle, x, y, width, height);
-        _webui_win32_wv2_set_navigate_flag(webView->cpp_handle, true);
+        //_webui_win32_wv2_set_navigate_flag(webView->cpp_handle, true); // This will solve issue #664
 
         win->webView = webView;
 
@@ -12116,8 +12142,37 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // Initialize GTK Window
         win->webView->gtk_win = gtk_window_new(0);
 
+        // GTK transparent window
+        if (win->transparent) {
+            // Enable transparency if the APIs are available
+            if (gtk_widget_set_visual && gtk_widget_get_screen && gdk_screen_get_rgba_visual) {
+                void* screen = gtk_widget_get_screen(win->webView->gtk_win);
+                if (screen) {
+                    void* visual = gdk_screen_get_rgba_visual(screen);
+                    if (visual) {
+                        gtk_widget_set_visual(win->webView->gtk_win, visual);
+                    }
+                }
+            }
+            // Enable app paintable for transparency
+            if (gtk_widget_set_app_paintable) {
+                gtk_widget_set_app_paintable(win->webView->gtk_win, 1);
+            }
+        }
+
         // Initialize WebView
         win->webView->gtk_wv = webkit_web_view_new();
+
+        // WebView transparent
+        if (win->transparent && webkit_web_view_set_background_color) {
+            struct {
+                double red;
+                double green;
+                double blue;
+                double alpha;
+            } transparent_color = {0.0, 0.0, 0.0, 0.0};
+            webkit_web_view_set_background_color(win->webView->gtk_wv, &transparent_color);
+        }
 
         // Window Settings
         gtk_window_set_default_size(win->webView->gtk_win, win->webView->width, win->webView->height);
@@ -12289,7 +12344,15 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libgtk, "g_signal_connect_data");
             g_idle_add = (g_idle_add_func)dlsym(
                 libgtk, "g_idle_add");
-            
+            gtk_widget_set_visual = (gtk_widget_set_visual_func)dlsym(
+                libgtk, "gtk_widget_set_visual");
+            gtk_widget_get_screen = (gtk_widget_get_screen_func)dlsym(
+                libgtk, "gtk_widget_get_screen");
+            gdk_screen_get_rgba_visual = (gdk_screen_get_rgba_visual_func)dlsym(
+                libgtk, "gdk_screen_get_rgba_visual");
+            gtk_widget_set_app_paintable = (gtk_widget_set_app_paintable_func)dlsym(
+                libgtk, "gtk_widget_set_app_paintable");
+
             // WebView Symbol Addresses
             webkit_web_view_new = (webkit_web_view_new_func)dlsym(
                 libwebkit, "webkit_web_view_new");
@@ -12305,6 +12368,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libwebkit, "webkit_navigation_policy_decision_get_request");
             webkit_uri_request_get_uri = (webkit_1ptr_arg_2str_func)dlsym(
                 libwebkit, "webkit_uri_request_get_uri");
+            webkit_web_view_set_background_color = (webkit_web_view_set_background_color_func)dlsym(
+                libwebkit, "webkit_web_view_set_background_color");
 
             // Check GTK
             if (
