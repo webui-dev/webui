@@ -174,6 +174,7 @@ struct mg_request_info {
 	const char *remote_user;    /* Authenticated user, or NULL if no auth
 	                               used */
 	char remote_addr[48];       /* Client's IP address as a string. */
+	char server_addr[48];       /* Server's IP address as a string. */
 
 	long long content_length; /* Length (in bytes) of the request body,
 	                             can be -1 if no length was given. */
@@ -1218,7 +1219,7 @@ struct mg_form_data_handler {
 	 *   filename: Name of a file to upload, at the client computer.
 	 *             Only set for input fields of type "file", otherwise NULL.
 	 *   path: Output parameter: File name (incl. path) to store the file
-	 *         at the server computer. Only used if FORM_FIELD_STORAGE_STORE
+	 *         at the server computer. Only used if MG_FORM_FIELD_STORAGE_STORE
 	 *         is returned by this callback. Existing files will be
 	 *         overwritten.
 	 *   pathlen: Length of the buffer for path.
@@ -1226,7 +1227,7 @@ struct mg_form_data_handler {
 	 *
 	 * Return value:
 	 *   The callback must return the intended storage for this field
-	 *   (See FORM_FIELD_STORAGE_*).
+	 *   (See MG_FORM_FIELD_STORAGE_*).
 	 */
 	int (*field_found)(const char *key,
 	                   const char *filename,
@@ -1234,7 +1235,7 @@ struct mg_form_data_handler {
 	                   size_t pathlen,
 	                   void *user_data);
 
-	/* If the "field_found" callback returned FORM_FIELD_STORAGE_GET,
+	/* If the "field_found" callback returned MG_FORM_FIELD_STORAGE_GET,
 	 * this callback will receive the field data.
 	 *
 	 * Parameters:
@@ -1251,7 +1252,7 @@ struct mg_form_data_handler {
 	                 size_t valuelen,
 	                 void *user_data);
 
-	/* If the "field_found" callback returned FORM_FIELD_STORAGE_STORE,
+	/* If the "field_found" callback returned MG_FORM_FIELD_STORAGE_STORE,
 	 * the data will be stored into a file. If the file has been written
 	 * successfully, this callback will be called. This callback will
 	 * not be called for only partially uploaded files. The

@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2024 the Civetweb developers
+/* Copyright (c) 2013-2025 the Civetweb developers
  * Copyright (c) 2004-2013 Sergey Lyubka
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -161,7 +161,7 @@ mg_static_assert(sizeof(void *) >= sizeof(int), "data type size check");
  * file system.
  * NO_FILES only disables the automatic mapping between URLs and local
  * file names.
- * NO_FILESYSTEM = do not access any file at all. Useful for embedded
+ * NO_FILESYSTEMS = do not access any file at all. Useful for embedded
  * devices without file system. Logging to files in not available
  * (use callbacks instead) and API functions like mg_send_file are not
  * available.
@@ -239,7 +239,7 @@ static void DEBUG_TRACE_FUNC(const char *func,
 
 #define NEED_DEBUG_TRACE_FUNC
 #if !defined(DEBUG_TRACE_STREAM)
-#define DEBUG_TRACE_STREAM stdout
+#define DEBUG_TRACE_STREAM stderr
 #endif
 
 #else
@@ -1595,7 +1595,7 @@ static int mg_openssl_initialized = 0;
 #endif
 #if !defined(OPENSSL_API_1_0) && !defined(OPENSSL_API_1_1)                     \
     && !defined(OPENSSL_API_3_0) && !defined(USE_MBEDTLS)                      \
-	&& !defined(USE_GNUTLS)
+    && !defined(USE_GNUTLS)
 #error "Please define OPENSSL_API_#_# or USE_MBEDTLS or USE_GNUTLS"
 #endif
 #if defined(OPENSSL_API_1_0) && defined(OPENSSL_API_1_1)
@@ -2087,7 +2087,7 @@ enum {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
 	LUA_WEBSOCKET_EXTENSIONS,
 #endif
-
+	REPLACE_ASTERISK_WITH_ORIGIN,
 	ACCESS_CONTROL_ALLOW_ORIGIN,
 	ACCESS_CONTROL_ALLOW_METHODS,
 	ACCESS_CONTROL_ALLOW_HEADERS,
@@ -2253,6 +2253,7 @@ static const struct mg_option config_options[] = {
 #if defined(USE_LUA) && defined(USE_WEBSOCKET)
     {"lua_websocket_pattern", MG_CONFIG_TYPE_EXT_PATTERN, "**.lua$"},
 #endif
+    {"replace_asterisk_with_origin", MG_CONFIG_TYPE_BOOLEAN, "no"},
     {"access_control_allow_origin", MG_CONFIG_TYPE_STRING, "*"},
     {"access_control_allow_methods", MG_CONFIG_TYPE_STRING, "*"},
     {"access_control_allow_headers", MG_CONFIG_TYPE_STRING, "*"},
@@ -2369,7 +2370,9 @@ STOP_FLAG_ASSIGN(stop_flag_t *f, stop_flag_t v)
 {
 	stop_flag_t sf = 0;
 	do {
-		sf = mg_atomic_compare_and_swap(f, *f, v);
+		sf = mg_atomic_compare_and_swap(f,
+		                                __atomic_load_n(f, __ATOMIC_SEQ_CST),
+		                                v);
 	} while (sf != v);
 }
 
@@ -3480,7 +3483,7 @@ mg_cry_internal_impl(const struct mg_connection *conn,
 	DEBUG_TRACE("mg_cry called from %s:%u: %s", func, line, buf);
 
 	if (!conn) {
-		puts(buf);
+		fputs(buf, stderr);
 		return;
 	}
 
@@ -4232,16 +4235,30 @@ send_cors_header(struct mg_connection *conn)
 	    conn->dom_ctx->config[ACCESS_CONTROL_EXPOSE_HEADERS];
 	const char *cors_meth_cfg =
 	    conn->dom_ctx->config[ACCESS_CONTROL_ALLOW_METHODS];
+	const char *cors_repl_asterisk_with_orig_cfg =
+	    conn->dom_ctx->config[REPLACE_ASTERISK_WITH_ORIGIN];
 
-	if (cors_orig_cfg && *cors_orig_cfg && origin_hdr && *origin_hdr) {
+	if (cors_orig_cfg && *cors_orig_cfg && origin_hdr && *origin_hdr
+	    && cors_repl_asterisk_with_orig_cfg
+	    && *cors_repl_asterisk_with_orig_cfg) {
+		int cors_repl_asterisk_with_orig =
+		    mg_strcasecmp(cors_repl_asterisk_with_orig_cfg, "yes");
+
 		/* Cross-origin resource sharing (CORS), see
 		 * http://www.html5rocks.com/en/tutorials/cors/,
 		 * http://www.html5rocks.com/static/images/cors_server_flowchart.png
 		 * CORS preflight is not supported for files. */
-		mg_response_header_add(conn,
-		                       "Access-Control-Allow-Origin",
-		                       cors_orig_cfg,
-		                       -1);
+		if (cors_repl_asterisk_with_orig == 0 && cors_orig_cfg[0] == '*') {
+			mg_response_header_add(conn,
+			                       "Access-Control-Allow-Origin",
+			                       origin_hdr,
+			                       -1);
+		} else {
+			mg_response_header_add(conn,
+			                       "Access-Control-Allow-Origin",
+			                       cors_orig_cfg,
+			                       -1);
+		}
 	}
 
 	if (cors_cred_cfg && *cors_cred_cfg && origin_hdr && *origin_hdr) {
@@ -6168,9 +6185,12 @@ push_inner(struct mg_context *ctx,
 		} else
 #elif defined(USE_GNUTLS)
 		if (ssl != NULL) {
-			n = gtls_ssl_write(ssl, (const unsigned char *)buf, (size_t) len);
+			n = gtls_ssl_write(ssl, (const unsigned char *)buf, (size_t)len);
 			if (n < 0) {
-				fprintf(stderr, "SSL write failed (%d): %s", n, gnutls_strerror(n));
+				fprintf(stderr,
+				        "SSL write failed (%d): %s",
+				        n,
+				        gnutls_strerror(n));
 				return -2;
 			} else {
 				err = 0;
@@ -6475,7 +6495,10 @@ pull_inner(FILE *fp,
 		if (pollres > 0) {
 			nread = gtls_ssl_read(conn->ssl, (unsigned char *)buf, to_read);
 			if (nread < 0) {
-				fprintf(stderr, "SSL read failed (%d): %s", nread, gnutls_strerror(nread));
+				fprintf(stderr,
+				        "SSL read failed (%d): %s",
+				        nread,
+				        gnutls_strerror(nread));
 				return -2;
 			} else {
 				err = 0;
@@ -7264,6 +7287,7 @@ mg_url_decode(const char *src,
               int is_form_url_encoded)
 {
 	int i, j, a, b;
+
 #define HEXTOI(x) (isdigit(x) ? (x - '0') : (x - 'W'))
 
 	for (i = j = 0; (i < src_len) && (j < (dst_len - 1)); i++, j++) {
@@ -7276,10 +7300,14 @@ mg_url_decode(const char *src,
 			i += 2;
 		} else if (is_form_url_encoded && (src[i] == '+')) {
 			dst[j] = ' ';
+		} else if ((unsigned char)src[i] <= ' ') {
+			return -1; /* invalid character */
 		} else {
 			dst[j] = src[i];
 		}
 	}
+
+#undef HEXTOI
 
 	dst[j] = '\0'; /* Null-terminate the destination */
 
@@ -8511,6 +8539,9 @@ static const struct {
      * (http://www.iana.org/assignments/media-types)
      * application types */
     {".bin", 4, "application/octet-stream"},
+    {".cer", 4, "application/pkix-cert"},
+    {".crl", 4, "application/pkix-crl"},
+    {".crt", 4, "application/pkix-cert"},
     {".deb", 4, "application/octet-stream"},
     {".dmg", 4, "application/octet-stream"},
     {".dll", 4, "application/octet-stream"},
@@ -8522,6 +8553,7 @@ static const struct {
     {".json", 5, "application/json"},
     {".mjs", 4, "application/javascript"},
     {".msi", 4, "application/octet-stream"},
+    {".pem", 4, "application/x-pem-file"},
     {".pdf", 4, "application/pdf"},
     {".ps", 3, "application/postscript"},
     {".rtf", 4, "application/rtf"},
@@ -9630,7 +9662,8 @@ connect_socket(
 		return 0;
 	}
 
-#if !defined(NO_SSL) && !defined(USE_MBEDTLS) && !defined(USE_GNUTLS) && !defined(NO_SSL_DL)
+#if !defined(NO_SSL) && !defined(USE_MBEDTLS) && !defined(USE_GNUTLS)          \
+    && !defined(NO_SSL_DL)
 #if defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0)
 	if (use_ssl && (TLS_client_method == NULL)) {
 		if (error != NULL) {
@@ -10770,9 +10803,13 @@ is_not_modified(const struct mg_connection *conn,
 	const char *inm = mg_get_header(conn, "If-None-Match");
 	construct_etag(etag, sizeof(etag), filestat);
 
-	return ((inm != NULL) && !mg_strcasecmp(etag, inm))
-	       || ((ims != NULL)
-	           && (filestat->last_modified <= parse_date_string(ims)));
+	if (inm) {
+		return !mg_strcasecmp(etag, inm);
+	}
+	if (ims) {
+		return (filestat->last_modified <= parse_date_string(ims));
+	}
+	return 0;
 }
 
 
@@ -15066,7 +15103,7 @@ handle_request(struct mg_connection *conn)
 		}
 		return;
 	}
-	uri_len = (int)strlen(ri->local_uri);
+
 
 	/* 1.3. decode url (if config says so) */
 	if (should_decode_url(conn)) {
@@ -15094,6 +15131,11 @@ handle_request(struct mg_connection *conn)
 	}
 	remove_dot_segments(tmp);
 	ri->local_uri = tmp;
+#if !defined(NO_FILES) /* Only compute if later code can actually use it */
+	/* Cache URI length once; recompute only if the buffer changes later. */
+	uri_len = (int)strlen(ri->local_uri);
+#endif
+
 
 	/* step 1. completed, the url is known now */
 	DEBUG_TRACE("REQUEST: %s %s", ri->request_method, ri->local_uri);
@@ -15146,13 +15188,20 @@ handle_request(struct mg_connection *conn)
 		const char *cors_acrm = get_header(ri->http_headers,
 		                                   ri->num_headers,
 		                                   "Access-Control-Request-Method");
+		const char *cors_repl_asterisk_with_orig_cfg =
+		    conn->dom_ctx->config[REPLACE_ASTERISK_WITH_ORIGIN];
 
 		/* Todo: check if cors_origin is in cors_orig_cfg.
 		 * Or, let the client check this. */
 
 		if ((cors_meth_cfg != NULL) && (*cors_meth_cfg != 0)
 		    && (cors_orig_cfg != NULL) && (*cors_orig_cfg != 0)
-		    && (cors_origin != NULL) && (cors_acrm != NULL)) {
+		    && (cors_origin != NULL) && (cors_acrm != NULL)
+		    && (cors_repl_asterisk_with_orig_cfg != NULL)
+		    && (*cors_repl_asterisk_with_orig_cfg != 0)) {
+			int cors_repl_asterisk_with_orig =
+			    mg_strcasecmp(cors_repl_asterisk_with_orig_cfg, "yes");
+
 			/* This is a valid CORS preflight, and the server is configured
 			 * to handle it automatically. */
 			const char *cors_acrh =
@@ -15173,7 +15222,10 @@ handle_request(struct mg_connection *conn)
 			          "Content-Length: 0\r\n"
 			          "Connection: %s\r\n",
 			          date,
-			          cors_orig_cfg,
+			          (cors_repl_asterisk_with_orig == 0
+			           && cors_orig_cfg[0] == '*')
+			              ? cors_origin
+			              : cors_orig_cfg,
 			          ((cors_meth_cfg[0] == '*') ? cors_acrm : cors_meth_cfg),
 			          suggest_connection_header(conn));
 
@@ -15564,8 +15616,9 @@ handle_request(struct mg_connection *conn)
 	}
 
 	/* 12. Directory uris should end with a slash */
-	if (file.stat.is_directory && ((uri_len = (int)strlen(ri->local_uri)) > 0)
+	if (file.stat.is_directory && (uri_len > 0)
 	    && (ri->local_uri[uri_len - 1] != '/')) {
+
 
 		/* Path + server root */
 		size_t buflen = UTF8_PATH_MAX * 2 + 2;
@@ -15579,12 +15632,27 @@ handle_request(struct mg_connection *conn)
 			mg_send_http_error(conn, 500, "out or memory");
 		} else {
 			mg_get_request_link(conn, new_path, buflen - 1);
-			strcat(new_path, "/");
-			if (ri->query_string) {
-				/* Append ? and query string */
-				strcat(new_path, "?");
-				strcat(new_path, ri->query_string);
+
+			size_t len = strlen(new_path);
+			if (len + 1 < buflen) {
+				new_path[len] = '/';
+				new_path[len + 1] = '\0';
+				len++;
 			}
+
+			if (ri->query_string) {
+				if (len + 1 < buflen) {
+					new_path[len] = '?';
+					new_path[len + 1] = '\0';
+					len++;
+				}
+
+				/* Append with size of space left for query string + null
+				 * terminator */
+				size_t max_append = buflen - len - 1;
+				strncat(new_path, ri->query_string, max_append);
+			}
+
 			mg_send_http_redirect(conn, new_path, 301);
 			mg_free(new_path);
 		}
@@ -16154,6 +16222,10 @@ set_ports_option(struct mg_context *phys_ctx)
 			mg_cry_ctx_internal(phys_ctx,
 			                    "cannot create socket (entry %i)",
 			                    portsTotal);
+			if (so.is_optional) {
+				portsOk++; /* it's okay if we couldn't create a socket,
+				        this port is optional anyway */
+			}
 			continue;
 		}
 
@@ -16239,6 +16311,10 @@ set_ports_option(struct mg_context *phys_ctx)
 #else
 			mg_cry_ctx_internal(phys_ctx, "%s", "IPv6 not available");
 			closesocket(so.sock);
+			if (so.is_optional) {
+				portsOk++; /* it's okay if we couldn't set the socket option,
+				              this port is optional anyway */
+			}
 			so.sock = INVALID_SOCKET;
 			continue;
 #endif
@@ -16729,7 +16805,8 @@ mg_sslctx_init(struct mg_context *phys_ctx, struct mg_domain_context *dom_ctx)
 		return 0;
 	}
 
-	return mbed_sslctx_init(dom_ctx->ssl_ctx, dom_ctx->config[SSL_CERTIFICATE])
+	return mbed_sslctx_init(dom_ctx->ssl_ctx, dom_ctx->config[SSL_CERTIFICATE],
+	                        dom_ctx->config[SSL_CIPHER_LIST])
 	               == 0
 	           ? 1
 	           : 0;
@@ -18389,7 +18466,8 @@ mg_close_connection(struct mg_connection *conn)
 
 	close_connection(conn);
 
-#if !defined(NO_SSL) && !defined(USE_MBEDTLS) && !defined(USE_GNUTLS) // TODO: mbedTLS client
+#if !defined(NO_SSL) && !defined(USE_MBEDTLS)                                  \
+    && !defined(USE_GNUTLS) // TODO: mbedTLS client
 	if (((conn->phys_ctx->context_type == CONTEXT_HTTP_CLIENT)
 	     || (conn->phys_ctx->context_type == CONTEXT_WS_CLIENT))
 	    && (conn->phys_ctx->dd.ssl_ctx != NULL)) {
@@ -18491,7 +18569,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		return NULL;
 	}
 
-#if !defined(NO_SSL) && !defined(USE_MBEDTLS) && !defined(USE_GNUTLS) // TODO: mbedTLS client
+#if !defined(NO_SSL) && !defined(USE_MBEDTLS)                                  \
+    && !defined(USE_GNUTLS) // TODO: mbedTLS client
 #if (defined(OPENSSL_API_1_1) || defined(OPENSSL_API_3_0))                     \
     && !defined(NO_SSL_DL)
 
@@ -18568,7 +18647,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 			            error->text_buffer_size,
 			            "Can not create mutex");
 		}
-#if !defined(NO_SSL) && !defined(USE_MBEDTLS) && !defined(USE_GNUTLS) // TODO: mbedTLS client
+#if !defined(NO_SSL) && !defined(USE_MBEDTLS)                                  \
+    && !defined(USE_GNUTLS) // TODO: mbedTLS client
 		SSL_CTX_free(conn->dom_ctx->ssl_ctx);
 #endif
 		closesocket(sock);
@@ -18576,7 +18656,8 @@ mg_connect_client_impl(const struct mg_client_options *client_options,
 		return NULL;
 	}
 
-#if !defined(NO_SSL) && !defined(USE_MBEDTLS) && !defined(USE_GNUTLS) // TODO: mbedTLS client
+#if !defined(NO_SSL) && !defined(USE_MBEDTLS)                                  \
+    && !defined(USE_GNUTLS) // TODO: mbedTLS client
 	if (use_ssl) {
 		/* TODO: Check ssl_verify_peer and ssl_ca_path here.
 		 * SSL_CTX_set_verify call is needed to switch off server
@@ -18833,6 +18914,19 @@ get_uri_type(const char *uri)
 	 * and % encoded symbols.
 	 */
 	for (i = 0; uri[i] != 0; i++) {
+		/* Check for CRLF injection attempts */
+		if (uri[i] == '%') {
+			if (uri[i + 1] == '0' && (uri[i + 2] == 'd' || uri[i + 2] == 'D')) {
+				/* Found %0d (CR) */
+				DEBUG_TRACE("CRLF injection attempt detected: %s\r\n", uri);
+				return 0;
+			}
+			if (uri[i + 1] == '0' && (uri[i + 2] == 'a' || uri[i + 2] == 'A')) {
+				/* Found %0a (LF) */
+				DEBUG_TRACE("CRLF injection attempt detected: %s\r\n", uri);
+				return 0;
+			}
+		}
 		if ((unsigned char)uri[i] < 33) {
 			/* control characters and spaces are invalid */
 			return 0;
@@ -20270,6 +20364,10 @@ worker_thread_run(struct mg_connection *conn)
 		sockaddr_to_string(conn->request_info.remote_addr,
 		                   sizeof(conn->request_info.remote_addr),
 		                   &conn->client.rsa);
+ 
+		sockaddr_to_string(conn->request_info.server_addr,
+		                   sizeof(conn->request_info.server_addr),
+		                   &conn->client.lsa);
 
 		DEBUG_TRACE("Incoming %sconnection from %s",
 		            (conn->client.is_ssl ? "SSL " : ""),
@@ -20542,7 +20640,7 @@ master_thread_run(struct mg_context *ctx)
 	unsigned int i;
 	unsigned int workerthreadcount;
 
-	if (!ctx) {
+	if (!ctx || !ctx->listening_socket_fds) {
 		return;
 	}
 
@@ -21995,7 +22093,7 @@ mg_start_domain2(struct mg_context *ctx,
 		}
 	}
 
-	new_dom->handlers = NULL;
+	new_dom->handlers = ctx->dd.handlers;
 	new_dom->next = NULL;
 	new_dom->nonce_count = 0;
 	new_dom->auth_nonce_mask = get_random() ^ (get_random() << 31);
@@ -22247,7 +22345,7 @@ mg_get_system_info(char *buffer, int buflen)
 		            sizeof(block),
 		            ",%s\"os\" : \"%s %s\"",
 		            eol,
-		           "RTEMS",
+		            "RTEMS",
 		            rtems_version());
 		system_info_length += mg_str_append(&buffer, end, block);
 #elif defined(__ZEPHYR__)
