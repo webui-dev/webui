@@ -1,3 +1,14 @@
+# WebUI Library
+# https://webui.me
+# https://github.com/webui-dev/webui
+# Copyright (c) 2020-2025 Hassan Draga.
+# Licensed under MIT License.
+# All rights reserved.
+# Canada.
+# 
+# WebUI Virtual File System Generator
+# v1.1
+
 import os
 import sys
 
@@ -53,7 +64,10 @@ def generate_vfs_header(directory, output_header):
 
         header.write('static const char* index_files[] = {\n')
         for dir_path, index_path in index_files.items():
-            header.write(f'    "{dir_path}/", "{index_path}",\n')
+            if dir_path == "/":
+                header.write(f'    "/", "{index_path}",\n')
+            else:
+                header.write(f'    "{dir_path}/", "{index_path}",\n')
         header.write('    NULL\n')
         header.write('};\n\n')
 
