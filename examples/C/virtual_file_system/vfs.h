@@ -35,7 +35,7 @@ static const VirtualFile virtual_files[] = {
 static const int virtual_files_count = sizeof(virtual_files) / sizeof(virtual_files[0]);
 
 static const char* index_files[] = {
-    "//", "/index.html",
+    "/", "/index.html",
     "/sub/", "/sub/index.html",
     NULL
 };
