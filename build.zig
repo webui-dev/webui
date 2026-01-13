@@ -1,10 +1,9 @@
 const std = @import("std");
-const builtin = @import("builtin");
-
 const Build = std.Build;
 const OptimizeMode = std.builtin.OptimizeMode;
 const Compile = Build.Step.Compile;
 const Module = Build.Module;
+const builtin = @import("builtin");
 
 const lib_name = "webui";
 var global_log_level: std.log.Level = .warn;
