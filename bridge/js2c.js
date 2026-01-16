@@ -1,7 +1,7 @@
 // WebUI v2.5.0-beta.4
 // https://webui.me
 // https://github.com/webui-dev/webui
-// Copyright (c) 2020-2025 Hassan Draga.
+// Copyright (c) 2020-2026 Hassan Draga.
 // Licensed under MIT License.
 // All rights reserved.
 // Canada.
@@ -10,7 +10,7 @@ async function jsToCHeader(inputFilename, outputFilename) {
     try {
         console.log(`Converting '${inputFilename}' to '${outputFilename}'...`);
         // Comment block
-        const comment = `// WebUI v2.5.0-beta.4\n// https://webui.me\n// https://github.com/webui-dev/webui\n// Copyright (c) 2020-2025 Hassan Draga.\n// Licensed under MIT License.\n// All rights reserved.\n// Canada.\n\n`;
+        const comment = `// WebUI v2.5.0-beta.4\n// https://webui.me\n// https://github.com/webui-dev/webui\n// Copyright (c) 2020-2026 Hassan Draga.\n// Licensed under MIT License.\n// All rights reserved.\n// Canada.\n\n`;
         // Read JS file content
         const fs = require('fs').promises;
         let content = await fs.readFile(inputFilename, 'utf-8');

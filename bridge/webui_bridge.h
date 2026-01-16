@@ -1,7 +1,7 @@
 // WebUI v2.5.0-beta.4
 // https://webui.me
 // https://github.com/webui-dev/webui
-// Copyright (c) 2020-2025 Hassan Draga.
+// Copyright (c) 2020-2026 Hassan Draga.
 // Licensed under MIT License.
 // All rights reserved.
 // Canada.
