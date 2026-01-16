@@ -1,5 +1,5 @@
 /*
-  WebUI Library Extras
+  WebUI Library
   https://webui.me
   https://github.com/webui-dev/webui
   Copyright (c) 2020-2025 Hassan Draga.
@@ -11,30 +11,11 @@
 #ifndef _WEBUI_EXTENSIONS_H
 #define _WEBUI_EXTENSIONS_H
 
+#include "webui.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * This is to help the compiler identify whether to compile the extensions API funtions or not
- * - If you are including the webui.c file to your source file directly,
- *   and wish to use the extensions API functions, 
- *   please include this header file before including webui.c,
- *   or define this macro manually before including webui.c
- * - In other cases, as long as the webui.c file is not included directly, 
- *   you might need to define this macro in your compiler settings
- */
-#ifndef WEBUI_EXTENSION_API
-#define WEBUI_EXTENSION_API
-#endif
-
-#ifndef WEBUI_EXPORT
-    #define WEBUI_EXPORT
-    #warning "WEBUI_EXPORT not defined; Please include webui.h before webui_extensions.h"
-#endif
-
-#include <stdbool.h>
-#include <stddef.h>
 
 /**
  * @brief Construct a JavaScript string from a format string,
@@ -51,7 +32,31 @@ extern "C" {
  *
  * @example webui_run_fmt(myWindow, "alert('Hello %s');", "World");
  */
-WEBUI_EXPORT void webui_run_fmt(size_t window, const char* fmt, ...);
+void webui_run_fmt(size_t window, const char* fmt, ...) {
+
+    int len;
+    char* buf;
+
+    // Precalculate actual string length
+    va_list args;
+    va_start(args, fmt);
+    len = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+
+    if (len < 1) return;
+
+    buf = (char*)webui_malloc(len + 1);
+    if (buf == NULL) return;
+
+    // Format and execute
+    va_start(args, fmt);
+    vsnprintf(buf, len + 1, fmt, args);
+    va_end(args);
+
+    webui_run(window, buf);
+
+    webui_free((void*)buf);
+}
 
 /**
  * @brief Construct a JavaScript string from a format string,
@@ -75,12 +80,42 @@ WEBUI_EXPORT void webui_run_fmt(size_t window, const char* fmt, ...);
  * @example bool err = webui_script_fmt(myWindow, 0, myBuffer, myBufferSize,
  *     "return %d + %d;", 4, 6);
  */
-WEBUI_EXPORT bool webui_script_fmt(size_t window, size_t timeout,
-    char* buffer, size_t buffer_length, 
-    const char* fmt, ...);
+bool webui_script_fmt(
+    size_t window,
+    size_t timeout,
+    char* buffer,
+    size_t buffer_length,
+    const char* fmt, ...) {
+
+    int len;
+    char* buf;
+    bool status;
+
+    // Precalculate actual string length
+    va_list args;
+    va_start(args, fmt);
+    len = vsnprintf(NULL, 0, fmt, args);
+    va_end(args);
+
+    if (len < 1) return false;
+
+    buf = (char*)webui_malloc(len + 1);
+    if (buf == NULL) return false;
+
+    // Format and execute
+    va_start(args, fmt);
+    vsnprintf(buf, len + 1, fmt, args);
+    va_end(args);
+
+    status = webui_script(window, buf, timeout, buffer, buffer_length);
+
+    webui_free((void*)buf);
+
+    return status;
+}
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /*_WEBUI_EXTENSIONS_H */
+#endif /* _WEBUI_EXTENSIONS_H */

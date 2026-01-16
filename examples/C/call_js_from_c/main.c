@@ -37,6 +37,9 @@ void my_function_count(webui_event_t* e) {
 
 	// Run JavaScript (Quick Way)
 	webui_run(e->window, js);
+
+	// Alternatively, Using `webui_extensions.h`
+	// webui_run_fmt(e->window, "SetCount(%d);", count);
 }
 
 int main() {

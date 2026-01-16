@@ -847,33 +847,6 @@ void webui_run(size_t window, const char* script) {
     _webui_send_all(win, 0, WEBUI_CMD_JS_QUICK, script, js_len);
 }
 
-#ifdef WEBUI_EXTENSION_API
-void webui_run_fmt(size_t window, const char* fmt, ...) {
-    int len;
-    char* buf;
-
-    // Precalculate actual string length
-    va_list args;
-    va_start(args, fmt);
-    len = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
-
-    if (len < 1) return;
-
-    buf = (char*)_webui_malloc(len + 1);
-    if (buf == NULL) return;
-
-    // Format and execute
-    va_start(args, fmt);
-    vsnprintf(buf, len + 1, fmt, args);
-    va_end(args);
-
-    webui_run(window, buf);
-
-    _webui_free_mem((void*)buf);
-}
-#endif /* WEBUI_EXTENSION_API */
-
 void webui_set_close_handler_wv(size_t window, bool(*close_handler)(size_t window)) {
 
     // Initialization
@@ -1091,39 +1064,6 @@ bool webui_script(size_t window, const char* script, size_t timeout,
 
     return webui_script_client(&e, script, timeout, buffer, buffer_length);
 }
-
-#ifdef WEBUI_EXTENSION_API
-bool webui_script_fmt(
-    size_t window, size_t timeout,
-    char* buffer, size_t buffer_length, 
-    const char* fmt, ...) {
-    int len;
-    char* buf;
-    bool status;
-
-    // Precalculate actual string length
-    va_list args;
-    va_start(args, fmt);
-    len = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
-
-    if (len < 1) return false;
-
-    buf = (char*)_webui_malloc(len + 1);
-    if (buf == NULL) return false;
-
-    // Format and execute
-    va_start(args, fmt);
-    vsnprintf(buf, len + 1, fmt, args);
-    va_end(args);
-
-    status = webui_script(window, buf, timeout, buffer, buffer_length);
-
-    _webui_free_mem((void*)buf);
-
-    return status;
-}
-#endif /* WEBUI_EXTENSION_API */
 
 static uint32_t _webui_generate_random_uint32() {
     uint32_t timestamp = (uint32_t) time(NULL);
