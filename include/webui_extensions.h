@@ -8,14 +8,26 @@
   Canada.
 */
 
-#ifndef _WEBUI_EXTRAS_H
-#define _WEBUI_EXTRAS_H
+#ifndef _WEBUI_EXTENSIONS_H
+#define _WEBUI_EXTENSIONS_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "webui.h"
+/**
+ * This is to help the compiler identify whether to compile the extensions API funtions or not
+ * - If you are including the webui.c file to your source file directly,
+ *   and wish to use the extensions API functions, 
+ *   please include this header file before including webui.c,
+ *   or define this macro manually before including webui.c
+ * - In other cases, as long as the webui.c file is not included directly, 
+ *   you might need to define this macro in your compiler settings
+ */
+#define WEBUI_EXTENSIONS_API
+
+#include <stdbool.h>
+#include <stddef.h>
 
 /**
  * @brief Construct a JavaScript string from a format string,
@@ -32,7 +44,7 @@ extern "C" {
  *
  * @example webui_run_fmt(myWindow, "alert('Hello %s');", "World");
  */
-WEBUI_EXPORT void webui_run_fmt(size_t window, const char* fmt, ...);
+void webui_run_fmt(size_t window, const char* fmt, ...);
 
 /**
  * @brief Construct a JavaScript string from a format string,
@@ -56,7 +68,7 @@ WEBUI_EXPORT void webui_run_fmt(size_t window, const char* fmt, ...);
  * @example bool err = webui_script_fmt(myWindow, 0, myBuffer, myBufferSize,
  *     "return %d + %d;", 4, 6);
  */
-WEBUI_EXPORT bool webui_script_fmt(size_t window, size_t timeout,
+bool webui_script_fmt(size_t window, size_t timeout,
     char* buffer, size_t buffer_length, 
     const char* fmt, ...);
 
@@ -64,4 +76,4 @@ WEBUI_EXPORT bool webui_script_fmt(size_t window, size_t timeout,
 }
 #endif
 
-#endif /*_WEBUI_EXTRAS_H */
+#endif /*_WEBUI_EXTENSIONS_H */

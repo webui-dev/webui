@@ -847,6 +847,7 @@ void webui_run(size_t window, const char* script) {
     _webui_send_all(win, 0, WEBUI_CMD_JS_QUICK, script, js_len);
 }
 
+#ifdef WEBUI_EXTENSION_API
 void webui_run_fmt(size_t window, const char* fmt, ...) {
     int len;
     char* buf;
@@ -871,6 +872,7 @@ void webui_run_fmt(size_t window, const char* fmt, ...) {
 
     _webui_free_mem((void*)buf);
 }
+#endif /* WEBUI_EXTENSION_API */
 
 void webui_set_close_handler_wv(size_t window, bool(*close_handler)(size_t window)) {
 
@@ -1090,6 +1092,7 @@ bool webui_script(size_t window, const char* script, size_t timeout,
     return webui_script_client(&e, script, timeout, buffer, buffer_length);
 }
 
+#ifdef WEBUI_EXTENSION_API
 bool webui_script_fmt(
     size_t window, size_t timeout,
     char* buffer, size_t buffer_length, 
@@ -1120,6 +1123,7 @@ bool webui_script_fmt(
 
     return status;
 }
+#endif /* WEBUI_EXTENSION_API */
 
 static uint32_t _webui_generate_random_uint32() {
     uint32_t timestamp = (uint32_t) time(NULL);
