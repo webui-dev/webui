@@ -17,9 +17,44 @@
 //@ts-ignore use *.ts import real extension
 import { AsyncFunction, addRefreshableEventListener } from './utils.ts';
 
-type DataTypes = string | number | boolean | Uint8Array;
+export type DataTypes = string | number | boolean | Uint8Array;
+export type Params = Array<DataTypes>;
+export type Output = DataTypes | void;
 
-class WebuiBridge {
+/** Attributes of a user-defined bridge callback. */
+export type CallbackAttributes<
+	P extends Params = Params,
+	O extends Output = Output
+> = {
+	/** The parameters of the callback. */
+  parameters: P;
+
+  /** The return value of the callback. */
+	output: O;
+};
+
+/** A user-defined bridge callback. */
+export type Callback<
+	Attributes extends CallbackAttributes = CallbackAttributes
+> = (...params: Attributes['parameters']) => Promise<Attributes['output']>; 
+
+/** Extensions of WebuiBridge. */
+export type Extensions = {
+	/** Callbacks that are callable from the frontend. */
+  callbacks: Record<string, CallbackAttributes>;
+  // More entries maybe
+};
+
+/** Converts extensions to an interface that can be added to `WebuiBridge`. */
+export type ExtensionsToInterface<Ext extends Extensions> = {
+	[Name in keyof Ext['callbacks']]: Callback<Ext['callbacks'][Name]>;
+};
+
+/** Adds extensions to `WebuiBridge`. */
+export type WithExtensions<Ext extends Extensions> = WebuiBridge<Ext> &
+	ExtensionsToInterface<Ext>; 
+
+class WebuiBridge<Ext extends Extensions = Extensions> {
 	// WebUI Settings
 	#secure: boolean;
 	#token: number;
@@ -923,7 +958,10 @@ class WebuiBridge {
 	 * @return - Response of the backend callback string
 	 * @example - const res = await webui.call("myID", 123, true, "Hi", new Uint8Array([0x42, 0x43, 0x44]))
 	 */
-	async call(fn: string, ...args: DataTypes[]): Promise<DataTypes> {
+	async call<K extends keyof Ext['callbacks']>(
+    fn: K,
+    ...args: Ext['callbacks'][K]['parameters']
+  ): Promise<Ext['callbacks'][K]['output']> {
 		if (!fn) return Promise.reject(new SyntaxError('No binding name is provided'));
 
 		if (!this.#wsIsConnected()) return Promise.reject(new Error('WebSocket is not connected'));
