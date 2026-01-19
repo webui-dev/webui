@@ -10225,18 +10225,28 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
     } else {
         arg_len = len;
         if (len > 0) {
-            if (win->ws_block) {
-                // This event has data. And it will be processed
-                // in this current thread, no need to copy data
-                arg_ptr = data;
-            }
-            else {
-                // This event has data. And it will be processed
-                // in a new thread, we should copy data once
-                void * data_cpy = (void*)_webui_malloc(len);
-                memcpy((char*)data_cpy, data, len);
-                arg_ptr = data_cpy;
-            }
+
+            // -- Old Method --
+            // if (win->ws_block) {
+            //     // This event has data. And it will be processed
+            //     // in this current thread, no need to copy data
+            //     arg_ptr = data;
+            // }
+            // else {
+            //     // This event has data. And it will be processed
+            //     // in a new thread, we should copy data once
+            //     void * data_cpy = (void*)_webui_malloc(len);
+            //     memcpy((char*)data_cpy, data, len);
+            //     arg_ptr = data_cpy;
+            // }
+
+            // -- New Method --
+            // This event has data, and it will be processed
+            // always in a new thread, we should copy data now
+            void * data_cpy = (void*)_webui_malloc(len);
+            memcpy((char*)data_cpy, data, len);
+            arg_ptr = data_cpy;
+
         } else {
             // This is a WS connect/disconnect event
             arg_ptr = NULL;
@@ -10244,32 +10254,54 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
     }
 
     // Process
-    if (win->ws_block) {
-        // Process the packet in this current thread
-        _webui_ws_process(win, client, connection_id, arg_ptr, arg_len, ++recvNum, event_type);
-        if (arg_ptr != data)
-            _webui_free_mem((void*)arg_ptr);
-    }
-    else {
-        // Process the packet in a new thread
-        _webui_recv_arg_t* arg = (_webui_recv_arg_t* ) _webui_malloc(sizeof(_webui_recv_arg_t));
-        arg->win = win;
-        arg->ptr = arg_ptr;
-        arg->len = arg_len;
-        arg->recvNum = ++recvNum;
-        arg->event_type = event_type;
-        arg->client = client;
-        arg->connection_id = connection_id;
-        #ifdef _WIN32
-        HANDLE thread = CreateThread(NULL, 0, _webui_ws_process_thread, (void*)arg, 0, NULL);
-        if (thread != NULL)
-            CloseHandle(thread);
-        #else
-        pthread_t thread;
-        pthread_create(&thread, NULL,&_webui_ws_process_thread, (void*)arg);
-        pthread_detach(thread);
-        #endif
-    }
+
+    // -- Old Method --
+    // if (win->ws_block) {
+    //     // Process the packet in this current thread
+    //     _webui_ws_process(win, client, connection_id, arg_ptr, arg_len, recvNum, event_type);
+    //     if (arg_ptr != data)
+    //         _webui_free_mem((void*)arg_ptr);
+    // }
+    // else {
+    //     // Process the packet in a new thread
+    //     _webui_recv_arg_t* arg = (_webui_recv_arg_t* ) _webui_malloc(sizeof(_webui_recv_arg_t));
+    //     arg->win = win;
+    //     arg->ptr = arg_ptr;
+    //     arg->len = arg_len;
+    //     arg->recvNum = recvNum;
+    //     arg->event_type = event_type;
+    //     arg->client = client;
+    //     arg->connection_id = connection_id;
+    //     #ifdef _WIN32
+    //     HANDLE thread = CreateThread(NULL, 0, _webui_ws_process_thread, (void*)arg, 0, NULL);
+    //     if (thread != NULL)
+    //         CloseHandle(thread);
+    //     #else
+    //     pthread_t thread;
+    //     pthread_create(&thread, NULL,&_webui_ws_process_thread, (void*)arg);
+    //     pthread_detach(thread);
+    //     #endif
+    // }
+
+    // -- New Method --
+    // Process the packet always in a new thread
+    _webui_recv_arg_t* arg = (_webui_recv_arg_t* ) _webui_malloc(sizeof(_webui_recv_arg_t));
+    arg->win = win;
+    arg->ptr = arg_ptr;
+    arg->len = arg_len;
+    arg->recvNum = recvNum;
+    arg->event_type = event_type;
+    arg->client = client;
+    arg->connection_id = connection_id;
+    #ifdef _WIN32
+    HANDLE thread = CreateThread(NULL, 0, _webui_ws_process_thread, (void*)arg, 0, NULL);
+    if (thread != NULL)
+        CloseHandle(thread);
+    #else
+    pthread_t thread;
+    pthread_create(&thread, NULL,&_webui_ws_process_thread, (void*)arg);
+    pthread_detach(thread);
+    #endif
 }
 
 static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* client, size_t* connection_id) {
@@ -10432,16 +10464,30 @@ static void _webui_ws_process(
                 ((unsigned char)packet[WEBUI_PROTOCOL_SIGN] == WEBUI_SIGNATURE) &&
                 (packet_token == win->token)) {
 
-                // Mutex
-                if (_webui.config.ws_block) {
-                    // wait for previous event to finish
-                    if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] != WEBUI_CMD_JS) {
-                        _webui_mutex_lock(&_webui.mutex_receive);
-                    }
-                }
-
                 if (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) { // Check if previous event called exit()
 
+                    // Mutex
+                    if (_webui.config.ws_block) {
+                        // The config is set to blocking mode, we should 
+                        // wait for the previous event to finish.
+                        if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] != WEBUI_CMD_JS) {
+                            #ifdef WEBUI_LOG
+                            _webui_log_debug(
+                                "[Core] [WS #%zu]\t_webui_ws_process() -> Waiting for the previous event to finish...\n",
+                                recvNum
+                            );
+                            #endif
+                            _webui_mutex_lock(&_webui.mutex_receive);
+                            #ifdef WEBUI_LOG
+                            _webui_log_debug(
+                                "[Core] [WS #%zu]\t_webui_ws_process() -> WS #%zu is locked.\n",
+                                recvNum, recvNum
+                            );
+                            #endif
+                        }
+                    }
+
+                    // Process Commands
                     if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_WIN_DRAG) {
 
                         // Drag Window Event (WebUI `-webkit-app-region: drag;` custom implementation)
@@ -10953,6 +10999,19 @@ static void _webui_ws_process(
                         );
                     }
                     #endif
+
+                    // Unlock Mutex
+                    if (_webui.config.ws_block) {
+                        if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] != WEBUI_CMD_JS) {
+                            #ifdef WEBUI_LOG
+                            _webui_log_debug(
+                                "[Core] [WS #%zu]\t_webui_ws_process() -> WS #%zu is unlocked.\n",
+                                recvNum, recvNum
+                            );
+                            #endif
+                            _webui_mutex_unlock(&_webui.mutex_receive);
+                        }
+                    }
                 }
                 #ifdef WEBUI_LOG
                 else {
@@ -10962,13 +11021,6 @@ static void _webui_ws_process(
                     );
                 }
                 #endif
-
-                // Unlock Mutex
-                if (_webui.config.ws_block) {
-                    if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] != WEBUI_CMD_JS) {
-                        _webui_mutex_unlock(&_webui.mutex_receive);
-                    }
-                }
             } else {
 
                 #ifdef WEBUI_LOG
