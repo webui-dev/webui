@@ -453,6 +453,7 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_async_response;
     webui_mutex_t mutex_mem;
     webui_mutex_t mutex_token;
+    webui_mutex_t mutex_js_run_id;
     webui_condition_t condition_wait;
     char* default_server_root_path;
     bool ui;
@@ -4837,9 +4838,12 @@ static uint16_t _webui_get_run_id(void) {
     _webui_log_debug("[Core]\t\t_webui_get_run_id()\n");
     #endif
 
+    _webui_mutex_lock(&_webui.mutex_js_run_id);
     if (_webui.run_last_id >= WEBUI_MAX_IDS)
         _webui.run_last_id = 0;
-    return _webui.run_last_id++;
+    uint16_t id = _webui.run_last_id++;
+    _webui_mutex_unlock(&_webui.mutex_js_run_id);
+    return id;
 }
 
 static bool _webui_socket_test_listen_mg(size_t port_num) {
@@ -7027,6 +7031,7 @@ static void _webui_clean(void) {
     _webui_mutex_destroy(&_webui.mutex_async_response);
     _webui_mutex_destroy(&_webui.mutex_mem);
     _webui_mutex_destroy(&_webui.mutex_token);
+    _webui_mutex_destroy(&_webui.mutex_js_run_id);
     _webui_condition_destroy(&_webui.condition_wait);
 
     #ifdef WEBUI_LOG
@@ -8790,6 +8795,7 @@ static void _webui_init(void) {
     _webui_mutex_init(&_webui.mutex_async_response);
     _webui_mutex_init(&_webui.mutex_mem);
     _webui_mutex_init(&_webui.mutex_token);
+    _webui_mutex_init(&_webui.mutex_js_run_id);
     _webui_condition_init(&_webui.condition_wait);
 
     // Random
