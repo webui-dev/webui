@@ -76,13 +76,15 @@ int main() {
         <br>
         <h1 id="count">0</h1>
         <br>
-        <button OnClick="my_function_count();">Manual Count</button>
+        <button id="ManualBtn" OnClick="my_function_count();">Manual Count</button>
         <br>
-        <button OnClick="AutoTest();">Auto Count (Every 10ms)</button>
+        <button id="AutoBtn" OnClick="AutoTest();">Auto Count (Every 10ms)</button>
         <br>
-        <button id="Exit">Exit</button>
+        <button id="Exit" OnClick="this.disabled=true;">Exit</button>
         <script>
           let count = 0;
+          let auto_running = false;
+
           function GetCount() {
             return count;
           }
@@ -91,6 +93,11 @@ int main() {
             count = number;
           }
           function AutoTest(number) {
+            if (auto_running) return;
+            auto_running = true;
+            document.getElementById('AutoBtn').disabled = true;
+            document.getElementById('ManualBtn').disabled = true;
+
             setInterval(function() {
               my_function_count();
             }, 10);
@@ -99,6 +106,9 @@ int main() {
       </body>
     </html>
   )V0G0N";
+
+	// Set WebUI configuration to proceess UI events one at a time
+	webui::set_config(ui_event_blocking, true);
 
 	// Create a window
 	webui::window my_window;

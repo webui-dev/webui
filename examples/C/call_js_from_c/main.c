@@ -75,6 +75,13 @@ int main() {
 	                      "        }"
 	                      "        h1 { text-shadow: -7px 10px 7px rgb(67 57 57 / 76%); }"
 	                      "        button:hover { background: #c9913d; }"
+	                      "        button:disabled {"
+	                      "            opacity: 0.6;"
+	                      "            cursor: not-allowed;"
+	                      "            box-shadow: none;"
+	                      "            filter: grayscale(30%);"
+	                      "        }"
+	                      "        button:disabled:hover { background: #3498db; }"
 	                      "        input:focus { outline: none; border-color: #3498db; }"
 	                      "    </style>"
 	                      "  </head>"
@@ -83,13 +90,14 @@ int main() {
 	                      "    <br>"
 	                      "    <h1 id=\"count\">0</h1>"
 	                      "    <br>"
-	                      "    <button OnClick=\"my_function_count();\">Manual Count</button>"
+	                      "    <button id=\"ManualBtn\" OnClick=\"my_function_count();\">Manual Count</button>"
 	                      "    <br>"
 	                      "    <button id=\"MyTest\" OnClick=\"AutoTest();\">Auto Count (Every 10ms)</button>"
 	                      "    <br>"
-	                      "    <button OnClick=\"my_function_exit();\">Exit</button>"
+	                      "    <button id=\"ExitBtn\" OnClick=\"this.disabled=true; my_function_exit();\">Exit</button>"
 	                      "    <script>"
 	                      "      let count = 0;"
+	                      "      let auto_running = false;"
 	                      "      function GetCount() {"
 	                      "        return count;"
 	                      "      }"
@@ -98,11 +106,18 @@ int main() {
 	                      "        count = number;"
 	                      "      }"
 	                      "      function AutoTest(number) {"
+	                      "        if (auto_running) return;"
+	                      "        auto_running = true;"
+	                      "        document.getElementById('MyTest').disabled = true;"
+	                      "        document.getElementById('ManualBtn').disabled = true;"
 	                      "        setInterval(function(){ my_function_count(); }, 10);"
 	                      "      }"
 	                      "    </script>"
 	                      "  </body>"
 	                      "</html>";
+
+	// Set WebUI configuration to proceess UI events one at a time
+	webui_set_config(ui_event_blocking, true);
 
 	// Create a window
 	size_t my_window = webui_new_window();
