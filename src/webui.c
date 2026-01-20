@@ -333,6 +333,8 @@ typedef struct _webui_window_t {
     char* url;
     char* public_url;
     const char* html;
+    const char* user_index_file;
+    const char* user_index_file_encoded;
     char* server_root_path;
     #ifdef _WIN32
     HANDLE server_thread;
@@ -8314,6 +8316,14 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
         _webui_free_mem((void*)win->html);
     if (win->url != NULL)
         _webui_free_mem((void*)win->url);
+    if (win->user_index_file != NULL)
+        _webui_free_mem((void*)win->user_index_file);
+    if (win->user_index_file_encoded != NULL)
+        _webui_free_mem((void*)win->user_index_file_encoded);
+    win->html = NULL;
+    win->url = NULL;
+    win->user_index_file = NULL;
+    win->user_index_file_encoded = NULL;
 
     // Get network ports
     if (win->custom_server_port > 0) win->server_port = win->custom_server_port;
@@ -8358,26 +8368,22 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
 
         // Show a window using a local folder
         win->is_embedded_html = false;
-        win->html = NULL;
 
         // Set window URL
         window_url = win->url;
     }
     else {
-        const char* user_file = content;
 
         // Show a window using a local file
         win->is_embedded_html = false;
-        win->html = NULL;
+        win->user_index_file = content;
+        win->user_index_file_encoded = _webui_url_encode(content);
 
         // Generate the URL
-        const char* file_url_encoded = _webui_url_encode(user_file);
-        size_t bf_len = (64 + _webui_strlen(file_url_encoded));
+        size_t bf_len = (64 + _webui_strlen(win->user_index_file_encoded));
         char* url_encoded = (char*)_webui_malloc(bf_len); // [http][domain][port] [file_encoded]
         WEBUI_SN_PRINTF_DYN(url_encoded, bf_len, WEBUI_HTTP_PROTOCOL "localhost:%zu/%s", 
-            win->server_port, file_url_encoded);
-        _webui_free_mem((void*)file_url_encoded);
-        _webui_free_mem((void*)user_file);
+            win->server_port, win->user_index_file_encoded);
 
         // Set window URL
         window_url = url_encoded;
@@ -8471,6 +8477,8 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
                 _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_SET_TRUE);
                 _webui_free_mem((void*)win->html);
                 _webui_free_mem((void*)win->url);
+                _webui_free_mem((void*)win->user_index_file);
+                _webui_free_mem((void*)win->user_index_file_encoded);
                 _webui_free_port(win->server_port);
                 win->server_port = 0;
                 return false;
@@ -9358,7 +9366,10 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
 
                 // Looking for index file and redirect
 
-                const char* index_files[] = {"index.ts", "index.js", "index.html", "index.htm"};
+                const char* index_files[] = {
+                    win->user_index_file, // User-defined index file
+                    "index.ts", "index.js", "index.html", "index.htm"
+                };
 
                 // [Path][Sep][File Name]
                 size_t bf_len = (_webui_strlen(win->server_root_path) + 1 + 24);
@@ -9466,7 +9477,10 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                 
                 // Looking for index file and redirect
 
-                const char* index_files[] = {"index.ts", "index.js", "index.html", "index.htm"};
+                const char* index_files[] = {
+                    // win->user_index_file, TODO: Do we need to disable user index file for subfolders?
+                    "index.ts", "index.js", "index.html", "index.htm"
+                };
 
                 // [Path][Sep][File Name]
                 size_t bf_len = (_webui_strlen(folder_path) + 1 + 24);
