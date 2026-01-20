@@ -11,7 +11,7 @@ cd ..
 echo.
 echo * Embedding React's build files into 'vfs.h'
 
-python vfs.py "./webui-react-example/build" "vfs.h"
+python vfs.py "./webui-react-example/build" "vfs.h" "index.html"
 
 echo.
 echo * Compiling 'main.c' into 'main.exe' using Microsoft Visual Studio...

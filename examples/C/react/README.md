@@ -14,7 +14,7 @@ A simple Python script `vfs.py` is used to generate `vfs.h` to embed the whole r
 
 1. Run `npx create-react-app my-react-app` to create a React app using NPM
 2. Add `<script src="webui.js"></script>` into `public/index.html` to connect UI with the backend
-3. Run `python vfs.py "./my-react-app/build" "vfs.h"` to embed the build folder
+3. Run `python vfs.py "./my-react-app/build" "vfs.h" "index.html"` to embed the build folder
 4. Now, use any C compiler to compile `main.c` into a portable executable program
 
 ### Other backend languages examples:
