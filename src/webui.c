@@ -468,8 +468,9 @@ typedef struct _webui_core_t {
     char* ssl_cert;
     char* ssl_key;
     #endif
-    // WebView
+    bool is_main_run;
     bool is_browser_main_run;
+    // WebView
     bool is_webview;
     #ifdef _WIN32
     char* webview_cacheFolder;
@@ -1358,6 +1359,7 @@ void webui_close(size_t window) {
 
     // Close
     if (!win->webView) {
+        // Close web browser window
         if (_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS)) {
             // Packet Protocol Format:
             // [...]
@@ -3585,6 +3587,13 @@ void webui_wait(void) {
     if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
         return;
 
+    if (_webui.is_main_run) {
+        #ifdef WEBUI_LOG
+        _webui_log_debug("[Loop] webui_wait() -> Already in main loop. Stop.\n");
+        #endif
+        return;
+    }
+
     if (_webui.startup_timeout > 0) {
 
         // Check if there is atleast one window (UI)
@@ -3618,7 +3627,11 @@ void webui_wait(void) {
         // called by the user.
     }
 
+    // Lock mutex
+    _webui_mutex_lock(&_webui.mutex_wait);
+
     // Main loop
+    _webui.is_main_run = true;
     #ifdef _WIN32
         if (!_webui.is_webview) {
             // Windows Web browser main loop
@@ -3628,7 +3641,6 @@ void webui_wait(void) {
             #endif
 
             _webui.is_browser_main_run = true;
-            _webui_mutex_lock(&_webui.mutex_wait);
             _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
             _webui.is_browser_main_run = false;
         }
@@ -3639,7 +3651,6 @@ void webui_wait(void) {
             _webui_log_debug("[Loop] webui_wait() -> Windows WebView loop\n");
             #endif
 
-            _webui_mutex_lock(&_webui.mutex_wait);
             _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
         }
     #elif __linux__
@@ -3651,7 +3662,6 @@ void webui_wait(void) {
             #endif
 
             _webui.is_browser_main_run = true;
-            _webui_mutex_lock(&_webui.mutex_wait);
             _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
             _webui.is_browser_main_run = false;
         }
@@ -3678,7 +3688,6 @@ void webui_wait(void) {
             #endif
 
             _webui.is_browser_main_run = true;
-            _webui_mutex_lock(&_webui.mutex_wait);
             _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
             _webui.is_browser_main_run = false;
         }
@@ -3697,6 +3706,7 @@ void webui_wait(void) {
             _webui.is_wkwebview_main_run = false;
         }
     #endif
+    _webui.is_main_run = false;
 
     #ifdef WEBUI_LOG
     _webui_log_debug("[Loop] webui_wait() -> Cleaning\n");
@@ -10064,16 +10074,19 @@ static WEBUI_THREAD_SERVER_START {
     mg_stop(http_ctx);
 
     // Fire the mutex condition for wait()
-    if (_webui.startup_timeout > 0 && _webui.servers < 1) {
-
-        // Stop all threads
-        _webui.ui = false;
-        _webui_mutex_app_is_exit_now(WEBUI_MUTEX_SET_TRUE);
-        // Break main loop
-        _webui_condition_signal(&_webui.condition_wait);
-        #ifdef __APPLE__
-        _webui_macos_wv_stop();
-        #endif
+    if ((_webui.startup_timeout > 0) && (_webui.servers < 1)) {
+        // Exit app only if user called `webui_wait()` and
+        // now all window's threads and servers are closed.
+        if (_webui.is_main_run) {
+            // Stop all threads
+            _webui.ui = false;
+            _webui_mutex_app_is_exit_now(WEBUI_MUTEX_SET_TRUE);
+            // Break main loop
+            _webui_condition_signal(&_webui.condition_wait);
+            #ifdef __APPLE__
+            _webui_macos_wv_stop();
+            #endif
+        }
     }
 
     // Clean monitor thread
