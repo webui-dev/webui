@@ -10078,9 +10078,16 @@ static WEBUI_THREAD_SERVER_START {
         // Exit app only if user called `webui_wait()` and
         // now all window's threads and servers are closed.
         if (_webui.is_main_run) {
-            // Stop all threads
-            _webui.ui = false;
-            _webui_mutex_app_is_exit_now(WEBUI_MUTEX_SET_TRUE);
+
+            // Stop all threads and exit app
+            // _webui.ui = false;
+            // _webui_mutex_app_is_exit_now(WEBUI_MUTEX_SET_TRUE);
+
+            // Reset single client cookie flag, so user
+            // can call `webui_show()` again if needed.
+            _webui.cookies_single_set[win->num] = false;
+            win->current_browser = 0;
+
             // Break main loop
             _webui_condition_signal(&_webui.condition_wait);
             #ifdef __APPLE__
