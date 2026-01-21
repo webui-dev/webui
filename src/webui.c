@@ -1700,7 +1700,7 @@ static void _webui_remove_firefox_profile_ini(const char* path, const char* prof
     if (path[0] == '~') {
         const char* home = getenv("HOME");
         if (home) {
-            WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s/%s", home,&path[1]);
+            WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s/%s", home, &path[1]);
         } else {
             // If for some reason HOME isn't set
             // fall back to the original path.
@@ -3399,7 +3399,7 @@ char* webui_encode(const char* str) {
     size_t buf_len = (((len + 2) / 3) * 4) + 8;
     char* buf = (char*)_webui_malloc(buf_len);
 
-    int ret = mg_base64_encode((const unsigned char*)str, len, buf,&buf_len);
+    int ret = mg_base64_encode((const unsigned char*)str, len, buf, &buf_len);
 
     if (ret > (-1)) {
 
@@ -3441,7 +3441,7 @@ char* webui_decode(const char* str) {
     size_t buf_len = (((len + 2) / 3) * 4) + 8;
     unsigned char* buf = (unsigned char*)_webui_malloc(buf_len);
 
-    int ret = mg_base64_decode(str, len, buf,&buf_len);
+    int ret = mg_base64_decode(str, len, buf, &buf_len);
 
     if (ret > (-1)) {
 
@@ -3589,23 +3589,24 @@ void webui_wait(void) {
 
         // Check if there is atleast one window (UI)
         // is running. Otherwise the mutex condition
-        // signal will never come
+        // signal will never be fired.
         if (!_webui.ui) {
 
             #ifdef WEBUI_LOG
             _webui_log_debug("[Loop] webui_wait() -> No window is found. Stop\n");
             #endif
+            // No window is found, Stop.
             return;
         }
 
+        // The mutex conditional signal will
+        // be fired when no more UI (servers)
+        // are running.
         #ifdef WEBUI_LOG
         _webui_log_debug("[Loop] webui_wait() -> Waiting (Timeout in %zu seconds)\n",
             _webui.startup_timeout);
         #endif
-
-        // The mutex conditional signal will
-        // be fired when no more UI (servers)
-        // is running.
+        
     } else {
 
         #ifdef WEBUI_LOG
@@ -3628,7 +3629,7 @@ void webui_wait(void) {
 
             _webui.is_browser_main_run = true;
             _webui_mutex_lock(&_webui.mutex_wait);
-            _webui_condition_wait(&_webui.condition_wait,&_webui.mutex_wait);
+            _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
             _webui.is_browser_main_run = false;
         }
         else {
@@ -3639,7 +3640,7 @@ void webui_wait(void) {
             #endif
 
             _webui_mutex_lock(&_webui.mutex_wait);
-            _webui_condition_wait(&_webui.condition_wait,&_webui.mutex_wait);
+            _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
         }
     #elif __linux__
         if (!_webui.is_webview) {
@@ -3651,7 +3652,7 @@ void webui_wait(void) {
 
             _webui.is_browser_main_run = true;
             _webui_mutex_lock(&_webui.mutex_wait);
-            _webui_condition_wait(&_webui.condition_wait,&_webui.mutex_wait);
+            _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
             _webui.is_browser_main_run = false;
         }
         else {
@@ -3678,7 +3679,7 @@ void webui_wait(void) {
 
             _webui.is_browser_main_run = true;
             _webui_mutex_lock(&_webui.mutex_wait);
-            _webui_condition_wait(&_webui.condition_wait,&_webui.mutex_wait);
+            _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
             _webui.is_browser_main_run = false;
         }
         else {
@@ -4670,7 +4671,7 @@ static bool _webui_timer_is_end(_webui_timer_t* t, size_t ms) {
 
     _webui_timer_clock_gettime(&t->now);
 
-    size_t def = (size_t) _webui_timer_diff(&t->start,&t->now);
+    size_t def = (size_t) _webui_timer_diff(&t->start, &t->now);
     if (def > ms)
         return true;
     return false;
@@ -5259,7 +5260,7 @@ static const char* _webui_interpret_command(const char* cmd) {
     // Redirect stderr to stdout
     char cmd_with_redirection[512] = {0};
     WEBUI_SN_PRINTF_STATIC(cmd_with_redirection, sizeof(cmd_with_redirection), "cmd.exe /c %s 2>&1", cmd);
-    _webui_system_win32_out(cmd_with_redirection,&out, false);
+    _webui_system_win32_out(cmd_with_redirection, &out, false);
     #else
     // Redirect stderr to stdout
     char cmd_with_redirection[512] = {0};
@@ -6137,7 +6138,7 @@ static const char* _webui_get_temp_path() {
     #ifdef _MSC_VER
     char* WinUserProfile = NULL;
     size_t sz = 0;
-    if (_dupenv_s(&WinUserProfile,&sz, "USERPROFILE") != 0 || WinUserProfile == NULL)
+    if (_dupenv_s(&WinUserProfile, &sz, "USERPROFILE") != 0 || WinUserProfile == NULL)
         return "";
     #else
     char* WinUserProfile = getenv("USERPROFILE");
@@ -7714,7 +7715,7 @@ static bool _webui_is_process_running(const char* process_name) {
     if (hSnapshot == INVALID_HANDLE_VALUE)
         return false;
     pe32.dwSize = sizeof(PROCESSENTRY32);
-    if (!Process32First(hSnapshot,&pe32)) {
+    if (!Process32First(hSnapshot, &pe32)) {
         CloseHandle(hSnapshot);
         return false;
     }
@@ -7723,7 +7724,7 @@ static bool _webui_is_process_running(const char* process_name) {
             isRunning = true;
             break;
         }
-    } while(Process32Next(hSnapshot,&pe32));
+    } while(Process32Next(hSnapshot, &pe32));
     CloseHandle(hSnapshot);
     #elif __linux__
     // Linux
@@ -7768,12 +7769,12 @@ static bool _webui_is_process_running(const char* process_name) {
     };
     struct kinfo_proc * procs = NULL;
     size_t size;
-    if (sysctl(mib, 4, NULL,&size, NULL, 0) < 0)
+    if (sysctl(mib, 4, NULL, &size, NULL, 0) < 0)
         return false; // Failed to get process list size
     procs = (struct kinfo_proc * ) malloc(size);
     if (!procs)
         return false; // Failed to allocate memory for process list
-    if (sysctl(mib, 4, procs,&size, NULL, 0) < 0) {
+    if (sysctl(mib, 4, procs, &size, NULL, 0) < 0) {
         free(procs);
         return false; // Failed to get process list
     }
@@ -8001,7 +8002,7 @@ static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key
         return false;
 
     if (EVP_PKEY_keygen_init(root_ctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(root_ctx, bits) <= 0 ||
-        EVP_PKEY_keygen(root_ctx,&root_pkey) <= 0) {
+        EVP_PKEY_keygen(root_ctx, &root_pkey) <= 0) {
         EVP_PKEY_CTX_free(root_ctx);
         return false;
     }
@@ -8061,7 +8062,7 @@ static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key
     }
 
     if (EVP_PKEY_keygen_init(ctx) <= 0 || EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, bits) <= 0 ||
-        EVP_PKEY_keygen(ctx,&pkey) <= 0) {
+        EVP_PKEY_keygen(ctx, &pkey) <= 0) {
         X509_free(root_x509);
         EVP_PKEY_free(root_pkey);
         EVP_PKEY_CTX_free(ctx);
@@ -8406,7 +8407,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
                 CloseHandle(thread);
             #else
             pthread_t thread;
-            pthread_create(&thread, NULL,&_webui_server_thread, (void*)win);
+            pthread_create(&thread, NULL, &_webui_server_thread, (void*)win);
             pthread_detach(thread);
             win->server_thread = thread;
             #endif
@@ -8499,7 +8500,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
                 CloseHandle(thread);
             #else
             pthread_t thread;
-            pthread_create(&thread, NULL,&_webui_server_thread, (void*)win);
+            pthread_create(&thread, NULL, &_webui_server_thread, (void*)win);
             pthread_detach(thread);
             win->server_thread = thread;
             #endif
@@ -10292,7 +10293,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
     //         CloseHandle(thread);
     //     #else
     //     pthread_t thread;
-    //     pthread_create(&thread, NULL,&_webui_ws_process_thread, (void*)arg);
+    //     pthread_create(&thread, NULL, &_webui_ws_process_thread, (void*)arg);
     //     pthread_detach(thread);
     //     #endif
     // }
@@ -10313,7 +10314,7 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
         CloseHandle(thread);
     #else
     pthread_t thread;
-    pthread_create(&thread, NULL,&_webui_ws_process_thread, (void*)arg);
+    pthread_create(&thread, NULL, &_webui_ws_process_thread, (void*)arg);
     pthread_detach(thread);
     #endif
 }
@@ -11217,7 +11218,7 @@ static bool _webui_socket_test_listen_win32(size_t port_num) {
     struct addrinfo hints;
 
     // Initialize Winsock
-    iResult = WSAStartup(MAKEWORD(2, 2),&wsaData);
+    iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (iResult != 0) {
         // WSAStartup failed
         return false;
@@ -11231,7 +11232,7 @@ static bool _webui_socket_test_listen_win32(size_t port_num) {
     // Resolve the server address and port
     char the_port[16] = {0};
     WEBUI_SN_PRINTF_STATIC(&the_port[0], sizeof(the_port), "%zu", port_num);
-    iResult = getaddrinfo("127.0.0.1",&the_port[0],&hints,&result);
+    iResult = getaddrinfo("127.0.0.1", &the_port[0], &hints, &result);
     if (iResult != 0) {
         // WSACleanup();
         return false;
@@ -11290,7 +11291,7 @@ static int _webui_system_win32_out(const char* cmd, char ** output, bool show) {
     sa.bInheritHandle = TRUE;
     sa.lpSecurityDescriptor = NULL;
     HANDLE stdout_read, stdout_write;
-    if (!CreatePipe(&stdout_read,&stdout_write,&sa, 0)) {
+    if (!CreatePipe(&stdout_read, &stdout_write, &sa, 0)) {
         return -1;
     }
     if (!SetHandleInformation(stdout_read, HANDLE_FLAG_INHERIT, 0)) {
@@ -11333,13 +11334,13 @@ static int _webui_system_win32_out(const char* cmd, char ** output, bool show) {
 
     SetFocus(pi.hProcess);
     WaitForSingleObject(pi.hProcess, WEBUI_SYS_CMD_TIMEOUT);
-    GetExitCodeProcess(pi.hProcess,&Return);
+    GetExitCodeProcess(pi.hProcess, &Return);
 
     DWORD bytes_read;
     char buffer[WEBUI_STDOUT_BUF];
     size_t output_size = 0;
 
-    while(ReadFile(stdout_read, buffer, WEBUI_STDOUT_BUF,&bytes_read, NULL) && bytes_read > 0) {
+    while(ReadFile(stdout_read, buffer, WEBUI_STDOUT_BUF, &bytes_read, NULL) && bytes_read > 0) {
 
         char* new_output = realloc(*output, output_size + bytes_read + 1);
         if (new_output == NULL) {
@@ -11458,7 +11459,7 @@ static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show) {
     // EnumWindows(_webui_enum_windows_proc_win32, (LPARAM)(pi.dwProcessId));
     // AssignProcessToJobObject(JobObject, pi.hProcess);
     WaitForSingleObject(pi.hProcess, WEBUI_SYS_CMD_TIMEOUT);
-    GetExitCodeProcess(pi.hProcess,&Return);
+    GetExitCodeProcess(pi.hProcess, &Return);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
     _webui_free_mem((void*)wcmd);
@@ -11477,14 +11478,14 @@ static bool _webui_get_windows_reg_value(HKEY key, LPCWSTR reg, LPCWSTR value_na
 
     HKEY hKey;
 
-    if (RegOpenKeyExW(key, reg, 0, KEY_READ,&hKey) == ERROR_SUCCESS) {
+    if (RegOpenKeyExW(key, reg, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
 
         DWORD VALUE_TYPE;
         BYTE VALUE_DATA[WEBUI_MAX_PATH];
         DWORD VALUE_SIZE = sizeof(VALUE_DATA);
 
         // If `value_name` is empty then it will read the "(default)" reg-key
-        if (RegQueryValueExW(hKey, value_name, NULL,&VALUE_TYPE, VALUE_DATA,&VALUE_SIZE) == ERROR_SUCCESS) {
+        if (RegQueryValueExW(hKey, value_name, NULL, &VALUE_TYPE, VALUE_DATA, &VALUE_SIZE) == ERROR_SUCCESS) {
 
             if (VALUE_TYPE == REG_SZ)
                 WEBUI_SN_PRINTF_STATIC(value, WEBUI_MAX_PATH, "%S", (LPCWSTR) VALUE_DATA);
