@@ -11756,8 +11756,23 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         // Free old WebView
         if (win->webView) {
-            _webui_wv_free(win->webView);
-            win->webView = NULL;
+
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t_webui_wv_show() -> Stopping old WebView thread...\n");
+            #endif
+
+            if (win->webView->cpp_handle) {
+                _webui_win32_wv2_set_stop(win->webView->cpp_handle, true);
+                _webui_webview_update(win);
+            }
+
+            // Wait for old WebView thread to stop
+            _webui_sleep(250);
+
+            if (win->webView) {
+                _webui_wv_free(win->webView);
+                win->webView = NULL;
+            }
         }
 
         // Get wide URL
@@ -12642,8 +12657,21 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         // Free old WebView
         if (win->webView) {
+
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t_webui_wv_show() -> Stopping old WebView thread...\n");
+            #endif
+
             win->webView->stop = true;
             _webui_webview_update(win);
+
+            // Wait for old WebView thread to stop
+            _webui_sleep(250);
+
+            if (win->webView) {
+                _webui_wv_free();
+                win->webView = NULL;
+            }
         }
 
         // Copy URL
@@ -12901,6 +12929,17 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         // Free old WebView
         if (win->webView) {
+
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t_webui_wv_show() -> Stopping old WebView thread...\n");
+            #endif
+
+            win->webView->stop = true;
+            _webui_webview_update(win);
+
+            // Wait for old WebView thread to stop
+            _webui_sleep(250);
+            
             _webui_wv_free(win->webView);
             win->webView = NULL;
         }
