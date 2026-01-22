@@ -541,6 +541,7 @@ static void _webui_clean(void);
 static bool _webui_browser_exist(_webui_window_t* win, size_t browser);
 static const char* _webui_get_temp_path();
 static bool _webui_folder_exist(const char* folder);
+static bool _webui_create_folder(const char* folder);
 static void _webui_delete_folder(char* folder);
 static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t browser);
 static bool _webui_browser_start_chrome(_webui_window_t* win, const char* address);
@@ -3144,19 +3145,8 @@ void webui_set_profile(size_t window, const char* name, const char* path) {
     // Some wrappers do not guarantee pointers stay valid,
     // so, let's make our copy.
 
-    char* name_cpy = NULL;
-    size_t len = _webui_strlen(name);
-    if (len > 0) {
-        name_cpy = (char*)_webui_malloc(len);
-        memcpy((char*)name_cpy, name, len);
-    }
-
-    char* path_cpy = NULL;
-    len = _webui_strlen(path);
-    if (len > 0) {
-        path_cpy = (char*)_webui_malloc(len);
-        memcpy((char*)path_cpy, path, len);
-    }
+    char* name_cpy = _webui_str_dup(name);
+    char* path_cpy = _webui_str_dup(path);
 
     // Free
     if (win->profile_name != NULL)
@@ -3174,6 +3164,13 @@ void webui_set_profile(size_t window, const char* name, const char* path) {
         win->default_profile = true;
     else
         win->default_profile = false;
+    
+    // Create browser profile folder if not exist
+    if(path_cpy) {
+        if (!_webui_folder_exist(path_cpy)) {
+            _webui_create_folder(path_cpy);
+        }
+    }
 }
 
 void webui_set_proxy(size_t window, const char* proxy_server) {
@@ -5957,6 +5954,56 @@ static bool _webui_folder_exist(const char* folder) {
     }
     #endif
 
+    return false;
+}
+
+static bool _webui_create_folder(const char* folder) {
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_create_folder([%s])\n", folder);
+    #endif
+
+    if (_webui_folder_exist(folder))
+        return true;
+
+    #if defined(_WIN32)
+    // Convert UTF-8 path to wide string
+    wchar_t* wfolder;
+    if (!_webui_str_to_wide(folder, &wfolder))
+        return false;
+    // Try creating the folder
+    if (CreateDirectoryW(wfolder, NULL)) {
+        webui_free(wfolder);
+        return true;
+    }
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        webui_free(wfolder);
+        return true;
+    }
+    // Retry loop
+    for (size_t i = 0; i < 6; i++) {
+        _webui_log_debug("[Core]\t\t_webui_create_folder() -> Retry #%zu...\n", i);
+        CreateDirectoryW(wfolder, NULL);
+        if (_webui_folder_exist(folder)) {
+            webui_free(wfolder);
+            return true;
+        }
+        _webui_sleep(500);
+    }
+    webui_free(wfolder);
+    #else
+    if (mkdir(folder, 0755) == 0)
+        return true;
+    if (errno == EEXIST)
+        return true;
+    for (size_t i = 0; i < 6; i++) {
+        _webui_log_debug("[Core]\t\t_webui_create_folder() -> Retry #%zu...\n", i);
+        mkdir(folder, 0755);
+        if (_webui_folder_exist(folder))
+            return true;
+        _webui_sleep(500);
+    }
+    #endif
     return false;
 }
 
