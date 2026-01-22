@@ -390,6 +390,7 @@ typedef struct _webui_window_t {
     bool proxy_set;
     char *proxy_server;
     webui_mutex_t mutex_win_exit_now;
+    webui_mutex_t mutex_win_reusable;
     bool win_exit_now;
     // WebView
     bool allow_webview;
@@ -636,6 +637,7 @@ static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client,
 static int _webui_external_file_handler(_webui_window_t* win, struct mg_connection* client, size_t client_id);
 static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* client, char* index, size_t client_id);
 static void _webui_webview_update(_webui_window_t* win);
+static void _webui_make_window_reusable(_webui_window_t* win);
 static const char* _webui_get_local_ip(void);
 static size_t _webui_get_child_process_id(_webui_window_t* win);
 // WebView
@@ -1118,6 +1120,7 @@ size_t webui_new_window_id(size_t num) {
 
     // Mutex Initialisation
     _webui_mutex_init(&win->mutex_win_exit_now);
+    _webui_mutex_init(&win->mutex_win_reusable);
     _webui_mutex_init(&win->mutex_webview_update);
     _webui_condition_init(&win->condition_webview_update);
 
@@ -1358,7 +1361,11 @@ void webui_close(size_t window) {
         return;
     _webui_window_t* win = _webui.wins[window];
 
-    // Close
+    // Make window reusable, so user can
+    // call `webui_show()` again if needed.
+    _webui_make_window_reusable(win);
+
+    // Close window
     if (!win->webView) {
         // Close web browser window
         if (_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS)) {
@@ -1457,6 +1464,7 @@ void webui_destroy(size_t window) {
     _webui_condition_destroy(&win->condition_webview_update);
     _webui_mutex_destroy(&win->mutex_webview_update);
     _webui_mutex_destroy(&win->mutex_win_exit_now);
+    _webui_mutex_destroy(&win->mutex_win_reusable);
 
     // Free window struct
     _webui_free_mem((void*)_webui.wins[window]);
@@ -5701,6 +5709,23 @@ static bool _webui_mutex_is_webview_update(_webui_window_t* win, int update) {
     status = win->update_webview;
     _webui_mutex_unlock(&win->mutex_webview_update);
     return status;
+}
+
+static void _webui_make_window_reusable(_webui_window_t* win) {
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_make_window_reusable(%zu)\n", win->num);
+    #endif
+
+    _webui_mutex_lock(&win->mutex_win_reusable);
+    if (!_webui.config.multi_client) {
+        // Single client mode
+        // Make window can set safe cookies and tokens again
+        _webui.cookies_single_set[win->num] = false;
+    }
+    // Make window can use any browser again
+    win->current_browser = 0;
+    _webui_mutex_unlock(&win->mutex_win_reusable);
 }
 
 static void _webui_webview_update(_webui_window_t* win) {
@@ -10130,10 +10155,9 @@ static WEBUI_THREAD_SERVER_START {
             // _webui.ui = false;
             // _webui_mutex_app_is_exit_now(WEBUI_MUTEX_SET_TRUE);
 
-            // Reset single client cookie flag, so user
-            // can call `webui_show()` again if needed.
-            _webui.cookies_single_set[win->num] = false;
-            win->current_browser = 0;
+            // Make window reusable, so user can
+            // call `webui_show()` again if needed.
+            _webui_make_window_reusable(win);
 
             // Break main loop
             _webui_condition_signal(&_webui.condition_wait);
@@ -11171,6 +11195,11 @@ static void _webui_ws_process(
                 recvNum
             );
             #endif
+
+            // Make window reusable, so user can
+            // call `webui_show()` again if needed.
+            // Note: This is in case user called `webui_show()` inside all events.
+            _webui_make_window_reusable(win);
 
             // Events
             if (win->has_all_events) {
