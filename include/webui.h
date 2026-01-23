@@ -88,6 +88,7 @@ extern "C" {
     #include <signal.h>
     #include <sys/socket.h>
     #include <sys/time.h>
+    #include <sys/stat.h>
     #include <sys/inotify.h>
     #include <unistd.h>
     #include <ifaddrs.h>
@@ -447,6 +448,18 @@ WEBUI_EXPORT bool webui_browser_exist(size_t browser);
  * @example webui_wait();
  */
 WEBUI_EXPORT void webui_wait(void);
+
+/**
+ * @brief Wait asynchronously until all opened windows get closed.
+ * Note: In WebView mode, you need to call this from the main thread.
+ *
+ * @return Returns True if more windows are still opened, False otherwise.
+ * 
+ * @example while (webui_wait_async()) {
+ *    // Your main thread code here
+ * }
+ */
+WEBUI_EXPORT bool webui_wait_async(void);
 
 /**
  * @brief Close a specific window only. The window object will still exist.
