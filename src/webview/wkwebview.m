@@ -151,6 +151,21 @@ void _webui_macos_wv_start() {
     }
 }
 
+bool _webui_macos_wv_iteration_do(void) {
+    @autoreleasepool {
+        NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                untilDate:[NSDate distantPast]
+                                inMode:NSDefaultRunLoopMode
+                                dequeue:YES];
+        if (event) {
+            [NSApp sendEvent:event];
+            [NSApp updateWindows];
+            return true; // One event processed
+        }
+        return false; // Event queue is empty
+    }
+}
+
 bool _webui_macos_wv_new(int index, bool frameless, bool resizable) {
     #ifdef WEBUI_LOG
     printf("[ObjC]\t\t\t_webui_macos_wv_new([%d], [%d], [%d])\n", index, frameless, resizable);
