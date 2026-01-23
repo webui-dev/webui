@@ -12781,6 +12781,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 if (win->webView) {
                     // Stop this thread
                     if (win->webView->stop) {
+                        _webui_mutex_unlock(&win->mutex_webview_update);
                         break;
                     }
                     // Window Size
@@ -13028,6 +13029,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                     // Stop this thread
                     if (win->webView->stop) {
                         _webui_macos_wv_close(win->webView->index);
+                        _webui_mutex_unlock(&win->mutex_webview_update);
                         break;
                     }
                     // Window Size
