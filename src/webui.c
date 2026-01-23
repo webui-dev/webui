@@ -5320,6 +5320,10 @@ static void _webui_condition_wait(webui_condition_t* cond, webui_mutex_t* mutex)
 
 static void _webui_condition_signal(webui_condition_t* cond) {
 
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_condition_signal()\n");
+    #endif
+
     #ifdef _WIN32
     WakeConditionVariable(cond);
     #else
@@ -12099,6 +12103,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> Cleaning\n");
         #endif
+
+        // Clean
         _webui_wv_free(win->webView);
         _webui_free_mem((void*) cacheFolderW);
         win->webView = NULL;
@@ -12494,6 +12500,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
 
             if (!libgtk) {
+                #ifdef WEBUI_LOG
+                _webui_log_debug("[Core]\t\t_webui_load_gtk_and_webkit() -> GTK load failed\n");
+                #endif
                 _webui_wv_free();
                 return false;
             }
@@ -12512,6 +12521,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
 
             if (!libwebkit) {
+                #ifdef WEBUI_LOG
+                _webui_log_debug("[Core]\t\t_webui_load_gtk_and_webkit() -> WebKit load failed\n");
+                #endif
                 _webui_wv_free();
                 return false;
             }
@@ -12775,6 +12787,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
                 // Wait for WebUI Messages
 
+                #ifdef WEBUI_LOG
+                _webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> Waiting for WebUI Messages...\n");
+                #endif
+
                 _webui_mutex_lock(&win->mutex_webview_update);
                 _webui_condition_wait(&win->condition_webview_update, &win->mutex_webview_update);
 
@@ -13022,6 +13038,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
                 // Check if there is any WebUI Messages
 
+                #ifdef WEBUI_LOG
+                _webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> Waiting for WebUI Messages...\n");
+                #endif
+
                 _webui_mutex_lock(&win->mutex_webview_update);
                 _webui_condition_wait(&win->condition_webview_update, &win->mutex_webview_update);
 
@@ -13060,6 +13080,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 win, 0, WEBUI_CMD_CLOSE, NULL, 0
             );
         }
+
+        #ifdef WEBUI_LOG
+        _webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> Cleaning\n");
+        #endif
 
         // Clean
         _webui_wv_free(win->webView);
