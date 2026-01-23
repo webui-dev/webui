@@ -114,6 +114,7 @@ extern "C" {
     #include <sys/syslimits.h>
     #include <sys/time.h>
     #include <sys/types.h>
+    #include <sys/stat.h>
     #include <sys/event.h>
     #include <unistd.h>
     #include <CoreGraphics/CoreGraphics.h>
