@@ -18,7 +18,7 @@ extern "C" {
 #define WEBUI_VERSION "2.5.0-beta.4"
 
 // Max windows, servers and threads
-#define WEBUI_MAX_IDS (65536)
+#define WEBUI_MAX_IDS UINT16_MAX  // 65535
 
 // Max allowed argument's index
 #define WEBUI_MAX_ARG (16)
