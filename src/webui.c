@@ -11771,7 +11771,25 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
 
             // Wait for old WebView thread to stop
-            _webui_sleep(250);
+            _webui_timer_t timer;
+            _webui_timer_start(&timer);
+            for (;;) {
+                _webui_sleep(25);
+                if (!win->webView) {
+                    // WebView thread just stopped.
+                    #ifdef WEBUI_LOG
+                    _webui_log_debug("[Core]\t\t_webui_wv_show() -> Old WebView thread stopped successfully.\n");
+                    #endif
+                    break;
+                }
+                if (_webui_timer_is_end(&timer, 2500)) {
+                    // Timeout. WebView thread did not stop.
+                    #ifdef WEBUI_LOG
+                    _webui_log_debug("[Core]\t\t_webui_wv_show() -> Old WebView thread did not stop (Timeout).\n");
+                    #endif
+                    break;
+                }
+            }
 
             if (win->webView) {
                 _webui_wv_free(win->webView);
@@ -12678,10 +12696,29 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             _webui_webview_update(win);
 
             // Wait for old WebView thread to stop
-            _webui_sleep(250);
+            _webui_timer_t timer;
+            _webui_timer_start(&timer);
+            for (;;) {
+                _webui_sleep(25);
+                if (!win->webView) {
+                    // WebView thread just stopped.
+                    #ifdef WEBUI_LOG
+                    _webui_log_debug("[Core]\t\t_webui_wv_show() -> Old WebView thread stopped successfully.\n");
+                    #endif
+                    break;
+                }
+                if (_webui_timer_is_end(&timer, 2500)) {
+                    // Timeout. WebView thread did not stop.
+                    #ifdef WEBUI_LOG
+                    _webui_log_debug("[Core]\t\t_webui_wv_show() -> Old WebView thread did not stop (Timeout).\n");
+                    #endif
+                    break;
+                }
+            }
 
             if (win->webView) {
                 _webui_wv_free();
+                _webui_wv_close(win->webView);
                 win->webView = NULL;
             }
         }
@@ -12956,9 +12993,30 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
             // Wait for old WebView thread to stop
             _webui_sleep(250);
+            _webui_timer_start(&timer);
+            for (;;) {
+                _webui_sleep(25);
+                if (!win->webView) {
+                    // WebView thread just stopped.
+                    #ifdef WEBUI_LOG
+                    _webui_log_debug("[Core]\t\t_webui_wv_show() -> Old WebView thread stopped successfully.\n");
+                    #endif
+                    break;
+                }
+                if (_webui_timer_is_end(&timer, 2500)) {
+                    // Timeout. WebView thread did not stop.
+                    #ifdef WEBUI_LOG
+                    _webui_log_debug("[Core]\t\t_webui_wv_show() -> Old WebView thread did not stop (Timeout).\n");
+                    #endif
+                    break;
+                }
+            }
             
-            _webui_wv_free(win->webView);
             win->webView = NULL;
+            if (win->webView) {
+                _webui_wv_free(win->webView);
+                win->webView = NULL;
+            }
         }
 
         // Copy URL
