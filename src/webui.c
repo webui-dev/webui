@@ -300,6 +300,7 @@ typedef struct webui_event_inf_t {
     extern void _webui_macos_wv_stop();
     extern void _webui_macos_wv_set_close_cb(void (*cb)(int index));
     extern void _webui_macos_wv_start();
+    extern bool _webui_macos_wv_iteration_do();
     extern bool _webui_macos_wv_maximize(int index);
     extern bool _webui_macos_wv_minimize(int index);
 
@@ -640,6 +641,9 @@ static void _webui_webview_update(_webui_window_t* win);
 static void _webui_make_window_reusable(_webui_window_t* win);
 static const char* _webui_get_local_ip(void);
 static size_t _webui_get_child_process_id(_webui_window_t* win);
+static void _webui_wait_clean();
+static bool _webui_wait(bool async);
+
 // WebView
 #ifdef _WIN32
 // Microsoft Windows
@@ -3581,140 +3585,10 @@ void webui_exit(void) {
     #endif
 }
 
-void webui_wait(void) {
+static void _webui_wait_clean() {
 
     #ifdef WEBUI_LOG
-    _webui_log_debug("[Loop] webui_wait()\n");
-    #endif
-
-    // Initialization
-    _webui_init();
-    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
-        return;
-
-    if (_webui.is_main_run) {
-        #ifdef WEBUI_LOG
-        _webui_log_debug("[Loop] webui_wait() -> Already in main loop. Stop.\n");
-        #endif
-        return;
-    }
-
-    if (_webui.startup_timeout > 0) {
-
-        // Check if there is atleast one window (UI)
-        // is running. Otherwise the mutex condition
-        // signal will never be fired.
-        if (!_webui.ui) {
-
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Loop] webui_wait() -> No window is found. Stop\n");
-            #endif
-            // No window is found, Stop.
-            return;
-        }
-
-        // The mutex conditional signal will
-        // be fired when no more UI (servers)
-        // are running.
-        #ifdef WEBUI_LOG
-        _webui_log_debug("[Loop] webui_wait() -> Waiting (Timeout in %zu seconds)\n",
-            _webui.startup_timeout);
-        #endif
-        
-    } else {
-
-        #ifdef WEBUI_LOG
-        _webui_log_debug("[Loop] webui_wait() -> Infinite waiting\n");
-        #endif
-
-        // The mutex conditional signal will
-        // be fired when `webui_exit()` is
-        // called by the user.
-    }
-
-    // Lock mutex
-    _webui_mutex_lock(&_webui.mutex_wait);
-
-    // Main loop
-    _webui.is_main_run = true;
-    #ifdef _WIN32
-        if (!_webui.is_webview) {
-            // Windows Web browser main loop
-
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Loop] webui_wait() -> Windows web browser loop\n");
-            #endif
-
-            _webui.is_browser_main_run = true;
-            _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
-            _webui.is_browser_main_run = false;
-        }
-        else {
-            // Windows WebView main loop
-
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Loop] webui_wait() -> Windows WebView loop\n");
-            #endif
-
-            _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
-        }
-    #elif __linux__
-        if (!_webui.is_webview) {
-            // Linux Web browser main loop
-
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Loop] webui_wait() -> Linux web browser loop\n");
-            #endif
-
-            _webui.is_browser_main_run = true;
-            _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
-            _webui.is_browser_main_run = false;
-        }
-        else {
-            // Linux WebView main loop
-
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Loop] webui_wait() -> Linux WebView loop\n");
-            #endif
-
-            _webui.is_gtk_main_run = true;
-
-            // GTK Run Application
-            gtk_main();
-
-            _webui.is_gtk_main_run = false;
-        }
-    #else
-        if (!_webui.is_webview) {
-            // macOS Web browser main loop
-
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Loop] webui_wait() -> macOS web browser loop\n");
-            #endif
-
-            _webui.is_browser_main_run = true;
-            _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
-            _webui.is_browser_main_run = false;
-        }
-        else {
-            // macOS WebView main loop
-
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Loop] webui_wait() -> macOS WebView loop\n");
-            #endif
-
-            _webui.is_wkwebview_main_run = true;
-
-            // WKWebView Run Application
-            _webui_macos_wv_start();
-
-            _webui.is_wkwebview_main_run = false;
-        }
-    #endif
-    _webui.is_main_run = false;
-
-    #ifdef WEBUI_LOG
-    _webui_log_debug("[Loop] webui_wait() -> Cleaning\n");
+    _webui_log_debug("[Loop] _webui_wait_clean() -> Cleaning\n");
     #endif
 
     // Clean
@@ -3744,6 +3618,8 @@ void webui_wait(void) {
         }
         else {
             // Linux WebView Clean
+
+            _webui.is_gtk_main_run = false;
 
             // Close all GTK windows if any
             for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
@@ -3778,11 +3654,253 @@ void webui_wait(void) {
         }
     #endif
 
+    
+}
+
+static bool _webui_wait(bool async) {
+
+    // #ifdef WEBUI_LOG
+    _webui_log_debug("[Loop] webui_wait(%s)\n", async ? "Non-Blocking" : "Blocking");
+    // #endif
+
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+        _webui_wait_clean();
+        return false; // App is exiting
+    }
+
+    if (_webui.is_main_run) {
+        #ifdef WEBUI_LOG
+        _webui_log_debug("[Loop] webui_wait() -> Already in main loop. Stop.\n");
+        #endif
+        return true; // Already in main loop
+    }
+
+    if (_webui.startup_timeout > 0) {
+
+        // Check if there is atleast one window (UI)
+        // is running. Otherwise the mutex condition
+        // signal will never be fired.
+        if (!_webui.ui) {
+
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Loop] webui_wait() -> No window is found. Stop\n");
+            #endif
+            return false; // No window is found, Stop.
+        }
+
+        // The mutex conditional signal will
+        // be fired when no more UI (servers)
+        // are running.
+        #ifdef WEBUI_LOG
+        _webui_log_debug("[Loop] webui_wait() -> Waiting (Timeout in %zu seconds)\n",
+            _webui.startup_timeout);
+        #endif
+        
+    } else {
+
+        // #ifdef WEBUI_LOG
+        _webui_log_debug("[Loop] webui_wait() -> Infinite waiting\n");
+        // #endif
+
+        // The mutex conditional signal will
+        // be fired when `webui_exit()` is
+        // called by the user.
+    }
+
+    // Lock mutex
+    _webui_mutex_lock(&_webui.mutex_wait);
+
+    // Main loop
+    _webui.is_main_run = true;
+    #ifdef _WIN32
+        if (!_webui.is_webview) {
+            // Windows Web browser main loop
+
+            // #ifdef WEBUI_LOG
+            _webui_log_debug("[Loop] webui_wait() -> Windows web browser loop\n");
+            // #endif
+
+            if (!async) {
+
+                // Blocking mode (Windows Web browser)
+                _webui.is_browser_main_run = true;
+                _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
+                _webui.is_browser_main_run = false;
+
+            } else {
+
+                // Non-Blocking mode (Windows Web browser)
+                if (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+                    // App is still running...
+                    _webui.is_main_run = false;
+                    _webui_mutex_unlock(&_webui.mutex_wait);
+                    return true; // We have more UI drawing events
+                }
+            }
+        }
+        else {
+            // Windows WebView main loop
+
+            // #ifdef WEBUI_LOG
+            _webui_log_debug("[Loop] webui_wait() -> Windows WebView loop\n");
+            // #endif
+
+            if (!async) {
+
+                // Blocking mode (Windows WebView)
+                _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
+
+            } else {
+
+                // Non-Blocking mode (Windows WebView)
+                if (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+                    // App is still running...
+                    _webui.is_main_run = false;
+                    _webui_mutex_unlock(&_webui.mutex_wait);
+                    return true; // We have more UI drawing events
+                }
+            }
+        }
+    #elif __linux__
+        if (!_webui.is_webview) {
+            // Linux Web browser main loop
+
+            // #ifdef WEBUI_LOG
+            _webui_log_debug("[Loop] webui_wait() -> Linux web browser loop\n");
+            // #endif
+
+            if (!async) {
+
+                // Blocking mode (Linux Web browser)
+                _webui.is_browser_main_run = true;
+                _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
+                _webui.is_browser_main_run = false;
+
+            } else {
+
+                // Non-Blocking mode (Linux Web browser)
+                if (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+                    // App is still running...
+                    _webui.is_main_run = false;
+                    _webui_mutex_unlock(&_webui.mutex_wait);
+                    return true; // We have more UI drawing events
+                }
+            }
+        }
+        else {
+            // Linux WebView main loop
+
+            // #ifdef WEBUI_LOG
+            _webui_log_debug("[Loop] webui_wait() -> Linux WebView loop\n");
+            // #endif
+
+            if (!async) {
+
+                // Blocking mode (Linux WebView)
+
+                _webui.is_gtk_main_run = true;
+                gtk_main();// GTK Run Application
+                _webui.is_gtk_main_run = false;
+
+            } else {
+                
+                // Non-Blocking mode (Linux WebView)
+                if (!_webui.is_gtk_main_run) _webui.is_gtk_main_run = true;
+                while (gtk_events_pending()) {
+                    gtk_main_iteration_do(0);
+                }
+                if (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+                    // App is still running...
+                    _webui.is_main_run = false;
+                    _webui_mutex_unlock(&_webui.mutex_wait);
+                    return true; // We have more UI drawing events
+                }
+            }
+        }
+    #else
+        if (!_webui.is_webview) {
+            // macOS Web browser main loop
+
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Loop] webui_wait() -> macOS web browser loop\n");
+            #endif
+
+            if (!async) {
+
+                // Blocking mode (macOS Web browser)
+                _webui.is_browser_main_run = true;
+                _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
+                _webui.is_browser_main_run = false;
+                
+            } else {
+                
+                // Non-Blocking mode (macOS Web browser)
+                if (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+                    // App is still running...
+                    _webui.is_main_run = false;
+                    _webui_mutex_unlock(&_webui.mutex_wait);
+                    return true; // We have more UI drawing events
+                }
+            }
+        }
+        else {
+            // macOS WebView main loop
+
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Loop] webui_wait() -> macOS WebView loop\n");
+            #endif
+
+            if (!async) {
+
+                // Blocking mode (macOS WebView)
+                _webui.is_wkwebview_main_run = true;
+                _webui_macos_wv_start(); // WKWebView Run Application
+                _webui.is_wkwebview_main_run = false;
+
+            } else {
+                
+                // Non-Blocking mode (macOS WebView)
+                while (_webui_macos_wv_iteration_do()) {
+                    // Process drawing events...
+                }
+                if (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+                    // App is still running...
+                    _webui.is_main_run = false;
+                    _webui_mutex_unlock(&_webui.mutex_wait);
+                    return true; // We have more UI drawing events
+                }
+            }
+        }
+    #endif
+    _webui.is_main_run = false;
+
+    // Clean up
+    _webui_wait_clean();
+
     #ifdef WEBUI_LOG
     _webui_log_debug("[Loop] webui_wait() -> Main loop exit successfully\n");
     #endif
 
+    // Unlock mutex
     _webui_mutex_unlock(&_webui.mutex_wait);
+
+    return false; // No more UI drawing events
+}
+
+void webui_wait(void) {
+
+    // Initialization
+    _webui_init();
+
+    (void) _webui_wait(false);
+}
+
+bool webui_wait_async(void) {
+
+    // Initialization
+    if (!_webui.initialized) _webui_init();
+
+    return _webui_wait(true);
 }
 
 void webui_set_timeout(size_t second) {
@@ -4608,7 +4726,7 @@ static void * _webui_malloc(size_t size) {
 static _webui_window_t* _webui_dereference_win_ptr(void * ptr) {
 
     #ifdef WEBUI_LOG_VERBOSE
-    //_webui_log_debug("[Core]\t\t_webui_dereference_win_ptr()\n");
+    // _webui_log_debug("[Core]\t\t_webui_dereference_win_ptr()\n");
     #endif
 
     if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
@@ -4695,7 +4813,7 @@ static bool _webui_timer_is_end(_webui_timer_t* t, size_t ms) {
 static bool _webui_is_empty(const char* s) {
 
     #ifdef WEBUI_LOG_VERBOSE
-    //_webui_log_debug("[Core]\t\t_webui_is_empty()\n");
+    // _webui_log_debug("[Core]\t\t_webui_is_empty()\n");
     #endif
 
     if ((s != NULL) && (s[0] != '\0'))
@@ -4706,7 +4824,7 @@ static bool _webui_is_empty(const char* s) {
 static size_t _webui_strlen(const char* s) {
 
     #ifdef WEBUI_LOG_VERBOSE
-    //_webui_log_debug("[Core]\t\t_webui_strlen()\n");
+    // _webui_log_debug("[Core]\t\t_webui_strlen()\n");
     #endif
 
     if (_webui_is_empty(s))
@@ -7118,6 +7236,16 @@ static void _webui_clean(void) {
     // Make sure app is stopped
     webui_exit();
 
+    // Let's give other threads more time to
+    // safely exit and finish cleaning up before
+    // cleaning memory.
+    for (size_t i = 0; i < 4; i++) {
+        _webui_sleep(500);
+        if (_webui.servers < 1) { // TODO: Add mutex here
+            break; // No more server threads are running
+        }
+    }
+
     // Clean all servers services
     mg_exit_library();
 
@@ -7142,7 +7270,7 @@ static void _webui_clean(void) {
     _webui_condition_destroy(&_webui.condition_wait);
 
     #ifdef WEBUI_LOG
-    _webui_log_debug("[Core]\t\tWebUI exit successfully\n");
+    _webui_log_debug("[Core]\t\tWebUI memory cleaned successfully\n");
     #endif
 }
 
@@ -12117,7 +12245,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
         }
 
-        // Clean
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> Cleaning\n");
         #endif
@@ -12484,7 +12611,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     static int _webui_wv_exit_schedule(void* arg) {
 
         #ifdef WEBUI_LOG
-        // _webui_log_debug("[Core]\t\t_webui_wv_exit_schedule()\n");
+        _webui_log_debug("[Core]\t\t_webui_wv_exit_schedule()\n");
         #endif
 
         if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
@@ -12717,7 +12844,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
 
             if (win->webView) {
-                _webui_wv_free();
+                //_webui_wv_free();
                 _webui_wv_close(win->webView);
                 win->webView = NULL;
             }
@@ -12992,7 +13119,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             _webui_webview_update(win);
 
             // Wait for old WebView thread to stop
-            _webui_sleep(250);
+            _webui_timer_t timer;
             _webui_timer_start(&timer);
             for (;;) {
                 _webui_sleep(25);
@@ -13012,7 +13139,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 }
             }
             
-            win->webView = NULL;
             if (win->webView) {
                 _webui_wv_free(win->webView);
                 win->webView = NULL;
