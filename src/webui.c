@@ -345,6 +345,7 @@ typedef struct _webui_window_t {
     // Window
     uint32_t token;
     size_t num; // Window number
+    bool is_showing;
     const char* html_elements[WEBUI_MAX_IDS];
     bool has_all_events;
     void* cb_context[WEBUI_MAX_IDS];
@@ -392,6 +393,7 @@ typedef struct _webui_window_t {
     char *proxy_server;
     webui_mutex_t mutex_win_exit_now;
     webui_mutex_t mutex_win_reusable;
+    webui_mutex_t mutex_win_server_running;
     bool win_exit_now;
     // WebView
     bool allow_webview;
@@ -565,6 +567,7 @@ static bool _webui_set_root_folder(_webui_window_t* win, const char* path);
 static const char* _webui_generate_js_bridge(_webui_window_t* win, struct mg_connection* client);
 static void _webui_free_mem(void * ptr);
 static bool _webui_file_exist_mg(_webui_window_t* win, struct mg_connection* client);
+static bool _webui_is_mg_client_valid(_webui_window_t* win, struct mg_connection* client);
 static bool _webui_file_exist(const char* path);
 static void _webui_free_all_mem(void);
 static bool _webui_show_window(_webui_window_t* win, struct mg_connection* client,
@@ -590,6 +593,7 @@ static bool _webui_mutex_app_is_exit_now(int update);
 static bool _webui_mutex_is_more_servers_running(int update);
 static bool _webui_mutex_win_is_exit_now(_webui_window_t* win, int update);
 static bool _webui_mutex_is_webview_update(_webui_window_t* win, int update);
+static bool _webui_mutex_is_server_running(_webui_window_t* win, int update);
 static void _webui_condition_init(webui_condition_t* cond);
 static void _webui_condition_wait(webui_condition_t* cond, webui_mutex_t* mutex);
 static void _webui_condition_signal(webui_condition_t* cond);
@@ -1129,6 +1133,7 @@ size_t webui_new_window_id(size_t num) {
     _webui_mutex_init(&win->mutex_win_exit_now);
     _webui_mutex_init(&win->mutex_win_reusable);
     _webui_mutex_init(&win->mutex_webview_update);
+    _webui_mutex_init(&win->mutex_win_server_running);
     _webui_condition_init(&win->condition_webview_update);
 
     // Initialisation
@@ -1413,7 +1418,7 @@ void webui_destroy(size_t window) {
         return;
     _webui_window_t* win = _webui.wins[window];
 
-    if (win->server_running) {
+    if (_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS)) {
 
         // Freindly close
         webui_close(window);
@@ -1423,13 +1428,13 @@ void webui_destroy(size_t window) {
         _webui_timer_start(&timer_1);
         for (;;) {
             _webui_sleep(10);
-            if (!win->server_running)
+            if (!_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS))
                 break;
             if (_webui_timer_is_end(&timer_1, 2500))
                 break;
         }
 
-        if (win->server_running) {
+        if (_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS)) {
 
             #ifdef WEBUI_LOG
             _webui_log_info("[User] webui_destroy([%zu]) -> Forced close\n", window);
@@ -1442,8 +1447,8 @@ void webui_destroy(size_t window) {
             _webui_timer_t timer_2;
             _webui_timer_start(&timer_2);
             for (;;) {
-                _webui_sleep(10);
-                if (!win->server_running)
+                _webui_sleep(100);
+                if (!_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS))
                     break;
                 if (_webui_timer_is_end(&timer_2, 1500))
                     break;
@@ -1472,6 +1477,7 @@ void webui_destroy(size_t window) {
     _webui_mutex_destroy(&win->mutex_webview_update);
     _webui_mutex_destroy(&win->mutex_win_exit_now);
     _webui_mutex_destroy(&win->mutex_win_reusable);
+    _webui_mutex_destroy(&win->mutex_win_server_running);
 
     // Free window struct
     _webui_free_mem((void*)_webui.wins[window]);
@@ -1844,7 +1850,7 @@ const char* webui_start_server(size_t window, const char* content) {
     _webui_window_t* win = _webui.wins[window];
 
     // Check
-    if (win->server_running)
+    if (_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS))
         return "";
 
     // Make `wait()` waits forever
@@ -3976,7 +3982,7 @@ bool webui_set_root_folder(size_t window, const char* path) {
     }
     #endif
     
-    if (win->server_running || 
+    if (_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS) || 
         _webui_is_empty(path) || 
         (_webui_strlen(path) > WEBUI_MAX_PATH) ||
         !_webui_folder_exist(path)) {
@@ -4830,11 +4836,28 @@ static size_t _webui_strlen(const char* s) {
     return length;
 }
 
+static bool _webui_is_mg_client_valid(_webui_window_t* win, struct mg_connection* client) {
+    // The `mg_get_xxx()` functions may crash if the client is not valid.
+    // So we need to check if the server is still running. Otherwise,
+    // we consider the client is freed and invalid.
+    if (!client) {
+        return false; // Client is not valid
+    }
+    if (win) {
+        if (!_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS))
+            return false; // Client is not valid
+    }
+    return true;
+}
+
 static bool _webui_file_exist_mg(_webui_window_t* win, struct mg_connection* client) {
 
     #ifdef WEBUI_LOG_VERBOSE
     _webui_log_debug("[Core]\t\t_webui_file_exist_mg()\n");
     #endif
+
+    if(!_webui_is_mg_client_valid(win, client))
+        return false; // Client is not valid
 
     char* file;
     char* full_path;
@@ -5163,6 +5186,9 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
     _webui_log_debug("[Core]\t\t_webui_external_file_handler()\n");
     #endif
 
+    if(!_webui_is_mg_client_valid(win, client))
+        return 500; // Client is not valid
+
     int http_status_code = 0;
     const struct mg_request_info * ri = mg_get_request_info(client);
     const char* url = ri->local_uri;
@@ -5279,6 +5305,9 @@ static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client,
     #endif
 
     // Serve a normal text based file
+
+    if(!_webui_is_mg_client_valid(win, client))
+        return 500; // Client is not valid
 
     int http_status_code = 0;
     const struct mg_request_info * ri = mg_get_request_info(client);
@@ -5491,6 +5520,9 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* cli
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_interpret_file()\n");
     #endif
+
+    if(!_webui_is_mg_client_valid(win, client))
+        return 500; // Client is not valid
 
     // Interpret the file using JavaScript/TypeScript runtimes
     // and send back the output. otherwise, send the file as a normal text based
@@ -5804,12 +5836,28 @@ static bool _webui_mutex_app_is_exit_now(int update) {
 
 static bool _webui_mutex_is_more_servers_running(int update) {
 
+    // This function will receive `false` when `_webui.servers < 1`,
+    // means no more servers are running.
+    //
+    // This function is primarily used to break `webui_wait()`.
+
     bool status = false;
     _webui_mutex_lock(&_webui.mutex_is_more_servers);
     if (update == WEBUI_MUTEX_SET_TRUE) _webui.is_more_servers = true;
     else if (update == WEBUI_MUTEX_SET_FALSE) _webui.is_more_servers = false;
     status = _webui.is_more_servers;
     _webui_mutex_unlock(&_webui.mutex_is_more_servers);
+    return status;
+}
+
+static bool _webui_mutex_is_server_running(_webui_window_t* win, int update) {
+
+    bool status = false;
+    _webui_mutex_lock(&win->mutex_win_server_running);
+    if (update == WEBUI_MUTEX_SET_TRUE) win->server_running = true;
+    else if (update == WEBUI_MUTEX_SET_FALSE) win->server_running = false;
+    status = win->server_running;
+    _webui_mutex_unlock(&win->mutex_win_server_running);
     return status;
 }
 
@@ -5849,6 +5897,7 @@ static void _webui_make_window_reusable(_webui_window_t* win) {
     }
     // Make window can use any browser again
     win->current_browser = 0;
+    win->server_port = 0;
     _webui_mutex_unlock(&win->mutex_win_reusable);
 }
 
@@ -8094,18 +8143,23 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
     if (_webui_is_empty(content))
         return false;
 
+    // Prevent main loops from breaking.
+    win->is_showing = true;
+
     // Some wrappers do not guarantee pointers stay valid,
     // so, let's make our copy.
     size_t content_len = _webui_strlen(content);
     const char* content_cpy = (const char*)_webui_malloc(content_len);
     memcpy((char*)content_cpy, content, content_len);
 
+    bool status = false;
+
     // URL
     if (_webui_is_valid_url(content_cpy)) {
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t_webui_show() -> URL: [%s]\n", content_cpy);
         #endif
-        return _webui_show_window(win, client, content_cpy, WEBUI_SHOW_URL, browser);
+        status = _webui_show_window(win, client, content_cpy, WEBUI_SHOW_URL, browser);
     }
     // Embedded HTML
     else if (strstr(content_cpy, "<html") || 
@@ -8116,7 +8170,7 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
         _webui_log_debug("[Core]\t\t_webui_show() -> Embedded HTML:\n");
         _webui_log_debug("- - -[HTML]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", content_cpy);
         #endif
-        return _webui_show_window(win, client, content_cpy, WEBUI_SHOW_HTML, browser);
+        status = _webui_show_window(win, client, content_cpy, WEBUI_SHOW_HTML, browser);
     }
     // Folder
     else if (_webui_folder_exist(content_cpy)) {
@@ -8129,9 +8183,9 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
             _webui_log_debug("[Core]\t\t_webui_show() -> Failed to set folder root path\n");
             #endif
             _webui_free_mem((void*)content_cpy);
-            return false;
+            status = false;
         }
-        return _webui_show_window(win, client, content_cpy, WEBUI_SHOW_FOLDER, browser);
+        status = _webui_show_window(win, client, content_cpy, WEBUI_SHOW_FOLDER, browser);
     }
     // File
     else {
@@ -8139,9 +8193,14 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
         _webui_log_debug("[Core]\t\t_webui_show() -> File: [%s]\n", content_cpy);
         #endif
         if (content_len > WEBUI_MAX_PATH || strstr(content_cpy, "<"))
-            return false;
-        return _webui_show_window(win, client, content_cpy, WEBUI_SHOW_FILE, browser);
+            status = false;
+        status = _webui_show_window(win, client, content_cpy, WEBUI_SHOW_FILE, browser);
     }
+
+    // Reset
+    win->is_showing = false;
+
+    return status;
 }
 
 // TLS
@@ -8528,8 +8587,31 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
     }
     #endif
 
-    // Initialization
     _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_SET_FALSE);
+
+    // Wait for server threads to stop
+    _webui_timer_t timer;
+    _webui_timer_start(&timer);
+    for (;;) {
+        #ifdef WEBUI_LOG
+        _webui_log_debug("[Core]\t\t_webui_show_window() -> Waiting for server thread to stop...\n");
+        #endif
+        _webui_sleep(100);
+        if (!_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS)) {
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t_webui_show_window() -> Server thread stopped.\n");
+            #endif
+            break;
+        }
+        if (_webui_timer_is_end(&timer, 1500)) {
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t_webui_show_window() -> Server thread did not stop in time.\n");
+            #endif
+            break;
+        }
+    }
+
+    // Initialization
     if (win->html != NULL)
         _webui_free_mem((void*)win->html);
     if (win->url != NULL)
@@ -8957,6 +9039,9 @@ static void _webui_free_port(size_t port) {
     _webui_log_debug("[Core]\t\t_webui_free_port([%zu])\n", port);
     #endif
 
+    if (port == 0)
+        return;
+
     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
         if (_webui.used_ports[i] == port) {
             _webui.used_ports[i] = 0;
@@ -9377,11 +9462,13 @@ static bool _webui_client_cookies_get_id(_webui_window_t* win, const char* cooki
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_client_cookies_get_id()\n");
     #endif
-    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-        if (_webui.cookies[i] != NULL) {
-            if (strcmp(_webui.cookies[i], cookies) == 0) {
-                *client_id = i;
-                return true;
+    if (cookies) {
+        for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+            if (_webui.cookies[i] != NULL) {
+                if (strcmp(_webui.cookies[i], cookies) == 0) {
+                    *client_id = i;
+                    return true;
+                }
             }
         }
     }
@@ -9393,6 +9480,10 @@ static size_t _webui_client_get_id(_webui_window_t* win, struct mg_connection* c
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_client_get_id()\n");
     #endif
+
+    if (!_webui_is_mg_client_valid(win, client))
+        return 0; // Client is not valid
+
     size_t client_id = 0;
     if (_webui.config.use_cookies) {
         char cookies[WEBUI_COOKIES_BUF] = {0};
@@ -9442,9 +9533,14 @@ static const char* _webui_get_cookies_full(const struct mg_connection* client) {
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_get_cookies_full()\n");
     #endif
+    
+    if(!_webui_is_mg_client_valid(NULL, client))
+        return ""; // Client is not valid
+
     const char* header = mg_get_header(client, "Cookie");
     if (header != NULL)
         return header;
+    
     return "";
 }
 
@@ -9452,6 +9548,10 @@ static void _webui_get_cookies(const struct mg_connection* client, char* buffer)
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_get_cookies()\n");
     #endif
+
+    if(!_webui_is_mg_client_valid(NULL, client))
+        return; // Client is not valid
+    
     const char* header = mg_get_header(client, "Cookie");
     if (!_webui_is_empty(header)) {
         mg_get_cookie(header, "webui_auth", buffer, WEBUI_COOKIES_BUF);
@@ -9473,6 +9573,9 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
         _webui_mutex_unlock(&_webui.mutex_http_handler);
         return 500; // Internal Server Error
     }
+
+    if(!_webui_is_mg_client_valid(win, client))
+        return 500; // Client is not valid
 
     // Initializing
     int http_status_code = 200;
@@ -9904,7 +10007,7 @@ static WEBUI_THREAD_SERVER_START {
     _webui_mutex_is_more_servers_running(WEBUI_MUTEX_SET_TRUE);
 
     _webui_window_t* win = _webui_dereference_win_ptr(arg);
-    if (win == NULL || win->server_running) {
+    if (win == NULL || _webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS)) {
         _webui_mutex_unlock(&_webui.mutex_server_start);
         WEBUI_THREAD_RETURN
     }
@@ -9923,7 +10026,7 @@ static WEBUI_THREAD_SERVER_START {
 
     // Initialization
     _webui.servers++;
-    win->server_running = true;
+    _webui_mutex_is_server_running(win, WEBUI_MUTEX_SET_TRUE);
     if (_webui.startup_timeout < 1)
         _webui.startup_timeout = 0;
     if (_webui.startup_timeout > WEBUI_MAX_TIMEOUT)
@@ -10233,7 +10336,7 @@ static WEBUI_THREAD_SERVER_START {
     }
 
     #ifdef WEBUI_LOG
-    _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> Cleaning\n", win->num);
+    _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> Server stopping...\n", win->num);
     #endif
 
     _webui_mutex_is_connected(win, WEBUI_MUTEX_SET_FALSE);
@@ -10261,15 +10364,19 @@ static WEBUI_THREAD_SERVER_START {
         #endif
     }
 
+    // Stop server services
+    mg_stop(http_ctx);
+
     // Clean
-    win->server_running = false;
     _webui_free_port(win->server_port);
     win->server_port = 0;
     _webui_free_mem((void*)server_port);
+    _webui_mutex_is_server_running(win, WEBUI_MUTEX_SET_FALSE);
     // _webui_client_cookies_free_all(win);
 
     #ifdef WEBUI_LOG
-    _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> Server stopped.\n", win->num);
+    _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> Server stopped.\n",
+        win->num);
     #endif
 
     // Let the main wait() know that
@@ -10277,28 +10384,25 @@ static WEBUI_THREAD_SERVER_START {
     if (_webui.servers > 0)
         _webui.servers--;
 
-    // Stop server services
-    // This should be at the
-    // end as it may take time
-    mg_stop(http_ctx);
-
     // Make window reusable, so user can
     // call `webui_show()` again if needed.
     _webui_make_window_reusable(win);
 
     // Fire the mutex condition for wait()
     if ((_webui.startup_timeout > 0) && (_webui.servers < 1)) {
+        if (!win->is_showing) {
 
-        #ifdef WEBUI_LOG
-        _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> Breaking main loop...\n", win->num);
-        #endif
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> Breaking main loop...\n", win->num);
+            #endif
 
-        // Break main loop
-        _webui_mutex_is_more_servers_running(WEBUI_MUTEX_SET_FALSE); // For `webui_wait()` in Non-blocking mode
-        _webui_condition_signal(&_webui.condition_wait); // For `webui_wait()` in Blocking mode
-        #ifdef __APPLE__
-        _webui_macos_wv_stop();
-        #endif
+            // Break main loop
+            _webui_mutex_is_more_servers_running(WEBUI_MUTEX_SET_FALSE); // For `webui_wait()` in Non-blocking mode
+            _webui_condition_signal(&_webui.condition_wait); // For `webui_wait()` in Blocking mode
+            #ifdef __APPLE__
+            _webui_macos_wv_stop();
+            #endif
+        }
     }
 
     // Clean monitor thread
@@ -11351,7 +11455,7 @@ static void _webui_ws_process(
                     "", // Event -> HTML Element
                     event_num, // Event -> Event Number
                     _webui_client_get_id(win, client), // Event -> Client ID
-                    _webui_get_cookies_full(client) // Event -> Full cookies
+                    NULL  // No cookies in a closing connection
                 );
 
                 // Free event
@@ -13328,7 +13432,8 @@ static WEBUI_THREAD_MONITOR {
         #endif
         char buffer[1024];
         DWORD bytesReturned;
-        while ((!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) && (win->server_running)) {
+        while ((!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) &&
+               (_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS))) {
             if (ReadDirectoryChangesW(
                     hDir, buffer, sizeof(buffer), TRUE,
                     FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES |
