@@ -12,17 +12,8 @@
 import os
 import sys
 
-def generate_vfs_header(directory, output_header, custom_index=None):
+def generate_vfs_header(directory, output_header):
     files = []
-    index_files = {}
-
-    # Handle custom index file
-    custom_index_path = None
-    if custom_index:
-        custom_index_rel = custom_index.lstrip('/').replace('\\', '/')
-        custom_index_abs = os.path.join(directory, custom_index_rel)
-        if os.path.isfile(custom_index_abs):
-            custom_index_path = '/' + custom_index_rel
 
     # Walk through the directory and collect files
     for root, _, filenames in os.walk(directory):
@@ -32,16 +23,6 @@ def generate_vfs_header(directory, output_header, custom_index=None):
             # Ensure path starts with a slash
             relative_path = '/' + relative_path.replace('\\', '/')
             files.append((relative_path, filepath))
-
-            # Check for index files
-            if filename.startswith("index."):
-                dir_path = os.path.dirname(relative_path)
-                if dir_path not in index_files:
-                    index_files[dir_path] = relative_path
-
-    # If a custom index file is provided, override the root index
-    if custom_index_path is not None:
-        index_files["/"] = custom_index_path
 
     # Generate the C header file
     with open(output_header, 'w') as header:
@@ -75,15 +56,6 @@ def generate_vfs_header(directory, output_header, custom_index=None):
 
         header.write('static const int virtual_files_count = sizeof(virtual_files) / sizeof(virtual_files[0]);\n\n')
 
-        header.write('static const char* index_files[] = {\n')
-        for dir_path, index_path in index_files.items():
-            if dir_path == "/":
-                header.write(f'    "/", "{index_path}",\n')
-            else:
-                header.write(f'    "{dir_path}/", "{index_path}",\n')
-        header.write('    NULL\n')
-        header.write('};\n\n')
-
         header.write('bool virtual_file_system(const char* path, const unsigned char** file, int* length) {\n')
         header.write('    for (int i = 0; i < virtual_files_count; ++i) {\n')
         header.write('        if (strcmp(virtual_files[i].path, path) == 0) {\n')
@@ -110,41 +82,18 @@ def generate_vfs_header(directory, output_header, custom_index=None):
         header.write('        snprintf((char*) response, header_length + 1, http_header_template, content_type, file_length);\n')
         header.write('        memcpy(response + header_length, file_data, file_length);\n')
         header.write('        return response;\n')
-        header.write('    } else {\n')
-        header.write('        // Check for index file redirection\n')
-        header.write('        char redirect_path[1024];\n')
-        header.write('        snprintf(redirect_path, sizeof(redirect_path), "%s", path);\n')
-        header.write('        size_t len = strlen(redirect_path);\n')
-        header.write('        if (redirect_path[len - 1] != \'/\') {\n')
-        header.write('            redirect_path[len] = \'/\';\n')
-        header.write('            redirect_path[len + 1] = \'\\0\';\n')
-        header.write('        }\n')
-        header.write('        for (int i = 0; index_files[i] != NULL; i += 2) {\n')
-        header.write('            if (strcmp(index_files[i], redirect_path) == 0) {\n')
-        header.write('                const char* location_header = "HTTP/1.1 302 Found\\r\\n"\n')
-        header.write('                                            "Location: %s\\r\\n"\n')
-        header.write('                                            "Cache-Control: no-cache\\r\\n\\r\\n";\n')
-        header.write('                int header_length = snprintf(NULL, 0, location_header, index_files[i + 1]);\n')
-        header.write('                *length = header_length;\n')
-        header.write('                unsigned char* response = (unsigned char*) webui_malloc(*length);\n')
-        header.write('                snprintf((char*) response, header_length + 1, location_header, index_files[i + 1]);\n')
-        header.write('                return response;\n')
-        header.write('            }\n')
-        header.write('        }\n')
-        header.write('        return NULL;\n')
         header.write('    }\n')
+        header.write('    return NULL;\n')
         header.write('}\n\n')
 
         header.write('#endif // VIRTUAL_FILE_SYSTEM_H\n')
 
 if __name__ == '__main__':
-    if len(sys.argv) not in (3, 4):
-        print(f'Usage: {sys.argv[0]} <directory> <output_header> [custom_index_filename]')
+    if len(sys.argv) != 3:
+        print(f'Usage: {sys.argv[0]} <directory> <output_header>')
         sys.exit(1)
 
     directory = sys.argv[1]
     output_header = sys.argv[2]
-    custom_index = sys.argv[3] if len(sys.argv) == 4 else None
-
-    generate_vfs_header(directory, output_header, custom_index)
+    generate_vfs_header(directory, output_header)
     print(f'Generated {output_header} from {directory}')
