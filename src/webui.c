@@ -3604,7 +3604,14 @@ static void _webui_wait_clean(bool async) {
     // Let WebView2, GTK, Cocoa loops
     // know that main thread is exiting.
     _webui.is_main_run = false;
+    
+    // Since we are stopping the main thread rendering loop
+    // so let's make app can use any browser/webview again
     _webui.is_browser_mode = false;
+
+    // Let find the best web browser step
+    // take any browser again
+    _webui.current_browser = 0;
 
     // Clean
     #ifdef _WIN32
@@ -5917,9 +5924,8 @@ static void _webui_make_window_reusable(_webui_window_t* win) {
         // Make window can set safe cookies and tokens again
         _webui.cookies_single_set[win->num] = false;
     }
-    // Make window can use any browser again
+    // Make this window can use any browser/webview again
     win->current_browser = 0;
-    win->server_port = 0;
     _webui_mutex_unlock(&win->mutex_win_reusable);
 }
 
@@ -8648,8 +8654,22 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
     win->user_index_file_encoded = NULL;
 
     // Get network ports
-    if (win->custom_server_port > 0) win->server_port = win->custom_server_port;
-    else if (win->server_port == 0) win->server_port = _webui_get_free_port();
+    if (win->custom_server_port > 0) {
+        // Use user's custom port
+        win->server_port = win->custom_server_port;
+    }
+    else if (_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS)) {
+        // Window is already connected, This is a UI reload.
+        // Let's reuse the same port if still valid
+        if (win->server_port == 0)
+            // For some reason the port is 0, get a new free port
+            win->server_port = _webui_get_free_port();
+    }
+    else {
+        // Window is not connected
+        // Get a new free port
+        win->server_port = _webui_get_free_port();
+    }
 
     // Generate the server URL
     win->url = (char*)_webui_malloc(32); // [http][domain][port]
@@ -8743,6 +8763,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
                 _webui_log_debug("[Core]\t\t_webui_show_window() -> WebView Found\n");
                 #endif
                 win->current_browser = Webview;
+                _webui.current_browser = Webview;
                 runWebView = true;
             }
             else {
@@ -8802,7 +8823,6 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
                 _webui_free_mem((void*)win->user_index_file);
                 _webui_free_mem((void*)win->user_index_file_encoded);
                 _webui_free_port(win->server_port);
-                win->server_port = 0;
                 return false;
             }            
         }
@@ -10389,12 +10409,12 @@ static WEBUI_THREAD_SERVER_START {
     // Stop server services
     mg_stop(http_ctx);
 
-    // Clean
+    // Free Port
     _webui_free_port(win->server_port);
-    win->server_port = 0;
     _webui_free_mem((void*)server_port);
+
+    // Mutex
     _webui_mutex_is_server_running(win, WEBUI_MUTEX_SET_FALSE);
-    // _webui_client_cookies_free_all(win);
 
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> Server stopped.\n",
