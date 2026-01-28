@@ -7,24 +7,15 @@
 # Canada.
 # 
 # WebUI Virtual File System Generator
-# v1.2.0
+# v1.1
 
 import os
 import sys
 
-def generate_vfs_header(directory, output_header, custom_index=None):
+def generate_vfs_header(directory, output_header):
     files = []
     index_files = {}
 
-    # Handle custom index file
-    custom_index_path = None
-    if custom_index:
-        custom_index_rel = custom_index.lstrip('/').replace('\\', '/')
-        custom_index_abs = os.path.join(directory, custom_index_rel)
-        if os.path.isfile(custom_index_abs):
-            custom_index_path = '/' + custom_index_rel
-
-    # Walk through the directory and collect files
     for root, _, filenames in os.walk(directory):
         for filename in filenames:
             filepath = os.path.join(root, filename)
@@ -39,14 +30,10 @@ def generate_vfs_header(directory, output_header, custom_index=None):
                 if dir_path not in index_files:
                     index_files[dir_path] = relative_path
 
-    # If a custom index file is provided, override the root index
-    if custom_index_path is not None:
-        index_files["/"] = custom_index_path
-
-    # Generate the C header file
     with open(output_header, 'w') as header:
         header.write('#ifndef VIRTUAL_FILE_SYSTEM_H\n')
         header.write('#define VIRTUAL_FILE_SYSTEM_H\n\n')
+
         header.write('typedef struct {\n')
         header.write('    const char *path;\n')
         header.write('    const unsigned char *data;\n')
@@ -98,6 +85,7 @@ def generate_vfs_header(directory, output_header, custom_index=None):
         header.write('const void* vfs(const char* path, int* length) {\n')
         header.write('    const unsigned char* file_data;\n')
         header.write('    int file_length;\n\n')
+
         header.write('    if (virtual_file_system(path, &file_data, &file_length)) {\n')
         header.write('        const char* content_type = webui_get_mime_type(path);\n')
         header.write('        const char* http_header_template = "HTTP/1.1 200 OK\\r\\n"\n')
@@ -138,13 +126,11 @@ def generate_vfs_header(directory, output_header, custom_index=None):
         header.write('#endif // VIRTUAL_FILE_SYSTEM_H\n')
 
 if __name__ == '__main__':
-    if len(sys.argv) not in (3, 4):
-        print(f'Usage: {sys.argv[0]} <directory> <output_header> [custom_index_filename]')
+    if len(sys.argv) != 3:
+        print(f'Usage: {sys.argv[0]} <directory> <output_header>')
         sys.exit(1)
 
     directory = sys.argv[1]
     output_header = sys.argv[2]
-    custom_index = sys.argv[3] if len(sys.argv) == 4 else None
-
-    generate_vfs_header(directory, output_header, custom_index)
+    generate_vfs_header(directory, output_header)
     print(f'Generated {output_header} from {directory}')
