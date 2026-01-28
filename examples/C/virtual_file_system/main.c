@@ -18,7 +18,7 @@ int main() {
 	// VSF (Virtual File System) Example
 	//
 	// 1. Run Python script to generate header file of a folder
-	//    python vfs.py "/path/to/folder" "vfs.h" "index.html"
+	//    python vfs.py "/path/to/folder" "vfs.h"
 	//
 	// 2. Include header file in your C project
 	//    #include "vfs.h"
