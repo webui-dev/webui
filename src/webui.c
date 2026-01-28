@@ -4864,6 +4864,17 @@ static bool _webui_file_exist_mg(_webui_window_t* win, struct mg_connection* cli
 
     const struct mg_request_info * ri = mg_get_request_info(client);
     const char* url = ri->local_uri;
+    const char* handler_url = url;
+    char user_index_url[WEBUI_MAX_PATH];
+    // Respect user-defined index file when using an external file handler.
+    if (strcmp(url, "/") == 0 && !_webui_is_empty(win->user_index_file)) {
+        if (win->user_index_file[0] == '/') {
+            handler_url = win->user_index_file;
+        } else {
+            WEBUI_SN_PRINTF_STATIC(user_index_url, WEBUI_MAX_PATH, "/%s", win->user_index_file);
+            handler_url = user_index_url;
+        }
+    }
     size_t url_len = _webui_strlen(url);
 
     // Get file name
@@ -5192,6 +5203,17 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
     int http_status_code = 0;
     const struct mg_request_info * ri = mg_get_request_info(client);
     const char* url = ri->local_uri;
+    const char* handler_url = url;
+    char user_index_url[WEBUI_MAX_PATH];
+    // Respect user-defined index file when using an external file handler.
+    if (strcmp(url, "/") == 0 && !_webui_is_empty(win->user_index_file)) {
+        if (win->user_index_file[0] == '/') {
+            handler_url = win->user_index_file;
+        } else {
+            WEBUI_SN_PRINTF_STATIC(user_index_url, WEBUI_MAX_PATH, "/%s", win->user_index_file);
+            handler_url = user_index_url;
+        }
+    }
 
     if (win->files_handler != NULL || win->files_handler_window != NULL) {
         // Get file content from the external files handler
@@ -5217,7 +5239,7 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
         if(win->files_handler_window) {
             pt = win->files_handler_window;
         }        
-        _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> Path [%s]\n", url);
+        _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> Path [%s]\n", handler_url);
         _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> Calling custom files handler callback at address 0x%p\n", pt);
         _webui_log_debug("[Call]\n");
         #endif
@@ -5232,9 +5254,9 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
         // Call user callback
         const void* callback_resp = NULL;
         if (win->files_handler_window != NULL) {
-            callback_resp = win->files_handler_window(win->num, url, (int*)&length);
+            callback_resp = win->files_handler_window(win->num, handler_url, (int*)&length);
         } else {
-            callback_resp = win->files_handler(url, (int*)&length);
+            callback_resp = win->files_handler(handler_url, (int*)&length);
         }
 
         // Async response wait
