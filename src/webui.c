@@ -12633,18 +12633,24 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         if (libwebkit) {
 
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Core]\t\t_webui_wv_free() -> Unload WebKit\n");
-            #endif
-            dlclose(libwebkit);
+            // #ifdef WEBUI_LOG
+            // _webui_log_debug("[Core]\t\t_webui_wv_free() -> Unload WebKit\n");
+            // #endif
+            // dlclose(libwebkit);
+
+            // Now, we relies on the OS to unload the shared libraries
+            // when the application ends.
         }
 
         if (libgtk) {
 
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Core]\t\t_webui_wv_free() -> Unload GTK\n");
-            #endif
-            dlclose(libgtk);
+            // #ifdef WEBUI_LOG
+            // _webui_log_debug("[Core]\t\t_webui_wv_free() -> Unload GTK\n");
+            // #endif
+            // dlclose(libgtk);
+
+            // Now, we relies on the OS to unload the shared libraries
+            // when the application ends.
         }
 
         _webui.is_webview = false;
