@@ -567,7 +567,7 @@ static bool _webui_set_root_folder(_webui_window_t* win, const char* path);
 static const char* _webui_generate_js_bridge(_webui_window_t* win, struct mg_connection* client);
 static void _webui_free_mem(void * ptr);
 static bool _webui_file_exist_mg(_webui_window_t* win, struct mg_connection* client);
-static bool _webui_is_mg_client_valid(_webui_window_t* win, struct mg_connection* client);
+static bool _webui_is_mg_client_valid(_webui_window_t* win, const struct mg_connection* client);
 static bool _webui_file_exist(const char* path);
 static void _webui_free_all_mem(void);
 static bool _webui_show_window(_webui_window_t* win, struct mg_connection* client,
@@ -4843,7 +4843,7 @@ static size_t _webui_strlen(const char* s) {
     return length;
 }
 
-static bool _webui_is_mg_client_valid(_webui_window_t* win, struct mg_connection* client) {
+static bool _webui_is_mg_client_valid(_webui_window_t* win, const struct mg_connection* client) {
     // The `mg_get_xxx()` functions may crash if the client is not valid.
     // So we need to check if the server is still running. Otherwise,
     // we consider the client is freed and invalid.
