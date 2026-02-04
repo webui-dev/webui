@@ -36,6 +36,8 @@ void private_window_events(webui_event_t* e) {
 		webui_run(private_window, javascript);
 		sprintf(javascript, "document.getElementById('urlSpan2').innerHTML = '%s';", url);
 		webui_run(private_window, javascript);
+		sprintf(javascript, "document.getElementById('urlSpan3').innerHTML = 'http://[ANY_IP_OF_THIS_MACHINE]:%zu';", port);
+		webui_run(private_window, javascript);
 	}
 }
 
@@ -84,6 +86,7 @@ int main() {
 		"    Public window links: <br>"
 		"    <h1 id=\"urlSpan1\" style=\"color:#c9913d\">...</h1>"
 		"    <h1 id=\"urlSpan2\" style=\"color:#c9913d\">...</h1>"
+		"    <h1 id=\"urlSpan3\" style=\"color:#c9913d\">...</h1>"
 		"    Public window events: <br>"
 		"    <textarea id=\"Logs\" rows=\"4\" cols=\"50\" style=\"width:60%\"></textarea>"
 		"    <br>"
