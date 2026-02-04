@@ -7372,7 +7372,11 @@ static int _webui_cmd_sync(_webui_window_t* win, char* cmd, bool show) {
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_cmd_sync() -> Running [%s] \n", buf);
     #endif
-    return _webui_system_win32(win, buf, show);
+    int r = _webui_system_win32(win, buf, show);
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_cmd_sync() -> Command Result [%d] \n", r);
+    #endif
+    return r;
     #else
     // Using: _CMD_
     WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "%s >>/dev/null 2>>/dev/null", cmd);
@@ -7381,6 +7385,9 @@ static int _webui_cmd_sync(_webui_window_t* win, char* cmd, bool show) {
     #endif
     int r = system(buf);
     r = (r != -1 && r != 127 && WIFEXITED(r)) ? WEXITSTATUS(r) : -1;
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_cmd_sync() -> Command Result [%d] \n", r);
+    #endif
     return r;
     #endif
 }
