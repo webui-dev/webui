@@ -287,7 +287,34 @@ public:
     };
 #endif
 
+// Cached WebView2Loader.dll handle and function pointer
+static HMODULE g_webviewLib = NULL;
+typedef HRESULT (__stdcall *CreateCoreWebView2EnvironmentWithOptionsFunc)(
+    PCWSTR, PCWSTR, ICoreWebView2EnvironmentOptions*,
+    ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*);
+static CreateCoreWebView2EnvironmentWithOptionsFunc g_createEnv = NULL;
+
 extern "C" {
+
+bool _webui_win32_wv2_check_loader_dll(void) {
+    // Already loaded and cached
+    if (g_webviewLib && g_createEnv) {
+        return true;
+    }
+    // Load and cache WebView2Loader.dll
+    g_webviewLib = LoadLibraryA("WebView2Loader.dll");
+    if (!g_webviewLib) {
+        return false;
+    }
+    g_createEnv = (CreateCoreWebView2EnvironmentWithOptionsFunc)
+        GetProcAddress(g_webviewLib, "CreateCoreWebView2EnvironmentWithOptions");
+    if (!g_createEnv) {
+        FreeLibrary(g_webviewLib);
+        g_webviewLib = NULL;
+        return false;
+    }
+    return true;
+}
 
 _webui_win32_wv2_handle _webui_win32_wv2_create(void) {
     return static_cast<_webui_win32_wv2_handle>(new WebView2Instance());
@@ -414,36 +441,27 @@ bool _webui_win32_wv2_create_environment(_webui_win32_wv2_handle handle, wchar_t
     if (!handle) return false;
     WebView2Instance* instance = static_cast<WebView2Instance*>(handle);
 
-    _wputenv(L"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--enable-features=msWebView2EnableDraggableRegions");
-
-    typedef HRESULT (__stdcall *CreateCoreWebView2EnvironmentWithOptionsFunc)(
-        PCWSTR, PCWSTR, ICoreWebView2EnvironmentOptions*,
-        ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*);
-
-    HMODULE webviewLib = LoadLibraryA("WebView2Loader.dll");
-    if (!webviewLib) return false;
-
-    CreateCoreWebView2EnvironmentWithOptionsFunc createEnv =
-        (CreateCoreWebView2EnvironmentWithOptionsFunc)GetProcAddress(webviewLib, "CreateCoreWebView2EnvironmentWithOptions");
-    if (!createEnv) {
-        FreeLibrary(webviewLib);
-        return false;
+    // Ensure DLL is loaded (use cached if available)
+    if (!g_webviewLib || !g_createEnv) {
+        if (!_webui_win32_wv2_check_loader_dll()) {
+            return false;
+        }
     }
+
+    _wputenv(L"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--enable-features=msWebView2EnableDraggableRegions");
 
     #ifdef _MSC_VER
         auto environmentHandler = Make<EnvironmentCompletedHandler>(instance);
         if (!environmentHandler) {
-            FreeLibrary(webviewLib);
             return false;
         }
-        HRESULT hr = createEnv(NULL, cacheFolder, NULL, environmentHandler.Get());
+        HRESULT hr = g_createEnv(NULL, cacheFolder, NULL, environmentHandler.Get());
     #else
         EnvironmentCompletedHandler* environmentHandler = new EnvironmentCompletedHandler(instance);
         if (!environmentHandler) {
-            FreeLibrary(webviewLib);
             return false;
         }
-        HRESULT hr = createEnv(NULL, cacheFolder, NULL, environmentHandler);
+        HRESULT hr = g_createEnv(NULL, cacheFolder, NULL, environmentHandler);
     #endif
 
     return SUCCEEDED(hr);

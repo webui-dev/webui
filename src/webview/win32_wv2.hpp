@@ -25,6 +25,7 @@ extern "C" {
 typedef struct _webui_window_t _webui_window_t;
 typedef void* _webui_win32_wv2_handle;
 
+bool _webui_win32_wv2_check_loader_dll(void);
 _webui_win32_wv2_handle _webui_win32_wv2_create(void);
 void _webui_win32_wv2_free(_webui_win32_wv2_handle handle);
 bool _webui_win32_wv2_navigate(_webui_win32_wv2_handle handle, wchar_t* url);

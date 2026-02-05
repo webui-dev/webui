@@ -12246,6 +12246,18 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             WEBUI_THREAD_RETURN
         }
 
+        // Load WebView2Loader.dll
+        if (!_webui_win32_wv2_check_loader_dll()) {
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> WebView2Loader.dll not found\n");
+            #endif
+            CoUninitialize();
+            _webui_wv_free(win->webView);
+            win->webView = NULL;
+            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
+            WEBUI_THREAD_RETURN
+        }
+
         if (win->transparent) {
             SetEnvironmentVariable("WEBVIEW2_DEFAULT_BACKGROUND_COLOR", "0");
         }
