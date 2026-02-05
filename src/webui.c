@@ -12140,7 +12140,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 // and loaded WebView successfully
                 break;
             }
-            if (_webui_timer_is_end(&timer, 2500)) {
+            if (_webui_timer_is_end(&timer, 500)) {
                 // Timeout. WebView thread failed.
                 break;
             }
