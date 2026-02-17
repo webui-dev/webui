@@ -1610,11 +1610,9 @@ void webui_navigate(size_t window, const char* url) {
             _webui_webview_update(win);
         }
         #else
-        _webui_free_mem((void*) win->webView->url);
-        char* url_cp = _webui_str_dup(url);
-        win->webView->url = url_cp;
-        win->webView->navigate = true;
-        _webui_webview_update(win);
+        // In WebKitGTK, navigation can be triggered from navigation-policy callback.
+        // Route this path through show(), which already applies in_show guard.
+        (void)webui_show(window, url);
         #endif
     }
 }
