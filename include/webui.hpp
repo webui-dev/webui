@@ -209,7 +209,7 @@ namespace webui {
 
             // Get current window object pointer
             webui::window& get_window() {
-                return event::handler::get_window(window);
+                return event::handler::get_window(bind_id);
             }
 
             // Get event type
