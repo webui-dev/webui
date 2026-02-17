@@ -122,15 +122,18 @@ if (WEBUI_BUILD_EXAMPLES)
 
     add_executable(minimal ${CMAKE_CURRENT_SOURCE_DIR}/examples/C++/minimal/main.cpp)
     add_executable(call_js_from_cpp ${CMAKE_CURRENT_SOURCE_DIR}/examples/C++/call_js_from_cpp/main.cpp)
+    add_executable(call_js_from_cpp_class ${CMAKE_CURRENT_SOURCE_DIR}/examples/C++/call_js_from_cpp_class/main.cpp)
     add_executable(call_js_from_c ${CMAKE_CURRENT_SOURCE_DIR}/examples/C/call_js_from_c/main.c)
 
     target_link_libraries(minimal webui)
     target_link_libraries(call_js_from_cpp webui)
+    target_link_libraries(call_js_from_cpp_class webui)
     target_link_libraries(call_js_from_c webui)
 
     if (MSVC)
         set_target_properties(minimal PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
         set_target_properties(call_js_from_cpp PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
+        set_target_properties(call_js_from_cpp_class PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
         set_target_properties(call_js_from_c PROPERTIES LINK_FLAGS "/SubSystem:\"Windows\"" VS_DPI_AWARE "ON")
     endif()
 

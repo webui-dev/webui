@@ -12,9 +12,11 @@
 #define _WEBUI_HPP
 
 // C++ STD
-#include <array>
+#include <functional>
+#include <mutex>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 // WebUI C Header
 extern "C" {
@@ -49,13 +51,14 @@ namespace webui {
             class handler {
 
                 public:
-                using callback_t = void (*)(event*);
+                using callback_t = std::function<void(event*)>;
 
                 private:
-                static inline std::array<callback_t, 512> callback_list{};
+                static inline std::unordered_map<size_t, callback_t> callback_list{};
 
                 // List of window objects: webui::window
-                static inline std::array<webui::window*, 512> window_list{};
+                static inline std::unordered_map<size_t, webui::window*> window_list{};
+                static inline std::mutex callback_mutex{};
 
                 public:
                 handler() = delete;
@@ -66,6 +69,10 @@ namespace webui {
                 ~handler() = delete;
 
                 static void add(size_t id, webui::window* win, callback_t func) {
+                    if ((id == 0) || (win == nullptr) || !func)
+                        return;
+
+                    std::lock_guard<std::mutex> lock(callback_mutex);
                     // Save window object
                     window_list[id] = win;
                     // Save callback
@@ -73,18 +80,36 @@ namespace webui {
                 }
 
                 static void handle(webui_event_t* c_e) {
+                    if (c_e == nullptr)
+                        return;
+
                     // Get the binded unique ID
                     const size_t id = c_e->bind_id;
-                    if (id > 0) {
+                    if (id == 0)
+                        return;
+
+                    webui::window* win = nullptr;
+                    callback_t callback;
+
+                    {
+                        std::lock_guard<std::mutex> lock(callback_mutex);
+                        const auto win_it = window_list.find(id);
+                        const auto cb_it = callback_list.find(id);
+                        if ((win_it != window_list.end()) && (cb_it != callback_list.end())) {
+                            win = win_it->second;
+                            callback = cb_it->second;
+                        }
+                    }
+
+                    if ((win != nullptr) && callback) {
                         // Create a new event struct
-                        event e(*window_list[id], *c_e);
+                        event e(*win, *c_e);
                         // Call the user callback
-                        if (callback_list[id] != nullptr)
-                            callback_list[id](&e);
+                        callback(&e);
                     }
                 }
 
-                static webui::window& get_window(const size_t index) { return *window_list[index]; }
+                static webui::window& get_window(const size_t index) { return *window_list.at(index); }
             };
 
             // ------ Event methods `e->xxx()` ------
@@ -210,6 +235,14 @@ namespace webui {
             // Get unique ID
             const size_t id = webui_bind(webui_window, element.data(), event::handler::handle);
             event::handler::add(id, this, func);
+        }
+
+        // Bind a class member function.
+        template <typename T>
+        void bind(const std::string_view element, T* instance, void (T::*method)(event*)) {
+            bind(element, [instance, method](event* e) {
+                (instance->*method)(e);
+            });
         }
 
         // Show a window using a embedded HTML, or a file. If the window is already opened
