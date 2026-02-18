@@ -8623,25 +8623,34 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
     _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_SET_FALSE);
 
     // Wait for server threads to stop
-    _webui_timer_t timer;
-    _webui_timer_start(&timer);
-    for (;;) {
+    if (!_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS) && 
+        _webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS)) {
+        // This is not a UI reload. The server thread is still running, 
+        // wait for it to stop before starting a new one.
+        _webui_timer_t timer;
+        _webui_timer_start(&timer);
+        for (;;) {
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t_webui_show_window() -> Waiting for server thread to stop...\n");
+            #endif
+            _webui_sleep(100);
+            if (!_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS)) {
+                #ifdef WEBUI_LOG
+                _webui_log_debug("[Core]\t\t_webui_show_window() -> Server thread stopped.\n");
+                #endif
+                break;
+            }
+            if (_webui_timer_is_end(&timer, 1500)) {
+                #ifdef WEBUI_LOG
+                _webui_log_debug("[Core]\t\t_webui_show_window() -> Server thread did not stop in time.\n");
+                #endif
+                break;
+            }
+        }
+    } else {
         #ifdef WEBUI_LOG
-        _webui_log_debug("[Core]\t\t_webui_show_window() -> Waiting for server thread to stop...\n");
+        _webui_log_debug("[Core]\t\t_webui_show_window() -> This is UI reload, reusing the same server thread.\n");
         #endif
-        _webui_sleep(100);
-        if (!_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS)) {
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Core]\t\t_webui_show_window() -> Server thread stopped.\n");
-            #endif
-            break;
-        }
-        if (_webui_timer_is_end(&timer, 1500)) {
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Core]\t\t_webui_show_window() -> Server thread did not stop in time.\n");
-            #endif
-            break;
-        }
     }
 
     // Initialization

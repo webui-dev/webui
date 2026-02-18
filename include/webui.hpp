@@ -245,7 +245,7 @@ namespace webui {
             });
         }
 
-        // Show a window using a embedded HTML, or a file. If the window is already opened
+        // Show a window (WebView/Browser) using a embedded HTML, or a file. If the window is already opened
         // then it will be refreshed.
         bool show(const std::string_view content) const {
             return webui_show(webui_window, content.data());
