@@ -25,7 +25,8 @@ debug:
 !ENDIF
 #	Dynamic with Debug info
 	@echo Build C++ Example (Debug Dynamic)...
-	@cl /Zi /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME)-static.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main-dyn.exe 1>NUL 2>&1
+	@copy "$(LIB_DIR)\debug\$(WEBUI_LIB_NAME).dll" "$(WEBUI_LIB_NAME).dll"
+	@cl /Zi /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)/debug" /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME).lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 #	Clean
 	@- del *.exp >nul 2>&1
 	@- del *.ilk >nul 2>&1
@@ -45,6 +46,7 @@ release:
 !ENDIF
 #	Dynamic Release
 	@echo Build C++ Example (Release Dynamic)...
+	@copy "$(LIB_DIR)\$(WEBUI_LIB_NAME).dll" "$(WEBUI_LIB_NAME).dll"
 	@cl /EHsc /std:c++17 main.cpp /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /SUBSYSTEM:WINDOWS $(WEBUI_LIB_NAME).lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 #	Clean
 	@- del *.exp >nul 2>&1
