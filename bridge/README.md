@@ -1,6 +1,6 @@
 # WebUI Bridge
 
-The WebUI Bridge connects the UI (_Web Browser_) with the backend application through WebSocket. This bridge is written in TypeScript, and it needs to be transpiled to JavaScript using [ESBuild](https://esbuild.github.io/) to produce `webui.js`, then converted to C header using the Python script `js2c.py` to generate `webui_bridge.h`.
+The WebUI Bridge connects the UI (_Web Browser_) with the backend application through WebSocket. This bridge is written in TypeScript, and it needs to be transpiled to JavaScript using [ESBuild](https://esbuild.github.io/) to produce `webui.js`, then converted to C header using the Node script `js2c.js` to generate `webui_bridge.h`.
 
 ### Windows
 
@@ -9,7 +9,7 @@ The WebUI Bridge connects the UI (_Web Browser_) with the backend application th
 - cd `webui\bridge`
 - `npm install esbuild`
 - `.\node_modules\.bin\esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=.\ .\webui.ts`
-- `python js2c.py`
+- `node js2c.js`
 
 ### Windows PowerShell
 
@@ -25,7 +25,7 @@ The WebUI Bridge connects the UI (_Web Browser_) with the backend application th
 - cd `webui/bridge`
 - `npm install esbuild`
 - `./node_modules/.bin/esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./ ./webui.ts`
-- `python js2c.py`
+- `node js2c.js`
 
 ### Linux Bash
 
@@ -39,7 +39,7 @@ The WebUI Bridge connects the UI (_Web Browser_) with the backend application th
 - cd `webui/bridge`
 - `npm install esbuild`
 - `./node_modules/.bin/esbuild --bundle --target="chrome90,firefox90,safari15" --format=esm --tree-shaking=false --outdir=./ ./webui.ts`
-- `python js2c.py`
+- `node js2c.js`
 
 ### macOS Bash
 
