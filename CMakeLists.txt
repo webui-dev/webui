@@ -122,7 +122,7 @@ if (WEBUI_BUILD_EXAMPLES)
 
     add_executable(minimal ${CMAKE_CURRENT_SOURCE_DIR}/examples/C++/minimal/main.cpp)
     add_executable(call_js_from_cpp ${CMAKE_CURRENT_SOURCE_DIR}/examples/C++/call_js_from_cpp/main.cpp)
-    add_executable(call_js_from_cpp_class ${CMAKE_CURRENT_SOURCE_DIR}/examples/C++/call_js_from_cpp_class/main.cpp)
+    add_executable(call_js_from_cpp_class ${CMAKE_CURRENT_SOURCE_DIR}/examples/C++/call_js_from_cpp/main.cpp)
     add_executable(serve_a_folder ${CMAKE_CURRENT_SOURCE_DIR}/examples/C++/serve_a_folder/main.cpp)
     add_executable(call_js_from_c ${CMAKE_CURRENT_SOURCE_DIR}/examples/C/call_js_from_c/main.c)
 
