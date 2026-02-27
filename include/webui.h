@@ -394,6 +394,15 @@ WEBUI_EXPORT bool webui_show_wv(size_t window, const char* content);
 WEBUI_EXPORT void webui_set_kiosk(size_t window, bool status);
 
 /**
+ * @brief Bring a window to the front and focus it.
+ *
+ * @param window The window number
+ *
+ * @example webui_focus(myWindow);
+ */
+WEBUI_EXPORT void webui_focus(size_t window);
+
+/**
  * @brief Add a user-defined web browser's CLI parameters.
  *
  * @param window The window number

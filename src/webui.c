@@ -477,7 +477,7 @@ typedef struct _webui_core_t {
     bool is_main_run;
     bool is_browser_mode;
     // WebView
-    bool is_webview;
+    bool is_webview_mode;
     #ifdef _WIN32
     char* webview_cacheFolder;
     HMODULE webviewLib;
@@ -985,7 +985,7 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
             js_status = _webui.run_done[run_id];
             _webui_mutex_unlock(&_webui.mutex_js_run);
             #if __linux__
-            if (_webui.is_webview) {
+            if (_webui.is_webview_mode) {
                 while (gtk_events_pending()) {
                    gtk_main_iteration_do(0);
                 }
@@ -1005,7 +1005,7 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
             js_status = _webui.run_done[run_id];
             _webui_mutex_unlock(&_webui.mutex_js_run);
             #if __linux__
-            if (_webui.is_webview) {
+            if (_webui.is_webview_mode) {
                 while (gtk_events_pending()) {
                    gtk_main_iteration_do(0);
                 }
@@ -1882,6 +1882,68 @@ bool webui_show_client(webui_event_t* e, const char* content) {
 
     // Show for single a client
     return _webui_show(win, _webui.clients[e->connection_id], content, AnyBrowser);
+}
+
+#ifdef _WIN32
+    // Callback for EnumWindows used to find the window handle of the web browser process
+    // and bring it to the foreground (front).
+    BOOL CALLBACK _webui_win32_enum_proc(HWND hwnd, LPARAM lParam) {
+        DWORD targetPid = (DWORD)lParam;
+        DWORD pid = 0;
+        GetWindowThreadProcessId(hwnd, &pid);
+        if (pid == targetPid && IsWindowVisible(hwnd)) {
+            // Restore if minimized
+            if (IsIconic(hwnd)) {
+                ShowWindow(hwnd, SW_RESTORE);
+            }
+            // Bring to foreground
+            SetForegroundWindow(hwnd);
+            // stop enumeration
+            return FALSE; 
+        }
+        // continue enumeration
+        return TRUE;
+    }
+#endif
+
+void webui_focus(size_t window) {
+
+    #ifdef WEBUI_LOG
+    _webui_log_info("[User] webui_focus([%zu])\n", window);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    #ifdef _WIN32
+    if (_webui.is_webview_mode) {
+        // WebView
+        void* hwnd = webui_win32_get_hwnd(window);
+        if (hwnd) {
+            ShowWindow(hwnd, SW_RESTORE);
+            SetForegroundWindow((HWND)hwnd);
+            SetFocus((HWND)hwnd);
+        }
+    } else {
+        // Web-Browser Window
+        DWORD pid = (DWORD)_webui_get_child_process_id(win);
+        if (pid != 0) {
+            // Set callback for EnumWindows
+            EnumWindows(_webui_win32_enum_proc, (LPARAM)pid);
+        }
+    }
+
+    #elif __linux__
+    // Linux does not have a standard way to bring a window to the foreground from another process.
+    // This is a known limitation and may not work on all desktop environments.
+    #else
+    // macOS does not have a standard way to bring a window to the foreground from another process.
+    #endif
 }
 
 bool webui_show(size_t window, const char* content) {
@@ -2818,7 +2880,7 @@ void* webui_win32_get_hwnd(size_t window) {
     _webui_window_t* win = _webui.wins[window];
 
     #ifdef _WIN32
-    if (_webui.is_webview) {
+    if (_webui.is_webview_mode) {
         // WebView Window
         if (win->webView && win->webView->cpp_handle) {
             return _webui_win32_wv2_get_hwnd(win->webView->cpp_handle);
@@ -2867,7 +2929,7 @@ void* webui_get_hwnd(size_t window) {
         return NULL;
     _webui_window_t* win = _webui.wins[window];
 
-    if (_webui.is_webview) {
+    if (_webui.is_webview_mode) {
       if (win->webView) {
         return win->webView->gtk_win;
       }
@@ -3613,7 +3675,7 @@ static void _webui_wait_clean(bool async) {
 
     // Clean
     #ifdef _WIN32
-        if (!_webui.is_webview) {
+        if (!_webui.is_webview_mode) {
             // Windows Web browser Clean
 
             // ...
@@ -3630,7 +3692,7 @@ static void _webui_wait_clean(bool async) {
             CoUninitialize();
         }
     #elif __linux__
-        if (!_webui.is_webview) {
+        if (!_webui.is_webview_mode) {
             // Linux Web browser Clean
 
             // ...
@@ -3660,7 +3722,7 @@ static void _webui_wait_clean(bool async) {
             _webui_wv_free();
         }
     #else
-        if (!_webui.is_webview) {
+        if (!_webui.is_webview_mode) {
             // macOS Web browser Clean
 
             // ...
@@ -3731,7 +3793,7 @@ static bool _webui_wait(bool async) {
 
     // Main loop
     #ifdef _WIN32
-        if (!_webui.is_webview) {
+        if (!_webui.is_webview_mode) {
             // Windows Web browser main loop
 
             #ifdef WEBUI_LOG
@@ -3775,7 +3837,7 @@ static bool _webui_wait(bool async) {
             }
         }
     #elif __linux__
-        if (!_webui.is_webview) {
+        if (!_webui.is_webview_mode) {
             // Linux Web browser main loop
 
             #ifdef WEBUI_LOG
@@ -3825,7 +3887,7 @@ static bool _webui_wait(bool async) {
             }
         }
     #else
-        if (!_webui.is_webview) {
+        if (!_webui.is_webview_mode) {
             // macOS Web browser main loop
 
             #ifdef WEBUI_LOG
@@ -7938,7 +8000,7 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
 static size_t _webui_get_child_process_id(_webui_window_t* win) {
     if (win) {
         // Get PID
-        if (_webui.is_webview) {
+        if (_webui.is_webview_mode) {
             // WebView Mode
             #if defined(_WIN32)
             return (size_t)GetCurrentProcessId();
@@ -7957,6 +8019,29 @@ static size_t _webui_get_child_process_id(_webui_window_t* win) {
             _webui_system_win32_out(cmd, &out, false);
             size_t process_id = 0;
             if (out) {
+
+                // Check if we get:
+                //   "'wmic' is not recognized as an internal or external command"
+                // which means WMIC is not available on this system (Windows 11 22H2 and later)
+                if (strstr(out, "is not recognized") != NULL) {
+                    free(out);
+                    // WMIC is not available, let's try PowerShell as a fallback.
+                    WEBUI_SN_PRINTF_STATIC(
+                        cmd,
+                        sizeof(cmd),
+                        "cmd.exe /c powershell -NoProfile -Command \"$url='%s';$p=Get-CimInstance Win32_Process | "
+                        "Where-Object { $_.CommandLine -and $_.CommandLine -match [regex]::Escape($url) };"
+                        "if($p.Count -gt 0){$p[0].ProcessId}else{0}\" 2>&1",
+                        win->url
+                    );
+                    _webui_system_win32_out(cmd, &out, false);
+                    if (!out) return 0;
+                    process_id = (size_t)atoi(out);
+                    free(out);
+                    return process_id;
+                }
+
+                // Parse the CSV output
                 char* line_start = out;
                 char* found_url_ptr = NULL;
                 while ((line_start = strstr(line_start, "\n")) != NULL) {
@@ -8232,6 +8317,9 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
 
     // Reset
     win->is_showing = false;
+
+    // Bring the window to front after showing content
+    webui_focus(win->num);
 
     return status;
 }
@@ -8901,7 +8989,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
             _webui.startup_timeout : WEBUI_DEF_TIMEOUT
         );
 
-        if (_webui.is_webview) {
+        if (_webui.is_webview_mode) {
 
             // WebView
 
@@ -8912,18 +9000,18 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
                 _webui_sleep(10);
 
                 // Process WebView rendering if any
-                if (_webui.is_webview) {
+                if (_webui.is_webview_mode) {
                     #ifdef _WIN32
                     // ...
                     #elif __linux__
-                    if (_webui.is_webview) {
+                    if (_webui.is_webview_mode) {
                         while (gtk_events_pending()) {
                             gtk_main_iteration_do(0);
                         }
                     }
                     #else
                     if (!_webui.is_wkwebview_main_run) {
-                        if (_webui.is_webview) {
+                        if (_webui.is_webview_mode) {
                             _webui_macos_wv_process();
                         }
                     }
@@ -10399,7 +10487,7 @@ static WEBUI_THREAD_SERVER_START {
 
     // Kill Process
     #ifndef WEBUI_LOG
-    if (!_webui.is_webview) {
+    if (!_webui.is_webview_mode) {
         if (_webui.current_browser != WEBUI_NATIVE_BROWSER) {
             // Terminating the web browser window process
             _webui_kill_pid(_webui_get_child_process_id(win));
@@ -12122,7 +12210,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         // Initializing
         // Expecting `_webui_webview_thread` to change `mutex_is_webview_update`
-        // to `false` when initialization is done, and `_webui.is_webview`
+        // to `false` when initialization is done, and `_webui.is_webview_mode`
         // to `true` if loading the WebView is succeeded.
         _webui_webview_update(win);
 
@@ -12154,10 +12242,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         #ifdef WEBUI_LOG
-        _webui_log_debug("[Core]\t\t_webui_wv_show() -> Return [%d]\n", (_webui.is_webview == true));
+        _webui_log_debug("[Core]\t\t_webui_wv_show() -> Return [%d]\n", (_webui.is_webview_mode == true));
         #endif
 
-        return (_webui.is_webview);
+        return (_webui.is_webview_mode);
     };
 
     static bool _webui_wv_minimize(_webui_wv_win32_t* webView) {
@@ -12352,7 +12440,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
             // Success
             // Let `wait()` use safe main-thread WebView2 loop
-            _webui.is_webview = true;
+            _webui.is_webview_mode = true;
 
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
             MSG msg;
@@ -12679,7 +12767,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             // when the application ends.
         }
 
-        _webui.is_webview = false;
+        _webui.is_webview_mode = false;
         libwebkit = NULL;
         libgtk = NULL;
     };
@@ -12813,7 +12901,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
     static bool _webui_load_gtk_and_webkit() {
         if (!libgtk || !libwebkit) {
 
-            _webui.is_webview = false;
+            _webui.is_webview_mode = false;
 
             // GTK Dynamic Load
             const char *gtk_libs[] = GTK_RUNTIME_ARR;
@@ -13070,7 +13158,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         // Initializing
         // Expecting `_webui_webview_thread` to change `mutex_is_webview_update` 
-        // to `false` when initialization is done, and `_webui.is_webview`
+        // to `false` when initialization is done, and `_webui.is_webview_mode`
         // to `true` if loading the WebView is succeeded.
         _webui_webview_update(win);
 
@@ -13093,10 +13181,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         #ifdef WEBUI_LOG
-        _webui_log_debug("[Core]\t\t_webui_wv_show() -> Return [%d]\n", (_webui.is_webview == true));
+        _webui_log_debug("[Core]\t\t_webui_wv_show() -> Return [%d]\n", (_webui.is_webview_mode == true));
         #endif
 
-        return (_webui.is_webview);
+        return (_webui.is_webview_mode);
     };
 
     static WEBUI_THREAD_WEBVIEW {
@@ -13128,7 +13216,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
             // Success
             // Let `wait()` use safe main-thread GTK WebView loop
-            _webui.is_webview = true;
+            _webui.is_webview_mode = true;
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
 
             while (true) {
@@ -13278,9 +13366,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         if (!_webui.is_wkwebview_main_run) {
             if (_webui_macos_wv_new(win->num, win->frameless, win->resizable)) {
-                if (!_webui.is_webview) {
+                if (!_webui.is_webview_mode) {
                     // Let `wait()` use safe main-thread WKWebView loop
-                    _webui.is_webview = true;
+                    _webui.is_webview_mode = true;
                     // Set close callback once
                     _webui_macos_wv_set_close_cb(_webui_wv_event_closed);
                 }
