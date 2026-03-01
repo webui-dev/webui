@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
+include(GNUInstallDirs)
 
 # Project name
 project(WebUILibrary 
@@ -109,6 +110,16 @@ install(EXPORT webui
     DESTINATION share/webui
 )
 
+# Generate and install pkgconfig
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/webui.pc.in ${CMAKE_CURRENT_BINARY_DIR}/${WEBUI_DEFAULT_OUT_LIB_NAME}.pc
+  @ONLY # don't replace ${VAR} syntax
+)
+
+install(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/${WEBUI_DEFAULT_OUT_LIB_NAME}.pc
+  DESTINATION lib/pkgconfig
+)
 
 #//////////////////////////
 # Build examples 
