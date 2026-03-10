@@ -336,6 +336,7 @@ typedef struct _webui_window_t {
     const char* html;
     const char* user_index_file;
     const char* user_index_file_encoded;
+    bool allow_index_fallback;
     char* server_root_path;
     #ifdef _WIN32
     HANDLE server_thread;
@@ -5425,10 +5426,12 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
                     }
                 }
 
-                index_files[index_files_len++] = "index.html";
-                index_files[index_files_len++] = "index.htm";
-                index_files[index_files_len++] = "index.ts";
-                index_files[index_files_len++] = "index.js";
+                if (win->allow_index_fallback) {
+                    index_files[index_files_len++] = "index.html";
+                    index_files[index_files_len++] = "index.htm";
+                    index_files[index_files_len++] = "index.ts";
+                    index_files[index_files_len++] = "index.js";
+                }
 
                 char base_url[WEBUI_MAX_PATH];
                 if (strcmp(url, "/") == 0) {
@@ -8860,6 +8863,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
     if (!keep_user_index_file) {
         win->user_index_file = NULL;
         win->user_index_file_encoded = NULL;
+        win->allow_index_fallback = false;
     }
 
     // Get network ports
@@ -8924,6 +8928,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
 
         // Show a window using a local folder
         win->is_embedded_html = false;
+        win->allow_index_fallback = true;
 
         // Set window URL
         window_url = win->url;
@@ -8934,6 +8939,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
         win->is_embedded_html = false;
         win->user_index_file = content;
         win->user_index_file_encoded = _webui_url_encode(content);
+        win->allow_index_fallback = false;
 
         // Generate the URL
         size_t bf_len = (64 + _webui_strlen(win->user_index_file_encoded));
@@ -9944,15 +9950,23 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
 
                 // Looking for index file and redirect
 
-                const char* index_files[] = {
-                    win->user_index_file, // User-defined index file
-                    "index.html", "index.htm", "index.ts", "index.js"
-                };
+                const char* index_files[5];
+                size_t index_files_len = 0;
+
+                if (!_webui_is_empty(win->user_index_file)) {
+                    index_files[index_files_len++] = win->user_index_file;
+                }
+                if (win->allow_index_fallback) {
+                    index_files[index_files_len++] = "index.html";
+                    index_files[index_files_len++] = "index.htm";
+                    index_files[index_files_len++] = "index.ts";
+                    index_files[index_files_len++] = "index.js";
+                }
 
                 // [Path][Sep][File Name]
                 size_t bf_len = (_webui_strlen(win->server_root_path) + 1 + 24);
                 char* index_path = (char*)_webui_malloc(bf_len);
-                for (size_t i = 0; i < (sizeof(index_files) / sizeof(index_files[0])); i++) {
+                for (size_t i = 0; i < index_files_len; i++) {
                     WEBUI_SN_PRINTF_DYN(index_path, bf_len, "%s%s%s",
                         win->server_root_path, os_sep, index_files[i]
                     );
@@ -10072,10 +10086,12 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                     }
                 }
 
-                index_files[index_files_len++] = "index.html";
-                index_files[index_files_len++] = "index.htm";
-                index_files[index_files_len++] = "index.ts";
-                index_files[index_files_len++] = "index.js";
+                if (win->allow_index_fallback) {
+                    index_files[index_files_len++] = "index.html";
+                    index_files[index_files_len++] = "index.htm";
+                    index_files[index_files_len++] = "index.ts";
+                    index_files[index_files_len++] = "index.js";
+                }
 
                 // [Path][Sep][File Name]
                 size_t bf_len = (_webui_strlen(folder_path) + 1 + 24);

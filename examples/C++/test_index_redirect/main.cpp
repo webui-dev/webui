@@ -12,9 +12,9 @@
 //
 // The expected server behavior is:
 //   - start_server("custom.html") prefers custom.html in every directory
-//   - if custom.html is missing, fallback probes index.html, index.htm,
-//     index.ts, then index.js
-//   - start_server() or start_server("") means "fallback mode"
+//   - an explicit filename is strict; if it does not exist, the request fails
+//   - start_server() or start_server("") means "fallback mode", which probes
+//     index.html, index.htm, index.ts, then index.js
 //
 // Note: index.ts and index.js can still be valid fallback targets for
 // runtime/script-first scenarios, but they are not equivalent to an HTML GUI
