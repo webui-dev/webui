@@ -643,6 +643,7 @@ static size_t _webui_client_get_id(_webui_window_t* win, struct mg_connection* c
 static void _webui_generate_cookies(char* cookies, size_t length);
 static int _webui_serve_file(_webui_window_t* win, struct mg_connection* client, size_t client_id);
 static int _webui_external_file_handler(_webui_window_t* win, struct mg_connection* client, size_t client_id);
+static const void* _webui_call_external_file_handler_cb(_webui_window_t* win, const char* path, size_t* length);
 static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* client, char* index, size_t client_id);
 static void _webui_webview_update(_webui_window_t* win);
 static void _webui_make_window_reusable(_webui_window_t* win);
@@ -1836,9 +1837,6 @@ const char* webui_start_server(size_t window, const char* content) {
     _webui_log_info("[User] webui_start_server([%zu])\n", window);
     #endif
 
-    if (_webui_is_empty(content))
-        return "";
-    
     // Initialization
     _webui_init();
 
@@ -1854,9 +1852,18 @@ const char* webui_start_server(size_t window, const char* content) {
     // Make `wait()` waits forever
     webui_set_timeout(0);
 
-    // Start the window without any GUI
-    if (webui_show_browser(window, content, NoBrowser)) {
-        return webui_get_url(window);
+    // Start the window without any GUI.
+    // Empty content means: use folder mode with the current root path,
+    // so index fallback can be resolved by WebUI.
+    bool started = false;
+    if (_webui_is_empty(content)) {
+        started = _webui_show_window(win, NULL, win->server_root_path, WEBUI_SHOW_FOLDER, NoBrowser);
+    } else {
+        started = webui_show_browser(window, content, NoBrowser);
+    }
+
+    if (started) {
+        return win->url;
     }
 
     return "";
@@ -5258,6 +5265,40 @@ static void _webui_free_event_inf(_webui_window_t* win, size_t event_num) {
     win->events[event_num] = NULL;
 }
 
+static const void* _webui_call_external_file_handler_cb(_webui_window_t* win, const char* path, size_t* length) {
+
+    // Async response init
+    if (_webui.config.asynchronous_response) {
+        win->file_handler_async_response = NULL;
+        win->file_handler_async_len = 0;
+        win->file_handler_async_done = false;
+    }
+
+    // Call user callback
+    const void* callback_resp = NULL;
+    if (win->files_handler_window != NULL) {
+        callback_resp = win->files_handler_window(win->num, path, (int*)length);
+    } else {
+        callback_resp = win->files_handler(path, (int*)length);
+    }
+
+    // Async response wait
+    if (_webui.config.asynchronous_response) {
+        bool done = false;
+        while (!done) {
+            _webui_sleep(10);
+            _webui_mutex_lock(&_webui.mutex_async_response);
+            if (win->file_handler_async_done)
+                done = true;
+            _webui_mutex_unlock(&_webui.mutex_async_response);
+        }
+        callback_resp = win->file_handler_async_response;
+        *length = win->file_handler_async_len;
+    }
+
+    return callback_resp;
+}
+
 static int _webui_external_file_handler(_webui_window_t* win, struct mg_connection* client, size_t client_id) {
 
     #ifdef WEBUI_LOG
@@ -5311,41 +5352,22 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
         _webui_log_debug("[Call]\n");
         #endif
 
-        // Async response ini
-        if (_webui.config.asynchronous_response) {
-            win->file_handler_async_response = NULL;
-            win->file_handler_async_len = 0;
-            win->file_handler_async_done = false;
-        }
-
-        // Call user callback
-        const void* callback_resp = NULL;
-        if (win->files_handler_window != NULL) {
-            callback_resp = win->files_handler_window(win->num, handler_url, (int*)&length);
-        } else {
-            callback_resp = win->files_handler(handler_url, (int*)&length);
-        }
-
-        // Async response wait
-        if (_webui.config.asynchronous_response) {
-            // `callback_resp` is NULL now, we need to
-            // wait for the response that will come later.
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> Waiting for asynchronous response...\n");
-            #endif
-            bool done = false;
-            while (!done) {
-                _webui_sleep(10);
-                _webui_mutex_lock(&_webui.mutex_async_response);
-                if(win->file_handler_async_done) done = true;
-                _webui_mutex_unlock(&_webui.mutex_async_response);
-            }
-            // Get the async response
-            callback_resp = win->file_handler_async_response;
-            length = win->file_handler_async_len;
-        }
+        // Call user callback for the requested path
+        const void* callback_resp = _webui_call_external_file_handler_cb(win, handler_url, &length);
 
         if (callback_resp != NULL) {
+            // Keep canonical behavior consistent with local-folder mode:
+            // if we resolved a different target path (e.g. "/" -> "/custom.html"),
+            // redirect to that path instead of serving it directly.
+            if (strcmp(url, handler_url) != 0) {
+                #ifdef WEBUI_LOG
+                _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> 302 Redirecting to [%s]\n", handler_url);
+                #endif
+                mg_send_http_redirect(client, handler_url, 302);
+                _webui_free_mem((void*)callback_resp);
+                http_status_code = 302;
+                return http_status_code;
+            }
 
             // File content found
 
@@ -5377,6 +5399,63 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
             #ifdef WEBUI_LOG
             _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> Custom files handler failed\n");
             #endif
+
+            // Virtual filesystems can represent directories without physical folders.
+            // If direct lookup fails, probe for index files and redirect.
+            size_t url_len = _webui_strlen(url);
+            const char* ext = _webui_get_extension(url);
+            bool maybe_folder = false;
+            if (url_len > 0 && url[0] == '/') {
+                if (strcmp(url, "/") == 0 || url[url_len - 1] == '/' || _webui_is_empty(ext))
+                    maybe_folder = true;
+            }
+
+            if (maybe_folder) {
+                const char* index_files[5];
+                size_t index_files_len = 0;
+
+                char user_index_name[WEBUI_MAX_PATH] = {0};
+                if (!_webui_is_empty(win->user_index_file)) {
+                    const char* user_index = win->user_index_file;
+                    const char* p = strrchr(user_index, '/');
+                    const char* filename = (p == NULL ? user_index : (p + 1));
+                    if (!_webui_is_empty(filename)) {
+                        WEBUI_SN_PRINTF_STATIC(user_index_name, WEBUI_MAX_PATH, "%s", filename);
+                        index_files[index_files_len++] = user_index_name;
+                    }
+                }
+
+                index_files[index_files_len++] = "index.html";
+                index_files[index_files_len++] = "index.htm";
+                index_files[index_files_len++] = "index.ts";
+                index_files[index_files_len++] = "index.js";
+
+                char base_url[WEBUI_MAX_PATH];
+                if (strcmp(url, "/") == 0) {
+                    WEBUI_SN_PRINTF_STATIC(base_url, WEBUI_MAX_PATH, "/");
+                } else if (url[url_len - 1] == '/') {
+                    WEBUI_SN_PRINTF_STATIC(base_url, WEBUI_MAX_PATH, "%s", url);
+                } else {
+                    WEBUI_SN_PRINTF_STATIC(base_url, WEBUI_MAX_PATH, "%s/", url);
+                }
+
+                for (size_t i = 0; i < index_files_len; i++) {
+                    char index_url[WEBUI_MAX_PATH];
+                    WEBUI_SN_PRINTF_STATIC(index_url, WEBUI_MAX_PATH, "%s%s", base_url, index_files[i]);
+
+                    size_t index_len = 0;
+                    const void* index_resp = _webui_call_external_file_handler_cb(win, index_url, &index_len);
+                    if (index_resp != NULL) {
+                        _webui_free_mem((void*)index_resp);
+                        #ifdef WEBUI_LOG
+                        _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> 302 Redirecting to [%s]\n", index_url);
+                        #endif
+                        mg_send_http_redirect(client, index_url, 302);
+                        http_status_code = 302;
+                        break;
+                    }
+                }
+            }
         }
 
         // If `data == NULL` thats mean the external handler
@@ -8258,11 +8337,19 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
     _webui_log_debug("[Core]\t\t_webui_show([%zu])\n", browser);
     #endif
 
-    if (_webui_is_empty(content))
-        return false;
-
     // Prevent main loops from breaking.
     win->is_showing = true;
+
+    // Empty content means: use folder mode with the current root path,
+    // so index fallback can be resolved by WebUI.
+    if (_webui_is_empty(content)) {
+        bool empty_status = _webui_show_window(
+            win, client, win->server_root_path, WEBUI_SHOW_FOLDER, browser
+        );
+        win->is_showing = false;
+        webui_focus(win->num);
+        return empty_status;
+    }
 
     // Some wrappers do not guarantee pointers stay valid,
     // so, let's make our copy.
@@ -8742,18 +8829,38 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
     }
 
     // Initialization
+    bool keep_user_index_file = false;
+    if (type == WEBUI_SHOW_URL && win->url != NULL && !_webui_is_empty(content)) {
+        // Keep previously selected entry file when we only open/reopen
+        // this window's own local server URL in a browser.
+        if (strcmp(content, win->url) == 0) {
+            keep_user_index_file = true;
+        } else {
+            size_t base_len = _webui_strlen(win->url);
+            if (_webui_strlen(content) > base_len &&
+                strncmp(content, win->url, base_len) == 0 &&
+                content[base_len] == '/') {
+                keep_user_index_file = true;
+            }
+        }
+    }
+
     if (win->html != NULL)
         _webui_free_mem((void*)win->html);
     if (win->url != NULL)
         _webui_free_mem((void*)win->url);
-    if (win->user_index_file != NULL)
-        _webui_free_mem((void*)win->user_index_file);
-    if (win->user_index_file_encoded != NULL)
-        _webui_free_mem((void*)win->user_index_file_encoded);
+    if (!keep_user_index_file) {
+        if (win->user_index_file != NULL)
+            _webui_free_mem((void*)win->user_index_file);
+        if (win->user_index_file_encoded != NULL)
+            _webui_free_mem((void*)win->user_index_file_encoded);
+    }
     win->html = NULL;
     win->url = NULL;
-    win->user_index_file = NULL;
-    win->user_index_file_encoded = NULL;
+    if (!keep_user_index_file) {
+        win->user_index_file = NULL;
+        win->user_index_file_encoded = NULL;
+    }
 
     // Get network ports
     if (win->custom_server_port > 0) {
@@ -8797,14 +8904,19 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
         const char* user_url = content;
 
         // Show a window using a specific URL
-        win->is_embedded_html = true;
-        size_t bf_len = (64 + _webui_strlen(user_url));
-        char* refresh = (char*)_webui_malloc(bf_len);
-        WEBUI_SN_PRINTF_DYN(refresh, bf_len, "<meta http-equiv=\"refresh\" content=\"0;url=%s\">", user_url);
-        win->html = refresh;
-
-        // Set window URL
-        window_url = (char*)user_url;
+        // If this URL points to this window's own local server,
+        // keep server routing state instead of switching to embedded HTML mode.
+        if (keep_user_index_file) {
+            win->is_embedded_html = false;
+            window_url = (char*)user_url;
+        } else {
+            win->is_embedded_html = true;
+            size_t bf_len = (64 + _webui_strlen(user_url));
+            char* refresh = (char*)_webui_malloc(bf_len);
+            WEBUI_SN_PRINTF_DYN(refresh, bf_len, "<meta http-equiv=\"refresh\" content=\"0;url=%s\">", user_url);
+            win->html = refresh;
+            window_url = (char*)user_url;
+        }
     }
     else if (type == WEBUI_SHOW_FOLDER) {
 
@@ -9834,7 +9946,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
 
                 const char* index_files[] = {
                     win->user_index_file, // User-defined index file
-                    "index.ts", "index.js", "index.html", "index.htm"
+                    "index.html", "index.htm", "index.ts", "index.js"
                 };
 
                 // [Path][Sep][File Name]
@@ -9899,7 +10011,10 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
             // [Path][Sep][folder]
             char* folder_path = _webui_get_full_path(win, url);
 
-            if (_webui_file_exist(folder_path)) {
+            bool is_folder = _webui_folder_exist(folder_path);
+            bool is_file = (_webui_file_exist(folder_path) && !is_folder);
+
+            if (is_file) {
 
                 // [/file]
 
@@ -9937,27 +10052,42 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                     http_status_code = _webui_serve_file(win, client, client_id);
                 }
             }
-            else if (_webui_folder_exist(folder_path)) {
+            else if (is_folder) {
 
                 // [/folder]
                 
                 // Looking for index file and redirect
 
-                const char* index_files[] = {
-                    // win->user_index_file, TODO: Do we need to disable user index file for subfolders?
-                    "index.ts", "index.js", "index.html", "index.htm"
-                };
+                const char* index_files[5];
+                size_t index_files_len = 0;
+
+                char user_index_name[WEBUI_MAX_PATH] = {0};
+                if (!_webui_is_empty(win->user_index_file)) {
+                    const char* user_index = win->user_index_file;
+                    const char* p = strrchr(user_index, '/');
+                    const char* filename = (p == NULL ? user_index : (p + 1));
+                    if (!_webui_is_empty(filename)) {
+                        WEBUI_SN_PRINTF_STATIC(user_index_name, WEBUI_MAX_PATH, "%s", filename);
+                        index_files[index_files_len++] = user_index_name;
+                    }
+                }
+
+                index_files[index_files_len++] = "index.html";
+                index_files[index_files_len++] = "index.htm";
+                index_files[index_files_len++] = "index.ts";
+                index_files[index_files_len++] = "index.js";
 
                 // [Path][Sep][File Name]
                 size_t bf_len = (_webui_strlen(folder_path) + 1 + 24);
                 char* index_path = (char*)_webui_malloc(bf_len);
-                for (size_t i = 0; i < (sizeof(index_files) / sizeof(index_files[0])); i++) {
+                for (size_t i = 0; i < index_files_len; i++) {
                     WEBUI_SN_PRINTF_DYN(index_path, bf_len, "%s%s%s", folder_path, os_sep, index_files[i]);
                     if (_webui_file_exist(index_path)) {
-                        // [URL][/][Index Name]
-                        size_t redirect_len = (_webui_strlen(url) + 1 + 24);
-                        char* redirect_url = (char*)_webui_malloc(bf_len);
-                        WEBUI_SN_PRINTF_DYN(redirect_url, redirect_len, "%s%s%s", url, "/", index_files[i]);
+                        // [URL][optional /][Index Name] (avoid generating "//")
+                        const char* sep = ((_webui_strlen(url) > 0) && (url[_webui_strlen(url) - 1] == '/')) ? "" : "/";
+                        size_t redirect_len = (_webui_strlen(url) + _webui_strlen(sep) + _webui_strlen(index_files[i]) + 1);
+                        char* redirect_url = (char*)_webui_malloc(redirect_len);
+                        WEBUI_SN_PRINTF_DYN(redirect_url, redirect_len, "%s%s%s", url, sep, index_files[i]);
                         #ifdef WEBUI_LOG
                         _webui_log_debug("[Core]\t\t_webui_http_handler() -> 302 Redirecting to [%s]\n", redirect_url);
                         #endif
