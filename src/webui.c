@@ -5404,12 +5404,7 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
             // Virtual filesystems can represent directories without physical folders.
             // If direct lookup fails, probe for index files and redirect.
             size_t url_len = _webui_strlen(url);
-            const char* ext = _webui_get_extension(url);
-            bool maybe_folder = false;
-            if (url_len > 0 && url[0] == '/') {
-                if (strcmp(url, "/") == 0 || url[url_len - 1] == '/' || _webui_is_empty(ext))
-                    maybe_folder = true;
-            }
+            bool maybe_folder = (url_len > 0 && url[0] == '/');
 
             if (maybe_folder) {
                 const char* index_files[5];
