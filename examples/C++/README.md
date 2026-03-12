@@ -9,6 +9,7 @@ The only requirement to build the examples is a a C++11 compiler.
 - `call_js_from_cpp`: Calls JavaScript from C++ using class methods and member-function bind.
 - `serve_a_folder`: Uses WebUI to serve a folder with multiple files (class-based example using member-function bind).
 - `virtual_file_system`: Embeds files using a virtual file system.
+- `test_index_redirect`: Tests index fallback and custom entry behavior for `/`, `/sub`, and `/sub/foo`.
 
 To build an example, cd into its directory and run the make command.
 

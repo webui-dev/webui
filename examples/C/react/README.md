@@ -3,6 +3,7 @@
 This is a basic example of how to use WebUI with React to generate a portable single executable program. WebUI will run the internal web server and use any installed web browser as GUI to show the React UI.
 
 A simple Python script `vfs.py` is used to generate `vfs.h` to embed the whole react's build folder into the portable single executable program.
+The generated VFS serves exact file paths only; directory index fallback/redirect is handled by WebUI core.
 
 ![Screenshot](webui_react.png)
 

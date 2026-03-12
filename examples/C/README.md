@@ -16,6 +16,7 @@ The only requirement to build the examples is a C compiler.
 - `public_network_access`: Allows network access to external devices.
 - `react`: React + WebUI example.
 - `virtual_file_system`: Embeds files using a virtual file system.
+- `test_index_redirect`: Tests index fallback and custom entry behavior for `/`, `/sub`, and `/sub/foo`.
 - `web_app_multi_client`: Multiple clients example.
 
 To build an example, cd into its directory and run the make command.

@@ -319,7 +319,9 @@ WEBUI_EXPORT size_t webui_get_best_browser(size_t window);
  * open, it will be refreshed. This will refresh all windows in multi-client mode.
  *
  * @param window The window number
- * @param content The HTML, URL, Or a local file
+ * @param content The HTML, URL, local file, or local folder.
+ * Pass `NULL` or an empty string to start in folder mode using the
+ * current root folder and index fallback logic.
  *
  * @return Returns True if showing the window is successed.
  *
@@ -346,7 +348,9 @@ WEBUI_EXPORT bool webui_show_client(webui_event_t* e, const char* content);
  * @brief Same as `webui_show()`. But using a specific web browser.
  *
  * @param window The window number
- * @param content The HTML, Or a local file
+ * @param content The HTML, URL, local file, or local folder.
+ * Pass `NULL` or an empty string to start in folder mode using the
+ * current root folder and index fallback logic.
  * @param browser The web browser to be used
  *
  * @return Returns True if showing the window is successed.
@@ -357,11 +361,13 @@ WEBUI_EXPORT bool webui_show_client(webui_event_t* e, const char* content);
 WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, size_t browser);
 
 /**
- * @brief Same as `webui_show()`. But start only the web server and return the URL.
+ * @brief Start only the local web server and return the URL.
  * No window will be shown.
  *
  * @param window The window number
- * @param content The HTML, Or a local file
+ * @param content The local file or local folder to serve.
+ * Pass `NULL` or an empty string to start in folder mode using the
+ * current root folder and index fallback logic.
  *
  * @return Returns the url of this window server.
  *
