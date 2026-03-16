@@ -271,6 +271,16 @@ namespace webui {
             webui_set_high_contrast(webui_window, status);
         }
 
+        // Maximize the window
+        void maximize() {
+            webui_maximize(webui_window);
+        }
+
+        // Minimize the window
+        void minimize() {
+            webui_minimize(webui_window);
+        }
+
         // Close a specific window only. The window object will still exist.
         void close() const {
             webui_close(webui_window);
