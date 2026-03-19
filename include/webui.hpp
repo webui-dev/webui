@@ -459,10 +459,27 @@ namespace webui {
             webui_set_context(webui_window, element.data(), context);
         }
 
-        // Gets Win32 window `HWND`. More reliable with WebView than web browser 
+        // Gets Win32 window `HWND`. More reliable with WebView than web browser
         // window, as browser PIDs may change on launch.
         void* win32_get_hwnd() const {
             return webui_win32_get_hwnd(webui_window);
+        }
+
+        // Get the native window handle. On Windows returns HWND (works with WebView
+        // and web browser). On Linux returns GtkWindow* (WebView only).
+        void* get_hwnd() const {
+            return webui_get_hwnd(webui_window);
+        }
+
+        // Bring the window to the front and give it keyboard focus.
+        void focus() const {
+            webui_focus(webui_window);
+        }
+
+        // Set a callback to intercept the close event of a WebView window.
+        // The handler must return false to prevent closing, true to allow it.
+        void set_close_handler_wv(bool (*close_handler)(size_t window)) const {
+            webui_set_close_handler_wv(webui_window, close_handler);
         }
     };
 
@@ -573,6 +590,28 @@ namespace webui {
     // Copy raw data.
     inline void memcpy(void* dest, const void* src, size_t count) {
         webui_memcpy(dest, const_cast<void*>(src), count);
+    }
+
+    // Wait asynchronously until all opened windows get closed.
+    // Returns true if more windows are still open, false when all are closed.
+    // Must be called from the main thread in WebView mode.
+    inline bool wait_async() {
+        return webui_wait_async();
+    }
+
+    // Set a custom logger function to receive WebUI's internal log messages.
+    inline void set_logger(void (*func)(size_t level, const char* log, void* user_data), void* user_data = nullptr) {
+        webui_set_logger(func, user_data);
+    }
+
+    // Get the error code from the most recent WebUI operation that failed.
+    inline size_t get_last_error_number() {
+        return webui_get_last_error_number();
+    }
+
+    // Get the human-readable error message from the most recent failed WebUI operation.
+    inline std::string_view get_last_error_message() {
+        return std::string_view{webui_get_last_error_message()};
     }
 
 } // namespace webui
