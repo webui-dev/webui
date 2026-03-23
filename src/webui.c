@@ -7486,6 +7486,8 @@ static void _webui_clean(void) {
     _webui_mutex_destroy(&_webui.mutex_ws_process_number);
     _webui_condition_destroy(&_webui.condition_wait);
 
+    _webui.initialized = false;
+
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\tWebUI memory cleaned successfully\n");
     #endif
