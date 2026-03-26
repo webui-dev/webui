@@ -265,18 +265,18 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 | Language        | v2.4.0 API | v2.5.0 API | Link                                                    |
 | --------------- | --- | -------------- | ---------------------------------------------------------  |
-| Python          | ✔️ | _not complete_ | [Python-WebUI](https://github.com/webui-dev/python-webui)  |
-| Go              | ✔️ | _not complete_ | [Go-WebUI](https://github.com/webui-dev/go-webui)          |
-| Zig             | ✔️ |  _not complete_ | [Zig-WebUI](https://github.com/webui-dev/zig-webui)        |
-| Nim             | ✔️ |  _not complete_ | [Nim-WebUI](https://github.com/webui-dev/nim-webui)        |
-| V               | ✔️ |  _not complete_ | [V-WebUI](https://github.com/webui-dev/v-webui)            |
-| Rust            | _not complete_ |  _not complete_ | [Rust-WebUI](https://github.com/webui-dev/rust-webui)      |
-| TS / JS (Deno)  | ✔️ |  _not complete_ | [Deno-WebUI](https://github.com/webui-dev/deno-webui)      |
-| TS / JS (Bun)   | _not complete_ |  _not complete_ | [Bun-WebUI](https://github.com/webui-dev/bun-webui)        |
-| Swift           | _not complete_ |  _not complete_ | [Swift-WebUI](https://github.com/webui-dev/swift-webui)    |
-| Odin            | _not complete_ |  _not complete_ | [Odin-WebUI](https://github.com/webui-dev/odin-webui)      |
-| Pascal          | _not complete_ |  _not complete_ | [Pascal-WebUI](https://github.com/webui-dev/pascal-webui)  |
-| Purebasic       | _not complete_ |  _not complete_ | [Purebasic-WebUI](https://github.com/webui-dev/purebasic-webui)|
+| Python          | ✔️ | ✔️ | [Python-WebUI](https://github.com/webui-dev/python-webui)  |
+| Go              | ✔️ | ✔️ | [Go-WebUI](https://github.com/webui-dev/go-webui)          |
+| Zig             | ✔️ | ✔️ | [Zig-WebUI](https://github.com/webui-dev/zig-webui)        |
+| Nim             | ✔️ | ✔️ | [Nim-WebUI](https://github.com/webui-dev/nim-webui)        |
+| V               | ✔️ | ✔️ | [V-WebUI](https://github.com/webui-dev/v-webui)            |
+| Rust            | ✔️ | ✔️ | [Rust-WebUI](https://github.com/webui-dev/rust-webui)      |
+| TS / JS (Deno)  | ✔️ | ✔️ | [Deno-WebUI](https://github.com/webui-dev/deno-webui)      |
+| TS / JS (Bun)   | ✔️ | ✔️ | [Bun-WebUI](https://github.com/webui-dev/bun-webui)        |
+| Swift           | ✔️ | ✔️ | [Swift-WebUI](https://github.com/webui-dev/swift-webui)    |
+| Odin            | ✔️ | ✔️ | [Odin-WebUI](https://github.com/webui-dev/odin-webui)      |
+| Pascal          | ✔️ | ✔️ | [Pascal-WebUI](https://github.com/webui-dev/pascal-webui)  |
+| Purebasic       | ✔️ | ✔️ | [Purebasic-WebUI](https://github.com/webui-dev/purebasic-webui)|
 | - |  |  |
 | Common Lisp     | _not complete_ |  _not complete_ | [cl-webui](https://github.com/garlic0x1/cl-webui)          |
 | Delphi          | _not complete_ |  _not complete_ | [WebUI4Delphi](https://github.com/salvadordf/WebUI4Delphi) |
