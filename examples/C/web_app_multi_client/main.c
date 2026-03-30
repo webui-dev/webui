@@ -26,7 +26,7 @@ void saveAll(webui_event_t* e) {
 	// Save it in the array
 	snprintf(publicInput_arr, 1024, "%s", publicInput);
 	// Update all users
-	char buffer[512] = {0};
+	char buffer[1024] = {0};
 	snprintf(buffer, sizeof(buffer), "document.getElementById(\"publicInput\").value = \"%s\";", publicInput);
 	webui_run(e->window, buffer);
 }
@@ -59,7 +59,7 @@ void events(webui_event_t* e) {
 	}
 
 	// Buffer
-	char buffer[512] = {0};
+	char buffer[1100] = {0};
 
 	// Update this current user only
 
