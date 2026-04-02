@@ -4205,6 +4205,10 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
                 _webui_mutex_lock(&_webui.mutex_async_response);
                 if (event_inf->done) done = true;
                 _webui_mutex_unlock(&_webui.mutex_async_response);
+
+                if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+                    break; // App is exiting, Stop waiting.
+                }
             }
         }
 
@@ -4915,6 +4919,8 @@ static bool _webui_is_mg_client_valid(_webui_window_t* win, const struct mg_conn
     // The `mg_get_xxx()` functions may crash if the client is not valid.
     // So we need to check if the server is still running. Otherwise,
     // we consider the client is freed and invalid.
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
+        return false; // App is exiting, Client is not valid
     if (!client) {
         return false; // Client is not valid
     }
@@ -5292,6 +5298,10 @@ static const void* _webui_call_external_file_handler_cb(_webui_window_t* win, co
             if (win->file_handler_async_done)
                 done = true;
             _webui_mutex_unlock(&_webui.mutex_async_response);
+
+            if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+                break; // App is exiting, Stop waiting.
+            }
         }
         callback_resp = win->file_handler_async_response;
         *length = win->file_handler_async_len;
@@ -9235,6 +9245,10 @@ static void _webui_window_event(
                 _webui_mutex_lock(&_webui.mutex_async_response);
                 if (event_inf->done) done = true;
                 _webui_mutex_unlock(&_webui.mutex_async_response);
+
+                if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+                    break; // App is exiting, Stop waiting.
+                }
             }
         }
     }
@@ -9807,6 +9821,9 @@ static void _webui_get_cookies(const struct mg_connection* client, char* buffer)
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_get_cookies()\n");
     #endif
+
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
+        return; // App is exiting, Stop getting cookies.
 
     if(!_webui_is_mg_client_valid(NULL, client))
         return; // Client is not valid
@@ -11446,6 +11463,10 @@ static void _webui_ws_process(
                                         _webui_mutex_lock(&_webui.mutex_async_response);
                                         if (event_inf->done) done = true;
                                         _webui_mutex_unlock(&_webui.mutex_async_response);
+
+                                        if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+                                            break; // App is exiting, Stop waiting.
+                                        }
                                     }
                                 }
                             }
