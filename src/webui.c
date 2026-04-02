@@ -8971,61 +8971,61 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
             #endif
         }
 
-        // New WebView
-        bool runWebView = false;
-        if (win->allow_webview) {
-            // Trying to use WebView
-            if (_webui_wv_show(win, window_url)) {
-                #ifdef WEBUI_LOG
-                _webui_log_debug("[Core]\t\t_webui_show_window() -> WebView Found\n");
-                #endif
-                win->current_browser = Webview;
-                _webui.current_browser = Webview;
-                runWebView = true;
-            }
-            else {
-                #ifdef WEBUI_LOG
-                _webui_log_debug("[Core]\t\t_webui_show_window() -> WebView Not Found\n");
-                #endif
-            }
-        }
-
-        // Run browser
+        // Try first to open the UI in a browser if allowed.
         bool runBrowser = false;
-        if (!runWebView) {
-            if (win->allow_browser) {
-                if (browser != NoBrowser) {
-                    if (!_webui_browser_start(win, window_url, browser)) {
+        if (win->allow_browser) {
+            if (browser != NoBrowser) {
+                if (!_webui_browser_start(win, window_url, browser)) {
+                    #ifdef WEBUI_LOG
+                    _webui_log_debug("[Core]\t\t_webui_show_window() -> App-mode browser failed\n");
+                    #endif
+                    // Opening App-mode browser failed
+                    // let's try opening UI in native default browser
+                    if (browser == AnyBrowser && _webui_open_url_native(window_url)) {
                         #ifdef WEBUI_LOG
-                        _webui_log_debug("[Core]\t\t_webui_show_window() -> App-mode browser failed\n");
+                        _webui_log_debug("[Core]\t\t_webui_show_window() -> Native browser succeeded\n");
                         #endif
-                        // Opening App-mode browser failed
-                        // let's try opening UI in native default browser
-                        if (browser == AnyBrowser && _webui_open_url_native(window_url)) {
-                            #ifdef WEBUI_LOG
-                            _webui_log_debug("[Core]\t\t_webui_show_window() -> Native browser succeeded\n");
-                            #endif
-                            runBrowser = true;
-                            // To avoid terminating the user's native browser on exit
-                            _webui.current_browser = WEBUI_NATIVE_BROWSER;
-                        }
-                        else {
-                            #ifdef WEBUI_LOG
-                            _webui_log_debug("[Core]\t\t_webui_show_window() -> Native browser failed\n");
-                            #endif
-                        }
+                        runBrowser = true;
+                        // To avoid terminating the user's native browser on exit
+                        _webui.current_browser = WEBUI_NATIVE_BROWSER;
                     }
                     else {
                         #ifdef WEBUI_LOG
-                        _webui_log_debug("[Core]\t\t_webui_show_window() -> App-mode browser succeeded\n");
+                        _webui_log_debug("[Core]\t\t_webui_show_window() -> Native browser failed\n");
                         #endif
-                        runBrowser = true;
                     }
-                } else {
+                }
+                else {
                     #ifdef WEBUI_LOG
-                    _webui_log_debug("[Core]\t\t_webui_show_window() -> Starting server only mode (NoBrowser)\n");
+                    _webui_log_debug("[Core]\t\t_webui_show_window() -> App-mode browser succeeded\n");
                     #endif
                     runBrowser = true;
+                }
+            } else {
+                #ifdef WEBUI_LOG
+                _webui_log_debug("[Core]\t\t_webui_show_window() -> Starting server only mode (NoBrowser)\n");
+                #endif
+                runBrowser = true;
+            }
+        }
+
+        // Try to open the UI in WebView if allowed and browser is failed.
+        bool runWebView = false;
+        if (!runBrowser) {
+            if (win->allow_webview) {
+                // Trying to use WebView
+                if (_webui_wv_show(win, window_url)) {
+                    #ifdef WEBUI_LOG
+                    _webui_log_debug("[Core]\t\t_webui_show_window() -> WebView Found\n");
+                    #endif
+                    win->current_browser = Webview;
+                    _webui.current_browser = Webview;
+                    runWebView = true;
+                }
+                else {
+                    #ifdef WEBUI_LOG
+                    _webui_log_debug("[Core]\t\t_webui_show_window() -> WebView Not Found\n");
+                    #endif
                 }
             }
         }
