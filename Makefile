@@ -32,12 +32,17 @@ CIVETWEB_BUILD_FLAGS = /Fo"civetweb.obj" /c /EHsc "$(MAKEDIR)/src/civetweb/civet
 CIVETWEB_DEFINE_FLAGS = /D NDEBUG /D NO_CACHING /D NO_CGI /D USE_WEBSOCKET
 WEBUI_BUILD_FLAGS = /Fo"webui.obj" /c /EHsc "$(MAKEDIR)/src/webui.c" /I"$(MAKEDIR)/include" /I"$(MAKEDIR)/src/webview" /I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG)
 WIN32_WV2_BUILD_FLAGS = /Fo"win32_wv2.obj" /c /EHsc "$(MAKEDIR)/src/webview/win32_wv2.cpp" /I"$(MAKEDIR)/include" /I"$(MAKEDIR)/src/webview" /I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG)
+WV2_STATIC_LIB =
+!IF "$(WEBUI_WEBVIEW_STATIC)" == "1"
+WIN32_WV2_BUILD_FLAGS = $(WIN32_WV2_BUILD_FLAGS) /DWEBUI_WEBVIEW_STATIC
+WV2_STATIC_LIB = "$(MAKEDIR)\WebView2LoaderStatic.lib"
+!ENDIF
 WARNING_RELEASE = /w
 WARNING_LOG = /W4
 
 # Output Commands
-LIB_STATIC_OUT = /OUT:"$(WEBUI_OUT_LIB_NAME)-static.lib" "webui.obj" "civetweb.obj" "win32_wv2.obj"
-LIB_DYN_OUT = /DLL /OUT:"$(WEBUI_OUT_LIB_NAME).dll" "webui.obj" "civetweb.obj" "win32_wv2.obj" user32.lib Advapi32.lib Shell32.lib Ole32.lib $(TLS_LDFLAG_DYNAMIC)
+LIB_STATIC_OUT = /OUT:"$(WEBUI_OUT_LIB_NAME)-static.lib" "webui.obj" "civetweb.obj" "win32_wv2.obj" $(WV2_STATIC_LIB)
+LIB_DYN_OUT = /DLL /OUT:"$(WEBUI_OUT_LIB_NAME).dll" "webui.obj" "civetweb.obj" "win32_wv2.obj" user32.lib Advapi32.lib Shell32.lib Ole32.lib $(TLS_LDFLAG_DYNAMIC) $(WV2_STATIC_LIB)
 
 # == 2.TARGETS ================================================================
 

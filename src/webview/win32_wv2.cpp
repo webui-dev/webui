@@ -287,16 +287,24 @@ public:
     };
 #endif
 
+#ifdef WEBUI_WEBVIEW_STATIC
+// The WebView2LoaderStatic.lib is linked, no need to load WebView2Loader.dll
+#else
 // Cached WebView2Loader.dll handle and function pointer
 static HMODULE g_webviewLib = NULL;
 typedef HRESULT (__stdcall *CreateCoreWebView2EnvironmentWithOptionsFunc)(
     PCWSTR, PCWSTR, ICoreWebView2EnvironmentOptions*,
     ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*);
 static CreateCoreWebView2EnvironmentWithOptionsFunc g_createEnv = NULL;
+#endif
 
 extern "C" {
 
 bool _webui_win32_wv2_check_loader_dll(void) {
+    #ifdef WEBUI_WEBVIEW_STATIC
+    // The WebView2LoaderStatic.lib is linked, no need to load WebView2Loader.dll
+    return true;
+    #else
     // Already loaded and cached
     if (g_webviewLib && g_createEnv) {
         return true;
@@ -314,6 +322,7 @@ bool _webui_win32_wv2_check_loader_dll(void) {
         return false;
     }
     return true;
+    #endif
 }
 
 _webui_win32_wv2_handle _webui_win32_wv2_create(void) {
@@ -441,11 +450,9 @@ bool _webui_win32_wv2_create_environment(_webui_win32_wv2_handle handle, wchar_t
     if (!handle) return false;
     WebView2Instance* instance = static_cast<WebView2Instance*>(handle);
 
-    // Ensure DLL is loaded (use cached if available)
-    if (!g_webviewLib || !g_createEnv) {
-        if (!_webui_win32_wv2_check_loader_dll()) {
-            return false;
-        }
+    // Ensure loader is ready (DLL or static)
+    if (!_webui_win32_wv2_check_loader_dll()) {
+        return false;
     }
 
     _wputenv(L"WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--enable-features=msWebView2EnableDraggableRegions");
@@ -455,13 +462,21 @@ bool _webui_win32_wv2_create_environment(_webui_win32_wv2_handle handle, wchar_t
         if (!environmentHandler) {
             return false;
         }
+        #ifdef WEBUI_WEBVIEW_STATIC
+        HRESULT hr = CreateCoreWebView2EnvironmentWithOptions(NULL, cacheFolder, NULL, environmentHandler.Get());
+        #else
         HRESULT hr = g_createEnv(NULL, cacheFolder, NULL, environmentHandler.Get());
+        #endif
     #else
         EnvironmentCompletedHandler* environmentHandler = new EnvironmentCompletedHandler(instance);
         if (!environmentHandler) {
             return false;
         }
+        #ifdef WEBUI_WEBVIEW_STATIC
+        HRESULT hr = CreateCoreWebView2EnvironmentWithOptions(NULL, cacheFolder, NULL, environmentHandler);
+        #else
         HRESULT hr = g_createEnv(NULL, cacheFolder, NULL, environmentHandler);
+        #endif
     #endif
 
     return SUCCEEDED(hr);

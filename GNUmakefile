@@ -49,6 +49,11 @@ CIVETWEB_BUILD_FLAGS := -o civetweb.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFIL
 CIVETWEB_DEFINE_FLAGS = -DNDEBUG -DNO_CACHING -DNO_CGI -DUSE_WEBSOCKET $(TLS_CFLAG)
 WEBUI_BUILD_FLAGS := -o webui.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webui.c" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG)
 WIN32_WV2_BUILD_FLAGS := -o win32_wv2.o -I"$(MAKEFILE_DIR)/include/" -c "$(MAKEFILE_DIR)/src/webview/win32_wv2.cpp" -I"$(WEBUI_TLS_INCLUDE)" $(TLS_CFLAG)
+WV2_STATIC_LIB :=
+ifeq ($(WEBUI_WEBVIEW_STATIC),1)
+WIN32_WV2_BUILD_FLAGS += -DWEBUI_WEBVIEW_STATIC
+WV2_STATIC_LIB := "$(MAKEFILE_DIR)/WebView2LoaderStatic.lib"
+endif
 WARNING_RELEASE := -w
 WARNING_LOG := -Wall -Wno-unused
 
@@ -144,7 +149,7 @@ endif
 	&& echo "Build WebUI library ($(CC) $(TARGET) debug dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -g -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_LOG) -g -fPIC -DWEBUI_LOG -DWEBUI_DYNAMIC \
-	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) $(CPP_FLAGS)
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) -g -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) $(CPP_FLAGS) $(WV2_STATIC_LIB)
 ifeq ($(PLATFORM),windows)
 	@cd "$(BUILD_DIR)/debug" && del *.o >nul 2>&1
 else
@@ -183,7 +188,7 @@ endif
 	&& echo "Build WebUI library ($(CC) $(TARGET) release dynamic)..." \
 	&& $(CC) $(TARGET) $(CIVETWEB_BUILD_FLAGS) $(CIVETWEB_DEFINE_FLAGS) -Os -fPIC \
 	&& $(CC) $(TARGET) $(WEBUI_BUILD_FLAGS) $(WARNING_RELEASE) -O3 -fPIC -DWEBUI_DYNAMIC \
-	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) $(CPP_FLAGS)
+	&& $(CC) $(TARGET) -shared -o $(LIB_DYN_OUT) webui.o civetweb.o $(WEBKIT_OBJ) $(WIN32_WV2_OBJ) -L"$(WEBUI_TLS_LIB)" $(TLS_LDFLAG_DYNAMIC) $(LWS2_OPT) $(WKWEBKIT_LINK_FLAGS) $(CPP_FLAGS) $(WV2_STATIC_LIB)
 #	Clean
 ifeq ($(PLATFORM),windows)
 	@strip --strip-unneeded $(BUILD_DIR)/$(LIB_DYN_OUT)
