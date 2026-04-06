@@ -34,8 +34,10 @@ jobs:
         include:
           - cc: gcc
             make: mingw32-make
+            wv2_static: ''
           - cc: msvc
             make: nmake
+            wv2_static: WEBUI_WEBVIEW_STATIC=1
       fail-fast: false
     env:
       ARTIFACT: webui-windows-${{ matrix.cc }}-x64
@@ -51,15 +53,24 @@ jobs:
       - uses: microsoft/setup-msbuild@v2
       - uses: ilammy/msvc-dev-cmd@v1
         if: matrix.cc == 'msvc'
+      - name: Download WebView2 Static Loader
+        if: matrix.cc == 'msvc'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/" -OutFile "webview2.zip"
+          Expand-Archive -Path "webview2.zip" -DestinationPath "webview2"
+          if (Test-Path "webview2/build/native/x64/WebView2LoaderStatic.lib") {
+            Copy-Item "webview2/build/native/x64/WebView2LoaderStatic.lib" -Destination "WebView2LoaderStatic.lib"
+          }
       - name: Build Debug Target
-        run: ${{ matrix.make }} debug
+        run: ${{ matrix.make }} ${{ matrix.wv2_static }} debug
       - name: Build Release Target
         if: ${{ !cancelled() }}
-        run: ${{ matrix.make }}
+        run: ${{ matrix.make }} ${{ matrix.wv2_static }}
       - name: Build TLS Debug Target
-        run: ${{ matrix.make }} WEBUI_USE_TLS=1 debug
+        run: ${{ matrix.make }} ${{ matrix.wv2_static }} WEBUI_USE_TLS=1 debug
       - name: Build TLS Release Target
-        run: ${{ matrix.make }} WEBUI_USE_TLS=1
+        run: ${{ matrix.make }} ${{ matrix.wv2_static }} WEBUI_USE_TLS=1
       - name: Build examples
         run: |
           $examples_base_dir = "$(Get-Location)/examples/C/"
