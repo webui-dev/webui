@@ -2528,6 +2528,23 @@ void webui_return_bool(webui_event_t* e, bool b) {
     }
 }
 
+void webui_return_http(size_t window, const void* response, int length) {
+
+    #ifdef WEBUI_LOG
+    _webui_log_info("[User] webui_return_http([%zu], [%d])\n", window, length);
+    #endif
+
+    // Notes: 
+    // `webui_return_http` is just an alias of 
+    // `webui_interface_set_response_file_handler` 
+    // for better readability.
+    //
+    // When `asynchronous_response` is enabled, `webui_return_http()` 
+    // can be used to send HTTP response asynchronously.
+
+    webui_interface_set_response_file_handler(window, response, length);
+}
+
 size_t webui_get_parent_process_id(size_t window) {
 
     #ifdef WEBUI_LOG

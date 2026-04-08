@@ -1279,6 +1279,18 @@ WEBUI_EXPORT void webui_return_string(webui_event_t* e, const char* s);
 WEBUI_EXPORT void webui_return_bool(webui_event_t* e, bool b);
 
 /**
+ * @brief Send HTTP response asynchronously, should be used 
+ * with `webui_set_file_handler_window()`.
+ *
+ * @param window The window number
+ * @param response The response buffer with full HTTP header and body
+ * @param length The response size
+ *
+ * @example webui_return_http(myWindow, "HTTP/1.1 200 OK\r\n...", 1024);
+ */
+WEBUI_EXPORT void webui_return_http(size_t window, const void* response, int length);
+
+/**
  * @brief Get the last WebUI error code.
  *
  * @example int error_num = webui_get_last_error_number();
