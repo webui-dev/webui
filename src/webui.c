@@ -578,6 +578,7 @@ static size_t _webui_strlen(const char* s);
 static uint16_t _webui_get_run_id(void);
 static uint16_t _webui_get_ws_process_number(void);
 static void * _webui_malloc(size_t size);
+static void* _webui_malloc_if_not_exist(void* ptr, size_t size);
 static void _webui_sleep(long unsigned int ms);
 static size_t _webui_find_the_best_browser(_webui_window_t* win);
 static bool _webui_is_process_running(const char* process_name);
@@ -4414,8 +4415,26 @@ void webui_interface_set_response_file_handler(size_t window, const void* respon
         return;
     _webui_window_t* win = _webui.wins[window];
 
+    if (length == 0)
+        length = _webui_strlen(response);
+
+    // If `response` is allocated using `webui_malloc()`, it will be
+    // available during execution and automatically freed by WebUI
+    // after sending the response. However, if `response` is allocated
+    // using other methods, or is simply a pointer to a static buffer,
+    // we may lose the data before sending the response. Therefore, we need
+    // to copy the data to a new buffer if it was not allocated by `webui_malloc()`.
+    void* response_copy = _webui_malloc_if_not_exist(response, length);
+    if (response_copy != response) {
+        #ifdef WEBUI_LOG
+        _webui_log_debug("[User] webui_interface_set_response_file_handler() -> "
+            "Response copied to a new buffer at %p\n", response_copy);
+        #endif
+        memcpy(response_copy, response, length);
+    }
+
     // Set the response
-    win->file_handler_async_response = response;
+    win->file_handler_async_response = response_copy;
     win->file_handler_async_len = length;
 
     // Async response
@@ -4785,6 +4804,23 @@ static void _webui_panic(char* msg) {
 
     _webui_log_error("WebUI Error: %s.\n", msg);
     webui_exit();
+}
+
+static void* _webui_malloc_if_not_exist(void* ptr, size_t size) {
+
+    #ifdef WEBUI_LOG_VERBOSE
+    // _webui_log_debug("[Core]\t\t_webui_malloc_if_not_exist(0x%p, [%zu])\n", ptr, size);
+    #endif
+
+    _webui_mutex_lock(&_webui.mutex_mem);
+    bool exist = _webui_ptr_exist(ptr);
+    _webui_mutex_unlock(&_webui.mutex_mem);
+
+    if(exist)
+        return ptr; // Pointer already exist, No need to malloc again.
+
+    // Pointer not exist, malloc new memory
+    return _webui_malloc(size);
 }
 
 static void * _webui_malloc(size_t size) {
@@ -5291,6 +5327,10 @@ static void _webui_free_event_inf(_webui_window_t* win, size_t event_num) {
 
 static const void* _webui_call_external_file_handler_cb(_webui_window_t* win, const char* path, size_t* length) {
 
+    // Note:
+    // It's safe to check `win->file_handler_async_xxx` without locking mutex here
+    // because `_webui_http_handler()` already locks the mutex.
+
     // Async response init
     if (_webui.config.asynchronous_response) {
         win->file_handler_async_response = NULL;
@@ -5302,26 +5342,53 @@ static const void* _webui_call_external_file_handler_cb(_webui_window_t* win, co
     const void* callback_resp = NULL;
     if (win->files_handler_window != NULL) {
         callback_resp = win->files_handler_window(win->num, path, (int*)length);
-    } else {
+    } else if (win->files_handler != NULL) {
         callback_resp = win->files_handler(path, (int*)length);
+    } else {
+        // No callback
+        return NULL;
     }
 
     // Async response wait
     if (_webui.config.asynchronous_response) {
+
+        // Since `asynchronous_response` is enabled, we ignore the direct callback response
+        // and wait for the async response instead. To avoid any ambiguous situation, we
+        // reset the `callback` response to rely solely on the coming async response.
+        callback_resp = NULL;
+
+        #ifdef WEBUI_LOG
+        _webui_log_debug("[Core]\t\t_webui_call_external_file_handler_cb() -> "
+            "Ignoring the callback response, waiting for async response...\n");
+        #endif
+        
+        _webui_timer_t timer;
+        _webui_timer_start(&timer);
+
         bool done = false;
         while (!done) {
-            _webui_sleep(10);
-            _webui_mutex_lock(&_webui.mutex_async_response);
-            if (win->file_handler_async_done)
-                done = true;
-            _webui_mutex_unlock(&_webui.mutex_async_response);
 
             if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
                 break; // App is exiting, Stop waiting.
             }
+
+            _webui_sleep(10);
+            _webui_mutex_lock(&_webui.mutex_async_response);
+            if (win->file_handler_async_done) {
+                done = true; // Async response received, Stop waiting.
+                callback_resp = win->file_handler_async_response;
+                *length = win->file_handler_async_len;
+            }
+            _webui_mutex_unlock(&_webui.mutex_async_response);
+
+            if (_webui_timer_is_end(&timer, (_webui.startup_timeout * 1000))) {
+                #ifdef WEBUI_LOG
+                _webui_log_debug("[Core]\t\t_webui_call_external_file_handler_cb() -> "
+                    "Asynchronous response timeout.\n");
+                #endif
+                break;
+            }
         }
-        callback_resp = win->file_handler_async_response;
-        *length = win->file_handler_async_len;
     }
 
     return callback_resp;
