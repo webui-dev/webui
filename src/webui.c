@@ -4415,8 +4415,15 @@ void webui_interface_set_response_file_handler(size_t window, const void* respon
         return;
     _webui_window_t* win = _webui.wins[window];
 
-    if (length == 0)
+    // Check if the response is empty
+    if (length == 0) {
         length = _webui_strlen(response);
+        if (length == 0) {
+            #ifdef WEBUI_LOG
+            _webui_log_info("[User] webui_interface_set_response_file_handler() -> Response is empty\n");
+            #endif
+        }
+    }
 
     // If `response` is allocated using `webui_malloc()`, it will be
     // available during execution and automatically freed by WebUI
@@ -4424,13 +4431,16 @@ void webui_interface_set_response_file_handler(size_t window, const void* respon
     // using other methods, or is simply a pointer to a static buffer,
     // we may lose the data before sending the response. Therefore, we need
     // to copy the data to a new buffer if it was not allocated by `webui_malloc()`.
-    void* response_copy = _webui_malloc_if_not_exist(response, length);
-    if (response_copy != response) {
-        #ifdef WEBUI_LOG
-        _webui_log_debug("[User] webui_interface_set_response_file_handler() -> "
-            "Response copied to a new buffer at %p\n", response_copy);
-        #endif
-        memcpy(response_copy, response, length);
+    void* response_copy = NULL;
+    if (length > 0) {
+        response_copy = _webui_malloc_if_not_exist(response, length);
+        if (response_copy != response) {
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[User] webui_interface_set_response_file_handler() -> "
+                "Response copied to a new buffer at %p\n", response_copy);
+            #endif
+            memcpy(response_copy, response, length);
+        }
     }
 
     // Set the response
@@ -5450,6 +5460,14 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
         // Call user callback for the requested path
         const void* callback_resp = _webui_call_external_file_handler_cb(win, handler_url, &length);
 
+        // Content length
+        if (length == 0) {
+            length = _webui_strlen(callback_resp);
+            if (length == 0) {
+                callback_resp = NULL; // No content length, Treat as not found
+            }
+        }
+
         if (callback_resp != NULL) {
             // Keep canonical behavior consistent with local-folder mode:
             // if we resolved a different target path (e.g. "/" -> "/custom.html"),
@@ -5463,11 +5481,6 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
                 http_status_code = 302;
                 return http_status_code;
             }
-
-            // File content found
-
-            if (length == 0)
-                length = _webui_strlen(callback_resp);
 
             #ifdef WEBUI_LOG
             _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> Custom files handler found (%zu bytes)\n",
