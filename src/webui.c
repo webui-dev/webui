@@ -578,7 +578,7 @@ static size_t _webui_strlen(const char* s);
 static uint16_t _webui_get_run_id(void);
 static uint16_t _webui_get_ws_process_number(void);
 static void * _webui_malloc(size_t size);
-static void* _webui_malloc_if_not_exist(void* ptr, size_t size);
+static void* _webui_malloc_if_not_exist(const void* ptr, size_t size);
 static void _webui_sleep(long unsigned int ms);
 static size_t _webui_find_the_best_browser(_webui_window_t* win);
 static bool _webui_is_process_running(const char* process_name);
@@ -4684,7 +4684,7 @@ void* webui_interface_get_context(size_t window, size_t event_number) {
 }
 
 // -- Core's Functions ----------------
-static bool _webui_ptr_exist(void * ptr) {
+static bool _webui_ptr_exist(const void * ptr) {
 
     #ifdef WEBUI_LOG_VERBOSE
     _webui_log_debug("[Core]\t\t_webui_ptr_exist()\n");
@@ -4816,7 +4816,7 @@ static void _webui_panic(char* msg) {
     webui_exit();
 }
 
-static void* _webui_malloc_if_not_exist(void* ptr, size_t size) {
+static void* _webui_malloc_if_not_exist(const void* ptr, size_t size) {
 
     #ifdef WEBUI_LOG_VERBOSE
     // _webui_log_debug("[Core]\t\t_webui_malloc_if_not_exist(0x%p, [%zu])\n", ptr, size);
@@ -4827,7 +4827,7 @@ static void* _webui_malloc_if_not_exist(void* ptr, size_t size) {
     _webui_mutex_unlock(&_webui.mutex_mem);
 
     if(exist)
-        return ptr; // Pointer already exist, No need to malloc again.
+        return (void*)ptr; // Pointer already exist, No need to malloc again.
 
     // Pointer not exist, malloc new memory
     return _webui_malloc(size);
