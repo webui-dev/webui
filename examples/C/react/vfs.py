@@ -7,7 +7,7 @@
 # Canada.
 # 
 # WebUI Virtual File System Generator
-# v2.0
+# v2.1
 
 import os
 import sys
@@ -41,7 +41,6 @@ def generate_vfs_header(directory, output_header):
                 header.write('};\n\n')
 
         header.write('\nstatic const VirtualFile virtual_files[] = {\n')
-
         for i, (relative_path, filepath) in enumerate(files):
             with open(filepath, 'rb') as f:
                 data = f.read()
@@ -50,17 +49,20 @@ def generate_vfs_header(directory, output_header):
                 header.write(f'        FILE_{i},\n')
                 header.write(f'        {len(data)}\n')
                 header.write('    },\n')
-
+        if not files:
+            header.write('    {NULL, NULL, 0}\n')
         header.write('};\n\n')
 
         header.write('static const int virtual_files_count = sizeof(virtual_files) / sizeof(virtual_files[0]);\n\n')
 
         header.write('bool virtual_file_system(const char* path, const unsigned char** file, int* length) {\n')
         header.write('    for (int i = 0; i < virtual_files_count; ++i) {\n')
-        header.write('        if (strcmp(virtual_files[i].path, path) == 0) {\n')
-        header.write('            *file = virtual_files[i].data;\n')
-        header.write('            *length = virtual_files[i].length;\n')
-        header.write('            return true;\n')
+        header.write('        if(virtual_files[i].path != NULL) {\n')
+        header.write('            if (strcmp(virtual_files[i].path, path) == 0) {\n')
+        header.write('                *file = virtual_files[i].data;\n')
+        header.write('                *length = virtual_files[i].length;\n')
+        header.write('                return true;\n')
+        header.write('            }\n')
         header.write('        }\n')
         header.write('    }\n')
         header.write('    return false;\n')
