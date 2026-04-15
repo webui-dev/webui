@@ -9596,14 +9596,44 @@ static void _webui_print_hex(const char* data, size_t len) {
 static void _webui_print_ascii(const char* data, size_t len) {
     // This function is used to print the protocol binary packets. the packet 
     // may have ASCII and `0x00` inside text, as well as other non-ascii bytes
-    for (size_t i = 0; i < len; i++) {
-        register unsigned char c = (unsigned char)* data;
-        if (c < 32 || c > 126) {
-            _webui_log_debug("[0x%02X]", c);
-        } else {
-            _webui_log_debug("%c", c);
+    
+    if (len <= 128) {
+        // Print all data if size is 128 or less
+        for (size_t i = 0; i < len; i++) {
+            register unsigned char c = (unsigned char)* data;
+            if (c < 32 || c > 126) {
+                _webui_log_debug("[0x%02X]", c);
+            } else {
+                _webui_log_debug("%c", c);
+            }
+            data++;
         }
-        data++;
+    } else {
+        // Print first 64 bytes
+        for (size_t i = 0; i < 64; i++) {
+            register unsigned char c = (unsigned char)* data;
+            if (c < 32 || c > 126) {
+                _webui_log_debug("[0x%02X]", c);
+            } else {
+                _webui_log_debug("%c", c);
+            }
+            data++;
+        }
+        
+        // Print ellipsis
+        _webui_log_debug(" ... ");
+        
+        // Print last 64 bytes
+        data = data + (len - 64);
+        for (size_t i = 0; i < 64; i++) {
+            register unsigned char c = (unsigned char)* data;
+            if (c < 32 || c > 126) {
+                _webui_log_debug("[0x%02X]", c);
+            } else {
+                _webui_log_debug("%c", c);
+            }
+            data++;
+        }
     }
 }
 #endif
