@@ -907,6 +907,11 @@ void webui_set_file_handler(size_t window, const void*(*handler)(const char* fil
     win->files_handler = handler;
     // And reset any previous `files_handler_window`
     win->files_handler_window = NULL;
+
+    // By default, WebUI uses cookies to prevent unauthorized clients from
+    // accessing the UI. When the user provides a custom file handler, security
+    // becomes the user's responsibility, so WebUI disables cookies automatically.
+    webui_set_config(use_cookies, false);
 }
 
 void webui_set_file_handler_window(size_t window, const void*(*handler)(size_t window, const char* filename, int* length)) {
@@ -926,6 +931,11 @@ void webui_set_file_handler_window(size_t window, const void*(*handler)(size_t w
     win->files_handler = NULL;
     // And set `files_handler_window`
     win->files_handler_window = handler;
+
+    // By default, WebUI uses cookies to prevent unauthorized clients from
+    // accessing the UI. When the user provides a custom file handler, security
+    // becomes the user's responsibility, so WebUI disables cookies automatically.
+    webui_set_config(use_cookies, false);
 }
 
 bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
