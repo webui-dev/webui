@@ -9960,6 +9960,7 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
         // GET
 
         #ifdef WEBUI_LOG
+        _webui_log_debug("[Core]\t\t---[ HTTP Request ]----------------\n");
         _webui_log_debug("[Core]\t\t_webui_http_handler() -> GET [%s]\n", url);
         #endif
 
