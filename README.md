@@ -263,28 +263,28 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ## Wrappers
 
-| Language        | v2.4.0 API | v2.5.0 API | Link                                                    |
-| --------------- | --- | -------------- | ---------------------------------------------------------  |
-| Python          | ✔️ | ✔️ | [Python-WebUI](https://github.com/webui-dev/python-webui)  |
-| Go              | ✔️ | ✔️ | [Go-WebUI](https://github.com/webui-dev/go-webui)          |
-| Zig             | ✔️ | ✔️ | [Zig-WebUI](https://github.com/webui-dev/zig-webui)        |
-| Nim             | ✔️ | ✔️ | [Nim-WebUI](https://github.com/webui-dev/nim-webui)        |
-| V               | ✔️ | ✔️ | [V-WebUI](https://github.com/webui-dev/v-webui)            |
-| Rust            | ✔️ | ✔️ | [Rust-WebUI](https://github.com/webui-dev/rust-webui)      |
-| TS / JS (Deno)  | ✔️ | ✔️ | [Deno-WebUI](https://github.com/webui-dev/deno-webui)      |
-| TS / JS (Bun)   | ✔️ | ✔️ | [Bun-WebUI](https://github.com/webui-dev/bun-webui)        |
-| Swift           | ✔️ | ✔️ | [Swift-WebUI](https://github.com/webui-dev/swift-webui)    |
-| Odin            | ✔️ | ✔️ | [Odin-WebUI](https://github.com/webui-dev/odin-webui)      |
-| Pascal          | ✔️ | ✔️ | [Pascal-WebUI](https://github.com/webui-dev/pascal-webui)  |
-| Purebasic       | ✔️ | ✔️ | [Purebasic-WebUI](https://github.com/webui-dev/purebasic-webui)|
-| - |  |  |
-| FSharp-WebUI    | _not complete_ |  ✔️ | [FSharp-WebUI](https://github.com/no-waves/FSharp-WebUI)   |
-| Common Lisp     | _not complete_ |  _not complete_ | [cl-webui](https://github.com/garlic0x1/cl-webui)          |
-| Delphi          | _not complete_ |  _not complete_ | [WebUI4Delphi](https://github.com/salvadordf/WebUI4Delphi) |
-| C#              | _not complete_ |  _not complete_ | [WebUI4CSharp](https://github.com/salvadordf/WebUI4CSharp) |
-| WebUI.NET       | _not complete_ |  _not complete_ | [WebUI.NET](https://github.com/Juff-Ma/WebUI.NET)          |
-| QuickJS         | _not complete_ |  _not complete_ | [QuickUI](https://github.com/xland/QuickUI)                |
-| PHP             | _not complete_ |  _not complete_ | [PHPWebUiComposer](https://github.com/KingBes/php-webui-composer) |
+| Language        | v2.5.0 API | Link |
+| --------------- | ---------- | ---------------------------------------------------- |
+| Python          | ✔️ | [Python-WebUI](https://github.com/webui-dev/python-webui) |
+| Go              | ✔️ | [Go-WebUI](https://github.com/webui-dev/go-webui) |
+| Zig             | ✔️ | [Zig-WebUI](https://github.com/webui-dev/zig-webui) |
+| Nim             | ✔️ | [Nim-WebUI](https://github.com/webui-dev/nim-webui) |
+| V               | ✔️ | [V-WebUI](https://github.com/webui-dev/v-webui) |
+| Rust            | ✔️ | [Rust-WebUI](https://github.com/webui-dev/rust-webui) |
+| TS / JS (Deno)  | ✔️ | [Deno-WebUI](https://github.com/webui-dev/deno-webui) |
+| TS / JS (Bun)   | ✔️ | [Bun-WebUI](https://github.com/webui-dev/bun-webui) |
+| Swift           | ✔️ | [Swift-WebUI](https://github.com/webui-dev/swift-webui) |
+| Odin            | ✔️ | [Odin-WebUI](https://github.com/webui-dev/odin-webui) |
+| Pascal          | ✔️ | [Pascal-WebUI](https://github.com/webui-dev/pascal-webui) |
+| Purebasic       | ✔️ | [Purebasic-WebUI](https://github.com/webui-dev/purebasic-webui) |
+| - | - | - |
+| FSharp-WebUI    | ✔️ | [FSharp-WebUI](https://github.com/no-waves/FSharp-WebUI) |
+| Common Lisp     | _not complete_ | [cl-webui](https://github.com/garlic0x1/cl-webui) |
+| Delphi          | _not complete_ | [WebUI4Delphi](https://github.com/salvadordf/WebUI4Delphi) |
+| C#              | _not complete_ | [WebUI4CSharp](https://github.com/salvadordf/WebUI4CSharp) |
+| WebUI.NET       | _not complete_ | [WebUI.NET](https://github.com/Juff-Ma/WebUI.NET) |
+| QuickJS         | _not complete_ | [QuickUI](https://github.com/xland/QuickUI) |
+| PHP             | _not complete_ | [PHPWebUiComposer](https://github.com/KingBes/php-webui-composer) |
 
 ## Supported Web Browsers
 
