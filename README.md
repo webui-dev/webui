@@ -53,13 +53,13 @@
 
 ## Features
 
-- Portable (*Needs only a web browser or a WebView at runtime*)
-- One header file
+- Portable (*Only needs a web browser at runtime, WebView is optional*)
+- Single header file
 - Lightweight (*Few Kb library*) & Small memory footprint
-- Fast binary communication protocol
+- Fast binary WebSocket communication protocol
 - Multi-platform & Multi-Browser
-- Using private profile for safety
-- Cross-platform WebView
+- Uses private profile for safety
+- Cross-platform WebView (*Optional*)
 
 ## UI & The Web Technologies
 
@@ -89,18 +89,19 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ### Runtime Dependencies Comparison
 
-|                                 | Tauri / WebView   | Qt                         | WebUI               |
-| ------------------------------- | ----------------- | -------------------------- | ------------------- |
-| Runtime Dependencies on Windows | _WebView2_        | _QtCore, QtGui, QtWidgets_ | **_A Web Browser_** |
-| Runtime Dependencies on Linux   | _GTK3, WebKitGTK_ | _QtCore, QtGui, QtWidgets_ | **_A Web Browser_** |
-| Runtime Dependencies on macOS   | _Cocoa, WebKit_   | _QtCore, QtGui, QtWidgets_ | **_A Web Browser_** |
+| Framework | Windows Dependencies | Linux Dependencies | macOS Dependencies |
+|-----------|---------|-------|-------|
+| **WebView** | WebView2 | GTK3, WebKitGTK | Cocoa, WebKit |
+| **Tauri** | WebView2 | GTK3, WebKitGTK | Cocoa, WebKit |
+| **Qt** | QtCore, QtGui, QtWidgets | QtCore, QtGui, QtWidgets | QtCore, QtGui, QtWidgets |
+| **Electron** | Embedded Chromium | Embedded Chromium | Embedded Chromium |
+| **NW.js** | WebView2 / Chromium | GTK3, Chromium | WebKit / Chromium |
+| **Flutter** | ANGLE/DirectX | GTK3 | Cocoa, Metal |
+| **WebUI** | **Only A Web Browser** | **Only A Web Browser** | **Only A Web Browser** |
 
 ## Documentation
 
-> **Note**
-> We are currently writing documentation.
-
-- [Online Documentation](https://webui.me/docs/)
+- [Online Documentation](https://webui.me/docs.html#/)
 
 ## Build WebUI Library
 
@@ -301,7 +302,7 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | Apple Safari    | _not available_ | _coming soon_ | _not available_ |
 | Opera           | _coming soon_   | _coming soon_ | _coming soon_   |
 
-## Supported WebView
+## Supported WebView (*Optional*)
 
 | WebView         | Status         |
 | --------------- | --------------- |
@@ -312,7 +313,3 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 ### License
 
 > Licensed under MIT License.
-
-### Stargazers
-
-[![Stargazers repo roster for @webui-dev/webui](https://reporoster.com/stars/webui-dev/webui)](https://github.com/webui-dev/webui/stargazers)
