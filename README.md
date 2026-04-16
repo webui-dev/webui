@@ -51,6 +51,10 @@
 - [Supported Web Browsers](#supported-web-browsers)
 - [License](#license)
 
+## Documentation
+
+- [Online Documentation](https://webui.me/docs.html#/)
+
 ## Features
 
 - Portable (*Only needs a web browser at runtime, WebView is optional*)
@@ -89,19 +93,13 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 
 ### Runtime Dependencies Comparison
 
-| Framework | Windows Dependencies | Linux Dependencies | macOS Dependencies |
+| GUI | Windows Dependencies | Linux Dependencies | macOS Dependencies |
 |-----------|---------|-------|-------|
-| **WebView** | WebView2 | GTK3, WebKitGTK | Cocoa, WebKit |
-| **Tauri** | WebView2 | GTK3, WebKitGTK | Cocoa, WebKit |
-| **Qt** | QtCore, QtGui, QtWidgets | QtCore, QtGui, QtWidgets | QtCore, QtGui, QtWidgets |
-| **Electron** | Embedded Chromium | Embedded Chromium | Embedded Chromium |
-| **NW.js** | WebView2 / Chromium | GTK3, Chromium | WebKit / Chromium |
-| **Flutter** | ANGLE/DirectX | GTK3 | Cocoa, Metal |
+| **Tauri** | WebView2 | GTK/WebKitGTK | WKWebView, WebKit |
+| **Qt** | Qt bundles | Qt bundles, libxcb, libxkbcommon... | Qt bundles |
+| **Electron** | Embedded Chromium + Node.js | Embedded Chromium + Node.js | Embedded Chromium + Node.js |
+| **NW.js** | Embedded Chromium + Node.js | Embedded Chromium + Node.js | Embedded Chromium + Node.js |
 | **WebUI** | **Only A Web Browser** | **Only A Web Browser** | **Only A Web Browser** |
-
-## Documentation
-
-- [Online Documentation](https://webui.me/docs.html#/)
 
 ## Build WebUI Library
 
