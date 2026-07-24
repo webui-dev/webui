@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>My WebUI App</title>
+	<link rel="icon" type="image/png" href="icon.png">
+	<link rel="stylesheet" href="style.css">
+	<!-- webui.js is a virtual file served by the WebUI library itself -->
+	<script src="webui.js"></script>
+</head>
+<body>
+	<div id="app">
+		<!-- Custom title bar (the window itself is frameless) -->
+		<header id="titlebar">
+			<span id="title">My WebUI App</span>
+			<div id="window-buttons">
+				<span class="button minimize" title="Minimize"></span>
+				<span class="button maximize" title="Maximize"></span>
+				<span class="button close" title="Close"></span>
+			</div>
+		</header>
+
+		<main id="content">
+			<div class="card">
+				<div class="logo">W</div>
+				<h1>My WebUI App</h1>
+				<p class="subtitle">C backend &middot; Embedded web frontend &middot; Single executable</p>
+
+				<section class="demo">
+					<label for="name">Your name</label>
+					<div class="row">
+						<input id="name" type="text" placeholder="World">
+						<button id="greet-btn">Call C</button>
+					</div>
+					<output id="reply">The reply from the C backend will appear here.</output>
+				</section>
+
+				<footer>
+					Edit <code>ui/</code> for the frontend &middot; <code>src/main.c</code> for the backend
+				</footer>
+			</div>
+		</main>
+	</div>
+	<script src="app.js"></script>
+</body>
+</html>
