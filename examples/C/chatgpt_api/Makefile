@@ -46,12 +46,12 @@ release:
 #	Static Release
 !IF "$(WEBUI_USE_TLS)" != "1"
 	@echo Build C Example (Static Release)...
-	@cl main.c icon.res /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /SUBSYSTEM:WINDOWS $(WEBUI_LIB_NAME)-static.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main.exe 1>NUL 2>&1
+	@cl main.c icon.res /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME)-static.lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main.exe 1>NUL 2>&1
 !ENDIF
 #	Dynamic Release
 	@echo Build C Example (Dynamic Release)...
 	@copy "$(LIB_DIR)\$(WEBUI_LIB_NAME).dll" "$(WEBUI_LIB_NAME).dll"
-	@cl main.c icon.res /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /SUBSYSTEM:WINDOWS $(WEBUI_LIB_NAME).lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main-dyn.exe 1>NUL 2>&1
+	@cl main.c icon.res /I"$(INCLUDE_DIR)" /link /LIBPATH:"$(LIB_DIR)" /SUBSYSTEM:CONSOLE $(WEBUI_LIB_NAME).lib user32.lib Advapi32.lib Shell32.lib Ole32.lib /OUT:main-dyn.exe 1>NUL 2>&1
 #	Clean
 	@- del *.exp >nul 2>&1
 	@- del *.ilk >nul 2>&1
