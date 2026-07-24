@@ -641,6 +641,17 @@ WEBUI_EXPORT void webui_set_timeout(size_t second);
 WEBUI_EXPORT void webui_set_icon(size_t window, const char* icon, const char* icon_type);
 
 /**
+ * @brief Set the window icon from an icon file (binary format).
+ * Can be used as the taskbar icon on Linux (GTK).
+ *
+ * @param window The window number
+ * @param path The icon file path: `icon.png`
+ *
+ * @example webui_set_icon_file(myWindow, "icon.png");
+ */
+WEBUI_EXPORT void webui_set_icon_file(size_t window, const char* path);
+
+/**
  * @brief Encode text to Base64. The returned buffer need to be freed.
  *
  * @param str The string to encode (Should be null terminated)

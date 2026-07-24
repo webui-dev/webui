@@ -232,6 +232,12 @@ typedef struct webui_event_inf_t {
     typedef void *(*gtk_widget_get_screen_func)(void *);
     typedef void *(*gdk_screen_get_rgba_visual_func)(void *);
     typedef void (*gtk_widget_set_app_paintable_func)(void *, int);
+    typedef void* (*gdk_pixbuf_loader_new_func)(void);
+    typedef int (*gdk_pixbuf_loader_write_func)(void *, const unsigned char *, unsigned long, void **);
+    typedef int (*gdk_pixbuf_loader_close_func)(void *, void **);
+    typedef void* (*gdk_pixbuf_loader_get_pixbuf_func)(void *);
+    typedef void (*gtk_window_set_icon_func)(void *, void *);
+    typedef void (*g_object_unref_func)(void *);
     // GTK Symbol Initialization
     static gtk_init_func gtk_init = NULL;
     static gtk_widget_show_all_func gtk_widget_show_all = NULL;
@@ -274,6 +280,12 @@ typedef struct webui_event_inf_t {
     static gtk_widget_get_screen_func gtk_widget_get_screen = NULL;
     static gdk_screen_get_rgba_visual_func gdk_screen_get_rgba_visual = NULL;
     static gtk_widget_set_app_paintable_func gtk_widget_set_app_paintable = NULL;
+    static gdk_pixbuf_loader_new_func gdk_pixbuf_loader_new = NULL;
+    static gdk_pixbuf_loader_write_func gdk_pixbuf_loader_write = NULL;
+    static gdk_pixbuf_loader_close_func gdk_pixbuf_loader_close = NULL;
+    static gdk_pixbuf_loader_get_pixbuf_func gdk_pixbuf_loader_get_pixbuf = NULL;
+    static gtk_window_set_icon_func gtk_window_set_icon = NULL;
+    static g_object_unref_func g_object_unref = NULL;
     // GTK Structs
     typedef struct {
         int x;
@@ -403,6 +415,8 @@ typedef struct _webui_window_t {
     size_t custom_server_port;
     const char* icon;
     const char* icon_type;
+    const unsigned char* icon_file_data;
+    size_t icon_file_size;
     size_t current_browser;
     char* browser_path;
     bool custom_profile;
@@ -1575,6 +1589,11 @@ void webui_set_icon(size_t window, const char* icon, const char* icon_type) {
         return;
     _webui_window_t* win = _webui.wins[window];
 
+    // The icon data and the icon type are both
+    // required, otherwise ignore the call
+    if (_webui_is_empty(icon) || _webui_is_empty(icon_type))
+        return;
+
     // Some wrappers do not guarantee pointers stay valid,
     // so, let's make our copy.
 
@@ -1596,6 +1615,103 @@ void webui_set_icon(size_t window, const char* icon, const char* icon_type) {
 
     win->icon = icon_cpy;
     win->icon_type = icon_type_cpy;
+}
+
+// Get the folder of the current executable (no trailing separator)
+static bool _webui_get_exe_dir(char* buffer, size_t max) {
+    #if defined(_WIN32)
+    DWORD len = GetModuleFileNameA(NULL, buffer, (DWORD)max);
+    if (len == 0 || len >= (DWORD)max)
+        return false;
+    #elif defined(__linux__)
+    ssize_t len = readlink("/proc/self/exe", buffer, max - 1);
+    if (len <= 0)
+        return false;
+    buffer[len] = '\0';
+    #else
+    // macOS: not implemented yet
+    (void)buffer;
+    (void)max;
+    return false;
+    #endif
+    #if defined(_WIN32) || defined(__linux__)
+    char* slash = strrchr(buffer, '/');
+    #if defined(_WIN32)
+    char* backslash = strrchr(buffer, '\\');
+    if (backslash > slash)
+        slash = backslash;
+    #endif
+    if (slash == NULL)
+        return false;
+    *slash = '\0';
+    return true;
+    #endif
+}
+
+void webui_set_icon_file(size_t window, const char* path) {
+
+    #ifdef WEBUI_LOG
+    _webui_log_info("[User] webui_set_icon_file([%zu], [%s])\n", window, path);
+    #endif
+
+    // Initialization
+    _webui_init();
+
+    // Dereference
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui.wins[window] == NULL)
+        return;
+    _webui_window_t* win = _webui.wins[window];
+
+    // The icon file path is required, otherwise ignore the call
+    if (_webui_is_empty(path))
+        return;
+
+    // Resolve the icon file: first as given (absolute, or relative to the
+    // current working directory), then relative to the executable's folder
+    char resolved[WEBUI_MAX_PATH];
+    WEBUI_SN_PRINTF_STATIC(resolved, sizeof(resolved), "%s", path);
+    if (!_webui_file_exist(resolved)) {
+        bool found = false;
+        char exe_dir[WEBUI_MAX_PATH];
+        if (_webui_get_exe_dir(exe_dir, sizeof(exe_dir))) {
+            WEBUI_SN_PRINTF_STATIC(resolved, sizeof(resolved), "%s/%s", exe_dir, path);
+            found = _webui_file_exist(resolved);
+        }
+        if (!found)
+            return; // Icon file not found - ignore the call
+    }
+
+    // Load the icon file content (binary safe)
+    FILE* file = NULL;
+    #if defined(_MSC_VER)
+    if (fopen_s(&file, resolved, "rb") != 0)
+        file = NULL;
+    #else
+    file = fopen(resolved, "rb");
+    #endif
+    if (file == NULL)
+        return;
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+    if (file_size <= 0) {
+        fclose(file);
+        return;
+    }
+    unsigned char* buffer = (unsigned char*)_webui_malloc((size_t)file_size);
+    if (fread(buffer, 1, (size_t)file_size, file) != (size_t)file_size) {
+        _webui_free_mem((void*)buffer);
+        fclose(file);
+        return;
+    }
+    fclose(file);
+
+    // Clean old sets if any
+    if (win->icon_file_data != NULL)
+        _webui_free_mem((void*)win->icon_file_data);
+
+    win->icon_file_data = buffer;
+    win->icon_file_size = (size_t)file_size;
 }
 
 void webui_navigate_client(webui_event_t* e, const char* url) {
@@ -13368,6 +13484,30 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             }
         }
 
+        // Window icon: use the icon file set by `webui_set_icon_file()`
+        // for the GTK window, so the window manager/taskbar (x11).
+        if (win->icon_file_data != NULL && win->icon_file_size > 0
+            && gdk_pixbuf_loader_new && gdk_pixbuf_loader_write
+            && gdk_pixbuf_loader_close && gdk_pixbuf_loader_get_pixbuf
+            && gtk_window_set_icon && g_object_unref) {
+            void* loader = gdk_pixbuf_loader_new();
+            if (loader != NULL) {
+                void* pixbuf = NULL;
+                if (gdk_pixbuf_loader_write(loader, win->icon_file_data,
+                    (unsigned long)win->icon_file_size, NULL)) {
+                    gdk_pixbuf_loader_close(loader, NULL);
+                    pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
+                } else {
+                    gdk_pixbuf_loader_close(loader, NULL);
+                }
+                if (pixbuf != NULL) {
+                    // `gtk_window_set_icon` takes its own reference
+                    gtk_window_set_icon(win->webView->gtk_win, pixbuf);
+                }
+                g_object_unref(loader);
+            }
+        }
+
         // Initialize WebView
         win->webView->gtk_wv = webkit_web_view_new();
 
@@ -13628,6 +13768,18 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 libgtk, "gdk_screen_get_rgba_visual");
             gtk_widget_set_app_paintable = (gtk_widget_set_app_paintable_func)dlsym(
                 libgtk, "gtk_widget_set_app_paintable");
+            gdk_pixbuf_loader_new = (gdk_pixbuf_loader_new_func)dlsym(
+                libgtk, "gdk_pixbuf_loader_new");
+            gdk_pixbuf_loader_write = (gdk_pixbuf_loader_write_func)dlsym(
+                libgtk, "gdk_pixbuf_loader_write");
+            gdk_pixbuf_loader_close = (gdk_pixbuf_loader_close_func)dlsym(
+                libgtk, "gdk_pixbuf_loader_close");
+            gdk_pixbuf_loader_get_pixbuf = (gdk_pixbuf_loader_get_pixbuf_func)dlsym(
+                libgtk, "gdk_pixbuf_loader_get_pixbuf");
+            gtk_window_set_icon = (gtk_window_set_icon_func)dlsym(
+                libgtk, "gtk_window_set_icon");
+            g_object_unref = (g_object_unref_func)dlsym(
+                libgtk, "g_object_unref");
 
             // WebView Symbol Addresses
             webkit_web_view_new = (webkit_web_view_new_func)dlsym(

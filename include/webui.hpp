@@ -301,6 +301,12 @@ namespace webui {
             webui_set_icon(webui_window, icon.data(), icon_type.data());
         }
 
+        // Set the window icon from an icon file (binary format).
+        // Can be used as the taskbar icon on Linux (GTK).
+        void set_icon_file(const std::string_view path) const {
+            webui_set_icon_file(webui_window, path.data());
+        }
+
         // Safely send raw data to the UI
         void send_raw(const std::string_view function, const void* raw, size_t size) const {
             webui_send_raw(webui_window, function.data(), raw, size);
