@@ -9,3 +9,7 @@ icon.res
 *.obj
 *.pdb
 *.ilk
+
+# CMake build folders
+build/
+build-*/

@@ -24,12 +24,30 @@ The first build must happen inside the WebUI repository: it copies the WebUI
 static library and header into `lib/`. Every later build works from the local
 `lib/` snapshot, wherever the folder lives.
 
+## Build with CMake (optional)
+
+The kit also ships `CMakeLists.txt` + `CMakePresets.json`, so it works out
+of the box with CMake-based IDEs and tools (Visual Studio, CLion, VS Code,
+Ninja, ...):
+
+```sh
+cmake -B build
+cmake --build build --config Release
+```
+
+Or using presets: `cmake --preset default` then `cmake --build --preset
+default` (`debug` presets included). The output matches the Makefile builds:
+everything lands in `bin/`, and the same `lib/` snapshot rule applies — run
+the first configure inside the WebUI repository.
+
 ## Folder structure
 
 ```
 starter_kit_c/
 ├── Makefile          # Windows MSVC (nmake)
 ├── GNUmakefile       # Linux, macOS, Windows MinGW (make / mingw32-make)
+├── CMakeLists.txt    # CMake build (Visual Studio, CLion, VS Code, ...)
+├── CMakePresets.json # CMake presets (Release / Debug)
 ├── icon.rc           # Windows resource: embeds ui/favicon.ico as the EXE icon
 ├── src/
 │   ├── main.c        # Your C backend (HTTP handler, bindings, window)
