@@ -1,0 +1,169 @@
+/* WebUI C Starter Kit - base styles */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+	height: 100%;
+	overflow: hidden;
+	background: transparent; /* The window itself is frameless + transparent */
+}
+
+body {
+	font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	color: #eef2f5;
+}
+
+#app {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	background: linear-gradient(135deg, rgba(27, 39, 53, 0.97), rgba(9, 10, 15, 0.97));
+	border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* --- Custom title bar (frameless window) --------------------------------- */
+
+#titlebar {
+	height: 44px;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 16px;
+	background: rgba(0, 0, 0, 0.25);
+	-webkit-app-region: drag; /* Windows/macOS (native drag) */
+	--webui-app-region: drag; /* Linux (WebUI custom drag) */
+}
+
+#title {
+	font-size: 13.5px;
+	font-weight: 600;
+	letter-spacing: 0.2px;
+	color: rgba(238, 242, 245, 0.85);
+}
+
+#window-buttons {
+	display: flex;
+	gap: 10px;
+	-webkit-app-region: no-drag; /* Windows/macOS (native) */
+	--webui-app-region: no-drag; /* Linux (WebUI custom) */
+}
+
+#window-buttons .button {
+	width: 13px;
+	height: 13px;
+	border-radius: 50%;
+	cursor: pointer;
+	transition: transform 0.15s ease-out, filter 0.15s ease-out;
+}
+
+#window-buttons .button:hover { transform: scale(1.12); filter: brightness(1.15); }
+#window-buttons .button:active { transform: scale(0.9); }
+
+.minimize { background: #ffbd2e; }
+.maximize { background: #28c940; }
+.close { background: #ff5f57; }
+
+/* --- Content ------------------------------------------------------------- */
+
+#content {
+	flex-grow: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+	overflow: auto;
+}
+
+.card {
+	width: min(560px, 92vw);
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 14px;
+	padding: 40px;
+	backdrop-filter: blur(10px);
+	box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+	text-align: center;
+}
+
+.logo {
+	width: 64px;
+	height: 64px;
+	margin: 0 auto 16px;
+	border-radius: 16px;
+	background: #2a6699; /* The WebUI brand blue */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 34px;
+	font-weight: 700;
+}
+
+h1 { font-size: 26px; font-weight: 600; }
+
+.subtitle {
+	margin-top: 8px;
+	font-size: 14px;
+	color: rgba(238, 242, 245, 0.6);
+}
+
+.demo { margin-top: 32px; text-align: left; }
+
+label {
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.3px;
+	color: rgba(238, 242, 245, 0.7);
+}
+
+.row { display: flex; gap: 10px; margin-top: 6px; }
+
+input {
+	flex: 1;
+	padding: 12px 14px;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: rgba(0, 0, 0, 0.25);
+	color: inherit;
+	font-size: 15px;
+}
+
+input:focus { outline: none; border-color: #2a6699; }
+
+#greet-btn {
+	padding: 12px 22px;
+	border-radius: 8px;
+	border: none;
+	background: #2a6699;
+	color: #fff;
+	font-size: 15px;
+	cursor: pointer;
+	transition: background 0.15s ease-out;
+}
+
+#greet-btn:hover { background: #357ab5; }
+#greet-btn:active { transform: translateY(1px); }
+
+output {
+	display: block;
+	margin-top: 16px;
+	padding: 14px;
+	border-radius: 8px;
+	background: rgba(0, 0, 0, 0.25);
+	border: 1px dashed rgba(255, 255, 255, 0.15);
+	color: rgba(238, 242, 245, 0.75);
+	font-size: 14px;
+	min-height: 48px;
+}
+
+footer {
+	margin-top: 32px;
+	font-size: 12.5px;
+	color: rgba(238, 242, 245, 0.45);
+}
+
+code {
+	background: rgba(255, 255, 255, 0.08);
+	padding: 2px 6px;
+	border-radius: 4px;
+}

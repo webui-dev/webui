@@ -1,0 +1,6 @@
+// WebUI C Starter Kit - Windows application icon
+//
+// 32512 is IDI_APPLICATION: picked up by Explorer, the taskbar, and the
+// WebUI WebView window class. Replace ui/favicon.ico to change your icon
+// (the same file is also embedded as the browser tab favicon).
+32512 ICON "ui/favicon.ico"

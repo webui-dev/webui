@@ -1,0 +1,15 @@
+# Generated at build time
+bin/
+lib/
+src/vfs.h
+tools/vfs
+tools/vfs.exe
+icon.o
+icon.res
+*.obj
+*.pdb
+*.ilk
+
+# CMake build folders
+build/
+build-*/
