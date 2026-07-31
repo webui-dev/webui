@@ -403,7 +403,6 @@ typedef struct _webui_window_t {
     // Window
     uint32_t token;
     size_t num; // Window number
-    bool is_showing;
     const char* html_elements[WEBUI_MAX_IDS];
     bool has_all_events;
     void* cb_context[WEBUI_MAX_IDS];
@@ -489,6 +488,7 @@ typedef struct _webui_core_t {
     char* cookies[WEBUI_MAX_IDS];
     bool cookies_single_set[WEBUI_MAX_IDS];
     size_t servers;
+    size_t showing;
     size_t used_ports[WEBUI_MAX_IDS];
     size_t startup_timeout;
     size_t cb_count;
@@ -651,7 +651,14 @@ static void _webui_mutex_unlock(webui_mutex_t* mutex);
 static void _webui_mutex_destroy(webui_mutex_t* mutex);
 static bool _webui_mutex_is_connected(_webui_window_t* win, int update);
 static bool _webui_mutex_app_is_exit_now(int update);
-static bool _webui_mutex_is_more_servers_running(int update);
+static bool _webui_mutex_is_more_servers_running(void);
+static void _webui_update_wait_state(void);
+static void _webui_servers_count(int delta);
+static size_t _webui_servers_get(void);
+static void _webui_showing_count(int delta);
+static bool _webui_wait_is_needed(void);
+static void _webui_wait_wake_up(void);
+static void _webui_wait_for_servers(void);
 static bool _webui_mutex_win_is_exit_now(_webui_window_t* win, int update);
 static bool _webui_mutex_is_webview_update(_webui_window_t* win, int update);
 static bool _webui_mutex_is_server_running(_webui_window_t* win, int update);
@@ -3839,18 +3846,14 @@ void webui_exit(void) {
     // safely exit and finish cleaning up.
     for (size_t i = 0; i < 4; i++) {
         _webui_sleep(500);
-        if (_webui.servers < 1) { // TODO: Add mutex here
+        if (_webui_servers_get() < 1) {
             // No more server threads are running
             break;
         }
     }
 
-    // Fire the mutex condition for wait()
-    _webui_mutex_is_more_servers_running(WEBUI_MUTEX_SET_FALSE); // For `webui_wait()` in Non-blocking mode
-    _webui_condition_signal(&_webui.condition_wait); // For `webui_wait()` in Blocking mode
-    #ifdef __APPLE__
-    _webui_macos_wv_stop();
-    #endif
+    // Break wait() (Blocking and Non-blocking modes)
+    _webui_update_wait_state();
 }
 
 static void _webui_wait_clean(bool async) {
@@ -4004,12 +4007,12 @@ static bool _webui_wait(bool async) {
             if (!async) {
 
                 // Blocking mode (Windows Web browser)
-                _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
+                _webui_wait_for_servers();
 
             } else {
 
                 // Non-Blocking mode (Windows Web browser)
-                if (_webui_mutex_is_more_servers_running(WEBUI_MUTEX_GET_STATUS)) {
+                if (_webui_wait_is_needed()) {
                     return true;
                 }
             }
@@ -4024,12 +4027,12 @@ static bool _webui_wait(bool async) {
             if (!async) {
 
                 // Blocking mode (Windows WebView)
-                _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
+                _webui_wait_for_servers();
 
             } else {
 
                 // Non-Blocking mode (Windows WebView)
-                if (_webui_mutex_is_more_servers_running(WEBUI_MUTEX_GET_STATUS)) {
+                if (_webui_wait_is_needed()) {
                     return true;
                 }
             }
@@ -4048,12 +4051,12 @@ static bool _webui_wait(bool async) {
             if (!async) {
 
                 // Blocking mode (Linux Web browser)
-                _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
+                _webui_wait_for_servers();
 
             } else {
 
                 // Non-Blocking mode (Linux Web browser)
-                if (_webui_mutex_is_more_servers_running(WEBUI_MUTEX_GET_STATUS)) {
+                if (_webui_wait_is_needed()) {
                     return true;
                 }
             }
@@ -4071,15 +4074,17 @@ static bool _webui_wait(bool async) {
             if (!async) {
 
                 // Blocking mode (Linux WebView)
-                gtk_main();
+                if (_webui_wait_is_needed()) {
+                    gtk_main();
+                }
 
             } else {
-                
+
                 // Non-Blocking mode (Linux WebView)
                 while (gtk_events_pending()) {
                     gtk_main_iteration_do(0);
                 }
-                if (_webui_mutex_is_more_servers_running(WEBUI_MUTEX_GET_STATUS)) {
+                if (_webui_wait_is_needed()) {
                     return true;
                 }
             }
@@ -4098,12 +4103,12 @@ static bool _webui_wait(bool async) {
             if (!async) {
 
                 // Blocking mode (macOS Web browser)
-                _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
+                _webui_wait_for_servers();
 
             } else {
-                
+
                 // Non-Blocking mode (macOS Web browser)
-                if (_webui_mutex_is_more_servers_running(WEBUI_MUTEX_GET_STATUS)) {
+                if (_webui_wait_is_needed()) {
                     return true;
                 }
             }
@@ -4121,15 +4126,17 @@ static bool _webui_wait(bool async) {
             if (!async) {
 
                 // Blocking mode (macOS WebView)
-                _webui_macos_wv_start();
+                if (_webui_wait_is_needed()) {
+                    _webui_macos_wv_start();
+                }
 
             } else {
-                
+
                 // Non-Blocking mode (macOS WebView)
                 while (_webui_macos_wv_iteration_do()) {
                     // Process drawing events...
                 }
-                if (_webui_mutex_is_more_servers_running(WEBUI_MUTEX_GET_STATUS)) {
+                if (_webui_wait_is_needed()) {
                     return true;
                 }
             }
@@ -4148,9 +4155,7 @@ void webui_wait(void) {
     _webui_init();
 
     // Wait (Blocking mode)
-    _webui_mutex_lock(&_webui.mutex_wait);
     (void) _webui_wait(false);
-    _webui_mutex_unlock(&_webui.mutex_wait);
 }
 
 bool webui_wait_async(void) {
@@ -4159,10 +4164,7 @@ bool webui_wait_async(void) {
     if (!_webui.initialized) _webui_init();
 
     // Wait (Non-Blocking mode)
-    _webui_mutex_lock(&_webui.mutex_wait);
-    bool status = _webui_wait(true);
-    _webui_mutex_unlock(&_webui.mutex_wait);
-    return status;
+    return _webui_wait(true);
 }
 
 void webui_set_timeout(size_t second) {
@@ -4645,7 +4647,7 @@ bool webui_interface_is_app_running(void) {
 
     // Get app status
     if (_webui.startup_timeout > 0) {
-        if (_webui.servers < 1)
+        if (!_webui_wait_is_needed())
             app_is_running = false;
     }
 
@@ -6279,20 +6281,100 @@ static bool _webui_mutex_app_is_exit_now(int update) {
     return status;
 }
 
-static bool _webui_mutex_is_more_servers_running(int update) {
+static bool _webui_mutex_is_more_servers_running(void) {
 
-    // This function will receive `false` when `_webui.servers < 1`,
-    // means no more servers are running.
-    //
-    // This function is primarily used to break `webui_wait()`.
+    // This is `false` when no more servers are running, which is
+    // primarily used to break `webui_wait()`. The state itself is
+    // owned by `_webui_update_wait_state()`.
 
     bool status = false;
     _webui_mutex_lock(&_webui.mutex_is_more_servers);
-    if (update == WEBUI_MUTEX_SET_TRUE) _webui.is_more_servers = true;
-    else if (update == WEBUI_MUTEX_SET_FALSE) _webui.is_more_servers = false;
     status = _webui.is_more_servers;
     _webui_mutex_unlock(&_webui.mutex_is_more_servers);
     return status;
+}
+
+static void _webui_update_wait_state(void) {
+
+    // `webui_exit()` always stops the wait, whatever the counters say.
+    bool more = !_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS);
+
+    _webui_mutex_lock(&_webui.mutex_is_more_servers);
+    if (more) {
+        // An infinite startup timeout means only `webui_exit()` stops the wait
+        more = ((_webui.startup_timeout < 1) ||
+            (_webui.servers > 0) || (_webui.showing > 0));
+    }
+    _webui.is_more_servers = more;
+    _webui_mutex_unlock(&_webui.mutex_is_more_servers);
+
+    if (!more)
+        _webui_wait_wake_up();
+}
+
+static void _webui_servers_count(int delta) {
+
+    _webui_mutex_lock(&_webui.mutex_is_more_servers);
+    if (delta > 0) _webui.servers++;
+    else if (_webui.servers > 0) _webui.servers--;
+    _webui_mutex_unlock(&_webui.mutex_is_more_servers);
+
+    _webui_update_wait_state();
+}
+
+static size_t _webui_servers_get(void) {
+
+    _webui_mutex_lock(&_webui.mutex_is_more_servers);
+    size_t count = _webui.servers;
+    _webui_mutex_unlock(&_webui.mutex_is_more_servers);
+    return count;
+}
+
+static void _webui_showing_count(int delta) {
+
+    _webui_mutex_lock(&_webui.mutex_is_more_servers);
+    if (delta > 0) _webui.showing++;
+    else if (_webui.showing > 0) _webui.showing--;
+    _webui_mutex_unlock(&_webui.mutex_is_more_servers);
+
+    _webui_update_wait_state();
+}
+
+static bool _webui_wait_is_needed(void) {
+
+    // Should `wait()` keep waiting?
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
+        return false;
+    return _webui_mutex_is_more_servers_running();
+}
+
+static void _webui_wait_wake_up(void) {
+
+    // Taking `mutex_wait` here is the handshake that makes the signal
+    // reliable. If the waiting thread already evaluated the predicate but did
+    // not enter the condition wait yet, it still holds `mutex_wait`, so we
+    // block until it is safely parked. Without this, a signal fired in that
+    // gap is simply lost and `wait()` blocks forever.
+    _webui_mutex_lock(&_webui.mutex_wait);
+    _webui_mutex_unlock(&_webui.mutex_wait);
+
+    _webui_condition_signal(&_webui.condition_wait);
+
+    #ifdef __APPLE__
+    _webui_macos_wv_stop();
+    #endif
+}
+
+static void _webui_wait_for_servers(void) {
+
+    // The predicate is re-checked under `mutex_wait` before and after every
+    // sleep, so an early signal cannot be lost, and a spurious wake-up cannot
+    // end the wait while windows are still running.
+    _webui_mutex_lock(&_webui.mutex_wait);
+    while (_webui_wait_is_needed()) {
+        _webui_condition_wait(&_webui.condition_wait, &_webui.mutex_wait);
+    }
+    _webui_mutex_unlock(&_webui.mutex_wait);
 }
 
 static bool _webui_mutex_is_server_running(_webui_window_t* win, int update) {
@@ -7756,7 +7838,7 @@ static void _webui_clean(void) {
     // cleaning memory.
     for (size_t i = 0; i < 4; i++) {
         _webui_sleep(500);
-        if (_webui.servers < 1) { // TODO: Add mutex here
+        if (_webui_servers_get() < 1) {
             break; // No more server threads are running
         }
     }
@@ -8671,16 +8753,12 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
     _webui_log_debug("[Core]\t\t_webui_show([%zu])\n", browser);
     #endif
 
-    // Prevent main loops from breaking.
-    win->is_showing = true;
-
     // Empty content means: use folder mode with the current root path,
     // so index fallback can be resolved by WebUI.
     if (_webui_is_empty(content)) {
         bool empty_status = _webui_show_window(
             win, client, win->server_root_path, WEBUI_SHOW_FOLDER, browser
         );
-        win->is_showing = false;
         webui_focus(win->num);
         return empty_status;
     }
@@ -8735,9 +8813,6 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
             status = false;
         status = _webui_show_window(win, client, content_cpy, WEBUI_SHOW_FILE, browser);
     }
-
-    // Reset
-    win->is_showing = false;
 
     // Bring the window to front after showing content
     if ((browser != NoBrowser) && (!win->hide)) {
@@ -9065,7 +9140,34 @@ static const char* _webui_get_local_ip(void) {
     #endif
 }
 
-static bool _webui_show_window(_webui_window_t* win, struct mg_connection* client, const char* content, int type, size_t browser) {
+static void _webui_start_server_thread(_webui_window_t* win) {
+
+    // Start the server thread of a window. The thread is counted in before it is
+    // created so that `wait()` cannot exit in the gap between this call and the
+    // thread actually starting.
+
+    _webui_servers_count(+1);
+
+    #ifdef _WIN32
+    HANDLE thread = CreateThread(NULL, 0, _webui_server_thread, (void*)win, 0, NULL);
+    win->server_thread = thread;
+    if (thread != NULL)
+        CloseHandle(thread);
+    else
+        _webui_servers_count(-1); // Thread creation failed
+    #else
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, &_webui_server_thread, (void*)win) == 0) {
+        pthread_detach(thread);
+        win->server_thread = thread;
+    }
+    else {
+        _webui_servers_count(-1); // Thread creation failed
+    }
+    #endif
+}
+
+static bool _webui_show_window_impl(_webui_window_t* win, struct mg_connection* client, const char* content, int type, size_t browser) {
 
     #ifdef WEBUI_LOG
     if (type == WEBUI_SHOW_HTML)
@@ -9303,19 +9405,9 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
         if (_webui.ui) {
             // Prioritize the server thread if we
             // knows that there is UIs running.
-            
+
             // New server thread
-            #ifdef _WIN32
-            HANDLE thread = CreateThread(NULL, 0, _webui_server_thread, (void*)win, 0, NULL);
-            win->server_thread = thread;
-            if (thread != NULL)
-                CloseHandle(thread);
-            #else
-            pthread_t thread;
-            pthread_create(&thread, NULL, &_webui_server_thread, (void*)win);
-            pthread_detach(thread);
-            win->server_thread = thread;
-            #endif
+            _webui_start_server_thread(win);
         }
 
         // Try first to open the UI in a browser if allowed.
@@ -9399,17 +9491,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
             _webui.ui = true;
 
             // New server thread
-            #ifdef _WIN32
-            HANDLE thread = CreateThread(NULL, 0, _webui_server_thread, (void*)win, 0, NULL);
-            win->server_thread = thread;
-            if (thread != NULL)
-                CloseHandle(thread);
-            #else
-            pthread_t thread;
-            pthread_create(&thread, NULL, &_webui_server_thread, (void*)win);
-            pthread_detach(thread);
-            win->server_thread = thread;
-            #endif
+            _webui_start_server_thread(win);
         }
 
     } else {
@@ -9515,6 +9597,19 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
 
     // The window is successfully launched.
     return true;
+}
+
+static bool _webui_show_window(_webui_window_t* win, struct mg_connection* client, const char* content, int type, size_t browser) {
+
+    // Re-showing a window stops its old server thread before starting the new
+    // one, so the servers counter can legitimately drop to zero in the middle
+    // of this call. Counting the show itself keeps `wait()` from exiting in
+    // that gap, and in the gap before the very first server thread starts.
+    _webui_showing_count(+1);
+    bool status = _webui_show_window_impl(win, client, content, type, browser);
+    _webui_showing_count(-1);
+
+    return status;
 }
 
 static void _webui_window_event(
@@ -10677,11 +10772,12 @@ static WEBUI_THREAD_SERVER_START {
 
     // Mutex
     _webui_mutex_lock(&_webui.mutex_server_start);
-    _webui_mutex_is_more_servers_running(WEBUI_MUTEX_SET_TRUE);
 
     _webui_window_t* win = _webui_dereference_win_ptr(arg);
     if (win == NULL || _webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS)) {
         _webui_mutex_unlock(&_webui.mutex_server_start);
+        // This thread was counted in by `_webui_start_server_thread()`
+        _webui_servers_count(-1);
         WEBUI_THREAD_RETURN
     }
 
@@ -10698,7 +10794,6 @@ static WEBUI_THREAD_SERVER_START {
     #endif
 
     // Initialization
-    _webui.servers++;
     _webui_mutex_is_server_running(win, WEBUI_MUTEX_SET_TRUE);
     if (_webui.startup_timeout < 1)
         _webui.startup_timeout = 0;
@@ -11052,31 +11147,14 @@ static WEBUI_THREAD_SERVER_START {
         win->num);
     #endif
 
-    // Let the main wait() know that
-    // this server thread is finished
-    if (_webui.servers > 0)
-        _webui.servers--;
-
     // Make window reusable, so user can
     // call `webui_show()` again if needed.
     _webui_make_window_reusable(win);
 
-    // Fire the mutex condition for wait()
-    if ((_webui.startup_timeout > 0) && (_webui.servers < 1)) {
-        if (!win->is_showing) {
-
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> Breaking main loop...\n", win->num);
-            #endif
-
-            // Break main loop
-            _webui_mutex_is_more_servers_running(WEBUI_MUTEX_SET_FALSE); // For `webui_wait()` in Non-blocking mode
-            _webui_condition_signal(&_webui.condition_wait); // For `webui_wait()` in Blocking mode
-            #ifdef __APPLE__
-            _webui_macos_wv_stop();
-            #endif
-        }
-    }
+    // Let the main wait() know that this server thread is finished. This
+    // breaks the main loop when nothing else is left running (no other
+    // server thread, and no `webui_show()` call in progress).
+    _webui_servers_count(-1);
 
     // Clean monitor thread
     if (_webui.config.folder_monitor && monitor_created) {
@@ -13625,15 +13703,16 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // _webui_log_debug("[Core]\t\t_webui_wv_exit_schedule()\n");
         #endif
 
-        if ((!_webui_mutex_is_more_servers_running(WEBUI_MUTEX_GET_STATUS)) ||
-            (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))) {
+        if (!_webui_wait_is_needed()) {
             if (_webui.is_gtk_main_run) {
                 #ifdef WEBUI_LOG
                 _webui_log_debug("[Core]\t\t_webui_wv_exit_schedule() -> Quit GTK Main Loop...\n");
                 #endif
                 gtk_main_quit();
+                return 0;
             }
-            return 0;
+            // The main loop is not running yet. Keep this schedule alive,
+            // otherwise nothing would be left to quit the loop if it starts.
         }
         return 1;
     }
