@@ -277,10 +277,11 @@ Think of WebUI like a WebView controller, but instead of embedding the WebView c
 | Pascal          | ✔️ | [Pascal-WebUI](https://github.com/webui-dev/pascal-webui) |
 | Purebasic       | ✔️ | [Purebasic-WebUI](https://github.com/webui-dev/purebasic-webui) |
 | - | - | - |
+| C#              | ✔️ | [CS-WebUI](https://github.com/Runic-Artifex/cs-webui) |
+| C#              | _not complete_ | [WebUI4CSharp](https://github.com/salvadordf/WebUI4CSharp) |
 | FSharp-WebUI    | ✔️ | [FSharp-WebUI](https://github.com/no-waves/FSharp-WebUI) |
 | Common Lisp     | _not complete_ | [cl-webui](https://github.com/garlic0x1/cl-webui) |
 | Delphi          | _not complete_ | [WebUI4Delphi](https://github.com/salvadordf/WebUI4Delphi) |
-| C#              | _not complete_ | [WebUI4CSharp](https://github.com/salvadordf/WebUI4CSharp) |
 | WebUI.NET       | _not complete_ | [WebUI.NET](https://github.com/Juff-Ma/WebUI.NET) |
 | QuickJS         | _not complete_ | [QuickUI](https://github.com/xland/QuickUI) |
 | PHP             | _not complete_ | [PHPWebUiComposer](https://github.com/KingBes/php-webui-composer) |
