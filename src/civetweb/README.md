@@ -15,3 +15,11 @@ Changes currently required when updating the submodule to ensure full direct int
 
   /* Copyright (c) 2013-2024 the Civetweb developers
   ```
+
+- Preserve WebUI-owned connection lifetimes during server shutdown.
+
+  WebUI carries `webui_civetweb_shutdown_context_connections()` and related
+  worker socket synchronization so it can stop admitting new connections and
+  interrupt blocked I/O before `mg_stop()` releases connection storage.
+  Preserve these changes when updating the vendored CivetWeb source until an
+  equivalent upstream facility is available.

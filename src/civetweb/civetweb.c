@@ -2431,7 +2431,9 @@ struct mg_context {
 
 	/* Thread related */
 	stop_flag_t stop_flag;        /* Should we stop event loop */
+	stop_flag_t stop_accepting;   /* Should newly accepted sockets be rejected */
 	pthread_mutex_t thread_mutex; /* Protects client_socks or queue */
+	pthread_mutex_t socket_mutex; /* Synchronizes worker socket scan and close */
 
 	pthread_t masterthreadid;            /* The master thread ID */
 	unsigned int cfg_max_worker_threads; /* How many worker-threads we are
@@ -18405,6 +18407,9 @@ close_connection(struct mg_connection *conn)
 		conn->ssl = NULL;
 	}
 #endif
+	if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+		(void)pthread_mutex_lock(&conn->phys_ctx->socket_mutex);
+	}
 	if (conn->client.sock != INVALID_SOCKET) {
 #if defined(__ZEPHYR__)
 		closesocket(conn->client.sock);
@@ -18412,6 +18417,9 @@ close_connection(struct mg_connection *conn)
 		close_socket_gracefully(conn);
 #endif
 		conn->client.sock = INVALID_SOCKET;
+	}
+	if (conn->phys_ctx->context_type == CONTEXT_SERVER) {
+		(void)pthread_mutex_unlock(&conn->phys_ctx->socket_mutex);
 	}
 
 	/* call the connection_closed callback if assigned */
@@ -18490,6 +18498,59 @@ mg_close_connection(struct mg_connection *conn)
 		mg_free(conn);
 	}
 #endif /* defined(USE_WEBSOCKET) */
+}
+
+
+/* WebUI-private extension: quiesce a server without releasing connection
+ * storage retained by WebUI callback tasks. Not part of the CivetWeb API. */
+void
+webui_civetweb_shutdown_context_connections(struct mg_context *ctx)
+{
+	if ((ctx == NULL) || (ctx->worker_connections == NULL)) {
+		return;
+	}
+
+	/* Quiesce socket dispatch before taking the worker snapshot. A socket that
+	 * was accepted just before this flag changed is rejected by produce_socket,
+	 * and dynamic worker publication uses the same mutex. Workers themselves
+	 * remain alive so external users may safely retire their conn pointers. */
+	(void)pthread_mutex_lock(&ctx->thread_mutex);
+	STOP_FLAG_ASSIGN(&ctx->stop_accepting, 1);
+	(void)pthread_mutex_lock(&ctx->socket_mutex);
+
+#if defined(ALTERNATIVE_QUEUE)
+	for (unsigned int i = 0; i < ctx->spawned_worker_threads; i++) {
+		if ((ctx->client_socks != NULL)
+		    && (ctx->client_socks[i].in_use == 1)
+		    && (ctx->client_socks[i].sock != INVALID_SOCKET)) {
+			shutdown(ctx->client_socks[i].sock, SHUTDOWN_BOTH);
+		}
+	}
+#else
+	/* No worker may consume the queue while thread_mutex is held. Close queued
+	 * sockets so every connection that can still be used is represented in
+	 * worker_connections below. */
+	while (ctx->sq_tail < ctx->sq_head) {
+		struct socket *queued = &ctx->squeue[ctx->sq_tail % ctx->sq_size];
+		if (queued->sock != INVALID_SOCKET) {
+			set_blocking_mode(queued->sock);
+			closesocket(queued->sock);
+			queued->sock = INVALID_SOCKET;
+		}
+		ctx->sq_tail++;
+	}
+	(void)pthread_cond_broadcast(&ctx->sq_empty);
+#endif
+
+	unsigned int count = ctx->spawned_worker_threads;
+	for (unsigned int i = 0; i < count; i++) {
+		struct mg_connection *conn = &ctx->worker_connections[i];
+		if (conn->client.sock != INVALID_SOCKET) {
+			shutdown(conn->client.sock, SHUTDOWN_BOTH);
+		}
+	}
+	(void)pthread_mutex_unlock(&ctx->socket_mutex);
+	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 }
 
 
@@ -20099,17 +20160,29 @@ static void
 produce_socket(struct mg_context *ctx, const struct socket *sp)
 {
 	unsigned int i;
+	(void)pthread_mutex_lock(&ctx->thread_mutex);
+	int accepting = STOP_FLAG_IS_ZERO(&ctx->stop_flag)
+	                && STOP_FLAG_IS_ZERO(&ctx->stop_accepting);
+	(void)pthread_mutex_unlock(&ctx->thread_mutex);
+	if (!accepting) {
+		set_blocking_mode(sp->sock);
+		closesocket(sp->sock);
+		return;
+	}
 
 	(void)mg_start_worker_thread(
 	    ctx, 1); /* will start a worker-thread only if there aren't currently
 	                any idle worker-threads */
 
-	while (!ctx->stop_flag) {
+	while (STOP_FLAG_IS_ZERO(&ctx->stop_flag)
+	       && STOP_FLAG_IS_ZERO(&ctx->stop_accepting)) {
 		for (i = 0; i < ctx->spawned_worker_threads; i++) {
 			/* find a free worker slot and signal it */
 			if (ctx->client_socks[i].in_use == 2) {
 				(void)pthread_mutex_lock(&ctx->thread_mutex);
-				if ((ctx->client_socks[i].in_use == 2) && !ctx->stop_flag) {
+				if ((ctx->client_socks[i].in_use == 2)
+				    && STOP_FLAG_IS_ZERO(&ctx->stop_flag)
+				    && STOP_FLAG_IS_ZERO(&ctx->stop_accepting)) {
 					ctx->client_socks[i] = *sp;
 					ctx->client_socks[i].in_use = 1;
 					/* socket has been moved to the consumer */
@@ -20149,6 +20222,11 @@ consume_socket(struct mg_context *ctx,
 
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
 	*sp = ctx->client_socks[thread_index];
+	/* Ownership moves to the worker connection. Do not leave a stale socket
+	 * number in the handoff slot where a later shutdown scan could mistake it
+	 * for an unconsumed connection after the descriptor has been reused. */
+	ctx->client_socks[thread_index].sock = INVALID_SOCKET;
+	ctx->client_socks[thread_index].in_use = 0;
 	if (ctx->stop_flag) {
 		(void)pthread_mutex_unlock(&ctx->thread_mutex);
 		if (sp->in_use == 1) {
@@ -20223,13 +20301,22 @@ static void
 produce_socket(struct mg_context *ctx, const struct socket *sp)
 {
 	int queue_filled;
+	int queued = 0;
 
 	(void)pthread_mutex_lock(&ctx->thread_mutex);
+	if (!STOP_FLAG_IS_ZERO(&ctx->stop_flag)
+	    || !STOP_FLAG_IS_ZERO(&ctx->stop_accepting)) {
+		(void)pthread_mutex_unlock(&ctx->thread_mutex);
+		set_blocking_mode(sp->sock);
+		closesocket(sp->sock);
+		return;
+	}
 
 	queue_filled = ctx->sq_head - ctx->sq_tail;
 
 	/* If the queue is full, wait */
 	while (STOP_FLAG_IS_ZERO(&ctx->stop_flag)
+	       && STOP_FLAG_IS_ZERO(&ctx->stop_accepting)
 	       && (queue_filled >= ctx->sq_size)) {
 		ctx->sq_blocked = 1; /* Status information: All threads busy */
 #if defined(USE_SERVER_STATS)
@@ -20242,10 +20329,13 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 		queue_filled = ctx->sq_head - ctx->sq_tail;
 	}
 
-	if (queue_filled < ctx->sq_size) {
+	if (STOP_FLAG_IS_ZERO(&ctx->stop_flag)
+	    && STOP_FLAG_IS_ZERO(&ctx->stop_accepting)
+	    && (queue_filled < ctx->sq_size)) {
 		/* Copy socket to the queue and increment head */
 		ctx->squeue[ctx->sq_head % ctx->sq_size] = *sp;
 		ctx->sq_head++;
+		queued = 1;
 		DEBUG_TRACE("queued socket %d", sp ? sp->sock : -1);
 	}
 
@@ -20258,6 +20348,11 @@ produce_socket(struct mg_context *ctx, const struct socket *sp)
 
 	(void)pthread_cond_signal(&ctx->sq_full);
 	(void)pthread_mutex_unlock(&ctx->thread_mutex);
+	if (!queued) {
+		set_blocking_mode(sp->sock);
+		closesocket(sp->sock);
+		return;
+	}
 
 	(void)mg_start_worker_thread(
 	    ctx, 1); /* will start a worker-thread only if there aren't currently
@@ -20740,6 +20835,7 @@ master_thread_run(struct mg_context *ctx)
 				 * Therefore, we're checking pfd[i].revents & POLLIN, not
 				 * pfd[i].revents == POLLIN. */
 				if (STOP_FLAG_IS_ZERO(&ctx->stop_flag)
+				    && STOP_FLAG_IS_ZERO(&ctx->stop_accepting)
 				    && (pfd[i].revents & POLLIN)) {
 					accept_new_connection(&ctx->listening_sockets[i], ctx);
 				}
@@ -20865,6 +20961,7 @@ free_context(struct mg_context *ctx)
 	 * condvars
 	 */
 	(void)pthread_mutex_destroy(&ctx->thread_mutex);
+	(void)pthread_mutex_destroy(&ctx->socket_mutex);
 
 #if defined(ALTERNATIVE_QUEUE)
 	mg_free(ctx->client_socks);
@@ -20979,7 +21076,7 @@ mg_stop(struct mg_context *ctx)
 	STOP_FLAG_ASSIGN(&ctx->stop_flag, 1);
 
 	/* Closing this socket will cause mg_poll() in all the I/O threads to return
-	 * immediately */
+	 * immediately. */
 	closesocket(ctx->user_shutdown_notification_socket);
 	ctx->user_shutdown_notification_socket =
 	    -1; /* to avoid calling closesocket() again in free_context() */
@@ -21154,13 +21251,24 @@ mg_socketpair(int *sockA, int *sockB)
 static int
 mg_start_worker_thread(struct mg_context *ctx, int only_if_no_idle_threads)
 {
+	/* Keep worker reservation, creation and publication atomic with respect to
+	 * an external stop/connection-interrupt request. The new worker may start
+	 * running immediately, but it cannot consume a socket until this mutex is
+	 * released. */
+	(void)pthread_mutex_lock(&ctx->thread_mutex);
 	const unsigned int i = ctx->spawned_worker_threads;
 	if (i >= ctx->cfg_max_worker_threads) {
+		(void)pthread_mutex_unlock(&ctx->thread_mutex);
 		return -1; /* Oops, we hit our worker-thread limit!  No more worker
 		              threads, ever! */
 	}
 
-	(void)pthread_mutex_lock(&ctx->thread_mutex);
+	if (!STOP_FLAG_IS_ZERO(&ctx->stop_flag)
+	    || !STOP_FLAG_IS_ZERO(&ctx->stop_accepting)) {
+		(void)pthread_mutex_unlock(&ctx->thread_mutex);
+		return -1;
+	}
+
 #if defined(ALTERNATIVE_QUEUE)
 	if ((only_if_no_idle_threads) && (ctx->idle_worker_thread_count > 0)) {
 #else
@@ -21175,7 +21283,6 @@ mg_start_worker_thread(struct mg_context *ctx, int only_if_no_idle_threads)
 	ctx->idle_worker_thread_count++; /* we do this here to avoid a race
 	                                    condition while the thread is starting
 	                                    up */
-	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 
 	ctx->worker_connections[i].phys_ctx = ctx;
 	int ret = mg_start_thread_with_id(worker_thread,
@@ -21186,10 +21293,9 @@ mg_start_worker_thread(struct mg_context *ctx, int only_if_no_idle_threads)
 		                                  the table */
 		DEBUG_TRACE("Started worker_thread #%i", ctx->spawned_worker_threads);
 	} else {
-		(void)pthread_mutex_lock(&ctx->thread_mutex);
 		ctx->idle_worker_thread_count--; /* whoops, roll-back on error */
-		(void)pthread_mutex_unlock(&ctx->thread_mutex);
 	}
+	(void)pthread_mutex_unlock(&ctx->thread_mutex);
 	return ret;
 }
 
@@ -21266,6 +21372,7 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 	pthread_setspecific(sTlsKey, &tls);
 
 	ok = (0 == pthread_mutex_init(&ctx->thread_mutex, &pthread_mutex_attr));
+	ok &= (0 == pthread_mutex_init(&ctx->socket_mutex, &pthread_mutex_attr));
 #if !defined(ALTERNATIVE_QUEUE)
 	ok &= (0 == pthread_cond_init(&ctx->sq_empty, NULL));
 	ok &= (0 == pthread_cond_init(&ctx->sq_full, NULL));
@@ -21772,6 +21879,9 @@ mg_start2(struct mg_init_data *init, struct mg_error_data *error)
 		free_context(ctx);
 		pthread_setspecific(sTlsKey, NULL);
 		return NULL;
+	}
+	for (i = 0; (unsigned)i < ctx->cfg_max_worker_threads; i++) {
+		ctx->worker_connections[i].client.sock = INVALID_SOCKET;
 	}
 
 #if defined(ALTERNATIVE_QUEUE)
