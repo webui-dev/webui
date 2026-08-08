@@ -286,7 +286,9 @@ namespace webui {
             webui_close(webui_window);
         }
 
-        // Close a specific window and free all memory resources.
+        // Close a specific window and free all memory resources. Safe to call
+        // from a WebUI callback; final reclamation is deferred until the
+        // callback and active server work retire.
         void destroy() const {
             webui_destroy(webui_window);
         }
@@ -439,6 +441,9 @@ namespace webui {
 
         // Start only the local web server and return the URL.
         // Empty content means: use current root folder + index fallback.
+        // The returned view is owned by WebUI and remains valid until a later
+        // successful call for this window or clean(). Destroying the window
+        // does not invalidate it.
         std::string_view start_server(const std::string_view content = "") const {
             return std::string_view{webui_start_server(webui_window, content.data())};
         }
@@ -568,7 +573,9 @@ namespace webui {
         return webui_malloc(size);
     }
 
-    // Free all memory resources. Should be called only at the end.
+    // Free all memory resources. Should be called only at the end. From a WebUI
+    // callback this requests exit and defers cleanup; call it again after
+    // wait() returns.
     inline void clean() {
         webui_clean();
     }

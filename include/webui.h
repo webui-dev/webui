@@ -369,7 +369,10 @@ WEBUI_EXPORT bool webui_show_browser(size_t window, const char* content, size_t 
  * Pass `NULL` or an empty string to start in folder mode using the
  * current root folder and index fallback logic.
  *
- * @return Returns the url of this window server.
+ * @return Returns the URL of this window server. The returned string is owned
+ * by WebUI and remains valid until a later successful `webui_start_server()`
+ * call for the same window or `webui_clean()`. Destroying the window does not
+ * invalidate it.
  *
  * @example const char* url = webui_start_server(myWindow, "/full/root/path");
  */
@@ -516,6 +519,8 @@ WEBUI_EXPORT void webui_close_client(webui_event_t* e);
 
 /**
  * @brief Close a specific window and free all memory resources.
+ * This function may be called from a WebUI callback. In that case, final
+ * reclamation is deferred until the callback and active server work retire.
  *
  * @param window The window number
  *
@@ -859,6 +864,8 @@ WEBUI_EXPORT void webui_navigate_client(webui_event_t* e, const char* url);
 
 /**
  * @brief Free all memory resources. Should be called only at the end.
+ * When called from a WebUI callback, this function requests application exit
+ * and defers cleanup. Call it again after `webui_wait()` returns.
  *
  * @example
  * webui_wait();
