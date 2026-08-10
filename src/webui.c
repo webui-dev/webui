@@ -2710,7 +2710,7 @@ const char* webui_get_last_error_message() {
     #endif
 
     // TODO: Add error message.
-    return "Unknown error.";
+    return "";
 }
 
 void webui_return_bool(webui_event_t* e, bool b) {
@@ -7237,6 +7237,34 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_browser_exist([%zu])\n", browser);
     #endif
+
+    // Non-supported browsers
+    if (browser == NoBrowser || browser == Safari || browser == Opera)
+        return false;
+
+    // Any supported web browser (Except WebView)
+    if (browser == AnyBrowser) {
+        static const size_t any_browsers[] = {
+            Chrome, Edge, Epic, Vivaldi, Brave, Firefox, Yandex, Chromium
+        };
+        for (size_t i = 0; i < (sizeof(any_browsers) / sizeof(any_browsers[0])); i++) {
+            if (_webui_browser_exist(win, any_browsers[i]))
+                return true;
+        }
+        return false;
+    }
+
+    // Any supported Chromium based web browser
+    if (browser == ChromiumBased) {
+        static const size_t chromium_browsers[] = {
+            Chrome, Edge, Epic, Vivaldi, Brave, Yandex, Chromium
+        };
+        for (size_t i = 0; i < (sizeof(chromium_browsers) / sizeof(chromium_browsers[0])); i++) {
+            if (_webui_browser_exist(win, chromium_browsers[i]))
+                return true;
+        }
+        return false;
+    }
 
     // Check if a web browser is installed on this machine
 
