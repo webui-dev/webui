@@ -50,7 +50,8 @@ class WebuiBridge {
 	#allowNavigation: boolean = true;
 	#sendQueue: Uint8Array[] = [];
 	#isSending: boolean = false;
-	#bindsList: string[];
+	#bindsList: string[] = [];
+	#bindsListTimeout: number = 10000;
 	// WebUI Const
 	#WEBUI_SIGNATURE: number = 221;
 	#CMD_JS: number = 254;
@@ -605,6 +606,17 @@ class WebuiBridge {
 	#wsIsConnected(): boolean {
 		return ((this.#ws) && (this.#ws.readyState === WebSocket.OPEN));
 	}
+	async #wsWaitForBindsList(): Promise<boolean> {
+		// The backend can run a script in this page before the token
+		// handshake is done, and the bind list comes with that handshake.
+		const start = Date.now();
+		while (!this.#TokenAccepted) {
+			if (!this.#wsIsConnected()) return false;
+			if ((Date.now() - start) > this.#bindsListTimeout) return false;
+			await new Promise((resolve) => setTimeout(resolve, 10));
+		}
+		return this.#wsIsConnected();
+	}
 	#wsConnect(): void {
 		if (this.#wsIsConnected()) {
 			this.#ws.close();
@@ -906,6 +918,8 @@ class WebuiBridge {
 	 */
 	async call(fn: string, ...args: DataTypes[]): Promise<DataTypes> {
 		if (!fn) return Promise.reject(new SyntaxError('No binding name is provided'));
+
+		if (!this.#TokenAccepted) await this.#wsWaitForBindsList();
 
 		if (!this.#wsIsConnected()) return Promise.reject(new Error('WebSocket is not connected'));
 

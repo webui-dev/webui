@@ -12223,11 +12223,6 @@ static void _webui_ws_process(
                         size_t connection_id = 0;
                         if (_webui_connection_get_id(win, client, &connection_id)) {
 
-                            if (win->single_client == client) {
-                                _webui_mutex_is_single_client_token_valid(win, WEBUI_MUTEX_SET_TRUE);
-                            }
-                            _webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_SET_TRUE, connection_id);
-
                             #ifdef WEBUI_LOG
                             _webui_log_debug(
                                 "[Core] [WS #%zu]\t_webui_ws_process() -> Token accepted. Sending bind list\n",
@@ -12280,6 +12275,15 @@ static void _webui_ws_process(
 
                             // Free
                             _webui_free_mem((void*)csv);
+
+                            // The token is marked valid only after the bind list is on the wire.
+                            // `_webui_show_window()` waits for this flag, so any script the backend
+                            // sends right after `webui_show()` returns is guaranteed to reach a
+                            // bridge that already knows its bind list.
+                            _webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_SET_TRUE, connection_id);
+                            if (win->single_client == client) {
+                                _webui_mutex_is_single_client_token_valid(win, WEBUI_MUTEX_SET_TRUE);
+                            }
 
                             // New Event
                             if (win->has_all_events) {
