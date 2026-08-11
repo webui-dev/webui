@@ -10082,9 +10082,24 @@ static bool _webui_get_cb_index(_webui_window_t* win, const char* element, size_
 
 #ifdef WEBUI_LOG
 static void _webui_print_hex(const char* data, size_t len) {
-    for (size_t i = 0; i < len; i++) {
-        _webui_log_debug("0x%02X ", (unsigned char)* data);
-        data++;
+    if (len <= 128) {
+        for (size_t i = 0; i < len; i++) {
+            _webui_log_debug("0x%02X ", (unsigned char)* data);
+            data++;
+        }
+    } else {
+        for (size_t i = 0; i < 64; i++) {
+            _webui_log_debug("0x%02X ", (unsigned char)* data);
+            data++;
+        }
+
+        _webui_log_debug("... ");
+
+        data += len - 128;
+        for (size_t i = 0; i < 64; i++) {
+            _webui_log_debug("0x%02X ", (unsigned char)* data);
+            data++;
+        }
     }
 }
 static void _webui_print_ascii(const char* data, size_t len) {
