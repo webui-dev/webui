@@ -680,6 +680,9 @@ static bool _webui_mutex_is_thread_running(_webui_window_t* win, int update);
 static bool _webui_mutex_is_start_requested(_webui_window_t* win, int update);
 static bool _webui_mutex_is_reload_requested(_webui_window_t* win, int update);
 static void _webui_window_request_reload(_webui_window_t* win);
+static void _webui_window_wait_for_reload(_webui_window_t* win);
+static bool _webui_window_thread_end(_webui_window_t* win);
+static bool _webui_window_cycle_end(_webui_window_t* win);
 static _webui_window_t* _webui_dereference_win_num(size_t num);
 static void _webui_start_server_thread(_webui_window_t* win);
 static void _webui_window_close_ui(_webui_window_t* win);
@@ -3617,6 +3620,9 @@ const char* webui_get_url(size_t window) {
     if (win == NULL)
         return NULL;
 
+    // Report the URL of the new server if a reload is pending
+    _webui_window_wait_for_reload(win);
+
     // Check if local server is started
     if (_webui_is_empty(win->url)) {
         // Start local server
@@ -6545,8 +6551,10 @@ static bool _webui_mutex_is_reload_requested(_webui_window_t* win, int update) {
 static void _webui_window_request_reload(_webui_window_t* win) {
 
     // Ask the persistent server thread of a window to restart its web
-    // server using the current settings. If clients are connected they
-    // get closed first: the thread reloads once the serve cycle ends.
+    // server using the current settings. The flag also ends the current
+    // serve cycle, so the thread reaches the reload immediately. The
+    // connected clients are asked to close: they are bound to the old
+    // server, which is about to be stopped.
 
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_window_request_reload([%zu])\n", win->num);
@@ -6555,6 +6563,50 @@ static void _webui_window_request_reload(_webui_window_t* win) {
     _webui_mutex_is_reload_requested(win, WEBUI_MUTEX_SET_TRUE);
     if (_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS))
         webui_close(win->num);
+}
+
+static void _webui_window_wait_for_reload(_webui_window_t* win) {
+
+    // Wait for a pending reload of this window to complete. The reload
+    // flag stays set until the web server is listening again, so after
+    // this the window port and URL are the final ones.
+
+    if (!_webui_mutex_is_reload_requested(win, WEBUI_MUTEX_GET_STATUS))
+        return;
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_window_wait_for_reload([%zu])\n", win->num);
+    #endif
+
+    _webui_timer_t timer;
+    _webui_timer_start(&timer);
+    for (;;) {
+        _webui_sleep(1);
+        if (!_webui_mutex_is_reload_requested(win, WEBUI_MUTEX_GET_STATUS))
+            break;
+        if (!_webui_mutex_is_thread_running(win, WEBUI_MUTEX_GET_STATUS))
+            break;
+        if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
+            break;
+        if (_webui_timer_is_end(&timer, 5000))
+            break;
+    }
+}
+
+static bool _webui_window_thread_end(_webui_window_t* win) {
+
+    // Should the persistent server thread of this window exit?
+    return (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) ||
+        _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_GET_STATUS));
+}
+
+static bool _webui_window_cycle_end(_webui_window_t* win) {
+
+    // Should the current serve cycle of this window end? A reload ends
+    // the cycle as well, so the server gets restarted right away instead
+    // of waiting for the connection timeouts to expire.
+    return (_webui_window_thread_end(win) ||
+        _webui_mutex_is_reload_requested(win, WEBUI_MUTEX_GET_STATUS));
 }
 
 static void _webui_window_task_count(_webui_window_t* win, int delta) {
@@ -9496,6 +9548,11 @@ static bool _webui_show_window_impl(_webui_window_t* win, struct mg_connection* 
     }
     #endif
 
+    // A pending reload is about to change this window's port and URL.
+    // Let the server thread finish it first, so this show uses the
+    // new ones instead of pointing the UI at the old server.
+    _webui_window_wait_for_reload(win);
+
     // Initialization
     bool keep_user_index_file = false;
     if (type == WEBUI_SHOW_URL && win->url != NULL && !_webui_is_empty(content)) {
@@ -11084,6 +11141,7 @@ static WEBUI_THREAD_SERVER_START {
     // and stays listening until this thread exits.
     struct mg_context * http_ctx = NULL;
     char* server_port = NULL;
+    bool resume_after_reload = false;
 
     // This thread is persistent: it parks until `webui_show()` requests a
     // serve cycle, serves until the window gets closed, then parks again.
@@ -11092,24 +11150,25 @@ static WEBUI_THREAD_SERVER_START {
 
         // Park: wait for a serve request, a client
         // re-connection, or a reload request
-        if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_GET_STATUS))
+        if (_webui_window_thread_end(win))
             break;
 
         // Reload: restart the web server of this window using the
         // current settings. Requested by setters like `webui_set_port()`.
-        // The requester closes this window's clients, so the reload runs
-        // once the serve cycle has ended and the clients are gone.
+        // The reload request also ended the serve cycle, so we get here
+        // immediately. The reload flag stays set until the server is
+        // listening again, so `webui_show()` waits for the new port.
         bool rebind_only = false;
-        if (_webui_mutex_is_reload_requested(win, WEBUI_MUTEX_GET_STATUS) &&
-            !_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS)) {
-
-            _webui_mutex_is_reload_requested(win, WEBUI_MUTEX_SET_FALSE);
+        if (_webui_mutex_is_reload_requested(win, WEBUI_MUTEX_GET_STATUS)) {
 
             if (http_ctx != NULL) {
 
                 #ifdef WEBUI_LOG
                 _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> Reloading server...\n", win->num);
                 #endif
+
+                // Any remaining client is bound to the old server
+                _webui_mutex_is_connected(win, WEBUI_MUTEX_SET_FALSE);
 
                 // Wait for this window's in-flight event tasks, then
                 // stop the server services
@@ -11135,6 +11194,10 @@ static WEBUI_THREAD_SERVER_START {
 
                 // Restart listening right away, then park again
                 rebind_only = true;
+            }
+            else {
+                // Nothing to reload, the server was never started
+                _webui_mutex_is_reload_requested(win, WEBUI_MUTEX_SET_FALSE);
             }
         }
 
@@ -11225,6 +11288,9 @@ static WEBUI_THREAD_SERVER_START {
                 win->server_port = 0;
                 _webui_free_mem((void*)server_port);
                 server_port = NULL;
+
+                // A failed reload is still a finished reload
+                _webui_mutex_is_reload_requested(win, WEBUI_MUTEX_SET_FALSE);
                 continue;
             }
 
@@ -11246,8 +11312,17 @@ static WEBUI_THREAD_SERVER_START {
         }
 
         if (rebind_only) {
+
             // The reload is done. The server is listening
             // again, using the new settings
+            _webui_mutex_is_reload_requested(win, WEBUI_MUTEX_SET_FALSE);
+
+            // Resume serving if this window was serving when the reload
+            // was requested, so it stays active for `webui_wait()`
+            if (resume_after_reload) {
+                resume_after_reload = false;
+                _webui_mutex_is_start_requested(win, WEBUI_MUTEX_SET_TRUE);
+            }
             continue;
         }
 
@@ -11291,7 +11366,7 @@ static WEBUI_THREAD_SERVER_START {
                         _webui_sleep(1);
 
                         // Stop if we get exit signal
-                        if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_GET_STATUS)) {
+                        if (_webui_window_cycle_end(win)) {
                             stop = true;
                             break;
                         }
@@ -11328,7 +11403,7 @@ static WEBUI_THREAD_SERVER_START {
                             for (;;) {
 
                                 // Stop if we get exit signal
-                                if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_GET_STATUS)) {
+                                if (_webui_window_cycle_end(win)) {
                                     stop = true;
                                     break;
                                 }
@@ -11380,7 +11455,7 @@ static WEBUI_THREAD_SERVER_START {
                         _webui_sleep(1);
 
                         // Exit signal
-                        if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_GET_STATUS)) {
+                        if (_webui_window_cycle_end(win)) {
                             stop = true;
                             break;
                         }
@@ -11416,7 +11491,7 @@ static WEBUI_THREAD_SERVER_START {
                                     for (;;) {
 
                                         // Stop if we get exit signal
-                                        if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_GET_STATUS)) {
+                                        if (_webui_window_cycle_end(win)) {
                                             stop = true;
                                             break;
                                         }
@@ -11481,7 +11556,7 @@ static WEBUI_THREAD_SERVER_START {
             // Wait forever
             for (;;) {
                 _webui_sleep(1);
-                if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_GET_STATUS))
+                if (_webui_window_cycle_end(win))
                     break;
             }
         }
@@ -11494,6 +11569,11 @@ static WEBUI_THREAD_SERVER_START {
         _webui_mutex_is_start_requested(win, WEBUI_MUTEX_SET_FALSE);
         _webui_mutex_is_connected(win, WEBUI_MUTEX_SET_FALSE);
         _webui_window_close_ui(win);
+
+        // A reload ended this cycle. Serving resumes once
+        // the server is listening again.
+        if (_webui_mutex_is_reload_requested(win, WEBUI_MUTEX_GET_STATUS))
+            resume_after_reload = true;
 
         // Make window reusable, so user can
         // call `webui_show()` again if needed.
