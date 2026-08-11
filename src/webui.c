@@ -458,6 +458,7 @@ typedef struct _webui_window_t {
     bool thread_running; // Persistent server thread is alive
     bool server_start_requested; // `webui_show()` requested a serve cycle
     bool destroy_requested; // Deferred destroy from a callback of this window
+    bool reload_requested; // A setter changed the web server settings
     size_t tasks; // In-flight event tasks using this window
     // WebView
     bool allow_webview;
@@ -523,6 +524,7 @@ typedef struct _webui_core_t {
     webui_mutex_t mutex_win_connect;
     webui_mutex_t mutex_app_exit_now;
     webui_mutex_t mutex_is_more_servers;
+    webui_mutex_t mutex_allocator; // Window ID and port allocators
     webui_mutex_t mutex_http_handler;
     webui_mutex_t mutex_client;
     webui_mutex_t mutex_async_response;
@@ -676,6 +678,8 @@ static bool _webui_mutex_is_webview_update(_webui_window_t* win, int update);
 static bool _webui_mutex_is_server_running(_webui_window_t* win, int update);
 static bool _webui_mutex_is_thread_running(_webui_window_t* win, int update);
 static bool _webui_mutex_is_start_requested(_webui_window_t* win, int update);
+static bool _webui_mutex_is_reload_requested(_webui_window_t* win, int update);
+static void _webui_window_request_reload(_webui_window_t* win);
 static _webui_window_t* _webui_dereference_win_num(size_t num);
 static void _webui_start_server_thread(_webui_window_t* win);
 static void _webui_window_close_ui(_webui_window_t* win);
@@ -1261,7 +1265,9 @@ size_t webui_new_window_id(size_t num) {
 
     // Create a new window
     _webui_window_t* win = (_webui_window_t* ) _webui_malloc(sizeof(_webui_window_t));
+    _webui_mutex_lock(&_webui.mutex_allocator);
     _webui.wins[num] = win;
+    _webui_mutex_unlock(&_webui.mutex_allocator);
 
     // Mutex Initialisation
     _webui_mutex_init(&win->mutex_win_exit_now);
@@ -1317,12 +1323,15 @@ size_t webui_get_new_window_id(void) {
     if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
         return 0;
 
+    _webui_mutex_lock(&_webui.mutex_allocator);
     for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
         if (_webui.wins[i] == NULL && !_webui.wins_reserved[i]) {
             _webui.wins_reserved[i] = true;
+            _webui_mutex_unlock(&_webui.mutex_allocator);
             return i;
         }
     }
+    _webui_mutex_unlock(&_webui.mutex_allocator);
 
     // We should never reach here
     WEBUI_ASSERT("webui_get_new_window_id() failed");
@@ -1622,10 +1631,12 @@ void webui_destroy(size_t window) {
     // and its buffers stay allocated until `webui_clean()`, because a
     // detached event task, or a WebView thread, may still hold pointers
     // to them.
+    _webui_mutex_lock(&_webui.mutex_allocator);
     if (_webui.wins[window] == win) {
         _webui.wins[window] = NULL;
         _webui.wins_reserved[window] = false;
     }
+    _webui_mutex_unlock(&_webui.mutex_allocator);
 }
 
 bool webui_is_shown(size_t window) {
@@ -3124,6 +3135,12 @@ bool webui_set_port(size_t window, size_t port) {
         return false;
 
     win->custom_server_port = port;
+
+    if (_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS)) {
+        // The server is already listening: reload
+        // it, so the new port takes effect
+        _webui_window_request_reload(win);
+    }
     return true;
 }
 
@@ -3636,7 +3653,14 @@ void webui_set_public(size_t window, bool status) {
     if (win == NULL)
         return;
 
-    win->is_public = status;
+    if (win->is_public != status) {
+        win->is_public = status;
+        if (_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS)) {
+            // The server is already listening: reload it,
+            // so the new host binding takes effect
+            _webui_window_request_reload(win);
+        }
+    }
 }
 
 void webui_send_raw_client(webui_event_t* e, const char* function, const void* raw, size_t size) {
@@ -4323,8 +4347,7 @@ bool webui_set_root_folder(size_t window, const char* path) {
     }
     #endif
     
-    if (_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS) || 
-        _webui_is_empty(path) || 
+    if (_webui_is_empty(path) ||
         (_webui_strlen(path) > WEBUI_MAX_PATH) ||
         !_webui_folder_exist(path)) {
 
@@ -4338,6 +4361,9 @@ bool webui_set_root_folder(size_t window, const char* path) {
     #ifdef WEBUI_LOG
     _webui_log_info("[User] webui_set_root_folder() -> Success\n");
     #endif
+    // The HTTP handler and the file serving logic read this path on
+    // every request, so a running window server picks it up live,
+    // without any reload
     WEBUI_SN_PRINTF_DYN(win->server_root_path, WEBUI_MAX_PATH, "%s", path);
     return true;
 }
@@ -6505,6 +6531,32 @@ static bool _webui_mutex_is_start_requested(_webui_window_t* win, int update) {
     return status;
 }
 
+static bool _webui_mutex_is_reload_requested(_webui_window_t* win, int update) {
+
+    bool status = false;
+    _webui_mutex_lock(&win->mutex_win_thread);
+    if (update == WEBUI_MUTEX_SET_TRUE) win->reload_requested = true;
+    else if (update == WEBUI_MUTEX_SET_FALSE) win->reload_requested = false;
+    status = win->reload_requested;
+    _webui_mutex_unlock(&win->mutex_win_thread);
+    return status;
+}
+
+static void _webui_window_request_reload(_webui_window_t* win) {
+
+    // Ask the persistent server thread of a window to restart its web
+    // server using the current settings. If clients are connected they
+    // get closed first: the thread reloads once the serve cycle ends.
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_window_request_reload([%zu])\n", win->num);
+    #endif
+
+    _webui_mutex_is_reload_requested(win, WEBUI_MUTEX_SET_TRUE);
+    if (_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS))
+        webui_close(win->num);
+}
+
 static void _webui_window_task_count(_webui_window_t* win, int delta) {
 
     _webui_mutex_lock(&win->mutex_win_thread);
@@ -8052,6 +8104,7 @@ static void _webui_clean(void) {
     _webui_mutex_destroy(&_webui.mutex_token);
     _webui_mutex_destroy(&_webui.mutex_js_run_id);
     _webui_mutex_destroy(&_webui.mutex_ws_process_number);
+    _webui_mutex_destroy(&_webui.mutex_allocator);
     _webui_condition_destroy(&_webui.condition_wait);
 
     _webui.initialized = false;
@@ -9939,12 +9992,14 @@ static void _webui_free_port(size_t port) {
     if (port == 0)
         return;
 
+    _webui_mutex_lock(&_webui.mutex_allocator);
     for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
         if (_webui.used_ports[i] == port) {
             _webui.used_ports[i] = 0;
             break;
         }
     }
+    _webui_mutex_unlock(&_webui.mutex_allocator);
 }
 
 static size_t _webui_get_free_port(void) {
@@ -9952,6 +10007,8 @@ static size_t _webui_get_free_port(void) {
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_get_free_port()\n");
     #endif
+
+    _webui_mutex_lock(&_webui.mutex_allocator);
 
     size_t port = (rand() % (WEBUI_MAX_PORT + 1 - WEBUI_MIN_PORT)) + WEBUI_MIN_PORT;
 
@@ -9987,6 +10044,7 @@ static size_t _webui_get_free_port(void) {
         }
     }
 
+    _webui_mutex_unlock(&_webui.mutex_allocator);
     return port;
 }
 
@@ -10024,6 +10082,7 @@ static void _webui_init(void) {
     _webui_mutex_init(&_webui.mutex_token);
     _webui_mutex_init(&_webui.mutex_js_run_id);
     _webui_mutex_init(&_webui.mutex_ws_process_number);
+    _webui_mutex_init(&_webui.mutex_allocator);
     _webui_condition_init(&_webui.condition_wait);
 
     // Random
@@ -11031,15 +11090,62 @@ static WEBUI_THREAD_SERVER_START {
     // It exits only when the window is destroyed or the app is exiting.
     for (;;) {
 
-        // Park: wait for a serve request, or a client re-connection
+        // Park: wait for a serve request, a client
+        // re-connection, or a reload request
         if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_GET_STATUS))
             break;
-        if (!_webui_mutex_is_start_requested(win, WEBUI_MUTEX_GET_STATUS) &&
-            !(http_ctx && _webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS))) {
-            _webui_sleep(1);
-            continue;
+
+        // Reload: restart the web server of this window using the
+        // current settings. Requested by setters like `webui_set_port()`.
+        // The requester closes this window's clients, so the reload runs
+        // once the serve cycle has ended and the clients are gone.
+        bool rebind_only = false;
+        if (_webui_mutex_is_reload_requested(win, WEBUI_MUTEX_GET_STATUS) &&
+            !_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS)) {
+
+            _webui_mutex_is_reload_requested(win, WEBUI_MUTEX_SET_FALSE);
+
+            if (http_ctx != NULL) {
+
+                #ifdef WEBUI_LOG
+                _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> Reloading server...\n", win->num);
+                #endif
+
+                // Wait for this window's in-flight event tasks, then
+                // stop the server services
+                _webui_window_wait_for_tasks(win);
+                mg_stop(http_ctx);
+                http_ctx = NULL;
+                _webui_mutex_is_server_running(win, WEBUI_MUTEX_SET_FALSE);
+
+                // Apply the port settings
+                size_t new_port = (win->custom_server_port > 0 ? win->custom_server_port : win->server_port);
+                if (new_port != win->server_port) {
+                    _webui_free_port(win->server_port);
+                    win->server_port = new_port;
+                }
+                _webui_free_mem((void*)server_port);
+                server_port = NULL;
+
+                // Regenerate the URL
+                char* old_url = win->url;
+                win->url = (char*)_webui_malloc(32); // [http][domain][port]
+                WEBUI_SN_PRINTF_DYN(win->url, 32, WEBUI_HTTP_PROTOCOL "localhost:%zu", win->server_port);
+                _webui_free_mem((void*)old_url);
+
+                // Restart listening right away, then park again
+                rebind_only = true;
+            }
         }
-        _webui_mutex_is_start_requested(win, WEBUI_MUTEX_SET_FALSE);
+
+        if (!rebind_only) {
+            if (!_webui_mutex_is_start_requested(win, WEBUI_MUTEX_GET_STATUS) &&
+                !(http_ctx && _webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS))) {
+                _webui_sleep(1);
+                continue;
+            }
+            _webui_mutex_is_start_requested(win, WEBUI_MUTEX_SET_FALSE);
+        }
 
         // Initialization
         if (_webui.startup_timeout < 1)
@@ -11137,6 +11243,12 @@ static WEBUI_THREAD_SERVER_START {
             #ifdef WEBUI_LOG
             _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> URL: [%s]\n", win->num, win->url);
             #endif
+        }
+
+        if (rebind_only) {
+            // The reload is done. The server is listening
+            // again, using the new settings
+            continue;
         }
 
         // This window is now active. `wait()` waits for it
@@ -11458,10 +11570,12 @@ static WEBUI_THREAD_SERVER_START {
     bool destroy_requested = win->destroy_requested;
     _webui_mutex_unlock(&win->mutex_win_thread);
     if (destroy_requested) {
+        _webui_mutex_lock(&_webui.mutex_allocator);
         if (_webui.wins[win->num] == win) {
             _webui.wins[win->num] = NULL;
             _webui.wins_reserved[win->num] = false;
         }
+        _webui_mutex_unlock(&_webui.mutex_allocator);
     }
 
     // Let `webui_destroy()` and `webui_clean()` know
