@@ -1,0 +1,8 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# stress test
+/st_root_a
+/st_root_b
+test_pass.txt
+test_error.txt
+log.txt
