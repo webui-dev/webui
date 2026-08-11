@@ -39,6 +39,8 @@ static size_t status_win = 0;
 
 static volatile long g_start = 0;
 static volatile long g_abort = 0;
+static volatile long g_run_one = -1; // Index of a single stage to run
+static volatile long g_busy = 0; // A stage is running right now
 static volatile long g_finished = 0; // 1 = all passed, 2 = a stage failed
 static volatile long g_ready = 0;
 static volatile long g_report = -1;
@@ -161,7 +163,17 @@ static void mark_passed(size_t w, const char* label) {
 
 static void cb_start(webui_event_t* e) {
 	(void)e;
+	if (g_busy)
+		return;
 	g_start = 1;
+}
+
+static void cb_run_stage(webui_event_t* e) {
+	if (g_busy)
+		return;
+	long idx = (long)webui_get_int(e);
+	if (idx >= 0 && idx < STAGES)
+		g_run_one = idx;
 }
 
 static void cb_exit(webui_event_t* e) {
@@ -513,6 +525,11 @@ static bool stage_port_reload(int i) {
 		snprintf(detail, sizeof(detail), "First show failed");
 		ok = false;
 	}
+	char old_url[256] = {0};
+	if (ok) {
+		const char* u = webui_get_url(w);
+		snprintf(old_url, sizeof(old_url), "%s", (u != NULL ? u : ""));
+	}
 	size_t new_port = 0;
 	if (ok) {
 		for (size_t p = 33000; p < 33100; p++) {
@@ -531,20 +548,24 @@ static bool stage_port_reload(int i) {
 		ok = false;
 	}
 	if (ok) {
-		sleep_ms(1500);
-		g_ready = 0;
-		if (!webui_show(w, make_page("Port reload", "ready(function(){webui.call('stage_ready',1);});")) ||
-			!wait_long(&g_ready, 1, 15000)) {
-			snprintf(detail, sizeof(detail), "Re-show on the new port failed");
-			ok = false;
-		}
-	}
-	if (ok) {
+		// This blocks until the pending reload is done,
+		// so the returned URL is the one of the new server
 		const char* url = webui_get_url(w);
 		char expect[32];
 		snprintf(expect, sizeof(expect), ":%zu", new_port);
 		if (url == NULL || strstr(url, expect) == NULL) {
 			snprintf(detail, sizeof(detail), "URL [%s] is not on port %zu", (url != NULL ? url : "?"), new_port);
+			ok = false;
+		} else if (strcmp(old_url, url) == 0) {
+			snprintf(detail, sizeof(detail), "URL did not change after the reload");
+			ok = false;
+		}
+	}
+	if (ok) {
+		g_ready = 0;
+		if (!webui_show(w, make_page("Port reload", "ready(function(){webui.call('stage_ready',1);});")) ||
+			!wait_long(&g_ready, 1, 15000)) {
+			snprintf(detail, sizeof(detail), "Re-show on the new port failed");
 			ok = false;
 		}
 	}
@@ -702,11 +723,26 @@ static bool stage_destroy_from_callback(int i) {
 	bool ok = true;
 	char detail[256] = "webui_destroy() called inside its own callback";
 	size_t w = webui_new_window();
+	webui_bind(w, "stage_ready", cb_ready);
 	webui_bind(w, "kamikaze", cb_kamikaze);
+	g_ready = 0;
 	g_kamikaze = 0;
-	if (!webui_show(w, make_page("Destroy from callback", "ready(function(){webui.call('kamikaze');});"))) {
+	// The page only reports that it is connected here. Destroying the
+	// window from the connect callback itself would race `webui_show()`,
+	// which returns the connection status: the window would already be
+	// gone by the time it returns, and the show would look failed.
+	if (!webui_show(w, make_page("Destroy from callback", "ready(function(){webui.call('stage_ready',1);});"))) {
 		snprintf(detail, sizeof(detail), "Show failed");
 		ok = false;
+	}
+	if (ok && !wait_long(&g_ready, 1, 15000)) {
+		snprintf(detail, sizeof(detail), "No page signal");
+		ok = false;
+	}
+	if (ok) {
+		// Now let the page call the backend function
+		// that destroys this very window
+		webui_run(w, "webui.call('kamikaze');");
 	}
 	if (ok && !wait_long(&g_kamikaze, 1, 15000)) {
 		snprintf(detail, sizeof(detail), "Callback never ran");
@@ -784,6 +820,60 @@ static const stage_fn stage_fns[STAGES] = {
 	stage_rapid_open_close
 };
 
+// Run every stage in order, and stop at the first failure. Only a full
+// run writes the result files, they tell if the whole suite passed.
+static void run_all_stages(void) {
+
+	remove("test_pass.txt");
+	remove("test_error.txt");
+	status_run("resetStages();");
+	status_run("setBanner('Running all stages...','');");
+
+	int i;
+	bool all = true;
+	for (i = 0; i < STAGES && all && !g_abort; i++)
+		all = stage_fns[i](i);
+
+	if (g_abort)
+		return;
+
+	if (all) {
+		g_finished = 1;
+		FILE* f = fopen("test_pass.txt", "w");
+		if (f != NULL)
+			fclose(f);
+		printf("ALL %d STAGES PASSED\n", STAGES);
+		status_run("setBanner('ALL %d STAGES PASSED - every green window is still connected','pass');", STAGES);
+	} else {
+		g_finished = 2;
+		for (int k = i; k < STAGES; k++)
+			status_run("setStage(%d,'SKIP','Stopped after a failure');", k);
+		FILE* f = fopen("test_error.txt", "w");
+		if (f != NULL)
+			fclose(f);
+		printf("STOPPED: stage %d failed\n", i);
+		status_run("setBanner('STOPPED - stage %d failed','fail');", i);
+	}
+	fflush(stdout);
+}
+
+// Run one stage alone, for a user who wants to test a single case.
+// This does not touch the result files.
+static void run_single_stage(int idx) {
+
+	status_run("setBanner('Running stage %d alone...','');", idx + 1);
+
+	bool ok = stage_fns[idx](idx);
+
+	if (g_abort)
+		return;
+
+	printf("SINGLE STAGE %d -> %s\n", idx + 1, ok ? "PASS" : "FAIL");
+	fflush(stdout);
+	status_run("setBanner('Stage %d %s (single run, result files unchanged)','%s');",
+		idx + 1, ok ? "passed" : "failed", ok ? "pass" : "fail");
+}
+
 #ifdef _WIN32
 static DWORD WINAPI driver(LPVOID arg)
 #else
@@ -792,38 +882,27 @@ static void* driver(void* arg)
 {
 	(void)arg;
 
-	// Wait for the Start click, or start right away in auto mode
-	while (!g_start && !g_abort)
-		sleep_ms(50);
-	if (!g_abort) {
+	// Serve run requests until the app exits. A request comes from
+	// the Start button, from a stage Run button, or from auto mode.
+	while (!g_abort) {
 
-		status_run("document.getElementById('bstart').disabled=true;");
-		status_run("setBanner('Running...','');");
-
-		int i;
-		bool all = true;
-		for (i = 0; i < STAGES && all && !g_abort; i++)
-			all = stage_fns[i](i);
-
-		if (!g_abort) {
-			if (all) {
-				g_finished = 1;
-				FILE* f = fopen("test_pass.txt", "w");
-				if (f != NULL)
-					fclose(f);
-				printf("ALL %d STAGES PASSED\n", STAGES);
-				status_run("setBanner('ALL %d STAGES PASSED - every green window is still connected','pass');", STAGES);
-			} else {
-				g_finished = 2;
-				for (int k = i; k < STAGES; k++)
-					status_run("setStage(%d,'SKIP','Stopped after a failure');", k);
-				FILE* f = fopen("test_error.txt", "w");
-				if (f != NULL)
-					fclose(f);
-				printf("STOPPED: stage %d failed\n", i);
-				status_run("setBanner('STOPPED - stage %d failed','fail');", i);
-			}
-			fflush(stdout);
+		if (g_start) {
+			g_start = 0;
+			g_busy = 1;
+			run_all_stages();
+			g_busy = 0;
+			status_run("setBusy(false);");
+		}
+		else if (g_run_one >= 0) {
+			int idx = (int)g_run_one;
+			g_run_one = -1;
+			g_busy = 1;
+			run_single_stage(idx);
+			g_busy = 0;
+			status_run("setBusy(false);");
+		}
+		else {
+			sleep_ms(50);
 		}
 	}
 
@@ -842,6 +921,8 @@ static const char* status_page =
 	"border-radius:6px;cursor:pointer;background:#3d63dd;color:#fff}"
 	"button:disabled{background:#2b3050;color:#8a92b2;cursor:default}"
 	"#bexit{background:#5a2530}"
+	"button.run{font-size:12px;font-weight:600;padding:4px 14px;margin:0;background:#2f3c6b}"
+	"button.run:hover:enabled{background:#3d63dd}"
 	"#banner{padding:10px 14px;border-radius:8px;background:#2b3050;margin:14px 0;font-weight:600}"
 	"#banner.pass{background:#12391f;color:#7ce38b}"
 	"#banner.fail{background:#46151a;color:#ff8089}"
@@ -853,11 +934,11 @@ static const char* status_page =
 	"</style></head><body>"
 	"<h1>WebUI Stress Test</h1>"
 	"<div>"
-	"<button id=\"bstart\" onclick=\"this.disabled=true;webui.call('start_test');\">Start</button>"
+	"<button id=\"bstart\" onclick=\"setBusy(true);webui.call('start_test');\">Start</button>"
 	"<button id=\"bexit\" onclick=\"webui.call('app_exit');\">Exit</button>"
 	"</div>"
-	"<div id=\"banner\">Ready. Click Start to run the test</div>"
-	"<table id=\"tbl\"><tr><th>#</th><th>Stage</th><th class=\"st\">Status</th><th>Details</th></tr></table>"
+	"<div id=\"banner\">Ready. Click Start to run every stage, or Run to test a single stage</div>"
+	"<table id=\"tbl\"><tr><th>#</th><th>Stage</th><th class=\"st\">Status</th><th>Details</th><th></th></tr></table>"
 	"<script>"
 	"const names=['Dashboard connection','Open / close / reopen window',"
 	"'C to JS calls (webui_run / webui_script)','JS to C calls and arguments',"
@@ -867,12 +948,18 @@ static const char* status_page =
 	"const tbl=document.getElementById('tbl');"
 	"names.forEach((n,i)=>{const r=tbl.insertRow(-1);r.insertCell(0).textContent=i+1;"
 	"r.insertCell(1).textContent=n;const s=r.insertCell(2);s.className='st';s.id='st'+i;"
-	"s.textContent='PENDING';const d=r.insertCell(3);d.className='dt';d.id='dt'+i;});"
+	"s.textContent='PENDING';const d=r.insertCell(3);d.className='dt';d.id='dt'+i;"
+	"const a=r.insertCell(4);const b=document.createElement('button');b.className='run';"
+	"b.textContent='Run';b.onclick=function(){setBusy(true);webui.call('run_stage',i);};"
+	"a.appendChild(b);});"
 	"function setStage(i,st,dt){const s=document.getElementById('st'+i);s.textContent=st;"
-	"s.className='st '+(st=='PASS'?'pass':st=='FAIL'?'fail':st=='SKIP'?'skip':'run');"
-	"if(dt)document.getElementById('dt'+i).textContent=dt;}"
+	"s.className='st '+(st=='PASS'?'pass':st=='FAIL'?'fail':st=='SKIP'?'skip':st=='PENDING'?'':'run');"
+	"if(dt!==undefined)document.getElementById('dt'+i).textContent=dt;}"
 	"function setBanner(t,cls){const b=document.getElementById('banner');"
 	"b.textContent=t;b.className=cls||'';}"
+	"function setBusy(b){document.getElementById('bstart').disabled=b;"
+	"document.querySelectorAll('button.run').forEach(x=>{x.disabled=b;});}"
+	"function resetStages(){for(let i=0;i<names.length;i++)setStage(i,'PENDING','');}"
 	"</script></body></html>";
 
 int main(int argc, char* argv[]) {
@@ -887,6 +974,7 @@ int main(int argc, char* argv[]) {
 
 	status_win = webui_new_window();
 	webui_bind(status_win, "start_test", cb_start);
+	webui_bind(status_win, "run_stage", cb_run_stage);
 	webui_bind(status_win, "app_exit", cb_exit);
 	if (!webui_show(status_win, status_page)) {
 		printf("Could not open the status window\n");
