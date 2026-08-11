@@ -8945,7 +8945,9 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
             strstr(content_cpy, "<!Doctype")) {
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t_webui_show() -> Embedded HTML:\n");
-        _webui_log_debug("- - -[HTML]- - - - - - - - - -\n%s\n- - - - - - - - - - - - - - - -\n", content_cpy);
+        _webui_log_debug("---[ HTML ]--------\n");
+        _webui_print_ascii((const char*)content_cpy, _webui_strlen(content_cpy));
+        _webui_log_debug("\n-----------------\n");
         #endif
         status = _webui_show_window(win, client, content_cpy, WEBUI_SHOW_HTML, browser);
     }
