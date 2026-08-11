@@ -844,10 +844,41 @@ static const char* webui_def_icon = "<svg xmlns=\"http://www.w3.org/2000/svg\" w
 static void _webui_log(size_t level, const char *format, va_list args) {
     if (_webui_log_data.logger_func == NULL) {
         // Print log directly
-        if (level == WEBUI_LOGGER_LEVEL_ERROR) {
-          vfprintf(stderr, format, args);
+        va_list args_copy;
+        va_copy(args_copy, args);
+        int needed_size = vsnprintf(NULL, 0, format, args_copy);
+        va_end(args_copy);
+        if (needed_size < 0) {
+            if (level == WEBUI_LOGGER_LEVEL_ERROR) {
+                vfprintf(stderr, format, args);
+            } else {
+                vprintf(format, args);
+            }
         } else {
-          vprintf(format, args);
+            char buf[129];
+            char* buffer = (needed_size <= 128)
+                ? buf
+                : _webui_malloc((size_t)needed_size + 1);
+            if (buffer == NULL) {
+                if (level == WEBUI_LOGGER_LEVEL_ERROR) {
+                    vfprintf(stderr, format, args);
+                } else {
+                    vprintf(format, args);
+                }
+            } else {
+                vsnprintf(buffer, (size_t)needed_size + 1, format, args);
+                FILE* output = (level == WEBUI_LOGGER_LEVEL_ERROR) ? stderr : stdout;
+                if (needed_size <= 128) {
+                    fputs(buffer, output);
+                } else {
+                    fwrite(buffer, 1, 64, output);
+                    fputs(" ... ", output);
+                    fwrite(buffer + needed_size - 64, 1, 64, output);
+                }
+                if (buffer != buf) {
+                    _webui_free_mem(buffer);
+                }
+            }
         }
     } else {
         // Pass log to user logger
@@ -8946,7 +8977,7 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t_webui_show() -> Embedded HTML:\n");
         _webui_log_debug("---[ HTML ]--------\n");
-        _webui_print_ascii((const char*)content_cpy, _webui_strlen(content_cpy));
+        _webui_log_debug(content_cpy);
         _webui_log_debug("\n-----------------\n");
         #endif
         status = _webui_show_window(win, client, content_cpy, WEBUI_SHOW_HTML, browser);
