@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.18)
 
+if(CMAKE_C_COMPILER MATCHES "mingw")
+    set(CMAKE_SYSTEM_NAME Windows)
+    message(STATUS "Cross-compiling for Windows using MinGW")
+    set(CMAKE_SYSTEM_NAME Windows)
+    set(WIN32 ON)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+endif()
+
 # Project name
 project(WebUILibrary 
     VERSION 2.5.0
@@ -73,6 +81,10 @@ if (BUILD_SHARED_LIBS AND WIN32)
     target_compile_definitions(webui PRIVATE CIVETWEB_DLL_EXPORTS PUBLIC CIVETWEB_DLL_IMPORTS)
 endif()
 
+if (BUILD_SHARED_LIBS AND WIN32 AND NOT MSVC)
+    target_link_options(webui PRIVATE -Wl,--export-all-symbols)
+endif()
+
 if (WEBUI_USE_TLS)
     target_compile_definitions(webui PUBLIC WEBUI_TLS NO_SSL_DL OPENSSL_API_1_1)
     target_link_libraries(webui PRIVATE OpenSSL::SSL OpenSSL::Crypto)
@@ -80,7 +92,9 @@ else()
     target_compile_definitions(webui PUBLIC NO_SSL)
 endif()
 
-if (WIN32)
+if(WIN32 AND NOT MSVC)
+    target_link_libraries(webui PRIVATE ws2_32 user32 shell32 ole32 uuid)
+elseif (WIN32)
     target_link_libraries(webui PRIVATE ws2_32 user32 shell32 ole32)
 elseif (APPLE)
     # link required frameworks
