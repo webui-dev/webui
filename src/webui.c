@@ -689,6 +689,7 @@ static void _webui_window_close_ui(_webui_window_t* win);
 static void _webui_window_task_count(_webui_window_t* win, int delta);
 static size_t _webui_window_task_get(_webui_window_t* win);
 static void _webui_window_wait_for_tasks(_webui_window_t* win);
+static void _webui_window_clear_clients(_webui_window_t* win);
 static void _webui_condition_init(webui_condition_t* cond);
 static void _webui_condition_wait(webui_condition_t* cond, webui_mutex_t* mutex);
 static void _webui_condition_signal(webui_condition_t* cond);
@@ -6625,6 +6626,26 @@ static size_t _webui_window_task_get(_webui_window_t* win) {
     return count;
 }
 
+static void _webui_window_clear_clients(_webui_window_t* win) {
+
+    _webui_mutex_lock(&_webui.mutex_client);
+    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+        if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num)) {
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t_webui_window_clear_clients([%zu]) -> Removing client #%zu\n", win->num, i);
+            #endif
+            _webui.clients[i] = NULL;
+            _webui.clients_win_num[i] = 0;
+            _webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_SET_FALSE, (int)i);
+        }
+    }
+    win->single_client = NULL;
+    win->clients_count = 0;
+    _webui_mutex_unlock(&_webui.mutex_client);
+
+    _webui_mutex_is_single_client_token_valid(win, WEBUI_MUTEX_SET_FALSE);
+}
+
 static void _webui_window_wait_for_tasks(_webui_window_t* win) {
 
     // Wait for the in-flight event tasks of this window to retire, so no
@@ -11177,6 +11198,9 @@ static WEBUI_THREAD_SERVER_START {
                 http_ctx = NULL;
                 _webui_mutex_is_server_running(win, WEBUI_MUTEX_SET_FALSE);
 
+                // The clients of the old server are gone with it
+                _webui_window_clear_clients(win);
+
                 // Apply the port settings
                 size_t new_port = (win->custom_server_port > 0 ? win->custom_server_port : win->server_port);
                 if (new_port != win->server_port) {
@@ -11607,6 +11631,9 @@ static WEBUI_THREAD_SERVER_START {
 
     // Mutex
     _webui_mutex_is_server_running(win, WEBUI_MUTEX_SET_FALSE);
+
+    // The clients of this window are gone with its server
+    _webui_window_clear_clients(win);
 
     // Free Port
     if (server_port != NULL) {
