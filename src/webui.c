@@ -462,6 +462,7 @@ typedef struct _webui_window_t {
     bool reload_requested; // A setter changed the web server settings
     bool monitor_running; // Folder monitor thread is alive
     bool monitor_stop; // Folder monitor thread should exit
+    bool webview_running; // WebView thread is alive
     bool browser_launched; // A web browser process was started for this window
     size_t tasks; // In-flight event tasks using this window
     // WebView
@@ -696,6 +697,8 @@ static void _webui_window_wait_for_tasks(_webui_window_t* win);
 static void _webui_window_clear_clients(_webui_window_t* win);
 static bool _webui_mutex_is_monitor_running(_webui_window_t* win, int update);
 static bool _webui_mutex_is_monitor_stop(_webui_window_t* win, int update);
+static bool _webui_mutex_is_webview_running(_webui_window_t* win, int update);
+static void _webui_window_wait_for_webview(_webui_window_t* win);
 static bool _webui_monitor_should_stop(_webui_window_t* win);
 static void _webui_window_stop_monitor(_webui_window_t* win, bool created);
 static bool _webui_window_is_registered(size_t num, _webui_window_t* win);
@@ -6665,6 +6668,46 @@ static bool _webui_mutex_is_monitor_stop(_webui_window_t* win, int update) {
     return status;
 }
 
+static bool _webui_mutex_is_webview_running(_webui_window_t* win, int update) {
+
+    bool status = false;
+    _webui_mutex_lock(&win->mutex_win_thread);
+    if (update == WEBUI_MUTEX_SET_TRUE) win->webview_running = true;
+    else if (update == WEBUI_MUTEX_SET_FALSE) win->webview_running = false;
+    status = win->webview_running;
+    _webui_mutex_unlock(&win->mutex_win_thread);
+    return status;
+}
+
+static void _webui_window_wait_for_webview(_webui_window_t* win) {
+
+    // Wait for the WebView thread of a window to finish. It was already
+    // asked to stop by `_webui_window_close_ui()`. Without this wait the
+    // window could not be reclaimed while its WebView is still closing,
+    // and destroying it would stall until the timeouts expire.
+
+    if (!_webui_mutex_is_webview_running(win, WEBUI_MUTEX_GET_STATUS))
+        return;
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_window_wait_for_webview([%zu])\n", win->num);
+    #endif
+
+    _webui_timer_t timer;
+    _webui_timer_start(&timer);
+    for (;;) {
+        if (!_webui_mutex_is_webview_running(win, WEBUI_MUTEX_GET_STATUS))
+            break;
+        if (_webui_timer_is_end(&timer, 3000)) {
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t_webui_window_wait_for_webview([%zu]) -> Timeout\n", win->num);
+            #endif
+            break;
+        }
+        _webui_sleep(10);
+    }
+}
+
 static bool _webui_monitor_should_stop(_webui_window_t* win) {
 
     // Should the folder monitor thread of this window exit?
@@ -11916,6 +11959,10 @@ static WEBUI_THREAD_SERVER_START {
     // Stop the folder monitor thread, and wait for it
     _webui_window_stop_monitor(win, monitor_created);
 
+    // The WebView was asked to stop by `_webui_window_close_ui()`,
+    // wait for its thread to finish before this window can be freed
+    _webui_window_wait_for_webview(win);
+
     // Retire any event task that started while stopping
     _webui_window_wait_for_tasks(win);
 
@@ -11933,7 +11980,7 @@ static WEBUI_THREAD_SERVER_START {
     win->thread_running = false;
     size_t win_num = win->num;
     bool reclaim = (win->destroy_requested && (win->tasks < 1) &&
-        !win->monitor_running && (win->webView == NULL));
+        !win->monitor_running && !win->webview_running && (win->webView == NULL));
     _webui_mutex_unlock(&win->mutex_win_thread);
 
     _webui_threads_count(-1);
@@ -13651,6 +13698,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         _webui_webview_update(win);
 
         // Win32 WebView thread
+        _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_TRUE);
         #ifdef _WIN32
         HANDLE thread = CreateThread(NULL, 0, _webui_webview_thread, (void*)win, 0, NULL);
         if (thread != NULL)
@@ -13984,6 +14032,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> End\n");
         #endif
+
+        // Let the window server thread know this WebView is finished
+        _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_FALSE);
 
         WEBUI_THREAD_RETURN
     };
@@ -14456,6 +14507,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         // processed in one single thread for each window.
 
         // Linux WebView thread
+        _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_TRUE);
         #ifdef _WIN32
         HANDLE thread = CreateThread(NULL, 0, _webui_webview_thread, (void*)win, 0, NULL);
         if (thread != NULL)
@@ -14940,6 +14992,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         _webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> End\n");
         #endif
 
+
+        // Let the window server thread know this WebView is finished
+        _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_FALSE);
         WEBUI_THREAD_RETURN
     }
 #else
@@ -15113,6 +15168,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         _webui_webview_update(win);
 
         // macOS WebView thread
+        _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_TRUE);
         #ifdef _WIN32
         HANDLE thread = CreateThread(NULL, 0, _webui_webview_thread, (void*)win, 0, NULL);
         if (thread != NULL)
@@ -15220,6 +15276,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         _webui_log_debug("[Core]\t\t[Thread .] _webui_webview_thread() -> End\n");
         #endif
 
+
+        // Let the window server thread know this WebView is finished
+        _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_FALSE);
         WEBUI_THREAD_RETURN
     }
 #endif
