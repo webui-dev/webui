@@ -17,6 +17,7 @@
 
 // -- WebView -------------------------
 #ifdef _WIN32
+    #include <wchar.h>
     #include "webview/WebView2.h"
     #include "webview/win32_wv2.hpp"
 #elif __linux__
@@ -457,8 +458,11 @@ typedef struct _webui_window_t {
     bool win_exit_now;
     bool thread_running; // Persistent server thread is alive
     bool server_start_requested; // `webui_show()` requested a serve cycle
-    bool destroy_requested; // Deferred destroy from a callback of this window
+    bool destroy_requested; // The window should be reclaimed
     bool reload_requested; // A setter changed the web server settings
+    bool monitor_running; // Folder monitor thread is alive
+    bool monitor_stop; // Folder monitor thread should exit
+    bool browser_launched; // A web browser process was started for this window
     size_t tasks; // In-flight event tasks using this window
     // WebView
     bool allow_webview;
@@ -690,6 +694,12 @@ static void _webui_window_task_count(_webui_window_t* win, int delta);
 static size_t _webui_window_task_get(_webui_window_t* win);
 static void _webui_window_wait_for_tasks(_webui_window_t* win);
 static void _webui_window_clear_clients(_webui_window_t* win);
+static bool _webui_mutex_is_monitor_running(_webui_window_t* win, int update);
+static bool _webui_mutex_is_monitor_stop(_webui_window_t* win, int update);
+static bool _webui_monitor_should_stop(_webui_window_t* win);
+static void _webui_window_stop_monitor(_webui_window_t* win, bool created);
+static bool _webui_window_is_registered(size_t num, _webui_window_t* win);
+static void _webui_window_free(_webui_window_t* win);
 static void _webui_condition_init(webui_condition_t* cond);
 static void _webui_condition_wait(webui_condition_t* cond, webui_mutex_t* mutex);
 static void _webui_condition_signal(webui_condition_t* cond);
@@ -1571,76 +1581,83 @@ void webui_destroy(size_t window) {
     if (win == NULL)
         return;
 
-    if (_webui_callback_win == win) {
+    bool in_callback = (_webui_callback_win == win);
 
-        // Deferred destruction: this call comes from inside one of this
-        // window's own callbacks. Freeing now would crash the caller, and
-        // waiting for the server thread would block this event thread the
-        // server is waiting for. So ask the server thread to exit, and let
-        // it unregister this window when it's done.
-        _webui_mutex_lock(&win->mutex_win_thread);
-        win->destroy_requested = true;
-        _webui_mutex_unlock(&win->mutex_win_thread);
+    // Request the destruction, and learn if a server thread owns this
+    // window. Both are done under the same lock the server thread uses
+    // when it decides to reclaim, so exactly one side does the free:
+    // a running thread always sees this request and reclaims, a thread
+    // that already exited never does, and then it's up to us.
+    _webui_mutex_lock(&win->mutex_win_thread);
+    win->destroy_requested = true;
+    bool thread_owns = win->thread_running;
+    _webui_mutex_unlock(&win->mutex_win_thread);
 
-        // Freindly close
-        webui_close(window);
-
-        // Ask the persistent server thread to exit
-        _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_SET_TRUE);
-        return;
-    }
-
-    if (_webui_mutex_is_thread_running(win, WEBUI_MUTEX_GET_STATUS)) {
+    if (thread_owns) {
 
         // Freindly close
         webui_close(window);
 
-        // Ask the persistent server thread to exit
+        // Ask the persistent server thread to exit. It unregisters
+        // and frees this window once it stopped everything.
         _webui_mutex_win_is_exit_now(win, WEBUI_MUTEX_SET_TRUE);
 
-        // Wait for the server thread to stop
+        if (in_callback) {
+            // This call comes from inside one of this window's own
+            // callbacks. Waiting here would block the event thread that
+            // the server thread is waiting for, so the reclaim is
+            // deferred and this returns right away.
+            return;
+        }
+
+        // Wait for the window to be reclaimed. The registry is polled
+        // instead of the window itself, because the window gets freed.
         _webui_timer_t timer_1;
         _webui_timer_start(&timer_1);
         for (;;) {
             _webui_sleep(10);
-            if (!_webui_mutex_is_thread_running(win, WEBUI_MUTEX_GET_STATUS))
+            if (!_webui_window_is_registered(window, win))
                 break;
             if (_webui_timer_is_end(&timer_1, 2500))
                 break;
         }
 
-        if (_webui_mutex_is_thread_running(win, WEBUI_MUTEX_GET_STATUS)) {
-
+        // Forced close. The window is still registered, so it's still
+        // alive: the reclaim happens under the same lock as the check.
+        _webui_mutex_lock(&_webui.mutex_allocator);
+        if (_webui.wins[window] == win) {
             #ifdef WEBUI_LOG
             _webui_log_info("[User] webui_destroy([%zu]) -> Forced close\n", window);
             #endif
-
-            // Forced close
             _webui_mutex_is_connected(win, WEBUI_MUTEX_SET_FALSE);
-
-            // Wait for the server thread to stop
-            _webui_timer_t timer_2;
-            _webui_timer_start(&timer_2);
-            for (;;) {
-                _webui_sleep(100);
-                if (!_webui_mutex_is_thread_running(win, WEBUI_MUTEX_GET_STATUS))
-                    break;
-                if (_webui_timer_is_end(&timer_2, 1500))
-                    break;
-            }
         }
+        _webui_mutex_unlock(&_webui.mutex_allocator);
+
+        // Wait more for the window to be reclaimed
+        _webui_timer_t timer_2;
+        _webui_timer_start(&timer_2);
+        for (;;) {
+            _webui_sleep(100);
+            if (!_webui_window_is_registered(window, win))
+                break;
+            if (_webui_timer_is_end(&timer_2, 1500))
+                break;
+        }
+        return;
     }
 
-    // Unregister the window, so its ID can be reused. The window struct
-    // and its buffers stay allocated until `webui_clean()`, because a
-    // detached event task, or a WebView thread, may still hold pointers
-    // to them.
+    // This window has no server thread, so nothing else can be using
+    // it. Unregister it, and free it here.
     _webui_mutex_lock(&_webui.mutex_allocator);
-    if (_webui.wins[window] == win) {
+    bool reclaim = (_webui.wins[window] == win);
+    if (reclaim) {
         _webui.wins[window] = NULL;
         _webui.wins_reserved[window] = false;
     }
     _webui_mutex_unlock(&_webui.mutex_allocator);
+
+    if (reclaim)
+        _webui_window_free(win);
 }
 
 bool webui_is_shown(size_t window) {
@@ -6626,6 +6643,116 @@ static size_t _webui_window_task_get(_webui_window_t* win) {
     return count;
 }
 
+static bool _webui_mutex_is_monitor_running(_webui_window_t* win, int update) {
+
+    bool status = false;
+    _webui_mutex_lock(&win->mutex_win_thread);
+    if (update == WEBUI_MUTEX_SET_TRUE) win->monitor_running = true;
+    else if (update == WEBUI_MUTEX_SET_FALSE) win->monitor_running = false;
+    status = win->monitor_running;
+    _webui_mutex_unlock(&win->mutex_win_thread);
+    return status;
+}
+
+static bool _webui_mutex_is_monitor_stop(_webui_window_t* win, int update) {
+
+    bool status = false;
+    _webui_mutex_lock(&win->mutex_win_thread);
+    if (update == WEBUI_MUTEX_SET_TRUE) win->monitor_stop = true;
+    else if (update == WEBUI_MUTEX_SET_FALSE) win->monitor_stop = false;
+    status = win->monitor_stop;
+    _webui_mutex_unlock(&win->mutex_win_thread);
+    return status;
+}
+
+static bool _webui_monitor_should_stop(_webui_window_t* win) {
+
+    // Should the folder monitor thread of this window exit?
+    return (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) ||
+        _webui_mutex_is_monitor_stop(win, WEBUI_MUTEX_GET_STATUS));
+}
+
+static void _webui_window_stop_monitor(_webui_window_t* win, bool created) {
+
+    // Ask the folder monitor thread of a window to exit, and wait for
+    // it. The monitor polls its stop flag, so no thread gets killed
+    // while it may hold a lock or an open handle.
+
+    if (!created)
+        return;
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_window_stop_monitor([%zu])\n", win->num);
+    #endif
+
+    _webui_mutex_is_monitor_stop(win, WEBUI_MUTEX_SET_TRUE);
+
+    _webui_timer_t timer;
+    _webui_timer_start(&timer);
+    for (;;) {
+        if (!_webui_mutex_is_monitor_running(win, WEBUI_MUTEX_GET_STATUS))
+            break;
+        if (_webui_timer_is_end(&timer, 3000)) {
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t_webui_window_stop_monitor([%zu]) -> Timeout\n", win->num);
+            #endif
+            break;
+        }
+        _webui_sleep(10);
+    }
+}
+
+static bool _webui_window_is_registered(size_t num, _webui_window_t* win) {
+
+    if (num < 1 || num >= WEBUI_MAX_IDS)
+        return false;
+    _webui_mutex_lock(&_webui.mutex_allocator);
+    bool status = (_webui.wins[num] == win);
+    _webui_mutex_unlock(&_webui.mutex_allocator);
+    return status;
+}
+
+static void _webui_window_free(_webui_window_t* win) {
+
+    // Free a window and all the resources it owns. The caller must
+    // guarantee that nothing can reach this window anymore: it must be
+    // unregistered, its server thread stopped, its event tasks retired,
+    // and its folder monitor stopped.
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_window_free([%zu])\n", win->num);
+    #endif
+
+    _webui_free_mem((void*)win->url);
+    _webui_free_mem((void*)win->public_url);
+    _webui_free_mem((void*)win->html);
+    _webui_free_mem((void*)win->icon);
+    _webui_free_mem((void*)win->icon_type);
+    _webui_free_mem((void*)win->browser_path);
+    _webui_free_mem((void*)win->profile_path);
+    _webui_free_mem((void*)win->profile_name);
+    _webui_free_mem((void*)win->server_root_path);
+    _webui_free_mem((void*)win->user_index_file);
+    _webui_free_mem((void*)win->user_index_file_encoded);
+
+    // Free events
+    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
+        if (win->events[i] != NULL)
+            _webui_free_mem((void*)win->events[i]);
+    }
+
+    // Free Mutex
+    _webui_condition_destroy(&win->condition_webview_update);
+    _webui_mutex_destroy(&win->mutex_webview_update);
+    _webui_mutex_destroy(&win->mutex_win_exit_now);
+    _webui_mutex_destroy(&win->mutex_win_reusable);
+    _webui_mutex_destroy(&win->mutex_win_server_running);
+    _webui_mutex_destroy(&win->mutex_win_thread);
+
+    // Free window struct
+    _webui_free_mem((void*)win);
+}
+
 static void _webui_window_clear_clients(_webui_window_t* win) {
 
     _webui_mutex_lock(&_webui.mutex_client);
@@ -8770,6 +8897,115 @@ static bool _webui_browser_start(_webui_window_t* win, const char* address, size
     return true;
 }
 
+#ifdef _WIN32
+typedef LONG(NTAPI * _webui_nt_query_process_t)(HANDLE, ULONG, PVOID, ULONG, PULONG);
+typedef struct {
+    USHORT Length;
+    USHORT MaximumLength;
+    PWSTR Buffer;
+}
+_webui_ntdll_string_t;
+
+static bool _webui_win32_find_pid_by_cmd(const char* needle, size_t* pid) {
+
+    // Find the first process having `needle` in its command line, by
+    // reading the command lines directly from the system. Asking WMI or
+    // PowerShell for the same list means spawning a shell, which costs
+    // about a second per call. Returns `false` when this is not
+    // supported, so the caller can use the slow way instead.
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_win32_find_pid_by_cmd([%s])\n", needle);
+    #endif
+
+    *pid = 0;
+    if (_webui_is_empty(needle))
+        return true;
+
+    // `ProcessCommandLineInformation` needs Windows 8.1 or later
+    static _webui_nt_query_process_t query_process = NULL;
+    static bool query_process_checked = false;
+    if (!query_process_checked) {
+        query_process_checked = true;
+        HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+        if (ntdll != NULL) {
+            query_process = (_webui_nt_query_process_t)(void*)
+                GetProcAddress(ntdll, "NtQueryInformationProcess");
+        }
+    }
+    if (query_process == NULL)
+        return false;
+
+    wchar_t* needle_wide = NULL;
+    if (!_webui_str_to_wide(needle, &needle_wide))
+        return false;
+
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snapshot == INVALID_HANDLE_VALUE) {
+        _webui_free_mem((void*)needle_wide);
+        return false;
+    }
+
+    bool supported = false;
+    PROCESSENTRY32 process;
+    process.dwSize = sizeof(PROCESSENTRY32);
+    if (Process32First(snapshot, &process)) {
+        unsigned char stack_buf[8192];
+        do {
+            if (process.th32ProcessID < 5)
+                continue;
+            HANDLE handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, process.th32ProcessID);
+            if (handle == NULL)
+                continue;
+
+            unsigned char* buf = stack_buf;
+            unsigned char* heap_buf = NULL;
+            ULONG len = 0;
+            // 60 = ProcessCommandLineInformation
+            LONG status = query_process(handle, 60, buf, (ULONG)sizeof(stack_buf), &len);
+            if ((status == (LONG)0xC0000004L) && (len > 0) && (len < (16 * 1024 * 1024))) {
+                // The command line did not fit, retry with the needed size
+                heap_buf = (unsigned char*)malloc(len);
+                if (heap_buf != NULL) {
+                    buf = heap_buf;
+                    status = query_process(handle, 60, buf, len, &len);
+                }
+            }
+            if (status >= 0) {
+                supported = true;
+                _webui_ntdll_string_t* cmd = (_webui_ntdll_string_t*)buf;
+                if ((cmd->Buffer != NULL) && (cmd->Length > 0)) {
+                    // The returned string is not guaranteed to be null
+                    // terminated, so let's terminate our own copy
+                    size_t chars = (size_t)(cmd->Length / sizeof(wchar_t));
+                    wchar_t* line = (wchar_t*)malloc((chars + 1) * sizeof(wchar_t));
+                    if (line != NULL) {
+                        memcpy(line, cmd->Buffer, chars * sizeof(wchar_t));
+                        line[chars] = L'\0';
+                        if (wcsstr(line, needle_wide) != NULL)
+                            *pid = (size_t)process.th32ProcessID;
+                        free(line);
+                    }
+                }
+            }
+            if (heap_buf != NULL)
+                free(heap_buf);
+            CloseHandle(handle);
+        } while ((*pid == 0) && Process32Next(snapshot, &process));
+    }
+
+    CloseHandle(snapshot);
+    _webui_free_mem((void*)needle_wide);
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_win32_find_pid_by_cmd() -> PID %zu (supported: %d)\n", *pid, supported);
+    #endif
+
+    // Nothing readable at all means this way is not usable here
+    return supported;
+}
+#endif
+
 static size_t _webui_get_child_process_id(_webui_window_t* win) {
     if (win) {
         // Get PID
@@ -8788,6 +9024,12 @@ static size_t _webui_get_child_process_id(_webui_window_t* win) {
             if (_webui_is_empty(win->url))
                 return 0;
             #if defined(_WIN32)
+            // Read the command lines directly. This is the fast way, and
+            // when it works its result is final: a window whose browser
+            // already closed has no process to find.
+            size_t native_pid = 0;
+            if (_webui_win32_find_pid_by_cmd(win->url, &native_pid))
+                return native_pid;
             char* out = NULL;
             char cmd[1024] = {0};
             WEBUI_SN_PRINTF_STATIC(cmd, sizeof(cmd),
@@ -9760,6 +10002,11 @@ static bool _webui_show_window_impl(_webui_window_t* win, struct mg_connection* 
                 win->current_browser = NoBrowser;
                 runBrowser = true;
             }
+            // Remember if a web browser process was really launched for
+            // this window, so closing it does not look for a process
+            // that never existed
+            if (runBrowser && (browser != NoBrowser))
+                win->browser_launched = true;
         }
 
         // Try to open the UI in WebView if allowed and browser is failed.
@@ -11116,7 +11363,8 @@ static void _webui_window_close_ui(_webui_window_t* win) {
 
     // Kill Process
     #ifndef WEBUI_LOG
-    if (!_webui.is_webview_mode) {
+    if (!_webui.is_webview_mode && win->browser_launched) {
+        win->browser_launched = false;
         if (_webui.current_browser != WEBUI_NATIVE_BROWSER) {
             // Terminating the web browser window process
             _webui_kill_pid(_webui_get_child_process_id(win));
@@ -11152,11 +11400,6 @@ static WEBUI_THREAD_SERVER_START {
 
     // Folder monitor thread
     bool monitor_created = false;
-    #ifdef _WIN32
-    HANDLE monitor_thread = NULL;
-    #else
-    pthread_t monitor_thread;
-    #endif
 
     // Web server of this window. It's started at the first serve cycle,
     // and stays listening until this thread exits.
@@ -11462,13 +11705,20 @@ static WEBUI_THREAD_SERVER_START {
                     // Folder monitor thread
                     if (_webui.config.folder_monitor && !monitor_created) {
                         monitor_created = true;
+                        _webui_mutex_is_monitor_stop(win, WEBUI_MUTEX_SET_FALSE);
+                        _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_TRUE);
                         #ifdef _WIN32
-                        monitor_thread = CreateThread(NULL, 0, _webui_folder_monitor_thread, (void*)win, 0, NULL);
+                        HANDLE monitor_thread = CreateThread(NULL, 0, _webui_folder_monitor_thread, (void*)win, 0, NULL);
                         if (monitor_thread != NULL)
                             CloseHandle(monitor_thread);
+                        else
+                            _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_FALSE);
                         #else
-                        pthread_create(&monitor_thread, NULL, &_webui_folder_monitor_thread, (void*)win);
-                        pthread_detach(monitor_thread);
+                        pthread_t monitor_thread;
+                        if (pthread_create(&monitor_thread, NULL, &_webui_folder_monitor_thread, (void*)win) == 0)
+                            pthread_detach(monitor_thread);
+                        else
+                            _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_FALSE);
                         #endif
                     }
 
@@ -11567,13 +11817,20 @@ static WEBUI_THREAD_SERVER_START {
             // Folder monitor thread
             if (_webui.config.folder_monitor && !monitor_created) {
                 monitor_created = true;
+                _webui_mutex_is_monitor_stop(win, WEBUI_MUTEX_SET_FALSE);
+                _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_TRUE);
                 #ifdef _WIN32
-                monitor_thread = CreateThread(NULL, 0, _webui_folder_monitor_thread, (void*)win, 0, NULL);
+                HANDLE monitor_thread = CreateThread(NULL, 0, _webui_folder_monitor_thread, (void*)win, 0, NULL);
                 if (monitor_thread != NULL)
                     CloseHandle(monitor_thread);
+                else
+                    _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_FALSE);
                 #else
-                pthread_create(&monitor_thread, NULL, &_webui_folder_monitor_thread, (void*)win);
-                pthread_detach(monitor_thread);
+                pthread_t monitor_thread;
+                if (pthread_create(&monitor_thread, NULL, &_webui_folder_monitor_thread, (void*)win) == 0)
+                    pthread_detach(monitor_thread);
+                else
+                    _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_FALSE);
                 #endif
             }
 
@@ -11656,39 +11913,50 @@ static WEBUI_THREAD_SERVER_START {
     // call `webui_show()` again if needed.
     _webui_make_window_reusable(win);
 
-    // Clean monitor thread
-    if (_webui.config.folder_monitor && monitor_created) {
-        #ifdef WEBUI_LOG
-        _webui_log_debug("[Core]\t\t_webui_server_thread([%zu]) -> Killing folder monitor thread\n", win->num);
-        #endif
-        #ifdef _WIN32
-        TerminateThread(monitor_thread, 0);
-        CloseHandle(monitor_thread);
-        #else
-        if (monitor_thread) {
-            pthread_cancel(monitor_thread);
-        }
-        #endif
-    }
+    // Stop the folder monitor thread, and wait for it
+    _webui_window_stop_monitor(win, monitor_created);
 
-    // Deferred destruction: `webui_destroy()` was called from inside one
-    // of this window's own callbacks, so unregistering was left to us
+    // Retire any event task that started while stopping
+    _webui_window_wait_for_tasks(win);
+
+    // This window server thread is finished. Reading the destroy
+    // request in the same locked step is what makes the reclaim
+    // single-owner: a `webui_destroy()` that arrives later sees no
+    // running thread, and reclaims the window itself.
+    // Anything that could still be using this window keeps it alive: a
+    // task that did not retire in time, a folder monitor that did not
+    // stop in time, or a WebView with its own worker threads. Such a
+    // window is left to `webui_clean()`. Everything needed after this
+    // point is read here, because once the lock is released a
+    // concurrent `webui_destroy()` may reclaim this window instead.
     _webui_mutex_lock(&win->mutex_win_thread);
-    bool destroy_requested = win->destroy_requested;
+    win->thread_running = false;
+    size_t win_num = win->num;
+    bool reclaim = (win->destroy_requested && (win->tasks < 1) &&
+        !win->monitor_running && (win->webView == NULL));
     _webui_mutex_unlock(&win->mutex_win_thread);
-    if (destroy_requested) {
+
+    _webui_threads_count(-1);
+
+    if (reclaim) {
+
+        // Unregister first, so nothing can reach this window anymore,
+        // then free it. `webui_destroy()` polls the registry to know
+        // when the window is gone.
         _webui_mutex_lock(&_webui.mutex_allocator);
-        if (_webui.wins[win->num] == win) {
-            _webui.wins[win->num] = NULL;
-            _webui.wins_reserved[win->num] = false;
+        if (_webui.wins[win_num] == win) {
+            _webui.wins[win_num] = NULL;
+            _webui.wins_reserved[win_num] = false;
+        }
+        else {
+            // Another caller already took this window over
+            reclaim = false;
         }
         _webui_mutex_unlock(&_webui.mutex_allocator);
-    }
 
-    // Let `webui_destroy()` and `webui_clean()` know
-    // that this window server thread is finished
-    _webui_mutex_is_thread_running(win, WEBUI_MUTEX_SET_FALSE);
-    _webui_threads_count(-1);
+        if (reclaim)
+            _webui_window_free(win);
+    }
 
     WEBUI_THREAD_RETURN
 }
@@ -14962,67 +15230,67 @@ static WEBUI_THREAD_MONITOR {
     _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread()\n");
     #endif
 
-    _webui_window_t* win = _webui_dereference_win_ptr(arg);
+    // The server thread of this window created this thread, and waits
+    // for it before the window can be reclaimed, so the window stays
+    // valid for as long as this thread runs.
+    _webui_window_t* win = (_webui_window_t*)arg;
     if (win == NULL) {
         WEBUI_THREAD_RETURN
     }
 
-    // Stop if a lower window already monitoring the same folder
-    // Loop trough all windows
-    for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
-        if ((_webui.wins[i] != NULL) && (_webui.wins[i] != win) && (i < win->num)) {
-            WEBUI_THREAD_RETURN
-        }
-    }
+    // Every window monitors its own root folder. Two windows may share
+    // the same folder, and both still need their own monitor, because a
+    // monitor only reloads the clients of its own window.
 
     const char* js = "location.reload();";
     size_t js_len = _webui_strlen(js);
 
     #ifdef _WIN32
         // Windows
-        HANDLE hDir = CreateFile(
-            win->server_root_path, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL
+        // A change notification is used instead of `ReadDirectoryChangesW()`
+        // because it can be waited on with a timeout, which lets this thread
+        // notice a stop request instead of being killed while blocked.
+        HANDLE hDir = FindFirstChangeNotification(
+            win->server_root_path, TRUE,
+            FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES |
+            FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE
         );
-        if (hDir == INVALID_HANDLE_VALUE) {
+        if ((hDir == INVALID_HANDLE_VALUE) || (hDir == NULL)) {
             #ifdef WEBUI_LOG
             _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Failed to open folder: %s\n",
                 win->server_root_path
             );
             #endif
+            _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Monitoring [%s]\n", win->server_root_path);
         #endif
-        char buffer[1024];
-        DWORD bytesReturned;
-        while ((!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) &&
-               (_webui_mutex_is_server_running(win, WEBUI_MUTEX_GET_STATUS))) {
-            if (ReadDirectoryChangesW(
-                    hDir, buffer, sizeof(buffer), TRUE,
-                    FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES |
-                    FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE, &bytesReturned, NULL, NULL
-                ))
-            {
-                #ifdef WEBUI_LOG
-                _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Folder updated\n");
-                #endif
-                // Loop trough all connected clients in this window
-                for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
-                    if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) && 
-                        (_webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_GET_STATUS, i))) {
-                        _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len, false);
-                    }
-                }
-            } else {
+        while (!_webui_monitor_should_stop(win)) {
+            DWORD wait_status = WaitForSingleObject(hDir, 500);
+            if (wait_status == WAIT_TIMEOUT)
+                continue;
+            if (wait_status != WAIT_OBJECT_0) {
                 #ifdef WEBUI_LOG
                 _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Failed to read folder changes\n");
                 #endif
                 break;
             }
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Folder updated\n");
+            #endif
+            // Loop trough all connected clients in this window
+            for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+                if ((_webui.clients[i] != NULL) && (_webui.clients_win_num[i] == win->num) &&
+                    (_webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_GET_STATUS, i))) {
+                    _webui_send_client(win, _webui.clients[i], 0, WEBUI_CMD_JS_QUICK, js, js_len, false);
+                }
+            }
+            if (!FindNextChangeNotification(hDir))
+                break;
         }
-        CloseHandle(hDir);
+        FindCloseChangeNotification(hDir);
     #elif __linux__
         // Linux
         int fd = inotify_init();
@@ -15030,6 +15298,7 @@ static WEBUI_THREAD_MONITOR {
             #ifdef WEBUI_LOG
             _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> inotify_init error\n");
             #endif
+            _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
         int wd = inotify_add_watch(fd, win->server_root_path, IN_MODIFY | IN_CREATE | IN_DELETE);
@@ -15038,13 +15307,31 @@ static WEBUI_THREAD_MONITOR {
             _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> inotify_add_watch error\n");
             #endif
             close(fd);
+            _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Monitoring [%s]\n", win->server_root_path);
         #endif
         char buffer[1024];
-        while (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+        // The descriptor is polled with a timeout, so a stop request is
+        // noticed instead of blocking forever in `read()`
+        struct pollfd monitor_poll;
+        monitor_poll.fd = fd;
+        monitor_poll.events = POLLIN;
+        while (!_webui_monitor_should_stop(win)) {
+            monitor_poll.revents = 0;
+            int ready = poll(&monitor_poll, 1, 500);
+            if (ready == 0)
+                continue;
+            if (ready < 0) {
+                if (errno == EINTR)
+                    continue;
+                #ifdef WEBUI_LOG
+                _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> poll error\n");
+                #endif
+                break;
+            }
             int length = read(fd, buffer, sizeof(buffer));
             if (length < 0) {
                 #ifdef WEBUI_LOG
@@ -15081,6 +15368,7 @@ static WEBUI_THREAD_MONITOR {
             #ifdef WEBUI_LOG
             _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> kqueue error\n");
             #endif
+            _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
         int fd = open(win->server_root_path, O_RDONLY);
@@ -15089,6 +15377,7 @@ static WEBUI_THREAD_MONITOR {
             _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> open error\n");
             #endif
             close(kq);
+            _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
         #ifdef WEBUI_LOG
@@ -15096,10 +15385,19 @@ static WEBUI_THREAD_MONITOR {
         #endif
         struct kevent change;
         EV_SET(&change, fd, EVFILT_VNODE, EV_ADD | EV_ENABLE | EV_ONESHOT, NOTE_WRITE, 0, NULL);
-        while (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
+        // The event wait uses a timeout, so a stop request is
+        // noticed instead of blocking forever in `kevent()`
+        struct timespec monitor_timeout;
+        monitor_timeout.tv_sec = 0;
+        monitor_timeout.tv_nsec = 500000000L;
+        while (!_webui_monitor_should_stop(win)) {
             struct kevent event;
-            int nev = kevent(kq, &change, 1, &event, 1, NULL);
-            if (nev == -1) {
+            int nev = kevent(kq, &change, 1, &event, 1, &monitor_timeout);
+            if (nev == 0) {
+                continue;
+            } else if (nev == -1) {
+                if (errno == EINTR)
+                    continue;
                 #ifdef WEBUI_LOG
                 _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> kevent error\n");
                 #endif
@@ -15125,6 +15423,10 @@ static WEBUI_THREAD_MONITOR {
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t[Thread .] _webui_folder_monitor_thread() -> Exit\n");
     #endif
+
+    // Let the window server thread know this monitor is finished
+    _webui_mutex_is_monitor_running(win, WEBUI_MUTEX_SET_FALSE);
+
     WEBUI_THREAD_RETURN
 }
 
