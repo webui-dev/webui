@@ -589,6 +589,7 @@ static int _webui_system_win32_out(const char* cmd, char ** output, bool show);
 static bool _webui_socket_test_listen_win32(size_t port_num);
 static bool _webui_get_windows_reg_value(HKEY key, LPCWSTR reg, LPCWSTR value_name, char value[WEBUI_MAX_PATH]);
 static bool _webui_str_to_wide(const char *s, wchar_t **w);
+static HWND _webui_win32_get_browser_hwnd(_webui_window_t* win);
 #define WEBUI_THREAD_SERVER_START DWORD WINAPI _webui_server_thread(LPVOID arg)
 #define WEBUI_THREAD_RECEIVE DWORD WINAPI _webui_ws_process_thread(LPVOID _arg)
 #define WEBUI_THREAD_WEBVIEW DWORD WINAPI _webui_webview_thread(LPVOID arg)
@@ -603,10 +604,17 @@ static void * _webui_run_browser_task(void * _arg);
 #define WEBUI_THREAD_MONITOR void * _webui_folder_monitor_thread(void * arg)
 #define WEBUI_THREAD_RETURN pthread_exit(NULL);
 #endif
-#ifdef _WIN32
-#define WEBUI_THREAD_LOCAL __declspec(thread)
+// Thread local storage. This depends on the compiler, not on the OS:
+// GCC on Windows ignores the Microsoft keyword, which would silently
+// turn a thread local into a variable shared by every thread.
+#if defined(_MSC_VER)
+    #define WEBUI_THREAD_LOCAL __declspec(thread)
+#elif defined(__GNUC__) || defined(__clang__) || defined(__TINYC__)
+    #define WEBUI_THREAD_LOCAL __thread
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
+    #define WEBUI_THREAD_LOCAL _Thread_local
 #else
-#define WEBUI_THREAD_LOCAL __thread
+    #error "WebUI needs thread local storage support from the compiler"
 #endif
 static void _webui_init(void);
 static bool _webui_show(_webui_window_t* win, struct mg_connection* client, const char* content, size_t browser);
@@ -2187,23 +2195,61 @@ bool webui_show_client(webui_event_t* e, const char* content) {
 #ifdef _WIN32
     // Callback for EnumWindows used to find the window handle of the web browser process
     // and bring it to the foreground (front).
-    BOOL CALLBACK _webui_win32_enum_proc(HWND hwnd, LPARAM lParam) {
-        DWORD targetPid = (DWORD)lParam;
-        DWORD pid = 0;
-        GetWindowThreadProcessId(hwnd, &pid);
-        if (pid == targetPid && IsWindowVisible(hwnd)) {
-            // Restore if minimized
-            if (IsIconic(hwnd)) {
-                ShowWindow(hwnd, SW_RESTORE);
-            }
-            // Bring to foreground
-            SetForegroundWindow(hwnd);
-            // stop enumeration
-            return FALSE; 
+    // Target of `_webui_win32_find_proc`. A window is matched either by
+    // the process owning it, or by a part of its title.
+    typedef struct {
+        DWORD pid;
+        const char* title;
+        HWND found;
+        int count;
+    }
+    _webui_win32_find_t;
+
+    // Count the windows matching a target, and remember the first one.
+    // The whole list is always walked, because a match is only usable
+    // when it is the single one: acting on a guess could resize or
+    // minimize a window of a completely different application.
+    BOOL CALLBACK _webui_win32_find_proc(HWND hwnd, LPARAM lParam) {
+
+        _webui_win32_find_t* target = (_webui_win32_find_t*)lParam;
+
+        // An owned window is a popup or a tool window of the
+        // browser, not the window the user sees as the app
+        if (!IsWindowVisible(hwnd) || (GetWindow(hwnd, GW_OWNER) != NULL))
+            return TRUE;
+
+        bool match = false;
+        if (target->pid != 0) {
+            DWORD pid = 0;
+            GetWindowThreadProcessId(hwnd, &pid);
+            match = (pid == target->pid);
         }
-        // continue enumeration
+        else if (target->title != NULL) {
+            char text[512] = {0};
+            if (GetWindowTextA(hwnd, text, (int)sizeof(text)) > 0)
+                match = (strstr(text, target->title) != NULL);
+        }
+
+        if (match) {
+            if (target->count == 0)
+                target->found = hwnd;
+            target->count++;
+        }
         return TRUE;
     }
+
+    // Return the window matching a target, but only when nothing
+    // else matches it too
+    static HWND _webui_win32_find_unique(DWORD pid, const char* title) {
+        _webui_win32_find_t target;
+        target.pid = pid;
+        target.title = title;
+        target.found = NULL;
+        target.count = 0;
+        EnumWindows(_webui_win32_find_proc, (LPARAM)&target);
+        return (target.count == 1 ? target.found : NULL);
+    }
+
 #endif
 
 void webui_focus(size_t window) {
@@ -2231,10 +2277,22 @@ void webui_focus(size_t window) {
         }
     } else {
         // Web-Browser Window
-        DWORD pid = (DWORD)_webui_get_child_process_id(win);
-        if (pid != 0) {
-            // Set callback for EnumWindows
-            EnumWindows(_webui_win32_enum_proc, (LPARAM)pid);
+        HWND hwnd = _webui_win32_get_browser_hwnd(win);
+        if (hwnd != NULL) {
+            // Restore if minimized
+            if (IsIconic(hwnd))
+                ShowWindow(hwnd, SW_RESTORE);
+            // Windows only lets the foreground process change the
+            // foreground window, so this thread borrows the input
+            // state of the window that currently has it
+            DWORD current = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
+            DWORD target = GetWindowThreadProcessId(hwnd, NULL);
+            if ((current != 0) && (target != 0) && (current != target))
+                AttachThreadInput(current, target, TRUE);
+            BringWindowToTop(hwnd);
+            SetForegroundWindow(hwnd);
+            if ((current != 0) && (target != 0) && (current != target))
+                AttachThreadInput(current, target, FALSE);
         }
     }
 
@@ -3282,6 +3340,128 @@ void webui_set_hide(size_t window, bool status) {
     win->hide = status;
 }
 
+static bool _webui_get_html_title(const char* html, char* title, size_t title_len) {
+
+    // Read the `<title>` of an HTML document. A browser shows it as the
+    // title of the window, which is how a window gets recognized when
+    // its process cannot be identified.
+
+    if ((html == NULL) || (title == NULL) || (title_len < 2))
+        return false;
+
+    const char* start = strstr(html, "<title>");
+    if (start == NULL)
+        return false;
+    start += 7;
+
+    const char* end = strstr(start, "</title>");
+    if ((end == NULL) || (end <= start))
+        return false;
+
+    size_t len = (size_t)(end - start);
+    if (len >= title_len)
+        len = title_len - 1;
+    memcpy(title, start, len);
+    title[len] = '\0';
+    return true;
+}
+
+#ifdef _WIN32
+static HWND _webui_win32_get_browser_hwnd(_webui_window_t* win) {
+
+    // Find the native window of the web browser showing this window.
+    // Each way of finding it is only trusted when it points to a single
+    // window. Anything else is a guess, and a wrong guess would move a
+    // window of another application.
+
+    HWND hwnd = NULL;
+
+    // 1. The process owning the window. Browsers keep all their windows
+    // in one process, so this only tells them apart when this one is
+    // the only window that process is showing.
+    size_t pid = _webui_get_child_process_id(win);
+    if (pid != 0)
+        hwnd = _webui_win32_find_unique((DWORD)pid, NULL);
+
+    // 2. The address the page was loaded from. Browsers show it as the
+    // window title when the page has no title of its own, and it holds
+    // this window's own port, so it cannot name any other window.
+    if (hwnd == NULL) {
+        char address[64] = {0};
+        WEBUI_SN_PRINTF_STATIC(address, sizeof(address), "localhost:%zu", win->server_port);
+        hwnd = _webui_win32_find_unique(0, address);
+    }
+
+    // 3. The title of the page. This is the last way to try, because
+    // the title belongs to the app author and any other window may
+    // carry the same one, in which case this is given up as well.
+    if (hwnd == NULL) {
+        char title[512] = {0};
+        if (_webui_get_html_title(win->html, title, sizeof(title)) && (title[0] != '\0'))
+            hwnd = _webui_win32_find_unique(0, title);
+    }
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_win32_get_browser_hwnd([%zu]) -> %s\n",
+        win->num, (hwnd != NULL ? "Found" : "No single window found"));
+    #endif
+
+    return hwnd;
+}
+#endif
+
+static void _webui_browser_window_state(_webui_window_t* win, bool maximize) {
+
+    // Minimize or maximize the web browser window of a window. A page
+    // cannot do this to its own browser window, so the native window of
+    // the browser is asked instead.
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_browser_window_state([%zu], %s)\n",
+        win->num, (maximize ? "maximize" : "minimize"));
+    #endif
+
+    #ifdef _WIN32
+    HWND hwnd = _webui_win32_get_browser_hwnd(win);
+    if (hwnd != NULL)
+        ShowWindow(hwnd, (maximize ? SW_MAXIMIZE : SW_MINIMIZE));
+
+    #elif __linux__
+    size_t pid = _webui_get_child_process_id(win);
+    if (pid == 0)
+        return;
+    // The window manager owns the window, and it's reached through
+    // the tools every X11 desktop provides. Wayland has no equivalent.
+    char cmd[512];
+    if (maximize) {
+        WEBUI_SN_PRINTF_STATIC(cmd, sizeof(cmd),
+            "WID=$(xdotool search --pid %zu --onlyvisible --limit 1 2>/dev/null | head -n 1); "
+            "[ -n \"$WID\" ] && wmctrl -i -r $WID -b add,maximized_vert,maximized_horz",
+            pid);
+    } else {
+        WEBUI_SN_PRINTF_STATIC(cmd, sizeof(cmd),
+            "xdotool search --pid %zu --onlyvisible --limit 1 windowminimize", pid);
+    }
+    _webui_cmd_async(win, cmd, false);
+    #else
+    size_t pid = _webui_get_child_process_id(win);
+    if (pid == 0)
+        return;
+    // Needs the accessibility permission to be granted to this app
+    char cmd[512];
+    if (maximize) {
+        WEBUI_SN_PRINTF_STATIC(cmd, sizeof(cmd),
+            "osascript -e 'tell application \"System Events\" to perform action \"AXZoomWindow\" "
+            "of window 1 of (first process whose unix id is %zu)'", pid);
+    } else {
+        WEBUI_SN_PRINTF_STATIC(cmd, sizeof(cmd),
+            "osascript -e 'tell application \"System Events\" to set value of attribute "
+            "\"AXMinimized\" of window 1 of (first process whose unix id is %zu) to true'", pid);
+    }
+    _webui_cmd_async(win, cmd, false);
+    #endif
+}
+
 void webui_minimize(size_t window) {
 
     #ifdef WEBUI_LOG
@@ -3299,12 +3479,15 @@ void webui_minimize(size_t window) {
     if(win->webView) {
         _webui_wv_minimize(win->webView);
     }
+    else {
+        _webui_browser_window_state(win, false);
+    }
 }
 
 void webui_maximize(size_t window) {
 
     #ifdef WEBUI_LOG
-    _webui_log_info("[User] webui_minimize(%zu)\n", window);
+    _webui_log_info("[User] webui_maximize(%zu)\n", window);
     #endif
 
     // Initialization
@@ -3317,6 +3500,9 @@ void webui_maximize(size_t window) {
 
     if(win->webView) {
         _webui_wv_maximize(win->webView);
+    }
+    else {
+        _webui_browser_window_state(win, true);
     }
 }
 
@@ -6575,17 +6761,39 @@ static void _webui_window_request_reload(_webui_window_t* win) {
 
     // Ask the persistent server thread of a window to restart its web
     // server using the current settings. The flag also ends the current
-    // serve cycle, so the thread reaches the reload immediately. The
-    // connected clients are asked to close: they are bound to the old
-    // server, which is about to be stopped.
+    // serve cycle, so the thread reaches the reload immediately.
 
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_window_request_reload([%zu])\n", win->num);
     #endif
 
+    // The clients are bound to the server that is about to be stopped.
+    // Before it goes down, they are told where the window is moving to,
+    // and to go there as soon as the new server answers. Waiting for
+    // the answer is what makes it safe: the old server is still up
+    // while this runs, and the new one may need a moment to listen.
+    if (_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS)) {
+
+        size_t new_port = (win->custom_server_port > 0 ?
+            win->custom_server_port : win->server_port
+        );
+
+        char js[1024];
+        WEBUI_SN_PRINTF_STATIC(js, sizeof(js),
+            "(function(){try{"
+            "var u=new URL(location.href);u.port='%zu';var t=u.href;var n=0;"
+            "var i=setInterval(function(){"
+            "if(++n>150){clearInterval(i);return;}"
+            "fetch(t,{cache:'no-store',mode:'no-cors'}).then(function(){"
+            "clearInterval(i);location.replace(t);}).catch(function(){});"
+            "},200);}catch(e){}})();",
+            new_port
+        );
+
+        _webui_send_all(win, 0, WEBUI_CMD_JS_QUICK, js, _webui_strlen(js));
+    }
+
     _webui_mutex_is_reload_requested(win, WEBUI_MUTEX_SET_TRUE);
-    if (_webui_mutex_is_connected(win, WEBUI_MUTEX_GET_STATUS))
-        webui_close(win->num);
 }
 
 static void _webui_window_wait_for_reload(_webui_window_t* win) {
@@ -8309,10 +8517,10 @@ static void _webui_clean(void) {
     _webui_log_debug("[Core]\t\t_webui_clean()\n");
     #endif
 
-    static bool cleaned = false;
-    if (cleaned)
+    // Nothing to clean. This also makes a second call harmless, while
+    // still allowing a new `_webui_init()` to start everything again.
+    if (!_webui.initialized)
         return;
-    cleaned = true;
 
     // Make sure app is stopped
     webui_exit();
@@ -9363,7 +9571,9 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
         bool empty_status = _webui_show_window(
             win, client, win->server_root_path, WEBUI_SHOW_FOLDER, browser
         );
-        webui_focus(win->num);
+        if(empty_status) {
+            webui_focus(win->num);
+        }
         return empty_status;
     }
 
@@ -9422,7 +9632,9 @@ static bool _webui_show(_webui_window_t* win, struct mg_connection* client, cons
 
     // Bring the window to front after showing content
     if ((browser != NoBrowser) && (!win->hide)) {
-        webui_focus(win->num);
+        if(status) {
+            webui_focus(win->num);
+        }
     }
 
     return status;
@@ -11887,19 +12099,22 @@ static WEBUI_THREAD_SERVER_START {
             }
         }
         // The serve cycle ended: the window got closed by the user, the
-        // connection timed out, or an exit is requested. Let's close the
-        // UI, and make this window inactive. A serve request that arrived
-        // during this cycle is stale now, so it gets dropped. A re-show
-        // in progress is still safe: its client re-connection starts a
-        // new serve cycle.
+        // connection timed out, an exit is requested, or the server is
+        // being reloaded. Let's make this window inactive. A serve
+        // request that arrived during this cycle is stale now, so it
+        // gets dropped. A re-show in progress is still safe: its client
+        // re-connection starts a new serve cycle.
+        bool ending_for_reload = _webui_mutex_is_reload_requested(win, WEBUI_MUTEX_GET_STATUS);
         _webui_mutex_is_start_requested(win, WEBUI_MUTEX_SET_FALSE);
         _webui_mutex_is_connected(win, WEBUI_MUTEX_SET_FALSE);
-        _webui_window_close_ui(win);
 
-        // A reload ended this cycle. Serving resumes once
-        // the server is listening again.
-        if (_webui_mutex_is_reload_requested(win, WEBUI_MUTEX_GET_STATUS))
+        // A reload keeps the UI open: the clients were told to move to
+        // the new address, and they are waiting for it to answer.
+        // Serving resumes once the server is listening again.
+        if (ending_for_reload)
             resume_after_reload = true;
+        else
+            _webui_window_close_ui(win);
 
         // Make window reusable, so user can
         // call `webui_show()` again if needed.
