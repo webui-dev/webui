@@ -110,6 +110,8 @@
 #define WEBUI_COOKIES_BUF    (64)    // Authentification cookies buffer size
 #define WEBUI_NATIVE_BROWSER (99)    // Internal ID used to avoid terminating the user's native browser on exit
 #define WEBUI_SYS_CMD_TIMEOUT (1500) // Max time to wait for a system command to run
+#define WEBUI_MAX_PRINT_LEN (1024)    // Max characters to print before using chunked printing
+#define WEBUI_CHUNK_PRINT_LEN (64)   // Max characters to print per chunk (First chunk, last chunk)
 
 #ifdef WEBUI_TLS
 #define WEBUI_SECURE         "TLS-Encryption"
@@ -876,8 +878,8 @@ static void _webui_log(size_t level, const char *format, va_list args) {
                 vprintf(format, args);
             }
         } else {
-            char buf[129];
-            char* buffer = (needed_size <= 128)
+            char buf[WEBUI_MAX_PRINT_LEN + 1];
+            char* buffer = (needed_size <= WEBUI_MAX_PRINT_LEN)
                 ? buf
                 : _webui_malloc((size_t)needed_size + 1);
             if (buffer == NULL) {
@@ -889,12 +891,12 @@ static void _webui_log(size_t level, const char *format, va_list args) {
             } else {
                 vsnprintf(buffer, (size_t)needed_size + 1, format, args);
                 FILE* output = (level == WEBUI_LOGGER_LEVEL_ERROR) ? stderr : stdout;
-                if (needed_size <= 128) {
+                if (needed_size <= WEBUI_MAX_PRINT_LEN) {
                     fputs(buffer, output);
                 } else {
-                    fwrite(buffer, 1, 64, output);
+                    fwrite(buffer, 1, WEBUI_CHUNK_PRINT_LEN, output);
                     fputs(" ... ", output);
-                    fwrite(buffer + needed_size - 64, 1, 64, output);
+                    fwrite(buffer + needed_size - WEBUI_CHUNK_PRINT_LEN, 1, WEBUI_CHUNK_PRINT_LEN, output);
                 }
                 if (buffer != buf) {
                     _webui_free_mem(buffer);
@@ -912,8 +914,8 @@ static void _webui_log(size_t level, const char *format, va_list args) {
             return;
         }
 
-        char buf[256];
-        char *buffer = (needed_size > 255) ? _webui_malloc(needed_size + 1) : buf;
+        char buf[WEBUI_MAX_PRINT_LEN + 1];
+        char *buffer = (needed_size > WEBUI_MAX_PRINT_LEN) ? _webui_malloc(needed_size + 1) : buf;
         if (buffer == NULL) {
             _webui_log_data.logger_func(WEBUI_LOGGER_LEVEL_ERROR, "Memory allocation failed for log", _webui_log_data.logger_user_data);
             return;
@@ -10542,21 +10544,21 @@ static bool _webui_get_cb_index(_webui_window_t* win, const char* element, size_
 
 #ifdef WEBUI_LOG
 static void _webui_print_hex(const char* data, size_t len) {
-    if (len <= 128) {
+    if (len <= WEBUI_MAX_PRINT_LEN) {
         for (size_t i = 0; i < len; i++) {
             _webui_log_debug("0x%02X ", (unsigned char)* data);
             data++;
         }
     } else {
-        for (size_t i = 0; i < 64; i++) {
+        for (size_t i = 0; i < WEBUI_CHUNK_PRINT_LEN; i++) {
             _webui_log_debug("0x%02X ", (unsigned char)* data);
             data++;
         }
 
         _webui_log_debug("... ");
 
-        data += len - 128;
-        for (size_t i = 0; i < 64; i++) {
+        data += len - WEBUI_CHUNK_PRINT_LEN;
+        for (size_t i = 0; i < WEBUI_CHUNK_PRINT_LEN; i++) {
             _webui_log_debug("0x%02X ", (unsigned char)* data);
             data++;
         }
@@ -10566,8 +10568,8 @@ static void _webui_print_ascii(const char* data, size_t len) {
     // This function is used to print the protocol binary packets. the packet 
     // may have ASCII and `0x00` inside text, as well as other non-ascii bytes
     
-    if (len <= 128) {
-        // Print all data if size is 128 or less
+    if (len <= WEBUI_MAX_PRINT_LEN) {
+        // Print all data if size is WEBUI_MAX_PRINT_LEN or less
         for (size_t i = 0; i < len; i++) {
             register unsigned char c = (unsigned char)* data;
             if (c < 32 || c > 126) {
@@ -10578,8 +10580,8 @@ static void _webui_print_ascii(const char* data, size_t len) {
             data++;
         }
     } else {
-        // Print first 64 bytes
-        for (size_t i = 0; i < 64; i++) {
+        // Print first WEBUI_CHUNK_PRINT_LEN bytes
+        for (size_t i = 0; i < WEBUI_CHUNK_PRINT_LEN; i++) {
             register unsigned char c = (unsigned char)* data;
             if (c < 32 || c > 126) {
                 _webui_log_debug("[0x%02X]", c);
@@ -10592,9 +10594,9 @@ static void _webui_print_ascii(const char* data, size_t len) {
         // Print ellipsis
         _webui_log_debug(" ... ");
         
-        // Print last 64 bytes
-        data = data + (len - 64);
-        for (size_t i = 0; i < 64; i++) {
+        // Print last WEBUI_CHUNK_PRINT_LEN bytes
+        data = data + (len - WEBUI_CHUNK_PRINT_LEN);
+        for (size_t i = 0; i < WEBUI_CHUNK_PRINT_LEN; i++) {
             register unsigned char c = (unsigned char)* data;
             if (c < 32 || c > 126) {
                 _webui_log_debug("[0x%02X]", c);
