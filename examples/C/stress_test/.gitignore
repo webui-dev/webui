@@ -3,6 +3,7 @@
 # stress test
 /st_root_a
 /st_root_b
+/st_monitor
 test_pass.txt
 test_error.txt
 log.txt

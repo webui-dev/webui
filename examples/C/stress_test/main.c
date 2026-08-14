@@ -30,7 +30,7 @@
 #include <sys/types.h>
 #endif
 
-#define STAGES 13
+#define STAGES 15
 #define BIG_ARG_LEN 262144
 #define BIG_RUN_LEN 307200
 #define BIG_SCRIPT_LEN 1048576
@@ -47,6 +47,9 @@ static volatile long g_report = -1;
 static volatile long g_bind_hits = 0;
 static volatile long g_kamikaze = 0;
 
+static volatile long g_stage = -1; // Stage being run, for progress reports
+static volatile long g_prog_last = -1;
+
 static char page_buf[8192];
 static char big_js[BIG_RUN_LEN + 128];
 static char big_buf[BIG_SCRIPT_LEN + 128];
@@ -62,7 +65,9 @@ static const char* stage_names[STAGES] = {
 	"Multi-window churn",
 	"Port change reload (webui_set_port)",
 	"Live root folder change",
+	"Folder monitor auto-reload",
 	"Concurrent create / destroy",
+	"Window reclaim (200 create / destroy)",
 	"Destroy from callback",
 	"Rapid open / close"
 };
@@ -81,6 +86,17 @@ static void sleep_ms(unsigned long ms) {
 static bool wait_long(volatile long* v, long want, unsigned long timeout_ms) {
 	unsigned long waited = 0;
 	while (*v != want) {
+		if (g_abort || waited >= timeout_ms)
+			return false;
+		sleep_ms(25);
+		waited += 25;
+	}
+	return true;
+}
+
+static bool wait_at_least(volatile long* v, long want, unsigned long timeout_ms) {
+	unsigned long waited = 0;
+	while (*v < want) {
 		if (g_abort || waited >= timeout_ms)
 			return false;
 		sleep_ms(25);
@@ -112,10 +128,25 @@ static void status_run(const char* fmt, ...) {
 static void stage_begin(int i) {
 	printf("[%d/%d] %s...\n", i + 1, STAGES, stage_names[i]);
 	fflush(stdout);
+	g_stage = i;
+	g_prog_last = -1;
 	status_run("setStage(%d,'RUNNING','');", i);
 }
 
+// Show how far a stage got, as a counter with a small bar. Stages
+// without a known number of steps simply never call this, and keep
+// showing RUNNING. Safe to call from any thread.
+static void stage_progress(long done, long total) {
+	if (g_stage < 0 || g_abort || total < 1)
+		return;
+	if (done == g_prog_last)
+		return;
+	g_prog_last = done;
+	status_run("setProgress(%ld,%ld,%ld);", (long)g_stage, done, total);
+}
+
 static bool stage_end(int i, bool ok, const char* detail) {
+	g_stage = -1;
 	printf("[%d/%d] %s -> %s (%s)\n", i + 1, STAGES, stage_names[i], ok ? "PASS" : "FAIL", detail);
 	fflush(stdout);
 	status_run("setStage(%d,'%s','%s');", i, ok ? "PASS" : "FAIL", detail);
@@ -191,6 +222,11 @@ static void cb_report(webui_event_t* e) {
 	g_report = (long)webui_get_int(e);
 }
 
+static void cb_ready_inc(webui_event_t* e) {
+	(void)e;
+	g_ready++;
+}
+
 static void cb_report_char(webui_event_t* e) {
 	const char* s = webui_get_string(e);
 	g_report = (s != NULL && s[0] != '\0') ? (long)s[0] : -2;
@@ -208,7 +244,12 @@ static void cb_big_arg(webui_event_t* e) {
 
 static void cb_bind_hit(webui_event_t* e) {
 	g_bind_hits++;
+	stage_progress(g_bind_hits, 40);
 	webui_return_int(e, 1);
+}
+
+static void cb_progress(webui_event_t* e) {
+	stage_progress((long)webui_get_int(e), 401);
 }
 
 static void cb_kamikaze(webui_event_t* e) {
@@ -266,6 +307,7 @@ static bool stage_reopen(int i) {
 			}
 			sleep_ms(400);
 		}
+		stage_progress(c + 1, 3);
 	}
 	if (ok)
 		mark_passed(w, stage_names[i]);
@@ -290,8 +332,12 @@ static bool stage_c_to_js(int i) {
 		ok = false;
 	}
 	if (ok) {
-		for (int n = 0; n < 2000; n++)
+		for (int n = 0; n < 2000; n++) {
 			webui_run(w, "count++;");
+			if ((n % 100) == 0)
+				stage_progress(n, 2000);
+		}
+		stage_progress(2000, 2000);
 		memset(resp, 0, sizeof(resp));
 		if (!webui_script(w, "return count;", 30, resp, sizeof(resp)) || strcmp(resp, "2000") != 0) {
 			snprintf(detail, sizeof(detail), "Counter is [%s], expected [2000]", resp);
@@ -328,13 +374,15 @@ static bool stage_js_to_c(int i) {
 	webui_bind(w, "echo", cb_echo);
 	webui_bind(w, "big_arg", cb_big_arg);
 	webui_bind(w, "report", cb_report);
+	webui_bind(w, "progress", cb_progress);
 	g_ready = 0;
 	g_report = -1;
 	if (!webui_show(w, make_page("JS to C",
 		"ready(async function(){"
 		"webui.call('stage_ready',1);"
 		"let ok=0;"
-		"for(let i=0;i<400;i++){const r=await webui.call('echo',i);if(Number(r)===i*2)ok++;}"
+		"for(let i=0;i<400;i++){const r=await webui.call('echo',i);if(Number(r)===i*2)ok++;"
+		"if((i%20)===0)webui.call('progress',i);}"
 		"const big='B'.repeat(262144);"
 		"if((await webui.call('big_arg',big))==='1')ok++;"
 		"webui.call('report',ok);});"))) {
@@ -382,6 +430,8 @@ static bool stage_big_payloads(int i) {
 				ok = false;
 			}
 		}
+		if (ok)
+			stage_progress(1, 2);
 	}
 	if (ok) {
 		g_report = -1;
@@ -397,6 +447,8 @@ static bool stage_big_payloads(int i) {
 			snprintf(detail, sizeof(detail), "300KB webui_run not confirmed (%ld)", g_report);
 			ok = false;
 		}
+		if (ok)
+			stage_progress(2, 2);
 	}
 	if (ok)
 		mark_passed(w, stage_names[i]);
@@ -462,6 +514,7 @@ static bool stage_navigation(int i) {
 			ok = false;
 			break;
 		}
+		stage_progress(p, 8);
 	}
 	if (ok)
 		mark_passed(w, stage_names[i]);
@@ -486,6 +539,7 @@ static bool stage_multi_window(int i) {
 				snprintf(detail, sizeof(detail), "Window %d.%d failed to open", round + 1, n + 1);
 				ok = false;
 			}
+			stage_progress((round * 3) + n + 1, 6);
 		}
 		if (ok) {
 			for (int n = 0; n < 3 && ok; n++) {
@@ -527,6 +581,7 @@ static bool stage_port_reload(int i) {
 	}
 	char old_url[256] = {0};
 	if (ok) {
+		stage_progress(1, 4);
 		const char* u = webui_get_url(w);
 		snprintf(old_url, sizeof(old_url), "%s", (u != NULL ? u : ""));
 	}
@@ -548,6 +603,7 @@ static bool stage_port_reload(int i) {
 		ok = false;
 	}
 	if (ok) {
+		stage_progress(2, 4);
 		// This blocks until the pending reload is done,
 		// so the returned URL is the one of the new server
 		const char* url = webui_get_url(w);
@@ -562,12 +618,15 @@ static bool stage_port_reload(int i) {
 		}
 	}
 	if (ok) {
+		stage_progress(3, 4);
 		g_ready = 0;
 		if (!webui_show(w, make_page("Port reload", "ready(function(){webui.call('stage_ready',1);});")) ||
 			!wait_long(&g_ready, 1, 15000)) {
 			snprintf(detail, sizeof(detail), "Re-show on the new port failed");
 			ok = false;
 		}
+		if (ok)
+			stage_progress(4, 4);
 	}
 	if (ok)
 		mark_passed(w, stage_names[i]);
@@ -629,6 +688,8 @@ static bool stage_root_folder(int i) {
 		snprintf(detail, sizeof(detail), "Folder A content mismatch (%ld)", g_report);
 		ok = false;
 	}
+	if (ok)
+		stage_progress(1, 2);
 	if (ok && !webui_set_root_folder(w, "./st_root_b")) {
 		snprintf(detail, sizeof(detail), "Live set_root_folder failed");
 		ok = false;
@@ -640,9 +701,134 @@ static bool stage_root_folder(int i) {
 			snprintf(detail, sizeof(detail), "Folder B content mismatch (%ld)", g_report);
 			ok = false;
 		}
+		if (ok)
+			stage_progress(2, 2);
 	}
 	if (ok)
 		mark_passed(w, stage_names[i]);
+	return stage_end(i, ok, detail);
+}
+
+static bool stage_folder_monitor(int i) {
+	stage_begin(i);
+	bool ok = true;
+	char detail[256] = "File change reloaded the page, monitor stopped clean";
+
+	#ifdef _WIN32
+	_mkdir("st_monitor");
+	#else
+	mkdir("st_monitor", 0755);
+	#endif
+	write_file("st_monitor/data.txt", "one");
+	write_file("st_monitor/index.html",
+		"<html><head><script src=\"webui.js\"></script></head><body>Folder monitor test"
+		"<script>"
+		"function ready(f){"
+		"let done=false;"
+		"const go=function(){if(!done){done=true;f();}};"
+		"document.addEventListener('DOMContentLoaded',function(){"
+		"if(typeof webui!=='undefined'){"
+		"webui.setEventCallback(function(e){if(e==webui.event.CONNECTED)go();});"
+		"if(webui.isConnected())go();"
+		"}});}"
+		"ready(function(){webui.call('stage_ready',1);});"
+		"</script></body></html>");
+
+	webui_set_config(folder_monitor, true);
+
+	size_t w = webui_new_window();
+	webui_bind(w, "stage_ready", cb_ready_inc);
+	g_ready = 0;
+	if (!webui_set_root_folder(w, "./st_monitor")) {
+		snprintf(detail, sizeof(detail), "set_root_folder failed");
+		ok = false;
+	}
+	if (ok && (!webui_show(w, "index.html") || !wait_at_least(&g_ready, 1, 15000))) {
+		snprintf(detail, sizeof(detail), "Show failed");
+		ok = false;
+	}
+	if (ok)
+		stage_progress(1, 2);
+	if (ok) {
+		// Changing a file in the folder must reload the page,
+		// which connects again and signals a second time
+		sleep_ms(1000);
+		write_file("st_monitor/data.txt", "two");
+		if (!wait_at_least(&g_ready, 2, 20000)) {
+			snprintf(detail, sizeof(detail), "Page was not reloaded on file change");
+			ok = false;
+		}
+		if (ok)
+			stage_progress(2, 2);
+	}
+	if (ok) {
+		// The monitor thread has to stop cooperatively. If it had to be
+		// killed, or if it hung, this destroy would take much longer.
+		time_t t0 = time(NULL);
+		webui_destroy(w);
+		double spent = difftime(time(NULL), t0);
+		if (spent > 5.0) {
+			snprintf(detail, sizeof(detail), "Destroy took %.0f seconds, monitor did not stop", spent);
+			ok = false;
+		}
+	}
+	webui_set_config(folder_monitor, false);
+
+	if (ok) {
+		// The tested window is destroyed, so keep a marker window
+		size_t w2 = webui_new_window();
+		webui_bind(w2, "stage_ready", cb_ready);
+		g_ready = 0;
+		if (!webui_show(w2, make_page("Folder monitor", "ready(function(){webui.call('stage_ready',1);});"))
+			|| !wait_long(&g_ready, 1, 15000)) {
+			snprintf(detail, sizeof(detail), "Marker window failed to open");
+			ok = false;
+		} else {
+			mark_passed(w2, stage_names[i]);
+		}
+	}
+	return stage_end(i, ok, detail);
+}
+
+static bool stage_reclaim(int i) {
+	stage_begin(i);
+	bool ok = true;
+	char detail[256] = "200 windows created and destroyed, memory reclaimed";
+	const char* page = "<html><head><script src=\"webui.js\"></script></head><body>Reclaim</body></html>";
+
+	for (int n = 0; n < 200 && ok; n++) {
+		size_t w = webui_new_window();
+		if (w == 0) {
+			snprintf(detail, sizeof(detail), "Window creation failed at %d", n + 1);
+			ok = false;
+			break;
+		}
+		if (!webui_show_browser(w, page, NoBrowser)) {
+			snprintf(detail, sizeof(detail), "Headless show failed at %d", n + 1);
+			webui_destroy(w);
+			ok = false;
+			break;
+		}
+		webui_destroy(w);
+		if ((n % 5) == 0)
+			stage_progress(n, 200);
+		if (g_abort)
+			break;
+	}
+	if (ok)
+		stage_progress(200, 200);
+	if (ok) {
+		size_t w = webui_new_window();
+		webui_bind(w, "stage_ready", cb_ready);
+		g_ready = 0;
+		if (!webui_show(w, make_page("Window reclaim", "ready(function(){webui.call('stage_ready',1);});"))
+			|| !wait_long(&g_ready, 1, 15000)) {
+			snprintf(detail, sizeof(detail), "Marker window failed to open");
+			ok = false;
+		} else {
+			mark_passed(w, stage_names[i]);
+		}
+	}
 	return stage_end(i, ok, detail);
 }
 
@@ -651,27 +837,35 @@ static bool stage_root_folder(int i) {
 static const char* churn_page =
 	"<html><head><script src=\"webui.js\"></script></head><body>Churn</body></html>";
 
+typedef struct {
+	bool ok;
+	volatile long done;
+} churn_arg_t;
+
 #ifdef _WIN32
 static DWORD WINAPI churn_worker(LPVOID arg)
 #else
 static void* churn_worker(void* arg)
 #endif
 {
-	bool* ok = (bool*)arg;
-	*ok = true;
+	churn_arg_t* state = (churn_arg_t*)arg;
+	state->ok = true;
 	for (int n = 0; n < 6; n++) {
 		size_t w = webui_new_window();
 		if (w == 0) {
-			*ok = false;
+			state->ok = false;
 			break;
 		}
 		webui_bind(w, "stage_ready", cb_ready);
 		if (!webui_show_browser(w, churn_page, NoBrowser)) {
-			*ok = false;
+			state->ok = false;
 			break;
 		}
 		sleep_ms(15);
 		webui_destroy(w);
+		// Only this worker writes this counter, the
+		// driver thread sums them up for the progress
+		state->done++;
 	}
 	#ifdef _WIN32
 	return 0;
@@ -684,22 +878,38 @@ static bool stage_concurrent(int i) {
 	stage_begin(i);
 	bool ok = true;
 	char detail[256] = "4 threads x 6 headless windows, no serialization";
-	bool oks[4] = {false, false, false, false};
+	churn_arg_t state[4];
+	memset(state, 0, sizeof(state));
 	#ifdef _WIN32
 	HANDLE th[4];
 	for (int n = 0; n < 4; n++)
-		th[n] = CreateThread(NULL, 0, churn_worker, &oks[n], 0, NULL);
+		th[n] = CreateThread(NULL, 0, churn_worker, &state[n], 0, NULL);
+	#else
+	pthread_t th[4];
+	for (int n = 0; n < 4; n++)
+		pthread_create(&th[n], NULL, churn_worker, &state[n]);
+	#endif
+
+	// Report the progress while the workers run
+	for (int guard = 0; guard < 1200; guard++) {
+		long done = state[0].done + state[1].done + state[2].done + state[3].done;
+		stage_progress(done, 24);
+		if (done >= 24 || g_abort)
+			break;
+		sleep_ms(50);
+	}
+
+	#ifdef _WIN32
 	WaitForMultipleObjects(4, th, TRUE, INFINITE);
 	for (int n = 0; n < 4; n++)
 		CloseHandle(th[n]);
 	#else
-	pthread_t th[4];
-	for (int n = 0; n < 4; n++)
-		pthread_create(&th[n], NULL, churn_worker, &oks[n]);
 	for (int n = 0; n < 4; n++)
 		pthread_join(th[n], NULL);
 	#endif
-	if (!oks[0] || !oks[1] || !oks[2] || !oks[3]) {
+	stage_progress(state[0].done + state[1].done + state[2].done + state[3].done, 24);
+
+	if (!state[0].ok || !state[1].ok || !state[2].ok || !state[3].ok) {
 		snprintf(detail, sizeof(detail), "A concurrent worker failed");
 		ok = false;
 	}
@@ -797,6 +1007,7 @@ static bool stage_rapid_open_close(int i) {
 				break;
 			}
 		}
+		stage_progress(c + 1, 5);
 	}
 	if (ok)
 		mark_passed(w, stage_names[i]);
@@ -815,7 +1026,9 @@ static const stage_fn stage_fns[STAGES] = {
 	stage_multi_window,
 	stage_port_reload,
 	stage_root_folder,
+	stage_folder_monitor,
 	stage_concurrent,
+	stage_reclaim,
 	stage_destroy_from_callback,
 	stage_rapid_open_close
 };
@@ -931,6 +1144,8 @@ static const char* status_page =
 	".st{width:110px;font-weight:600}"
 	".st.pass{color:#7ce38b}.st.fail{color:#ff8089}.st.run{color:#ffd866}.st.skip{color:#8a92b2}"
 	".dt{color:#9aa0b8}"
+	".bar{height:4px;background:#23274a;border-radius:2px;margin-top:5px;overflow:hidden}"
+	".bar i{display:block;height:4px;background:#ffd866;border-radius:2px}"
 	"</style></head><body>"
 	"<h1>WebUI Stress Test</h1>"
 	"<div>"
@@ -944,7 +1159,8 @@ static const char* status_page =
 	"'C to JS calls (webui_run / webui_script)','JS to C calls and arguments',"
 	"'Large payloads (multi-packet)','Many bindings','Navigation / content reload',"
 	"'Multi-window churn','Port change reload (webui_set_port)','Live root folder change',"
-	"'Concurrent create / destroy','Destroy from callback','Rapid open / close'];"
+	"'Folder monitor auto-reload','Concurrent create / destroy',"
+	"'Window reclaim (200 create / destroy)','Destroy from callback','Rapid open / close'];"
 	"const tbl=document.getElementById('tbl');"
 	"names.forEach((n,i)=>{const r=tbl.insertRow(-1);r.insertCell(0).textContent=i+1;"
 	"r.insertCell(1).textContent=n;const s=r.insertCell(2);s.className='st';s.id='st'+i;"
@@ -955,6 +1171,10 @@ static const char* status_page =
 	"function setStage(i,st,dt){const s=document.getElementById('st'+i);s.textContent=st;"
 	"s.className='st '+(st=='PASS'?'pass':st=='FAIL'?'fail':st=='SKIP'?'skip':st=='PENDING'?'':'run');"
 	"if(dt!==undefined)document.getElementById('dt'+i).textContent=dt;}"
+	"function setProgress(i,done,total){const s=document.getElementById('st'+i);"
+	"const pct=total>0?Math.round((done*100)/total):0;"
+	"s.className='st run';"
+	"s.innerHTML=done+'/'+total+'<div class=\"bar\"><i style=\"width:'+pct+'%\"></i></div>';}"
 	"function setBanner(t,cls){const b=document.getElementById('banner');"
 	"b.textContent=t;b.className=cls||'';}"
 	"function setBusy(b){document.getElementById('bstart').disabled=b;"
