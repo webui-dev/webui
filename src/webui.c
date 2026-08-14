@@ -8725,7 +8725,9 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
                 c = WEBUI_SN_PRINTF_STATIC(buffer, len, " -P %s", win->profile_name);
             // Basic
             if (_webui_is_empty(win->custom_parameters)) {
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " -purgecaches");
+                if (_webui.current_browser != Firefox) {
+                    c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " -purgecaches");
+                }
             }
             // Kiosk Mode
             if (win->kiosk_mode)
