@@ -51,6 +51,16 @@
     };
 #endif
 
+// Explicitly enable non-client region support, which defaults to FALSE.
+static void _webui_win32_wv2_enable_non_client_region_support(ICoreWebView2Settings* settings) {
+    ICoreWebView2Settings9* nonClientSettings = nullptr;
+    if (SUCCEEDED(settings->QueryInterface(IID_ICoreWebView2Settings9,
+            reinterpret_cast<void**>(&nonClientSettings))) && nonClientSettings) {
+        nonClientSettings->put_IsNonClientRegionSupportEnabled(TRUE);
+        nonClientSettings->Release();
+    }
+}
+
 class WebView2Instance {
 public:
     ComPtr<ICoreWebView2Environment> webviewEnvironment;
@@ -149,6 +159,7 @@ public:
                     settings->put_IsScriptEnabled(TRUE);
                     settings->put_AreDefaultScriptDialogsEnabled(TRUE);
                     settings->put_IsWebMessageEnabled(TRUE);
+                    _webui_win32_wv2_enable_non_client_region_support(settings.Get());
                     #ifdef WEBUI_LOG
                     settings->put_AreDevToolsEnabled(TRUE);
                     #else
@@ -211,6 +222,7 @@ public:
                     settings->put_IsScriptEnabled(TRUE);
                     settings->put_AreDefaultScriptDialogsEnabled(TRUE);
                     settings->put_IsWebMessageEnabled(TRUE);
+                    _webui_win32_wv2_enable_non_client_region_support(settings);
                     #ifdef WEBUI_LOG
                     settings->put_AreDevToolsEnabled(TRUE);
                     #else
