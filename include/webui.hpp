@@ -152,12 +152,12 @@ namespace webui {
             // Run JavaScript without waiting for the response. Single client.
             bool script_client(const std::string_view script, unsigned int timeout,
                             char* buffer, size_t buffer_length) {
-                return webui_script_client(this, script.data(), timeout, buffer, buffer_length);
+                return webui_script_client(this, std::string{script}.c_str(), timeout, buffer, buffer_length);
             }
 
             // Run JavaScript without waiting for the response. Single client.
             void run_client(const std::string_view script) {
-                webui_run_client(this, script.data());
+                webui_run_client(this, std::string{script}.c_str());
             }
 
             // Return the response to JavaScript as integer.
@@ -172,12 +172,12 @@ namespace webui {
 
             // Safely send raw data to the UI. Single client.
             void send_raw_client(const std::string_view function, const void* raw, size_t size) {
-                webui_send_raw_client(this, function.data(), raw, size);
+                webui_send_raw_client(this, std::string{function}.c_str(), raw, size);
             }
 
             // Return the response to JavaScript as string.
             void return_string(const std::string_view s) {
-                webui_return_string(this, s.data());
+                webui_return_string(this, std::string{s}.c_str());
             }
 
             // Return the response to JavaScript as boolean.
@@ -192,12 +192,12 @@ namespace webui {
 
             // Navigate to a specific URL. Single client.
             void navigate_client(const std::string_view url) {
-                webui_navigate_client(this, url.data());
+                webui_navigate_client(this, std::string{url}.c_str());
             }
 
             // Same as `show()` but for a specific single client
             bool show_client(const std::string_view s) {
-                return webui_show_client(this, s.data());
+                return webui_show_client(this, std::string{s}.c_str());
             }
 
             // Get user data that is set using `set_context()`
@@ -233,7 +233,7 @@ namespace webui {
         // Bind a specific html element click event with a function. Empty element means all events.
         void bind(const std::string_view element, event::handler::callback_t func) {
             // Get unique ID
-            const size_t id = webui_bind(webui_window, element.data(), event::handler::handle);
+            const size_t id = webui_bind(webui_window, std::string{element}.c_str(), event::handler::handle);
             event::handler::add(id, this, func);
         }
 
@@ -248,12 +248,12 @@ namespace webui {
         // Show a window (WebView/Browser) using embedded HTML, URL, file, or folder.
         // Empty content means: use current root folder + index fallback.
         bool show(const std::string_view content = "") const {
-            return webui_show(webui_window, content.data());
+            return webui_show(webui_window, std::string{content}.c_str());
         }
 
         // Same as show(). But with a specific web browser.
         bool show_browser(const std::string_view content = "", unsigned int browser = AnyBrowser) const {
-            return webui_show_browser(webui_window, content.data(), browser);
+            return webui_show_browser(webui_window, std::string{content}.c_str(), browser);
         }
 
         // Set the window in Kiosk mode (Full screen)
@@ -298,18 +298,18 @@ namespace webui {
 
         // Set the default embedded HTML favicon
         void set_icon(const std::string_view icon, const std::string_view icon_type) const {
-            webui_set_icon(webui_window, icon.data(), icon_type.data());
+            webui_set_icon(webui_window, std::string{icon}.c_str(), std::string{icon_type}.c_str());
         }
 
         // Set the window icon from an icon file (binary format).
         // Can be used as the taskbar icon on Linux (GTK).
         void set_icon_file(const std::string_view path) const {
-            webui_set_icon_file(webui_window, path.data());
+            webui_set_icon_file(webui_window, std::string{path}.c_str());
         }
 
         // Safely send raw data to the UI
         void send_raw(const std::string_view function, const void* raw, size_t size) const {
-            webui_send_raw(webui_window, function.data(), raw, size);
+            webui_send_raw(webui_window, std::string{function}.c_str(), raw, size);
         }
 
         // Run the window in hidden mode
@@ -364,7 +364,7 @@ namespace webui {
 
         // Set the web-server root folder path for this specific window.
         bool set_root_folder(const std::string_view path) const {
-            return webui_set_root_folder(webui_window, path.data());
+            return webui_set_root_folder(webui_window, std::string{path}.c_str());
         }
 
         // Set a custom handler to serve files. This custom handler should return full HTTP header and body.
@@ -382,12 +382,12 @@ namespace webui {
         // Set the web browser profile to use. An empty `name` and `path` means the default user profile. Need
         // to be called before `webui_show()`.
         void set_profile(const std::string_view name = {""}, const std::string_view path = {""}) const {
-            webui_set_profile(webui_window, name.data(), path.data());
+            webui_set_profile(webui_window, std::string{name}.c_str(), std::string{path}.c_str());
         }
 
         // Set the web browser proxy to use. Need to be called before `webui_show()`.
         void set_proxy(const std::string_view proxy_server = {""}) const {
-            webui_set_proxy(webui_window, proxy_server.data());
+            webui_set_proxy(webui_window, std::string{proxy_server}.c_str());
         }
 
         // Get the full current URL
@@ -397,7 +397,7 @@ namespace webui {
 
         // Navigate to a specific URL.
         void navigate(const std::string_view url) const {
-            webui_navigate(webui_window, url.data());
+            webui_navigate(webui_window, std::string{url}.c_str());
         }
 
         // Control if UI events coming from this window should be processed one at a time in a
@@ -408,7 +408,7 @@ namespace webui {
 
         // Show a WebView window using embedded HTML, or a file. If the window is already open, it will be refreshed.
         bool show_wv(const std::string_view content) const {
-            return webui_show_wv(webui_window, content.data());
+            return webui_show_wv(webui_window, std::string{content}.c_str());
         }
 
         // Allow a specific window address to be accessible from a public network.
@@ -440,18 +440,18 @@ namespace webui {
         // Start only the local web server and return the URL.
         // Empty content means: use current root folder + index fallback.
         std::string_view start_server(const std::string_view content = "") const {
-            return std::string_view{webui_start_server(webui_window, content.data())};
+            return std::string_view{webui_start_server(webui_window, std::string{content}.c_str())};
         }
 
         // Quickly run a JavaScript (no response waiting).
         void run(const std::string_view script) const {
-            webui_run(webui_window, script.data());
+            webui_run(webui_window, std::string{script}.c_str());
         }
 
         // Run a JavaScript, and get the response back (Make sure your local buffer can hold the response).
         bool script(const std::string_view script, unsigned int timeout,
                     char* buffer, size_t buffer_length) const {
-            return webui_script(webui_window, script.data(), timeout, buffer, buffer_length);
+            return webui_script(webui_window, std::string{script}.c_str(), timeout, buffer, buffer_length);
         }
 
         // Chose between Deno and Nodejs runtime for .js and .ts files.
@@ -462,7 +462,7 @@ namespace webui {
         // Use this API after using `bind()` to add any user data to it that can be
         // read later using `get_context()`.
         void set_context(const std::string_view element, void* context) const {
-            webui_set_context(webui_window, element.data(), context);
+            webui_set_context(webui_window, std::string{element}.c_str(), context);
         }
 
         // Gets Win32 window `HWND`. More reliable with WebView than web browser
@@ -508,17 +508,17 @@ namespace webui {
 
     // Open an URL in the native default web browser.
     inline void open_url(const std::string_view url) {
-        webui_open_url(url.data());
+        webui_open_url(std::string{url}.c_str());
     }
 
     // Set the web-server root folder path for all windows.
     inline bool set_default_root_folder(const std::string_view path) {
-        return webui_set_default_root_folder(path.data());
+        return webui_set_default_root_folder(std::string{path}.c_str());
     }
 
     // Set custom browser folder path.
     inline void set_browser_folder(const std::string_view path) {
-        webui_set_browser_folder(path.data());
+        webui_set_browser_folder(std::string{path}.c_str());
     }
 
     // Get OS high contrast preference.
@@ -538,24 +538,24 @@ namespace webui {
 
     // Get the HTTP mime type of a file.
     inline std::string get_mime_type(const std::string_view file) {
-        return std::string{webui_get_mime_type(file.data())};
+        return std::string{webui_get_mime_type(std::string{file}.c_str())};
     }
 
     // Base64 encoding. Use this to safely send text based data to the UI. If it fails it will return NULL.
     inline std::string encode(const std::string_view str) {
-        return std::string{webui_encode(str.data())};
+        return std::string{webui_encode(std::string{str}.c_str())};
     }
 
     // Base64 decoding. Use this to safely decode received Base64 text from the UI. If it fails it will return NULL.
     inline std::string decode(const std::string_view str) {
-        return std::string{webui_decode(str.data())};
+        return std::string{webui_decode(std::string{str}.c_str())};
     }
 
     // Set the SSL/TLS certificate and the private key content, both in PEM format.
     // This works only with `webui-2-secure` library. If set empty WebUI will generate a self-signed certificate.
     inline bool set_tls_certificate(const std::string_view certificate_pem,
                                     const std::string_view private_key_pem) {
-        return webui_set_tls_certificate(certificate_pem.data(), private_key_pem.data());
+        return webui_set_tls_certificate(std::string{certificate_pem}.c_str(), std::string{private_key_pem}.c_str());
     }
 
     // Safely free a buffer allocated by WebUI, for example when using webui_encode().
