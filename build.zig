@@ -186,6 +186,10 @@ fn build_examples(b: *Build, webui: *Compile) !void {
         };
         defer examples_dir.close(io);
 
+        // Zig 0.17 caches the configure phase; re-run it when an example
+        // directory is added or removed.
+        b.dependOnDirectoryContents(b.path("examples/C"));
+
         var paths = examples_dir.iterate();
         while (try paths.next(io)) |val| {
             if (val.kind != .directory) continue;
