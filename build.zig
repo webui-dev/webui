@@ -80,7 +80,8 @@ fn addLinkerFlags(
     const webui_target = webui.rootModuleTarget();
     const is_windows = webui_target.os.tag == .windows;
     const is_darwin = webui_target.os.tag == .macos;
-    const debug = webui.root_module.optimize.? == .Debug;
+    // Zig 0.17 renamed `OptimizeMode` to `Optimize` with lowercase tags.
+    const debug = webui.root_module.optimize.? == if (comptime builtin.zig_version.minor >= 17) .debug else .Debug;
     // In Zig 0.16, methods like addCSourceFile/linkLibC/addIncludePath/linkSystemLibrary/
     // linkFramework/addCMacro were removed from *Compile and live only on *Module.
     // Routing every call through `mod` keeps the build script compatible with 0.14/0.15/0.16.
