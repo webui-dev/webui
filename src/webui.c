@@ -2524,8 +2524,9 @@ const char* webui_get_string_at(webui_event_t* e, size_t index) {
     _webui_log_info("[User] webui_get_string_at([%zu])\n", index);
     #endif
 
-    // Initialization
-    _webui_init();
+    // Events only exist while WebUI is initialized
+    if (!_webui.initialized)
+        return NULL;
 
     if (index > WEBUI_MAX_ARG)
         return NULL;
@@ -2555,8 +2556,9 @@ size_t webui_get_count(webui_event_t* e) {
     _webui_log_info("[User] webui_get_count()\n");
     #endif
 
-    // Initialization
-    _webui_init();
+    // Events only exist while WebUI is initialized
+    if (!_webui.initialized)
+        return 0;
 
     // Dereference
     _webui_window_t* win = _webui_dereference_win_num(e->window);
@@ -2651,8 +2653,9 @@ size_t webui_get_size_at(webui_event_t* e, size_t index) {
     _webui_log_info("[User] webui_get_size_at([%zu])\n", index);
     #endif
 
-    // Initialization
-    _webui_init();
+    // Events only exist while WebUI is initialized
+    if (!_webui.initialized)
+        return 0;
 
     if (index > WEBUI_MAX_ARG)
         return 0;
@@ -2721,8 +2724,9 @@ void webui_return_int(webui_event_t* e, long long int n) {
     _webui_log_info("[User] webui_return_int([%lld])\n", n);
     #endif
 
-    // Initialization
-    _webui_init();
+    // Events only exist while WebUI is initialized
+    if (!_webui.initialized)
+        return;
 
     // Dereference
     _webui_window_t* win = _webui_dereference_win_num(e->window);
@@ -2744,8 +2748,9 @@ void webui_return_float(webui_event_t* e, double f) {
     _webui_log_info("[User] webui_return_float([%f])\n", f);
     #endif
 
-    // Initialization
-    _webui_init();
+    // Events only exist while WebUI is initialized
+    if (!_webui.initialized)
+        return;
 
     // Dereference
     _webui_window_t* win = _webui_dereference_win_num(e->window);
@@ -2767,11 +2772,9 @@ void webui_return_string(webui_event_t* e, const char* s) {
     _webui_log_info("[User] webui_return_string([%s])\n", s);
     #endif
 
-    if (_webui_is_empty(s))
+    // Events only exist while WebUI is initialized
+    if (!_webui.initialized)
         return;
-
-    // Initialization
-    _webui_init();
 
     // Dereference
     _webui_window_t* win = _webui_dereference_win_num(e->window);
@@ -2779,9 +2782,11 @@ void webui_return_string(webui_event_t* e, const char* s) {
         return;
 
     // Copy Str
+    // An empty string is still a response, it completes an async call
     size_t len = _webui_strlen(s);
     char* buf = (char*)_webui_malloc(len);
-    memcpy(buf, s, len);
+    if (len > 0)
+        memcpy(buf, s, len);
 
     // Set response
     _webui_event_set_response(win, e->event_number, buf);
@@ -2813,8 +2818,9 @@ void webui_return_bool(webui_event_t* e, bool b) {
     _webui_log_info("[User] webui_return_bool([%d])\n", b);
     #endif
 
-    // Initialization
-    _webui_init();
+    // Events only exist while WebUI is initialized
+    if (!_webui.initialized)
+        return;
 
     // Dereference
     _webui_window_t* win = _webui_dereference_win_num(e->window);
@@ -4795,8 +4801,9 @@ void webui_interface_set_response(size_t window, size_t event_number, const char
     _webui_log_info("[User] webui_interface_set_response() -> Response [%s] \n", response);
     #endif
 
-    // Initialization
-    _webui_init();
+    // Events only exist while WebUI is initialized
+    if (!_webui.initialized)
+        return;
 
     // Dereference
     _webui_window_t* win = _webui_dereference_win_num(window);
@@ -4806,7 +4813,8 @@ void webui_interface_set_response(size_t window, size_t event_number, const char
     // Copy the response
     size_t len = _webui_strlen(response);
     char* buf = (char*)_webui_malloc(len);
-    WEBUI_STR_COPY_DYN(buf, len, response);
+    if (len > 0)
+        WEBUI_STR_COPY_DYN(buf, len, response);
 
     #ifdef WEBUI_LOG
     _webui_log_info("[User] webui_interface_set_response() -> Internal buffer [%s] \n", buf);
@@ -5092,12 +5100,12 @@ void* webui_interface_get_context(size_t window, size_t event_number) {
     if (win == NULL)
         return NULL;
 
-    // New Event (Wrapper)
-    webui_event_t e;
-    e.window = window;
-    e.event_number = event_number;
+    // Get event inf
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, event_number);
+    if (event_inf == NULL)
+        return NULL;
 
-    return webui_get_context(&e);
+    return webui_get_context(&event_inf->event);
 }
 
 // -- Core's Functions ----------------
@@ -5217,13 +5225,7 @@ static void _webui_free_all_mem(void) {
     _webui_log_debug("[Core]\t\t_webui_free_all_mem()\n");
     #endif
 
-    _webui_mutex_lock(&_webui.mutex_mem);    
-
-    // Makes sure we run this once
-    static bool freed = false;
-    if (freed)
-        return;
-    freed = true;
+    _webui_mutex_lock(&_webui.mutex_mem);
 
     // Free all pointers in the list
     void * ptr = NULL;
@@ -5284,6 +5286,7 @@ static void * _webui_malloc(size_t size) {
 
     // Check
     if (mem == NULL) {
+        _webui_mutex_unlock(&_webui.mutex_mem);
         WEBUI_ASSERT("malloc() failed");
         return NULL;
     }
