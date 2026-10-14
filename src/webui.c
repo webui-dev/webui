@@ -520,6 +520,7 @@ typedef struct _webui_core_t {
     bool run_done[WEBUI_MAX_IDS]; // 2 Bytes ID
     char* run_userBuffer[WEBUI_MAX_IDS];
     size_t run_userBufferLen[WEBUI_MAX_IDS];
+    struct mg_connection* run_client[WEBUI_MAX_IDS]; // Client the result must come from, NULL when the pipe is free
     bool run_error[WEBUI_MAX_IDS];
     uint16_t run_last_id;
     uint16_t ws_process_number;
@@ -1137,6 +1138,10 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
     if (js_len < 1)
         return false;
 
+    struct mg_connection* client = _webui.clients[e->connection_id];
+    if (client == NULL)
+        return false;
+
     // Initializing pipe
     _webui_mutex_lock(&_webui.mutex_js_run);
     uint16_t run_id = _webui_get_run_id();
@@ -1144,6 +1149,7 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
     _webui.run_error[run_id] = false;
     _webui.run_userBuffer[run_id] = buffer;
     _webui.run_userBufferLen[run_id] = buffer_length;
+    _webui.run_client[run_id] = client;
     _webui_mutex_unlock(&_webui.mutex_js_run);
 
     // Packet Protocol Format:
@@ -1152,7 +1158,7 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
     // [Script]
 
     // Send the packet to a single specific client and wait for response
-    _webui_send_client(win, _webui.clients[e->connection_id], run_id, WEBUI_CMD_JS, script, js_len, false);
+    _webui_send_client(win, client, run_id, WEBUI_CMD_JS, script, js_len, false);
 
     bool js_status = false;
 
@@ -1199,20 +1205,29 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
         }
     }
 
+    // Release pipe, so a late result can't write into the buffer
+    _webui_mutex_lock(&_webui.mutex_js_run);
+    js_status = _webui.run_done[run_id];
+    bool js_error = _webui.run_error[run_id];
+    _webui.run_userBuffer[run_id] = NULL;
+    _webui.run_userBufferLen[run_id] = 0;
+    _webui.run_client[run_id] = NULL;
+    _webui_mutex_unlock(&_webui.mutex_js_run);
+
     if (js_status) {
 
         #ifdef WEBUI_LOG
         _webui_log_info(
             "[User] webui_script -> Response found. User buffer len: %zu bytes \n",
-            _webui.run_userBufferLen[run_id]
+            buffer_length
         );
         _webui_log_info(
             "[User] webui_script -> Response found. User buffer data (ASCII): [%s] \n",
-            _webui.run_userBuffer[run_id]
+            buffer
         );
         #endif
 
-        return !_webui.run_error[run_id];
+        return !js_error;
     } else {
 
         #ifdef WEBUI_LOG
@@ -12748,11 +12763,12 @@ static void _webui_ws_process(
                         // Get pipe id
                         if (packet_id < WEBUI_MAX_IDS) {
 
-                            if (_webui.run_userBuffer[packet_id] != NULL) {
+                            // The pipe is released after the first result, or when
+                            // `webui_script()` stops waiting. So a duplicate, late or
+                            // forged result never reaches the user's buffer.
+                            _webui_mutex_lock(&_webui.mutex_js_run);
 
-                                _webui_mutex_lock(&_webui.mutex_js_run);
-                                _webui.run_done[packet_id] = false;
-                                _webui_mutex_unlock(&_webui.mutex_js_run);
+                            if (client != NULL && _webui.run_client[packet_id] == client) {
 
                                 // Get js-error
                                 bool error = true;
@@ -12761,7 +12777,10 @@ static void _webui_ws_process(
 
                                 // Get data part as binary (last byte is an extras null byte for string terminator)
                                 char* data = (char*)&packet[WEBUI_PROTOCOL_DATA + 1];
-                                size_t data_len = len - (WEBUI_PROTOCOL_SIZE + 1 + 1); // [Total packet size - (Header + error byte + null byte)]
+                                // [Total packet size - (Header + error byte + null byte)]
+                                size_t data_len = 0;
+                                if (len > (WEBUI_PROTOCOL_SIZE + 1 + 1))
+                                    data_len = len - (WEBUI_PROTOCOL_SIZE + 1 + 1);
 
                                 #ifdef WEBUI_LOG
                                 _webui_log_debug(
@@ -12788,28 +12807,27 @@ static void _webui_ws_process(
                                 _webui_log_debug("] @ 0x%p\n", data);
                                 #endif
 
-                                // Set pipe
-                                _webui.run_error[packet_id] = error;
-                                if (data_len > 0) {
-
-                                    // Copy response to the user's response buffer directly
-                                    size_t response_len = data_len + 1;
-                                    size_t bytes_to_cpy = (
-                                        response_len <= _webui.run_userBufferLen[packet_id] ?
-                                            response_len : _webui.run_userBufferLen[packet_id]
-                                    );
-                                    memcpy(_webui.run_userBuffer[packet_id], data, bytes_to_cpy);
-                                } else {
-
-                                    // Empty Result
-                                    _webui.run_userBuffer[packet_id] = 0x00;
+                                // Copy response to the user's response buffer directly,
+                                // truncated to keep the null terminator
+                                char* buffer = _webui.run_userBuffer[packet_id];
+                                size_t buffer_len = _webui.run_userBufferLen[packet_id];
+                                if (buffer != NULL && buffer_len > 0) {
+                                    size_t bytes_to_cpy = (data_len < buffer_len ? data_len : (buffer_len - 1));
+                                    memcpy(buffer, data, bytes_to_cpy);
+                                    buffer[bytes_to_cpy] = 0x00;
                                 }
 
+                                // Release pipe
+                                _webui.run_userBuffer[packet_id] = NULL;
+                                _webui.run_userBufferLen[packet_id] = 0;
+                                _webui.run_client[packet_id] = NULL;
+
                                 // Send ready signal to webui_script()
-                                _webui_mutex_lock(&_webui.mutex_js_run);
+                                _webui.run_error[packet_id] = error;
                                 _webui.run_done[packet_id] = true;
-                                _webui_mutex_unlock(&_webui.mutex_js_run);
                             }
+
+                            _webui_mutex_unlock(&_webui.mutex_js_run);
                         }
                     } else if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_NAVIGATION) {
 
@@ -12899,17 +12917,33 @@ static void _webui_ws_process(
                         event_inf->connection_id = connection_id;
                         event_inf->packet = ptr;
 
-                        // Loop trough args
+                        // Locate args lengths and data
+                        // `packet[len]` is always a null byte
                         size_t data_size_expected = 0;
-                        char* args_lens = (char*)&packet[WEBUI_PROTOCOL_DATA + element_len + 1];
+                        size_t data_size_recv = 0;
+                        size_t args_lens_pos = WEBUI_PROTOCOL_DATA + element_len + 1;
+                        bool args_valid = (args_lens_pos <= len);
+                        char* args_lens = (char*)&packet[args_valid ? args_lens_pos : len];
                         size_t args_len = _webui_strlen(args_lens);
-                        char* args_ptr = (char*)&packet[WEBUI_PROTOCOL_DATA + element_len + 1 + args_len + 1];
+                        size_t args_data_pos = args_lens_pos + args_len + 1;
+                        args_valid = (args_valid && args_data_pos <= len);
+                        if (args_valid)
+                            data_size_recv = len - args_data_pos;
+                        char* args_ptr = (char*)&packet[args_valid ? args_data_pos : len];
+
+                        // Loop trough args
                         char* context;
-                        char* tk = WEBUI_STR_TOK(args_lens, ";", &context);
+                        char* tk = (args_valid ? WEBUI_STR_TOK(args_lens, ";", &context) : NULL);
                         size_t tk_num = 0;
                         while(tk != NULL && tk_num < WEBUI_MAX_ARG + 1) {
 
                             size_t arg_len = (size_t) strtoul(tk, NULL, 10);
+
+                            // The argument and its null byte must fit in the remaining data
+                            if (arg_len >= (data_size_recv - data_size_expected)) {
+                                args_valid = false;
+                                break;
+                            }
                             data_size_expected = data_size_expected + arg_len + 1;
 
                             if (arg_len > 0) {
@@ -12934,13 +12968,7 @@ static void _webui_ws_process(
                         }
 
                         // Check data validity
-                        size_t data_size_recv = len - (WEBUI_PROTOCOL_SIZE + // [Header]
-                            element_len + // [Fn]
-                            1 + // [Null]
-                            args_len + // [{Len;Len;...}]
-                            1); // [Null]
-
-                        if (data_size_expected == data_size_recv) {
+                        if (args_valid && data_size_expected == data_size_recv) {
 
                             #ifdef WEBUI_LOG
                             _webui_log_debug(
