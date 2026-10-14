@@ -591,6 +591,13 @@ typedef struct _webui_recv_arg_t {
 }
 _webui_recv_arg_t;
 
+typedef struct _webui_multi_packet_t {
+    char* buf;
+    size_t expect;
+    size_t receive;
+}
+_webui_multi_packet_t;
+
 // -- Definitions ---------------------
 #ifdef _WIN32
 static const char* os_sep = "\\";
@@ -742,6 +749,7 @@ static void _webui_ws_ready_handler(struct mg_connection* client, void * _win);
 static int _webui_ws_data_handler(struct mg_connection* client, int opcode, char* data, size_t datasize, void * _win);
 static void _webui_ws_close_handler(const struct mg_connection* client, void * _win);
 static void _webui_receive(_webui_window_t* win, struct mg_connection* client, int event_type, void * data, size_t len);
+static void _webui_multi_packet_free(const struct mg_connection* client);
 static void _webui_ws_process(_webui_window_t* win, struct mg_connection* client, size_t connection_id, 
     void* ptr, size_t len, size_t recvNum, int event_type);
 static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* client, size_t* connection_id);
@@ -11273,8 +11281,10 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
         return 500; // Internal Server Error
     }
 
-    if(!_webui_is_mg_client_valid(win, client))
+    if(!_webui_is_mg_client_valid(win, client)) {
+        _webui_mutex_unlock(&_webui.mutex_http_handler);
         return 500; // Client is not valid
+    }
 
     // Initializing
     int http_status_code = 200;
@@ -11681,7 +11691,8 @@ static int _webui_ws_data_handler(struct mg_connection* client, int opcode, char
     _webui_log_debug("[Core]\t\t_webui_ws_data_handler()\n");
     #endif
 
-    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) || datasize < WEBUI_PROTOCOL_SIZE)
+    // Small messages are not dropped here, the last chunk of a multi packet can be smaller than a header
+    if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
         return 1; // OK
 
     switch(opcode&0xf) {
@@ -11716,6 +11727,9 @@ static void _webui_ws_close_handler(const struct mg_connection* client, void * _
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_ws_close_handler()\n");
     #endif
+
+    // Drop an unfinished multi packet of this connection
+    _webui_multi_packet_free(client);
 
     // Dereference
     _webui_window_t* win = _webui_dereference_win_ptr(_win);
@@ -12338,6 +12352,17 @@ static WEBUI_THREAD_SERVER_START {
     WEBUI_THREAD_RETURN
 }
 
+static void _webui_multi_packet_free(const struct mg_connection* client) {
+
+    _webui_multi_packet_t* multi = (_webui_multi_packet_t*)mg_get_user_connection_data(client);
+    if (multi == NULL)
+        return;
+
+    mg_set_user_connection_data(client, NULL);
+    _webui_free_mem((void*)multi->buf);
+    _webui_free_mem((void*)multi);
+}
+
 static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
     int event_type, void * data, size_t len) {
 
@@ -12347,11 +12372,6 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
     _webui_log_debug("[Core] [WS #%zu]\t_webui_receive([%zu], [%d], [%zu])\n",
         recvNum, win->num, event_type, len);
     #endif
-
-    static bool multi_packet = false;
-    static size_t multi_expect = 0;
-    static size_t multi_receive = 0;
-    static void * multi_buf = NULL;
 
     // Get connection id
     size_t connection_id = 0;
@@ -12415,100 +12435,78 @@ static void _webui_receive(_webui_window_t* win, struct mg_connection* client,
     }
 
     // Multi Packet (big data)
-    if (multi_packet) {
-        if ((multi_receive + len) > multi_expect) {
-            // Received more data than expected
+    // The state is per connection. CivetWeb delivers the messages of
+    // one connection in order, on that connection's own thread.
+    void * arg_ptr = NULL;
+    size_t arg_len = 0;
+    if (event_type == WEBUI_WS_DATA) {
+        _webui_multi_packet_t* multi = (_webui_multi_packet_t*)mg_get_user_connection_data(client);
+        if (multi != NULL) {
+            if (len > (multi->expect - multi->receive)) {
+                // Received more data than expected
+                #ifdef WEBUI_LOG
+                _webui_log_debug(
+                    "[Core] [WS #%zu]\t_webui_receive() -> "
+                    "Multi packet received more data than expected (%zu + %zu > %zu).\n",
+                    recvNum, multi->receive, len, multi->expect
+                );
+                #endif
+                _webui_multi_packet_free(client);
+                return;
+            }
+            // Accumulate packet
             #ifdef WEBUI_LOG
-            _webui_log_debug(
-                "[Core] [WS #%zu]\t_webui_receive() -> "
-                "Multi packet received more data than expected (%zu + %zu > %zu).\n",
-                recvNum, multi_receive, len, multi_expect
-            );
+            _webui_log_debug("[Core] [WS #%zu]\t_webui_receive() -> Multi packet accumulate %zu bytes\n",
+                recvNum, len);
             #endif
-            multi_packet = false;
-            multi_expect = 0;
-            multi_receive = 0;
-            _webui_free_mem(multi_buf);
-            multi_buf = NULL;
+            memcpy((multi->buf + multi->receive), data, len);
+            multi->receive += len;
+            // Check if theire is more packets comming
+            if (multi->receive < multi->expect)
+                return;
+            // Get data from accumulated multipackets
+            #ifdef WEBUI_LOG
+            _webui_log_debug("[Core] [WS #%zu]\t_webui_receive() -> Processing multi packet\n",
+                recvNum);
+            #endif
+            arg_len = multi->receive;
+            arg_ptr = multi->buf;
+            multi->buf = NULL;
+            _webui_multi_packet_free(client);
+        }
+        else if (len < WEBUI_PROTOCOL_SIZE) {
+            // Not a WebUI packet (keep-alive ping)
             return;
         }
-        // Accumulate packet
-        #ifdef WEBUI_LOG
-        _webui_log_debug("[Core] [WS #%zu]\t_webui_receive() -> Multi packet accumulate %zu bytes\n",
-            recvNum, len);
-        #endif
-        memcpy(((unsigned char*)multi_buf + multi_receive), data, len);
-        multi_receive += len;
-        // Check if theire is more packets comming
-        if (multi_receive < multi_expect)
-            return;
-    }
-    else if (event_type == WEBUI_WS_DATA) {
-        if (((unsigned char*)data)[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_MULTI) {
-            if (len >= WEBUI_PROTOCOL_SIZE && ((unsigned char*)data)[WEBUI_PROTOCOL_SIGN] == WEBUI_SIGNATURE) {
-                size_t expect_len = (size_t) strtoul(&((const char*)data)[WEBUI_PROTOCOL_DATA], NULL, 10);
-                if (expect_len > 0 && expect_len <= WEBUI_MAX_BUF) {
+        else if (((unsigned char*)data)[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_MULTI) {
+            if (((unsigned char*)data)[WEBUI_PROTOCOL_SIGN] == WEBUI_SIGNATURE) {
+                // [Header][Total length as text, Null]
+                const unsigned char* len_str = (const unsigned char*)data;
+                size_t expect_len = 0;
+                for (size_t i = WEBUI_PROTOCOL_DATA; i < len && isdigit(len_str[i]) && expect_len <= WEBUI_MAX_BUF; i++)
+                    expect_len = (expect_len * 10) + (size_t)(len_str[i] - '0');
+                if (expect_len >= WEBUI_PROTOCOL_SIZE && expect_len <= WEBUI_MAX_BUF) {
                     #ifdef WEBUI_LOG
                     _webui_log_debug(
                         "[Core] [WS #%zu]\t_webui_receive() -> Multi packet started, Expecting %zu bytes\n",
                         recvNum, expect_len
                     );
                     #endif
-                    multi_buf = _webui_malloc(expect_len);
-                    memcpy(multi_buf, data, len);
-                    multi_receive = 0;
-                    multi_expect = expect_len;
-                    multi_packet = true;
+                    multi = (_webui_multi_packet_t*)_webui_malloc(sizeof(_webui_multi_packet_t));
+                    multi->buf = (char*)_webui_malloc(expect_len);
+                    multi->expect = expect_len;
+                    multi->receive = 0;
+                    mg_set_user_connection_data(client, multi);
                 }
             }
             return;
         }
-    }
-
-    // Generate args
-    void * arg_ptr = NULL;
-    size_t arg_len = 0;
-    if (multi_packet) {
-        #ifdef WEBUI_LOG
-        _webui_log_debug("[Core] [WS #%zu]\t_webui_receive() -> Processing multi packet\n",
-            recvNum);
-        #endif
-        // Get data from accumulated multipackets
-        arg_len = multi_receive;
-        arg_ptr = multi_buf;
-        // Reset
-        multi_packet = false;
-        multi_expect = 0;
-        multi_receive = 0;
-        multi_buf = NULL;
-    } else {
-        arg_len = len;
-        if (len > 0) {
-
-            // -- Old Method --
-            // if (win->ws_block) {
-            //     // This event has data. And it will be processed
-            //     // in this current thread, no need to copy data
-            //     arg_ptr = data;
-            // }
-            // else {
-            //     // This event has data. And it will be processed
-            //     // in a new thread, we should copy data once
-            //     void * data_cpy = (void*)_webui_malloc(len);
-            //     memcpy((char*)data_cpy, data, len);
-            //     arg_ptr = data_cpy;
-            // }
-
-            // -- New Method --
+        else {
             // This event has data, and it will be processed
             // always in a new thread, we should copy data now
-            void * data_cpy = (void*)_webui_malloc(len);
-            memcpy((char*)data_cpy, data, len);
-            arg_ptr = data_cpy;
-
-        } else {
-            // This is a WS connect/disconnect event
-            arg_ptr = NULL;
+            arg_len = len;
+            arg_ptr = _webui_malloc(len);
+            memcpy((char*)arg_ptr, data, len);
         }
     }
 
