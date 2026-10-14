@@ -521,6 +521,7 @@ typedef struct _webui_core_t {
     char* run_userBuffer[WEBUI_MAX_IDS];
     size_t run_userBufferLen[WEBUI_MAX_IDS];
     struct mg_connection* run_client[WEBUI_MAX_IDS]; // Client the result must come from, NULL when the pipe is free
+    bool run_abandoned[WEBUI_MAX_IDS]; // Timed out, the pipe is free once the late result arrives
     bool run_error[WEBUI_MAX_IDS];
     uint16_t run_last_id;
     uint16_t ws_process_number;
@@ -672,7 +673,7 @@ static bool _webui_show_window(_webui_window_t* win, struct mg_connection* clien
     const char* content, int type, size_t browser);
 static bool _webui_is_empty(const char* s);
 static size_t _webui_strlen(const char* s);
-static uint16_t _webui_get_run_id(void);
+static bool _webui_get_run_id(uint16_t* id);
 static uint16_t _webui_get_ws_process_number(void);
 static void * _webui_malloc(size_t size);
 static void* _webui_malloc_if_not_exist(const void* ptr, size_t size);
@@ -715,6 +716,7 @@ static void _webui_window_task_count(_webui_window_t* win, int delta);
 static size_t _webui_window_task_get(_webui_window_t* win);
 static void _webui_window_wait_for_tasks(_webui_window_t* win);
 static void _webui_window_clear_clients(_webui_window_t* win);
+static void _webui_script_client_closed(struct mg_connection* client);
 static bool _webui_mutex_is_monitor_running(_webui_window_t* win, int update);
 static bool _webui_mutex_is_monitor_stop(_webui_window_t* win, int update);
 static bool _webui_mutex_is_webview_running(_webui_window_t* win, int update);
@@ -1138,19 +1140,39 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
     if (js_len < 1)
         return false;
 
+    if (e->connection_id >= WEBUI_MAX_IDS)
+        return false;
     struct mg_connection* client = _webui.clients[e->connection_id];
     if (client == NULL)
         return false;
 
     // Initializing pipe
     _webui_mutex_lock(&_webui.mutex_js_run);
-    uint16_t run_id = _webui_get_run_id();
+    uint16_t run_id = 0;
+    if (!_webui_get_run_id(&run_id)) {
+        _webui_mutex_unlock(&_webui.mutex_js_run);
+        return false;
+    }
     _webui.run_done[run_id] = false;
     _webui.run_error[run_id] = false;
+    _webui.run_abandoned[run_id] = false;
     _webui.run_userBuffer[run_id] = buffer;
     _webui.run_userBufferLen[run_id] = buffer_length;
     _webui.run_client[run_id] = client;
     _webui_mutex_unlock(&_webui.mutex_js_run);
+
+    // The client may have closed before the pipe was registered
+    _webui_mutex_lock(&_webui.mutex_client);
+    bool client_alive = (_webui.clients[e->connection_id] == client);
+    _webui_mutex_unlock(&_webui.mutex_client);
+    if (!client_alive) {
+        _webui_mutex_lock(&_webui.mutex_js_run);
+        _webui.run_userBuffer[run_id] = NULL;
+        _webui.run_userBufferLen[run_id] = 0;
+        _webui.run_client[run_id] = NULL;
+        _webui_mutex_unlock(&_webui.mutex_js_run);
+        return false;
+    }
 
     // Packet Protocol Format:
     // [...]
@@ -1205,13 +1227,17 @@ bool webui_script_client(webui_event_t* e, const char* script, size_t timeout,
         }
     }
 
-    // Release pipe, so a late result can't write into the buffer
+    // Release pipe, so a late result can't write into the buffer. A timed
+    // out id stays reserved until its late result arrives or the client closes.
     _webui_mutex_lock(&_webui.mutex_js_run);
     js_status = _webui.run_done[run_id];
     bool js_error = _webui.run_error[run_id];
     _webui.run_userBuffer[run_id] = NULL;
     _webui.run_userBufferLen[run_id] = 0;
-    _webui.run_client[run_id] = NULL;
+    if (js_status)
+        _webui.run_client[run_id] = NULL;
+    else
+        _webui.run_abandoned[run_id] = true;
     _webui_mutex_unlock(&_webui.mutex_js_run);
 
     if (js_status) {
@@ -5595,18 +5621,53 @@ static const char* _webui_get_extension(const char* f) {
     return ext + 1;
 }
 
-static uint16_t _webui_get_run_id(void) {
+static bool _webui_get_run_id(uint16_t* id) {
 
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_get_run_id()\n");
     #endif
 
+    // The caller must lock `mutex_js_run`. Ids still waiting
+    // for a result are skipped, so a stale result can't reach
+    // a new script that reused its id.
+
+    bool found = false;
     _webui_mutex_lock(&_webui.mutex_js_run_id);
-    if (_webui.run_last_id >= WEBUI_MAX_IDS)
-        _webui.run_last_id = 0;
-    uint16_t id = _webui.run_last_id++;
+    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+        if (_webui.run_last_id >= WEBUI_MAX_IDS)
+            _webui.run_last_id = 0;
+        uint16_t candidate = _webui.run_last_id++;
+        if (_webui.run_client[candidate] == NULL) {
+            *id = candidate;
+            found = true;
+            break;
+        }
+    }
     _webui_mutex_unlock(&_webui.mutex_js_run_id);
-    return id;
+    return found;
+}
+
+static void _webui_script_client_closed(struct mg_connection* client) {
+
+    // No result can come from a closed client, so free its abandoned
+    // ids and stop scripts that are still waiting for it.
+
+    if (client == NULL)
+        return;
+
+    _webui_mutex_lock(&_webui.mutex_js_run);
+    for (size_t i = 0; i < WEBUI_MAX_IDS; i++) {
+        if (_webui.run_client[i] != client)
+            continue;
+        if (_webui.run_abandoned[i]) {
+            _webui.run_client[i] = NULL;
+            _webui.run_abandoned[i] = false;
+        } else if (!_webui.run_done[i]) {
+            _webui.run_error[i] = true;
+            _webui.run_done[i] = true;
+        }
+    }
+    _webui_mutex_unlock(&_webui.mutex_js_run);
 }
 
 static uint16_t _webui_get_ws_process_number(void) {
@@ -7076,6 +7137,7 @@ static void _webui_window_clear_clients(_webui_window_t* win) {
             #ifdef WEBUI_LOG
             _webui_log_debug("[Core]\t\t_webui_window_clear_clients([%zu]) -> Removing client #%zu\n", win->num, i);
             #endif
+            _webui_script_client_closed(_webui.clients[i]);
             _webui.clients[i] = NULL;
             _webui.clients_win_num[i] = 0;
             _webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_SET_FALSE, (int)i);
@@ -12568,6 +12630,7 @@ static void _webui_connection_remove(_webui_window_t* win, struct mg_connection*
                 win->clients_count--;
             // Close
             _webui_mutex_unlock(&_webui.mutex_client);
+            _webui_script_client_closed(client);
             mg_close_connection(client);
             return;
         }
@@ -12578,6 +12641,7 @@ static void _webui_connection_remove(_webui_window_t* win, struct mg_connection*
     _webui_log_debug("[Core]\t\t_webui_connection_remove() -> Client not found\n");
     #endif
     _webui_mutex_unlock(&_webui.mutex_client);
+    _webui_script_client_closed(client);
     mg_close_connection(client);
 }
 
@@ -12763,12 +12827,23 @@ static void _webui_ws_process(
                         // Get pipe id
                         if (packet_id < WEBUI_MAX_IDS) {
 
-                            // The pipe is released after the first result, or when
-                            // `webui_script()` stops waiting. So a duplicate, late or
-                            // forged result never reaches the user's buffer.
+                            // Only the first result from the client the script was
+                            // sent to is used. So a duplicate, late or forged result
+                            // never reaches the user's buffer.
                             _webui_mutex_lock(&_webui.mutex_js_run);
 
-                            if (client != NULL && _webui.run_client[packet_id] == client) {
+                            bool expected = (
+                                client != NULL && _webui.run_client[packet_id] == client &&
+                                !_webui.run_done[packet_id]
+                            );
+
+                            if (expected && _webui.run_abandoned[packet_id]) {
+
+                                // Late result of a timed out script, the id can be reused now
+                                _webui.run_client[packet_id] = NULL;
+                                _webui.run_abandoned[packet_id] = false;
+
+                            } else if (expected) {
 
                                 // Get js-error
                                 bool error = true;
@@ -12816,11 +12891,6 @@ static void _webui_ws_process(
                                     memcpy(buffer, data, bytes_to_cpy);
                                     buffer[bytes_to_cpy] = 0x00;
                                 }
-
-                                // Release pipe
-                                _webui.run_userBuffer[packet_id] = NULL;
-                                _webui.run_userBufferLen[packet_id] = 0;
-                                _webui.run_client[packet_id] = NULL;
 
                                 // Send ready signal to webui_script()
                                 _webui.run_error[packet_id] = error;
