@@ -171,17 +171,26 @@ typedef struct _webui_timer_t {
     struct timespec now;
 } _webui_timer_t;
 
+// Event number: [15-bit generation][16-bit slot]
+#define WEBUI_EVENT_SLOT_MASK ((size_t)0xFFFF)
+#define WEBUI_EVENT_GEN_SHIFT (16)
+#define WEBUI_EVENT_GEN_MASK ((size_t)0x7FFF)
+
 // Event data
 typedef struct webui_event_inf_t {
+    // Event passed to user callbacks
+    webui_event_t event;
     // Client
     struct mg_connection* client;
     size_t connection_id;
+    void* packet; // Received packet that `event_data` points into
     // Args and Response
     char* event_data[WEBUI_MAX_ARG + 1]; // Event data (string | num | bool | raw)
     size_t event_size[WEBUI_MAX_ARG + 1]; // Event data size (in bytes)
     char* response; // Event response (string)
     size_t count; // Event arguments count
-    bool done;
+    bool done; // No more responses are accepted
+    bool abandoned; // Stopped waiting for a response, never freed
 } webui_event_inf_t;
 
 // WebView
@@ -752,6 +761,11 @@ static void _webui_bridge_api_handler(webui_event_t* e);
 // static size_t _webui_hash_djb2(const char* s);
 static size_t _webui_new_event_inf(_webui_window_t* win, webui_event_inf_t** event_inf);
 static void _webui_free_event_inf(_webui_window_t* win, size_t event_num);
+static webui_event_inf_t* _webui_get_event_inf(_webui_window_t* win, size_t event_number);
+static void _webui_event_set_response(_webui_window_t* win, size_t event_number, char* response);
+static bool _webui_event_wait(webui_event_inf_t* event_inf);
+static void _webui_event_abandon(webui_event_inf_t* event_inf);
+static void _webui_mem_untrack(void* ptr);
 static const char* _webui_get_cookies_full(const struct mg_connection* client);
 static void _webui_get_cookies(const struct mg_connection* client, char* buffer);
 static bool _webui_client_cookies_save(_webui_window_t* win, const char* cookies, size_t* client_id);
@@ -856,6 +870,8 @@ static _webui_core_t _webui;
 // The window whose user callback is currently
 // running on this thread, if any
 static WEBUI_THREAD_LOCAL _webui_window_t* _webui_callback_win = NULL;
+// Kept outside `_webui` so it survives `webui_clean()`
+static size_t _webui_event_generation = 0;
 static _webui_log_t  _webui_log_data = { NULL, NULL };
 static const char* webui_html_served = "<html><head><title>Access Denied</title><script src=\"/webui.js\"></script><style>"
 "body{margin:0;background-repeat:no-repeat;background-attachment:fixed;background-color:#FF3CAC;background-image:linear-"
@@ -2520,7 +2536,7 @@ const char* webui_get_string_at(webui_event_t* e, size_t index) {
         return NULL;
 
     // Get event inf
-    webui_event_inf_t* event_inf = win->events[e->event_number];
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, e->event_number);
     if (event_inf == NULL)
         return NULL;
 
@@ -2548,7 +2564,7 @@ size_t webui_get_count(webui_event_t* e) {
         return 0;
 
     // Get event inf
-    webui_event_inf_t* event_inf = win->events[e->event_number];
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, e->event_number);
     if (event_inf == NULL)
         return 0;
 
@@ -2647,7 +2663,7 @@ size_t webui_get_size_at(webui_event_t* e, size_t index) {
         return 0;
 
     // Get event inf
-    webui_event_inf_t* event_inf = win->events[e->event_number];
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, e->event_number);
     if (event_inf == NULL)
         return 0;
 
@@ -2713,29 +2729,13 @@ void webui_return_int(webui_event_t* e, long long int n) {
     if (win == NULL)
         return;
 
-    // Get event inf
-    webui_event_inf_t* event_inf = win->events[e->event_number];
-    if (event_inf == NULL)
-        return;
-
-    // Free
-    if (event_inf->response != NULL)
-        _webui_free_mem((void*)event_inf->response);
-
     // Int to Str
     // 64-bit max is -9,223,372,036,854,775,808 (20 character)
     char* buf = (char*)_webui_malloc(20);
     WEBUI_SN_PRINTF_DYN(buf, 20, "%lld", n);
 
     // Set response
-    event_inf->response = buf;
-
-    // Async response
-    if (_webui.config.asynchronous_response) {
-        _webui_mutex_lock(&_webui.mutex_async_response);
-        event_inf->done = true;
-        _webui_mutex_unlock(&_webui.mutex_async_response);
-    }
+    _webui_event_set_response(win, e->event_number, buf);
 }
 
 void webui_return_float(webui_event_t* e, double f) {
@@ -2752,29 +2752,13 @@ void webui_return_float(webui_event_t* e, double f) {
     if (win == NULL)
         return;
 
-    // Get event inf
-    webui_event_inf_t* event_inf = win->events[e->event_number];
-    if (event_inf == NULL)
-        return;
-
-    // Free
-    if (event_inf->response != NULL)
-        _webui_free_mem((void*)event_inf->response);
-
     // Float to Str
     // 64-bit max is -9,223,372,036,854,775,808 (20 character)
     char* buf = (char*)_webui_malloc(20);
     WEBUI_SN_PRINTF_DYN(buf, 20, "%lf", f);
 
     // Set response
-    event_inf->response = buf;
-
-    // Async response
-    if (_webui.config.asynchronous_response) {
-        _webui_mutex_lock(&_webui.mutex_async_response);
-        event_inf->done = true;
-        _webui_mutex_unlock(&_webui.mutex_async_response);
-    }
+    _webui_event_set_response(win, e->event_number, buf);
 }
 
 void webui_return_string(webui_event_t* e, const char* s) {
@@ -2794,29 +2778,13 @@ void webui_return_string(webui_event_t* e, const char* s) {
     if (win == NULL)
         return;
 
-    // Get event inf
-    webui_event_inf_t* event_inf = win->events[e->event_number];
-    if (event_inf == NULL)
-        return;
-
-    // Free
-    if (event_inf->response != NULL)
-        _webui_free_mem((void*)event_inf->response);
-
     // Copy Str
     size_t len = _webui_strlen(s);
     char* buf = (char*)_webui_malloc(len);
     memcpy(buf, s, len);
 
     // Set response
-    event_inf->response = buf;
-
-    // Async response
-    if (_webui.config.asynchronous_response) {
-        _webui_mutex_lock(&_webui.mutex_async_response);
-        event_inf->done = true;
-        _webui_mutex_unlock(&_webui.mutex_async_response);
-    }
+    _webui_event_set_response(win, e->event_number, buf);
 }
 
 size_t webui_get_last_error_number() {
@@ -2853,29 +2821,13 @@ void webui_return_bool(webui_event_t* e, bool b) {
     if (win == NULL)
         return;
 
-    // Get event inf
-    webui_event_inf_t* event_inf = win->events[e->event_number];
-    if (event_inf == NULL)
-        return;
-
-    // Free
-    if (event_inf->response != NULL)
-        _webui_free_mem((void*)event_inf->response);
-
     // Bool to Str
     int len = 1;
     char* buf = (char*)_webui_malloc(len);
     WEBUI_SN_PRINTF_DYN(buf, len, "%d", b);
 
     // Set response
-    event_inf->response = buf;
-
-    // Async response
-    if (_webui.config.asynchronous_response) {
-        _webui_mutex_lock(&_webui.mutex_async_response);
-        event_inf->done = true;
-        _webui_mutex_unlock(&_webui.mutex_async_response);
-    }
+    _webui_event_set_response(win, e->event_number, buf);
 }
 
 void webui_return_http(size_t window, const void* response, int length) {
@@ -4698,26 +4650,15 @@ static void _webui_interface_bind_handler(webui_event_t* e) {
     }
 
     // Get event inf
-    webui_event_inf_t* event_inf = win->events[e->event_number];
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, e->event_number);
     if (event_inf != NULL) {
 
         // Async response wait
-        if (_webui.config.asynchronous_response) {
-            #ifdef WEBUI_LOG
+        #ifdef WEBUI_LOG
+        if (_webui.config.asynchronous_response)
             _webui_log_debug("[Core]\t\t_webui_interface_bind_handler() -> Waiting for asynchronous response...\n");
-            #endif
-            bool done = false;
-            while (!done) {
-                _webui_sleep(10);
-                _webui_mutex_lock(&_webui.mutex_async_response);
-                if (event_inf->done) done = true;
-                _webui_mutex_unlock(&_webui.mutex_async_response);
-
-                if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
-                    break; // App is exiting, Stop waiting.
-                }
-            }
-        }
+        #endif
+        _webui_event_wait(event_inf);
 
         #ifdef WEBUI_LOG
         // Print cb response
@@ -4862,30 +4803,17 @@ void webui_interface_set_response(size_t window, size_t event_number, const char
     if (win == NULL)
         return;
 
-    // Get event inf
-    webui_event_inf_t* event_inf = win->events[event_number];
-    if (event_inf == NULL)
-        return;
-
-    // Free
-    if (event_inf->response != NULL)
-        _webui_free_mem((void*)event_inf->response);
-
-    // Set the response
+    // Copy the response
     size_t len = _webui_strlen(response);
-    event_inf->response = (char*)_webui_malloc(len);
-    WEBUI_STR_COPY_DYN(event_inf->response, len, response);
-
-    // Async response
-    if (_webui.config.asynchronous_response) {
-        _webui_mutex_lock(&_webui.mutex_async_response);
-        event_inf->done = true;
-        _webui_mutex_unlock(&_webui.mutex_async_response);
-    }
+    char* buf = (char*)_webui_malloc(len);
+    WEBUI_STR_COPY_DYN(buf, len, response);
 
     #ifdef WEBUI_LOG
-    _webui_log_info("[User] webui_interface_set_response() -> Internal buffer [%s] \n", event_inf->response);
+    _webui_log_info("[User] webui_interface_set_response() -> Internal buffer [%s] \n", buf);
     #endif
+
+    // Set the response
+    _webui_event_set_response(win, event_number, buf);
 }
 
 void webui_interface_set_response_file_handler(size_t window, const void* response, int length) {
@@ -5006,7 +4934,7 @@ bool webui_interface_show_client(size_t window, size_t event_number, const char*
         return false;
 
     // Get event inf
-    webui_event_inf_t* event_inf = win->events[event_number];
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, event_number);
     if (event_inf == NULL)
         return false;
 
@@ -5033,7 +4961,7 @@ void webui_interface_close_client(size_t window, size_t event_number) {
         return;
 
     // Get event inf
-    webui_event_inf_t* event_inf = win->events[event_number];
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, event_number);
     if (event_inf == NULL)
         return;
 
@@ -5060,7 +4988,7 @@ void webui_interface_send_raw_client(size_t window, size_t event_number, const c
         return;
 
     // Get event inf
-    webui_event_inf_t* event_inf = win->events[event_number];
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, event_number);
     if (event_inf == NULL)
         return;
 
@@ -5087,7 +5015,7 @@ void webui_interface_navigate_client(size_t window, size_t event_number, const c
         return;
 
     // Get event inf
-    webui_event_inf_t* event_inf = win->events[event_number];
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, event_number);
     if (event_inf == NULL)
         return;
 
@@ -5114,7 +5042,7 @@ void webui_interface_run_client(size_t window, size_t event_number, const char* 
         return;
 
     // Get event inf
-    webui_event_inf_t* event_inf = win->events[event_number];
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, event_number);
     if (event_inf == NULL)
         return;
 
@@ -5141,7 +5069,7 @@ bool webui_interface_script_client(size_t window, size_t event_number, const cha
         return false;
 
     // Get event inf
-    webui_event_inf_t* event_inf = win->events[event_number];
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, event_number);
     if (event_inf == NULL)
         return false;
 
@@ -5257,6 +5185,26 @@ static void _webui_free_mem(void * ptr) {
         if (_webui.ptr_list[i] == NULL) {
             _webui.ptr_last_pos = i;
             break;
+        }
+    }
+
+    _webui_mutex_unlock(&_webui.mutex_mem);
+}
+
+static void _webui_mem_untrack(void* ptr) {
+
+    // The pointer stays allocated, but `_webui_free_mem()`
+    // and `webui_clean()` will no longer free it.
+
+    if (ptr == NULL)
+        return;
+
+    _webui_mutex_lock(&_webui.mutex_mem);
+
+    for (size_t i = 0; i < _webui.ptr_last_pos; i++) {
+        if (_webui.ptr_list[i] == ptr) {
+            _webui.ptr_size[i] = 0;
+            _webui.ptr_list[i] = NULL;
         }
     }
 
@@ -5793,27 +5741,45 @@ static char* _webui_get_full_path(_webui_window_t* win, const char* file) {
 static size_t _webui_new_event_inf(_webui_window_t* win, webui_event_inf_t** event_inf) {
     (*event_inf) = (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
 
-    // Lock memory and search for next empty event entry
-    _webui_mutex_lock(&_webui.mutex_mem);
+    // Lock events and search for next empty event entry
+    _webui_mutex_lock(&_webui.mutex_async_response);
 
-    size_t event_num = win->events_count;
+    size_t slot = win->events_count;
 
     do {
-       event_num++;
-       if (event_num >= WEBUI_MAX_IDS)
-          event_num = 0;
-    } while (win->events[event_num] != NULL);
+       slot++;
+       if (slot >= WEBUI_MAX_IDS)
+          slot = 0;
+    } while (win->events[slot] != NULL);
 
-    win->events_count = event_num;
-    win->events[event_num] = (*event_inf);
+    _webui_event_generation = (_webui_event_generation + 1) & WEBUI_EVENT_GEN_MASK;
+    size_t event_num = slot | (_webui_event_generation << WEBUI_EVENT_GEN_SHIFT);
 
-    _webui_mutex_unlock(&_webui.mutex_mem);
+    (*event_inf)->event.window = win->num;
+    (*event_inf)->event.event_number = event_num;
+
+    win->events_count = slot;
+    win->events[slot] = (*event_inf);
+
+    _webui_mutex_unlock(&_webui.mutex_async_response);
 
     return event_num;
 }
 
 static void _webui_free_event_inf(_webui_window_t* win, size_t event_num) {
-    webui_event_inf_t* event_inf = win->events[event_num];
+
+    // Abandoned events are never freed, the user may still hold them
+    _webui_mutex_lock(&_webui.mutex_async_response);
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, event_num);
+    if (event_inf != NULL && !event_inf->abandoned)
+        win->events[event_num & WEBUI_EVENT_SLOT_MASK] = NULL;
+    else
+        event_inf = NULL;
+    _webui_mutex_unlock(&_webui.mutex_async_response);
+
+    if (event_inf == NULL)
+        return;
+
     for (size_t i = 0; i < (WEBUI_MAX_ARG + 1); i++) {
         if (event_inf->event_data[i] != NULL)
             webui_free((void*)event_inf->event_data[i]);
@@ -5821,9 +5787,85 @@ static void _webui_free_event_inf(_webui_window_t* win, size_t event_num) {
     if (event_inf->response != NULL)
         webui_free((void*)event_inf->response);
     webui_free((void*)event_inf);
-    _webui_mutex_lock(&_webui.mutex_mem);
-    win->events[event_num] = NULL;
-    _webui_mutex_unlock(&_webui.mutex_mem);
+}
+
+static webui_event_inf_t* _webui_get_event_inf(_webui_window_t* win, size_t event_number) {
+
+    size_t slot = event_number & WEBUI_EVENT_SLOT_MASK;
+    if (slot >= WEBUI_MAX_IDS)
+        return NULL;
+
+    // A reused slot holds a newer event with another generation
+    webui_event_inf_t* event_inf = win->events[slot];
+    if (event_inf == NULL || event_inf->event.event_number != event_number)
+        return NULL;
+
+    return event_inf;
+}
+
+static void _webui_event_set_response(_webui_window_t* win, size_t event_number, char* response) {
+
+    // Responses to a finished, abandoned or unknown event are ignored
+    char* unused_response = response;
+
+    _webui_mutex_lock(&_webui.mutex_async_response);
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, event_number);
+    if (event_inf != NULL && !event_inf->done) {
+        unused_response = event_inf->response;
+        event_inf->response = response;
+        if (_webui.config.asynchronous_response)
+            event_inf->done = true;
+    }
+    _webui_mutex_unlock(&_webui.mutex_async_response);
+
+    _webui_free_mem((void*)unused_response);
+}
+
+static bool _webui_event_wait(webui_event_inf_t* event_inf) {
+
+    // Returns false if the event was abandoned
+
+    if (_webui.config.asynchronous_response) {
+        while (true) {
+            _webui_mutex_lock(&_webui.mutex_async_response);
+            bool done = event_inf->done;
+            _webui_mutex_unlock(&_webui.mutex_async_response);
+            if (done || _webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS))
+                break;
+            _webui_sleep(10);
+        }
+    }
+
+    bool abandon = false;
+    _webui_mutex_lock(&_webui.mutex_async_response);
+    if (!event_inf->done && _webui.config.asynchronous_response) {
+        event_inf->abandoned = true;
+        abandon = true;
+    }
+    event_inf->done = true;
+    bool owned = !event_inf->abandoned;
+    _webui_mutex_unlock(&_webui.mutex_async_response);
+
+    if (abandon)
+        _webui_event_abandon(event_inf);
+
+    return owned;
+}
+
+static void _webui_event_abandon(webui_event_inf_t* event_inf) {
+
+    // The app exits before the response, but the user may still use `e`,
+    // so its memory is kept forever and the late response is ignored.
+
+    if (!_webui_is_empty(event_inf->event.cookies)) {
+        char* cookies = _webui_str_dup(event_inf->event.cookies);
+        _webui_mem_untrack(cookies);
+        event_inf->event.cookies = cookies;
+    }
+    for (size_t i = 0; i < (WEBUI_MAX_ARG + 1); i++)
+        _webui_mem_untrack(event_inf->event_data[i]);
+    _webui_mem_untrack(event_inf->packet);
+    _webui_mem_untrack(event_inf);
 }
 
 static const void* _webui_call_external_file_handler_cb(_webui_window_t* win, const char* path, size_t* length) {
@@ -10445,15 +10487,18 @@ static void _webui_window_event(
         win->num, connection_id, element);
     #endif
 
+    // Get event inf
+    webui_event_inf_t* event_inf = _webui_get_event_inf(win, event_number);
+    if (event_inf == NULL)
+        return;
+
     // New Event (General)
-    webui_event_t e;
-    e.window = win->num;
-    e.event_type = event_type;
-    e.element = element;
-    e.event_number = event_number;
-    e.connection_id = connection_id;
-    e.client_id = client_id;
-    e.cookies = (char*)cookies;
+    webui_event_t* e = &event_inf->event;
+    e->event_type = event_type;
+    e->element = element;
+    e->connection_id = connection_id;
+    e->client_id = client_id;
+    e->cookies = (char*)cookies;
 
     // Check for all events-bind functions
     if (!_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS) && win->has_all_events) {
@@ -10465,10 +10510,10 @@ static void _webui_window_event(
             _webui_log_debug("[Core]\t\t_webui_window_event() -> Calling all-events user callback at address 0x%p\n", win->cb[events_cb_index]);
             _webui_log_debug("[Call]\n");
             #endif
-            e.bind_id = events_cb_index;
+            e->bind_id = events_cb_index;
             _webui_window_t* previous_cb_win = _webui_callback_win;
             _webui_callback_win = win;
-            win->cb[events_cb_index](&e);
+            win->cb[events_cb_index](e);
             _webui_callback_win = previous_cb_win;
         }
     }
@@ -10484,37 +10529,21 @@ static void _webui_window_event(
                 _webui_log_debug("[Core]\t\t_webui_window_event() -> Calling user callback at address 0x%p\n", win->cb[cb_index]);
                 _webui_log_debug("[Call]\n");
                 #endif
-                e.bind_id = cb_index;
+                e->bind_id = cb_index;
                 _webui_window_t* previous_cb_win = _webui_callback_win;
                 _webui_callback_win = win;
-                win->cb[cb_index](&e);
+                win->cb[cb_index](e);
                 _webui_callback_win = previous_cb_win;
             }
         }
     }
 
-    // Get event inf
-    webui_event_inf_t* event_inf = win->events[e.event_number];
-    if (event_inf != NULL) {
-
-        // Async response wait
-        if (_webui.config.asynchronous_response) {
-            #ifdef WEBUI_LOG
-            _webui_log_debug("[Core]\t\t_webui_window_event() -> Waiting for asynchronous response...\n");
-            #endif
-            bool done = false;
-            while (!done) {
-                _webui_sleep(10);
-                _webui_mutex_lock(&_webui.mutex_async_response);
-                if (event_inf->done) done = true;
-                _webui_mutex_unlock(&_webui.mutex_async_response);
-
-                if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
-                    break; // App is exiting, Stop waiting.
-                }
-            }
-        }
-    }
+    // Async response wait
+    #ifdef WEBUI_LOG
+    if (_webui.config.asynchronous_response)
+        _webui_log_debug("[Core]\t\t_webui_window_event() -> Waiting for asynchronous response...\n");
+    #endif
+    _webui_event_wait(event_inf);
 
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_window_event() -> Finished\n");
@@ -12691,6 +12720,7 @@ static void _webui_ws_process(
                         size_t event_num = _webui_new_event_inf(win, &event_inf);
                         event_inf->client = client;
                         event_inf->connection_id = connection_id;
+                        event_inf->packet = ptr;
 
                         _webui_window_event(
                             win, // Event -> Window
@@ -12813,6 +12843,7 @@ static void _webui_ws_process(
                             size_t event_num = _webui_new_event_inf(win, &event_inf);
                             event_inf->client = client;
                             event_inf->connection_id = connection_id;
+                            event_inf->packet = ptr;
 
                             // Event Info Extras
                             event_inf->event_data[0] = url;
@@ -12861,6 +12892,9 @@ static void _webui_ws_process(
                         // New event inf (Function Call)
                         webui_event_inf_t* event_inf = NULL;
                         size_t event_num = _webui_new_event_inf(win, &event_inf);
+                        event_inf->client = client;
+                        event_inf->connection_id = connection_id;
+                        event_inf->packet = ptr;
 
                         // Loop trough args
                         size_t data_size_expected = 0;
@@ -12913,16 +12947,15 @@ static void _webui_ws_process(
                             #endif
 
                             // Create new event (Function Call)
-                            webui_event_t e;
-                            e.window = win->num;
-                            e.event_type = WEBUI_EVENT_CALLBACK;
-                            e.element = element;
-                            e.event_number = event_num;
-                            e.connection_id = connection_id;
-                            e.client_id = _webui_client_get_id(win, client);
-                            e.cookies = (char*)_webui_get_cookies_full(client); // Full cookies
+                            webui_event_t* e = &event_inf->event;
+                            e->event_type = WEBUI_EVENT_CALLBACK;
+                            e->element = element;
+                            e->connection_id = connection_id;
+                            e->client_id = _webui_client_get_id(win, client);
+                            e->cookies = (char*)_webui_get_cookies_full(client); // Full cookies
 
                             // Call user function
+                            const char* response = NULL;
                             size_t cb_index = 0;
                             bool exist = _webui_get_cb_index(win, element, &cb_index);
                             if (exist && win->cb[cb_index] != NULL) {
@@ -12934,41 +12967,31 @@ static void _webui_ws_process(
                                     recvNum, win->cb[cb_index]
                                 );
                                 #endif
-                                e.bind_id = cb_index;
+                                e->bind_id = cb_index;
                                 _webui_window_t* previous_cb_win = _webui_callback_win;
                                 _webui_callback_win = win;
-                                win->cb[cb_index](&e);
+                                win->cb[cb_index](e);
                                 _webui_callback_win = previous_cb_win;
 
                                 // Async response wait
-                                if (_webui.config.asynchronous_response) {
-                                    #ifdef WEBUI_LOG
+                                #ifdef WEBUI_LOG
+                                if (_webui.config.asynchronous_response)
                                     _webui_log_debug("[Core] [WS #%zu]\t_webui_ws_process() -> "
                                         "Waiting for asynchronous response...\n",
                                         recvNum);
-                                    #endif
-                                    bool done = false;
-                                    while (!done) {
-                                        _webui_sleep(10);
-                                        _webui_mutex_lock(&_webui.mutex_async_response);
-                                        if (event_inf->done) done = true;
-                                        _webui_mutex_unlock(&_webui.mutex_async_response);
-
-                                        if (_webui_mutex_app_is_exit_now(WEBUI_MUTEX_GET_STATUS)) {
-                                            break; // App is exiting, Stop waiting.
-                                        }
-                                    }
-                                }
+                                #endif
+                                if (_webui_event_wait(event_inf))
+                                    response = event_inf->response;
                             }
 
                             // Check the response
-                            if (_webui_is_empty(event_inf->response))
-                                event_inf->response = NULL;
+                            if (_webui_is_empty(response))
+                                response = NULL;
 
                             #ifdef WEBUI_LOG
                             _webui_log_debug(
                                 "[Core] [WS #%zu]\t_webui_ws_process() -> user-callback response [%s]\n",
-                                recvNum, event_inf->response
+                                recvNum, response
                             );
                             #endif
 
@@ -12980,11 +13003,8 @@ static void _webui_ws_process(
                             // Send the packet
                             _webui_send_client(
                                 win, client, packet_id, WEBUI_CMD_CALL_FUNC,
-                                event_inf->response, _webui_strlen(event_inf->response), false
+                                response, _webui_strlen(response), false
                             );
-
-                            // Free event
-                            _webui_free_event_inf(win, event_num);
                         } else {
 
                             // WebSocket/Civetweb did not send all the data as expected.
@@ -13010,7 +13030,7 @@ static void _webui_ws_process(
                         }
 
                         // Free event
-                        _webui_free_mem((void*)event_inf);
+                        _webui_free_event_inf(win, event_num);
                     } else if ((unsigned char)packet[WEBUI_PROTOCOL_CMD] == WEBUI_CMD_CHECK_TK) {
 
                         // Check Token Event
