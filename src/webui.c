@@ -868,8 +868,8 @@ static WEBUI_THREAD_MONITOR;
 #define WEBUI_SN_PRINTF_STATIC(buffer, buffer_size, format, ...) snprintf(buffer, buffer_size, format, ##__VA_ARGS__)
 #define WEBUI_STR_COPY_DYN(dest, dest_size, src) strncpy(dest, src, (dest_size + 1))
 #define WEBUI_STR_COPY_STATIC(dest, dest_size, src) strncpy(dest, src, dest_size)
-#define WEBUI_STR_CAT_DYN(dest, dest_size, src) strncat(dest, src, (dest_size + 1))
-#define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strncat(dest, src, (dest_size - (strlen(dest) - 1)))
+#define WEBUI_STR_CAT_DYN(dest, dest_size, src) strncat(dest, src, ((dest_size) - strlen(dest)))
+#define WEBUI_STR_CAT_STATIC(dest, dest_size, src) strncat(dest, src, ((dest_size) - strlen(dest) - 1))
 #endif
 
 // Assert
@@ -2011,6 +2011,15 @@ void webui_delete_all_profiles(void) {
     }
 }
 
+static bool _webui_is_ini_line(const char* line, const char* target) {
+
+    // Whole line match, so `Name=a` does not match `Name=ab`
+    size_t len = strlen(line);
+    while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
+        len--;
+    return (len == strlen(target) && strncmp(line, target, len) == 0);
+}
+
 static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* profile_name) {
 
     #ifdef WEBUI_LOG
@@ -2032,10 +2041,10 @@ static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* pr
         } else {
             // If for some reason HOME isn't set
             // fall back to the original path.
-            strncpy(full_path, path, sizeof(full_path));
+            WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s", path);
         }
     } else {
-        strncpy(full_path, path, sizeof(full_path));
+        WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s", path);
     }
     #endif
 
@@ -2056,7 +2065,7 @@ static bool _webui_is_firefox_ini_profile_exist(const char* path, const char* pr
 
     char line[1024];
     while(fgets(line, sizeof(line), file)) {
-        if (strstr(line, target) != NULL) {
+        if (_webui_is_ini_line(line, target)) {
             #ifdef WEBUI_LOG
             _webui_log_debug("[Core]\t\t_webui_is_firefox_ini_profile_exist() -> Target found\n");
             #endif
@@ -2090,10 +2099,10 @@ static void _webui_remove_firefox_profile_ini(const char* path, const char* prof
         } else {
             // If for some reason HOME isn't set
             // fall back to the original path.
-            strncpy(full_path, path, sizeof(full_path));
+            WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s", path);
         }
     } else {
-        strncpy(full_path, path, sizeof(full_path));
+        WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s", path);
     }
     #endif
 
@@ -2103,47 +2112,80 @@ static void _webui_remove_firefox_profile_ini(const char* path, const char* prof
 
     // Open
     FILE * file;
-    WEBUI_FILE_OPEN(file, full_path, "r");
+    WEBUI_FILE_OPEN(file, full_path, "rb");
     if (!file)
         return;
 
-    char buffer[1024 * 3] = {0};
-    char output[1024 * 4] = {0};
-    char target[128] = {0};
+    // Read the whole file
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    if (file_size <= 0 || file_size > (1024 * 1024)) {
+        fclose(file);
+        return;
+    }
+    char* input = (char*)_webui_malloc((size_t)file_size);
+    size_t input_len = fread(input, 1, (size_t)file_size, file);
+    fclose(file);
 
+    char target[128] = {0};
     WEBUI_SN_PRINTF_STATIC(target, sizeof(target), "Name=%s", profile_name);
 
-    bool skip = false;
-    while(fgets(buffer, sizeof(buffer), file)) {
-        if (strncmp(buffer, "[Profile", 8) == 0) {
-            if (skip)
-                skip = false;
+    // Copy every section, except the whole `[Profile]` section of this profile
+    char* output = (char*)_webui_malloc(input_len);
+    size_t output_len = 0;
+    size_t section_start = 0;
+    bool section_is_profile = false;
+    bool section_is_target = false;
+    bool found = false;
+    char line[1024];
+    size_t pos = 0;
+    for (;;) {
+        bool at_end = (pos >= input_len);
+        if (at_end || input[pos] == '[') {
+            if (!section_is_target) {
+                memcpy(output + output_len, input + section_start, pos - section_start);
+                output_len += (pos - section_start);
+            }
+            if (at_end)
+                break;
+            section_start = pos;
+            section_is_profile = (strncmp(input + pos, "[Profile", 8) == 0);
+            section_is_target = false;
         }
-        if (!skip) {
-            if (strstr(buffer, target) != NULL) {
+        size_t eol = pos;
+        while (eol < input_len && input[eol] != '\n')
+            eol++;
+        if (section_is_profile && (eol - pos) < sizeof(line)) {
+            memcpy(line, input + pos, eol - pos);
+            line[eol - pos] = 0x00;
+            if (_webui_is_ini_line(line, target)) {
                 #ifdef WEBUI_LOG
                 _webui_log_debug("[Core]\t\t_webui_remove_firefox_profile_ini() -> Target found\n");
                 #endif
-                skip = true;
-                continue;
-            } else {
-                WEBUI_STR_CAT_STATIC(output, sizeof(output), buffer);
+                section_is_target = true;
+                found = true;
             }
+        }
+        pos = (eol < input_len ? (eol + 1) : eol);
+    }
+
+    if (found) {
+
+        #ifdef WEBUI_LOG
+        _webui_log_debug("[Core]\t\t_webui_remove_firefox_profile_ini() -> Saving\n");
+        #endif
+
+        // Save
+        WEBUI_FILE_OPEN(file, full_path, "wb");
+        if (file) {
+            fwrite(output, 1, output_len, file);
+            fclose(file);
         }
     }
 
-    fclose(file);
-
-    #ifdef WEBUI_LOG
-    _webui_log_debug("[Core]\t\t_webui_remove_firefox_profile_ini() -> Saving\n");
-    #endif
-
-    // Save
-    WEBUI_FILE_OPEN(file, full_path, "w");
-    if (!file)
-        return;
-    fputs(output, file);
-    fclose(file);
+    _webui_free_mem((void*)input);
+    _webui_free_mem((void*)output);
 }
 
 void webui_delete_profile(size_t window) {
@@ -5588,10 +5630,10 @@ static bool _webui_file_exist(const char* path) {
         } else {
             // If for some reason HOME isn't set
             // fall back to the original path.
-            strncpy(full_path, path, sizeof(full_path));
+            WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s", path);
         }
     } else {
-        strncpy(full_path, path, sizeof(full_path));
+        WEBUI_SN_PRINTF_STATIC(full_path, sizeof(full_path), "%s", path);
     }
     #endif
 
@@ -6306,33 +6348,111 @@ static const char* _webui_interpret_command(const char* cmd) {
     // Output buffer
     char* out = NULL;
 
+    // Redirect stderr to stdout
+    size_t cmd_len = _webui_strlen(cmd) + 32;
+    char* cmd_with_redirection = (char*)_webui_malloc(cmd_len);
+
     #ifdef _WIN32
-    // Redirect stderr to stdout
-    char cmd_with_redirection[512] = {0};
-    WEBUI_SN_PRINTF_STATIC(cmd_with_redirection, sizeof(cmd_with_redirection), "cmd.exe /c %s 2>&1", cmd);
-    _webui_system_win32_out(cmd_with_redirection, &out, false);
+    WEBUI_SN_PRINTF_DYN(cmd_with_redirection, cmd_len, "cmd.exe /c %s 2>&1", cmd);
+    char* raw_out = NULL;
+    _webui_system_win32_out(cmd_with_redirection, &raw_out, false);
+    if (raw_out != NULL) {
+        // Callers free the output with `_webui_free_mem()`
+        out = _webui_str_dup(raw_out);
+        free(raw_out);
+    }
     #else
-    // Redirect stderr to stdout
-    char cmd_with_redirection[512] = {0};
-    WEBUI_SN_PRINTF_STATIC(cmd_with_redirection, sizeof(cmd_with_redirection), "%s 2>&1", cmd);
+    WEBUI_SN_PRINTF_DYN(cmd_with_redirection, cmd_len, "%s 2>&1", cmd);
 
     FILE * pipe = WEBUI_POPEN(cmd_with_redirection, "r");
 
-    if (pipe == NULL)
+    if (pipe == NULL) {
+        _webui_free_mem((void*)cmd_with_redirection);
         return NULL;
+    }
 
-    // Read STDOUT
+    // Read STDOUT, the rest of a too long output is read but dropped
     out = (char*)_webui_malloc(WEBUI_STDOUT_BUF);
+    size_t out_len = 0;
     char* line = (char*)_webui_malloc(1024);
-    while(fgets(line, 1024, pipe) != NULL)
-        WEBUI_STR_CAT_DYN(out, WEBUI_STDOUT_BUF, line);
+    while(fgets(line, 1024, pipe) != NULL) {
+        size_t line_len = strlen(line);
+        if (line_len > (WEBUI_STDOUT_BUF - out_len))
+            line_len = (WEBUI_STDOUT_BUF - out_len);
+        memcpy(out + out_len, line, line_len);
+        out_len += line_len;
+    }
     WEBUI_PCLOSE(pipe);
 
     // Clean
     _webui_free_mem((void*)line);
     #endif
 
+    _webui_free_mem((void*)cmd_with_redirection);
     return (const char*)out;
+}
+
+static char* _webui_interpret_arg(const char* s, bool url) {
+
+    // Quote `s` as one shell argument, so a request can't run
+    // its own commands through the file path or the query.
+
+    size_t len = _webui_strlen(s);
+
+    #ifdef _WIN32
+    // `cmd.exe` expands `%` even inside quotes, so each `%` is
+    // written as `"^%"`. Any other unsafe character of the URL
+    // query is percent-encoded, it means the same to the script.
+    const char* hex = "0123456789ABCDEF";
+    char* arg = (char*)_webui_malloc((len * 8) + 4);
+    size_t j = 0;
+    size_t slashes = 0;
+    arg[j++] = '"';
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)s[i];
+        bool keep = (c >= 0x20 && c != '"' && c != '%');
+        if (keep && url)
+            keep = (isalnum(c) || strchr("-._~=&+,;:@/?", c) != NULL);
+        if (c == '%' || !keep) {
+            // Backslashes before a quote must be doubled
+            for (; slashes > 0; slashes--)
+                arg[j++] = '\\';
+            arg[j++] = '"';
+            arg[j++] = '^';
+            arg[j++] = '%';
+            arg[j++] = '"';
+            if (c != '%') {
+                arg[j++] = hex[c >> 4];
+                arg[j++] = hex[c & 15];
+            }
+            continue;
+        }
+        arg[j++] = (char)c;
+        slashes = (c == '\\' ? (slashes + 1) : 0);
+    }
+    for (; slashes > 0; slashes--)
+        arg[j++] = '\\';
+    arg[j++] = '"';
+    #else
+    // Nothing expands inside single quotes, a `'` is written as `'\''`
+    (void)url;
+    char* arg = (char*)_webui_malloc((len * 4) + 2);
+    size_t j = 0;
+    arg[j++] = '\'';
+    for (size_t i = 0; i < len; i++) {
+        if (s[i] == '\'') {
+            arg[j++] = '\'';
+            arg[j++] = '\\';
+            arg[j++] = '\'';
+            arg[j++] = '\'';
+        } else {
+            arg[j++] = s[i];
+        }
+    }
+    arg[j++] = '\'';
+    #endif
+
+    return arg;
 }
 
 static void _webui_condition_init(webui_condition_t* cond) {
@@ -6470,6 +6590,11 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* cli
         // Get query
         query = ri->query_string;
 
+        // Shell arguments
+        char* path_arg = _webui_interpret_arg(full_path, false);
+        char* query_arg = _webui_interpret_arg(query, true);
+        size_t args_len = (_webui_strlen(path_arg) + _webui_strlen(query_arg));
+
         if (win->runtime == Deno) {
 
             // Use Deno
@@ -6477,19 +6602,19 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* cli
 
                 // Set command
                 // [disable coloring][deno][file][query]
-                size_t bf_len = (128 + _webui_strlen(full_path) + _webui_strlen(query));
+                size_t bf_len = (128 + args_len);
                 char* cmd = (char*)_webui_malloc(bf_len);
                 #ifdef _WIN32
                 WEBUI_SN_PRINTF_DYN(
                     cmd, bf_len,
-                    "Set NO_COLOR=1&Set DENO_NO_UPDATE_CHECK=1&deno run --quiet --allow-read --allow-write --allow-net --allow-env --allow-ffi \"%s\" \"%s\"",
-                    full_path, query
+                    "Set NO_COLOR=1&Set DENO_NO_UPDATE_CHECK=1&deno run --quiet --allow-read --allow-write --allow-net --allow-env --allow-ffi %s %s",
+                    path_arg, query_arg
                 );
                 #else
                 WEBUI_SN_PRINTF_DYN(
                     cmd, bf_len,
-                    "NO_COLOR=1;DENO_NO_UPDATE_CHECK=1;deno run --quiet --allow-read --allow-write --allow-net --allow-env --allow-ffi \"%s\" \"%s\"",
-                    full_path, query
+                    "NO_COLOR=1 DENO_NO_UPDATE_CHECK=1 deno run --quiet --allow-read --allow-write --allow-net --allow-env --allow-ffi %s %s",
+                    path_arg, query_arg
                 );
                 #endif
 
@@ -6524,9 +6649,9 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* cli
 
                 // Set command
                 // [bun][file][query]
-                size_t bf_len = (32 + _webui_strlen(full_path) + _webui_strlen(query));
+                size_t bf_len = (32 + args_len);
                 char* cmd = (char*)_webui_malloc(bf_len);
-                WEBUI_SN_PRINTF_DYN(cmd, bf_len, "bun \"%s\" \"%s\"", full_path, query);
+                WEBUI_SN_PRINTF_DYN(cmd, bf_len, "bun %s %s", path_arg, query_arg);
 
                 // Run command
                 const char* out = _webui_interpret_command(cmd);
@@ -6560,9 +6685,9 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* cli
 
                 // Set command
                 // [node][file]
-                size_t bf_len = (32 + _webui_strlen(full_path) + _webui_strlen(query));
+                size_t bf_len = (32 + args_len);
                 char* cmd = (char*)_webui_malloc(bf_len);
-                WEBUI_SN_PRINTF_DYN(cmd, bf_len, "node \"%s\" \"%s\"", full_path, query);
+                WEBUI_SN_PRINTF_DYN(cmd, bf_len, "node %s %s", path_arg, query_arg);
 
                 // Run command
                 const char* out = _webui_interpret_command(cmd);
@@ -6593,6 +6718,9 @@ static int _webui_interpret_file(_webui_window_t* win, struct mg_connection* cli
             // Serve as a normal text-based file 200
             _webui_http_send_file(win, client, mg_get_builtin_mime_type(url), full_path, false);
         }
+
+        _webui_free_mem((void*)path_arg);
+        _webui_free_mem((void*)query_arg);
     } else {
 
         // Unknown file extension
@@ -6675,10 +6803,10 @@ static const char* _webui_generate_js_bridge(_webui_window_t* win, struct mg_con
     );
     // Window Size
     if (win->size_set)
-        c += WEBUI_SN_PRINTF_DYN(js + c, len, "winW: %u, winH: %u, ", win->width, win->height);
+        c += WEBUI_SN_PRINTF_DYN(js + c, (len - c), "winW: %u, winH: %u, ", win->width, win->height);
     // Window Position
     if (win->position_set)
-        c += WEBUI_SN_PRINTF_DYN(js + c, len, "winX: %u, winY: %u, ", win->x, win->y);
+        c += WEBUI_SN_PRINTF_DYN(js + c, (len - c), "winX: %u, winY: %u, ", win->x, win->y);
     // Close
     WEBUI_STR_CAT_DYN(js, len, "});});");
 
@@ -13542,7 +13670,7 @@ static int _webui_system_win32_out(const char* cmd, char ** output, bool show) {
     // Flags
     DWORD CreationFlags = CREATE_NO_WINDOW;
     if (show)
-        CreationFlags = SW_SHOW;
+        CreationFlags = 0;
 
     SECURITY_ATTRIBUTES sa;
     sa.nLength = sizeof(SECURITY_ATTRIBUTES);
@@ -13591,18 +13719,33 @@ static int _webui_system_win32_out(const char* cmd, char ** output, bool show) {
     CloseHandle(stdout_write);
 
     SetFocus(pi.hProcess);
-    WaitForSingleObject(pi.hProcess, WEBUI_SYS_CMD_TIMEOUT);
-    GetExitCodeProcess(pi.hProcess, &Return);
 
+    // Read while the process runs, a full pipe would block it
     DWORD bytes_read;
     char buffer[WEBUI_STDOUT_BUF];
     size_t output_size = 0;
+    DWORD start_time = GetTickCount();
 
-    while(ReadFile(stdout_read, buffer, WEBUI_STDOUT_BUF, &bytes_read, NULL) && bytes_read > 0) {
+    for (;;) {
+
+        if ((GetTickCount() - start_time) >= WEBUI_SYS_CMD_TIMEOUT)
+            break;
+        DWORD available = 0;
+        if (!PeekNamedPipe(stdout_read, NULL, 0, NULL, &available, NULL))
+            break; // The process exited and all its output was read
+        if (available == 0) {
+            if (WaitForSingleObject(pi.hProcess, 10) == WAIT_OBJECT_0 &&
+                PeekNamedPipe(stdout_read, NULL, 0, NULL, &available, NULL) && available == 0)
+                break; // The process exited and all its output was read
+            continue;
+        }
+        if (!ReadFile(stdout_read, buffer, WEBUI_STDOUT_BUF, &bytes_read, NULL) || bytes_read == 0)
+            break;
 
         char* new_output = realloc(*output, output_size + bytes_read + 1);
         if (new_output == NULL) {
             free(*output);
+            *output = NULL;
             CloseHandle(stdout_read);
             CloseHandle(pi.hProcess);
             CloseHandle(pi.hThread);
@@ -13616,6 +13759,11 @@ static int _webui_system_win32_out(const char* cmd, char ** output, bool show) {
 
     if (*output != NULL)
         (*output)[output_size] = '\0';
+
+    // Exit code
+    DWORD elapsed = (GetTickCount() - start_time);
+    WaitForSingleObject(pi.hProcess, (elapsed < WEBUI_SYS_CMD_TIMEOUT ? (WEBUI_SYS_CMD_TIMEOUT - elapsed) : 0));
+    GetExitCodeProcess(pi.hProcess, &Return);
 
     CloseHandle(stdout_read);
     CloseHandle(pi.hProcess);
@@ -13686,7 +13834,7 @@ static int _webui_system_win32(_webui_window_t* win, char* cmd, bool show) {
     DWORD CreationFlags = CREATE_NO_WINDOW;
 
     if (show)
-        CreationFlags = SW_SHOW;
+        CreationFlags = 0;
 
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
