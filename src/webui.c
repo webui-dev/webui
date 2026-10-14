@@ -5793,21 +5793,21 @@ static char* _webui_get_full_path(_webui_window_t* win, const char* file) {
 static size_t _webui_new_event_inf(_webui_window_t* win, webui_event_inf_t** event_inf) {
     (*event_inf) = (webui_event_inf_t*)_webui_malloc(sizeof(webui_event_inf_t));
 
-    size_t event_num = win->events_count;
-
     // Lock memory and search for next empty event entry
     _webui_mutex_lock(&_webui.mutex_mem);
 
+    size_t event_num = win->events_count;
+
     do {
        event_num++;
-       if (win->events_count >= WEBUI_MAX_IDS)
+       if (event_num >= WEBUI_MAX_IDS)
           event_num = 0;
     } while (win->events[event_num] != NULL);
 
-    _webui_mutex_unlock(&_webui.mutex_mem);
-
     win->events_count = event_num;
     win->events[event_num] = (*event_inf);
+
+    _webui_mutex_unlock(&_webui.mutex_mem);
 
     return event_num;
 }
@@ -5821,7 +5821,9 @@ static void _webui_free_event_inf(_webui_window_t* win, size_t event_num) {
     if (event_inf->response != NULL)
         webui_free((void*)event_inf->response);
     webui_free((void*)event_inf);
+    _webui_mutex_lock(&_webui.mutex_mem);
     win->events[event_num] = NULL;
+    _webui_mutex_unlock(&_webui.mutex_mem);
 }
 
 static const void* _webui_call_external_file_handler_cb(_webui_window_t* win, const char* path, size_t* length) {
