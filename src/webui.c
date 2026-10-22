@@ -12022,6 +12022,7 @@ static WEBUI_THREAD_SERVER_START {
                 "access_control_allow_headers", "*",
                 "access_control_allow_methods", "*",
                 "access_control_allow_origin", "*",
+                "tcp_nodelay", "1",
                 #ifdef WEBUI_TLS
                 "authentication_domain", "localhost",
                 "enable_auth_domain_check", "no",
