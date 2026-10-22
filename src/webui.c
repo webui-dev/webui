@@ -13061,6 +13061,7 @@ static void _webui_ws_process(
                             // Event Info Extras
                             event_inf->event_data[0] = url;
                             event_inf->event_size[0] = url_len;
+                            event_inf->count = 1;
 
                             _webui_window_event(
                                 win, // Event -> Window
@@ -14596,6 +14597,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 event_inf->event_size[0] = strlen(uri);
                 event_inf->event_data[1] = type;
                 event_inf->event_size[1] = strlen(type);
+                event_inf->count = 2;
 
                 _webui_window_event(
                     win, // Event -> Window
