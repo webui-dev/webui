@@ -534,7 +534,6 @@ typedef struct _webui_core_t {
     _webui_window_t* wins[WEBUI_MAX_IDS];
     bool wins_reserved[WEBUI_MAX_IDS];
     webui_mutex_t mutex_server_start;
-    webui_mutex_t mutex_send;
     webui_mutex_t mutex_receive;
     webui_mutex_t mutex_wait;
     webui_mutex_t mutex_bridge;
@@ -8803,7 +8802,6 @@ static void _webui_clean(void) {
 
     // Destroy all mutex
     _webui_mutex_destroy(&_webui.mutex_server_start);
-    _webui_mutex_destroy(&_webui.mutex_send);
     _webui_mutex_destroy(&_webui.mutex_receive);
     _webui_mutex_destroy(&_webui.mutex_wait);
     _webui_mutex_destroy(&_webui.mutex_js_run);
@@ -10789,10 +10787,9 @@ static void _webui_send_client_ws(_webui_window_t* win, struct mg_connection* cl
     int ret = 0;
     if (win->num > 0 && win->num < WEBUI_MAX_IDS) {
         if (client != NULL) {
-            // Mutex
-            _webui_mutex_lock(&_webui.mutex_send);
+            // No global lock here. CivetWeb locks the connection for the
+            // whole frame, so a client that stops reading only blocks itself.
             ret = mg_websocket_write(client, MG_WEBSOCKET_OPCODE_BINARY, packet, packets_size);
-            _webui_mutex_unlock(&_webui.mutex_send);
         }
     }
 
@@ -10898,7 +10895,6 @@ static void _webui_init(void) {
 
     // Initializing mutex
     _webui_mutex_init(&_webui.mutex_server_start);
-    _webui_mutex_init(&_webui.mutex_send);
     _webui_mutex_init(&_webui.mutex_receive);
     _webui_mutex_init(&_webui.mutex_wait);
     _webui_mutex_init(&_webui.mutex_bridge);
