@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        webui_set_root_folder(window, "/home/gordon/Dokumenty/PlatformIO/Projects/webui/examples/C/test_index_redirect/ui/");
+        webui_set_root_folder(window, "ui");
         
         // Absolute paths:
         // webui_set_root_folder(window, "/path/to/ui/");
