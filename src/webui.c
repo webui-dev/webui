@@ -507,6 +507,7 @@ typedef struct _webui_core_t {
     struct mg_connection* clients[WEBUI_MAX_IDS];
     size_t clients_win_num[WEBUI_MAX_IDS];
     bool clients_token_check[WEBUI_MAX_IDS];
+    bool clients_broken[WEBUI_MAX_IDS]; // A write failed, send nothing more
     char* cookies[WEBUI_MAX_IDS];
     bool cookies_single_set[WEBUI_MAX_IDS];
     size_t servers; // Active (shown and not yet closed) windows
@@ -10894,7 +10895,31 @@ static void _webui_send_client_ws(_webui_window_t* win, struct mg_connection* cl
         if (client != NULL) {
             // No global lock here. CivetWeb locks the connection for the
             // whole frame, so a client that stops reading only blocks itself.
-            ret = mg_websocket_write(client, MG_WEBSOCKET_OPCODE_BINARY, packet, packets_size);
+            // We hold the same (recursive) lock around the check, the write
+            // and the close, so no other frame can follow a broken one.
+            mg_lock_connection(client);
+            _webui_mutex_lock(&_webui.mutex_client);
+            bool broken = (_webui.clients[connection_id] == client) && _webui.clients_broken[connection_id];
+            _webui_mutex_unlock(&_webui.mutex_client);
+            if (!broken) {
+                ret = mg_websocket_write(client, MG_WEBSOCKET_OPCODE_BINARY, packet, packets_size);
+                if (ret < 0 || (size_t)ret < packets_size) {
+                    // The write failed or ended early (the client stopped reading
+                    // for longer than `request_timeout_ms`, or a socket error), so
+                    // part of a frame can be on the wire. Send nothing more to this
+                    // client and close it, so the page sees the connection close.
+                    #ifdef WEBUI_LOG
+                    _webui_log_debug("[Core]\t\t_webui_send_client_ws() -> Write failed, closing client #%zu\n",
+                        connection_id);
+                    #endif
+                    _webui_mutex_lock(&_webui.mutex_client);
+                    if (_webui.clients[connection_id] == client)
+                        _webui.clients_broken[connection_id] = true;
+                    _webui_mutex_unlock(&_webui.mutex_client);
+                    mg_close_connection(client);
+                }
+            }
+            mg_unlock_connection(client);
         }
     }
 
@@ -12831,6 +12856,7 @@ static bool _webui_connection_save(_webui_window_t* win, struct mg_connection* c
             }
             _webui.clients[i] = client;
             _webui.clients_win_num[i] = win->num;
+            _webui.clients_broken[i] = false;
             _webui_mutex_is_multi_client_token_valid(win, WEBUI_MUTEX_SET_FALSE, i);
             win->clients_count++;
             _webui_mutex_unlock(&_webui.mutex_client);
