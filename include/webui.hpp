@@ -136,12 +136,14 @@ namespace webui {
 
             // Get an argument as string at a specific index.
             std::string get_string(size_t index = 0) {
-                return std::string{webui_get_string_at(this, index)};
+                const char* str = webui_get_string_at(this, index);
+                return std::string{str ? str : ""};
             }
 
             // Get an argument as string_view at a specific index.
             std::string_view get_string_view(size_t index = 0) {
-                return std::string_view{webui_get_string_at(this, index)};
+                const char* str = webui_get_string_at(this, index);
+                return std::string_view{str ? str : ""};
             }
 
             // Get an argument as boolean at a specific index.
@@ -392,7 +394,8 @@ namespace webui {
 
         // Get the full current URL
         std::string_view get_url() const {
-            return std::string_view{webui_get_url(webui_window)};
+            const char* url = webui_get_url(webui_window);
+            return std::string_view{url ? url : ""};
         }
 
         // Navigate to a specific URL.
@@ -541,14 +544,24 @@ namespace webui {
         return std::string{webui_get_mime_type(std::string{file}.c_str())};
     }
 
-    // Base64 encoding. Use this to safely send text based data to the UI. If it fails it will return NULL.
+    // Base64 encoding. Use this to safely send text based data to the UI. If it fails it will return an empty string.
     inline std::string encode(const std::string_view str) {
-        return std::string{webui_encode(std::string{str}.c_str())};
+        char* buf = webui_encode(std::string{str}.c_str());
+        if (buf == nullptr)
+            return std::string{};
+        std::string result{buf};
+        webui_free(buf);
+        return result;
     }
 
-    // Base64 decoding. Use this to safely decode received Base64 text from the UI. If it fails it will return NULL.
+    // Base64 decoding. Use this to safely decode received Base64 text from the UI. If it fails it will return an empty string.
     inline std::string decode(const std::string_view str) {
-        return std::string{webui_decode(std::string{str}.c_str())};
+        char* buf = webui_decode(std::string{str}.c_str());
+        if (buf == nullptr)
+            return std::string{};
+        std::string result{buf};
+        webui_free(buf);
+        return result;
     }
 
     // Set the SSL/TLS certificate and the private key content, both in PEM format.

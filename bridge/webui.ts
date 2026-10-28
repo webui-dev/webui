@@ -895,8 +895,10 @@ class WebuiBridge {
 					// 4: [Function,Null,Raw Data]
 					// Get function name
 					const functionName: string = this.#getDataStrFromPacket(buffer8, this.#PROTOCOL_DATA);
-					// Get the raw data
-					const rawDataIndex: number = this.#PROTOCOL_DATA + functionName.length + 1;
+					// Get the raw data, it starts after the name's null byte. A UTF-8
+					// name can have more bytes than `functionName.length` characters.
+					const nameEnd: number = buffer8.indexOf(0, this.#PROTOCOL_DATA);
+					const rawDataIndex: number = (nameEnd < 0 ? buffer8.length : nameEnd + 1);
 					const rawDataSize: number = (buffer8.length - rawDataIndex) - 1;
 					const userRawData = buffer8.subarray(rawDataIndex, (rawDataIndex + rawDataSize));
 					if (this.#log) console.log(`WebUI -> CMD -> Received Raw ${rawDataSize} bytes for [${functionName}()]`);

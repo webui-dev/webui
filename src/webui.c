@@ -430,6 +430,7 @@ typedef struct _webui_window_t {
     size_t icon_file_size;
     size_t current_browser;
     char* browser_path;
+    size_t browser_path_id; // The browser that `browser_path` belongs to
     bool custom_profile;
     bool default_profile;
     char* profile_path;
@@ -637,6 +638,7 @@ static void * _webui_run_browser_task(void * _arg);
 static void _webui_init(void);
 static bool _webui_show(_webui_window_t* win, struct mg_connection* client, const char* content, size_t browser);
 static bool _webui_get_cb_index(_webui_window_t* win, const char* element, size_t* id);
+static bool _webui_new_cb_index(size_t* id);
 static size_t _webui_get_free_port(void); 
 static void _webui_free_port(size_t port);
 static char* _webui_get_current_path(void);
@@ -2565,8 +2567,16 @@ size_t webui_bind(size_t window, const char* element, void(*func)(webui_event_t*
     size_t cb_index = 0;
     bool exist = _webui_get_cb_index(win, element, &cb_index);
 
+    // New ID
+    size_t index = cb_index;
+    if (!exist && !_webui_new_cb_index(&index)) {
+        #ifdef WEBUI_LOG
+        _webui_log_info("[User] webui_bind() -> No free bind ID left\n");
+        #endif
+        return 0;
+    }
+
     // Free old ID
-    size_t index = (exist ? cb_index : _webui.cb_count++);
     _webui_free_mem((void*)win->html_elements[index]);
 
     // All events binding
@@ -3744,21 +3754,27 @@ void webui_set_center(size_t window) {
     screen_width = (unsigned int)screenRect.size.width;
     screen_height = (unsigned int)screenRect.size.height;
     #elif __linux__
-    // GTK and Webkit Dynamic Load
-    if (!libgtk || !libwebkit) {
-        if (_webui_load_gtk_and_webkit()) {
-            void* display = gdk_display_get_default();
-            if (display) {
-                void* monitor = gdk_display_get_primary_monitor(display);
-                if (monitor) {
-                    GdkRectangle geometry;
-                    gdk_monitor_get_geometry(monitor, &geometry);
-                    screen_width = (unsigned int)geometry.width;
-                    screen_height = (unsigned int)geometry.height;
-                }
-            }            
+    // GTK and Webkit Dynamic Load. The screen is read once and kept, so
+    // later calls still center, without calling GTK from a thread other
+    // than its main loop once it runs.
+    static bool gtk_screen_read = false;
+    static unsigned int gtk_screen_width = 0;
+    static unsigned int gtk_screen_height = 0;
+    if (!gtk_screen_read && _webui_load_gtk_and_webkit()) {
+        gtk_screen_read = true;
+        void* display = gdk_display_get_default();
+        if (display) {
+            void* monitor = gdk_display_get_primary_monitor(display);
+            if (monitor) {
+                GdkRectangle geometry;
+                gdk_monitor_get_geometry(monitor, &geometry);
+                gtk_screen_width = (unsigned int)geometry.width;
+                gtk_screen_height = (unsigned int)geometry.height;
+            }
         }
     }
+    screen_width = gtk_screen_width;
+    screen_height = gtk_screen_height;
     #endif
 
     #ifdef WEBUI_LOG
@@ -3815,14 +3831,15 @@ void webui_set_profile(size_t window, const char* name, const char* path) {
     win->profile_path = path_cpy;
     win->custom_profile = true;
 
-    // Default local machine profile
-    if (name_cpy == NULL && path_cpy == NULL)
+    // Default local machine profile. The copies are never NULL,
+    // an empty (or NULL) name and path mean the default profile.
+    if (_webui_is_empty(name_cpy) && _webui_is_empty(path_cpy))
         win->default_profile = true;
     else
         win->default_profile = false;
     
     // Create browser profile folder if not exist
-    if(path_cpy) {
+    if (!_webui_is_empty(path_cpy)) {
         if (!_webui_folder_exist(path_cpy)) {
             _webui_create_folder(path_cpy);
         }
@@ -7507,14 +7524,18 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
         else return false;
         // Firefox linux snap version
         // ~/snap/firefox/common/.mozilla/firefox/WebUIFirefoxProfile
+        // The snap sandbox can only reach its own folder, a regular
+        // install keeps using the home folder like other browsers.
         char snap_path[WEBUI_MAX_PATH];
-        const char* home = getenv("HOME");
-        if (home) {
-            WEBUI_SN_PRINTF_STATIC(snap_path, sizeof(snap_path), "%s/snap/firefox/common/.mozilla/firefox", home);
-            temp = snap_path;
-        } else {
-            // Failed to get HOME
-            return false;
+        if (snap) {
+            const char* home = getenv("HOME");
+            if (home) {
+                WEBUI_SN_PRINTF_STATIC(snap_path, sizeof(snap_path), "%s/snap/firefox/common/.mozilla/firefox", home);
+                temp = snap_path;
+            } else {
+                // Failed to get HOME
+                return false;
+            }
         }
         #else
         // macOS
@@ -7522,9 +7543,9 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
         #endif
 
         if (!win->custom_profile){
-            // Set Firefox profile folder name
-            const char* ff = "FirefoxProfile";
-            if(!win->disable_browser_high_contrast) {
+            // Set Firefox profile folder name, `-NoHC` like the profile name
+            const char* ff = "WebUIFirefoxProfile";
+            if(win->disable_browser_high_contrast) {
                 ff = "WebUIFirefoxProfile-NoHC";
             }
             // Generate Firefox profile path
@@ -7595,12 +7616,8 @@ static bool _webui_browser_create_new_profile(_webui_window_t* win, size_t brows
             fclose(file);
 
             // userChrome.css
-            WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "\"%s%schrome%s\"", win->profile_path, os_sep, os_sep);
-            if (!_webui_folder_exist(buf)) {
-
-                WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "mkdir \"%s%schrome%s\"", win->profile_path, os_sep, os_sep);
-                _webui_cmd_sync(win, buf, false); // Create directory
-            }
+            WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "%s%schrome", win->profile_path, os_sep);
+            _webui_create_folder(buf); // Create directory if not exist
             WEBUI_SN_PRINTF_STATIC(buf, sizeof(buf), "%s%schrome%suserChrome.css", win->profile_path, os_sep, os_sep);
             WEBUI_FILE_OPEN(file, buf, "a");
             if (file == NULL)
@@ -7862,9 +7879,11 @@ static void _webui_send_client(
 }
 
 static char* _webui_str_dup(const char* src) {
+    // A NULL source gives an empty string, the copy must not read it
     size_t len = _webui_strlen(src);
     char* dst = (char*)_webui_malloc(len);
-    WEBUI_STR_COPY_DYN(dst, len, src);
+    if (len > 0)
+        WEBUI_STR_COPY_DYN(dst, len, src);
     return dst;
 }
 
@@ -8064,7 +8083,7 @@ static bool _webui_webview_exist() {
     #endif
 }
 
-static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
+static bool _webui_browser_find(_webui_window_t* win, size_t browser) {
 
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_browser_exist([%zu])\n", browser);
@@ -8106,7 +8125,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
         static bool ChromeExist = false;
         if(win) {
-            if (ChromeExist && !_webui_is_empty(win->browser_path))
+            if (ChromeExist && (win->browser_path_id == Chrome) && !_webui_is_empty(win->browser_path))
                 return true;
         }
 
@@ -8194,7 +8213,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
         static bool EdgeExist = false;
         if(win) {
-            if (EdgeExist && !_webui_is_empty(win->browser_path))
+            if (EdgeExist && (win->browser_path_id == Edge) && !_webui_is_empty(win->browser_path))
                 return true;
         }
 
@@ -8287,7 +8306,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
         static bool EpicExist = false;
         if(win) {
-            if (EpicExist && !_webui_is_empty(win->browser_path))
+            if (EpicExist && (win->browser_path_id == Epic) && !_webui_is_empty(win->browser_path))
                 return true;
         }
 
@@ -8368,7 +8387,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
         static bool VivaldiExist = false;
         if(win) {
-            if (VivaldiExist && !_webui_is_empty(win->browser_path))
+            if (VivaldiExist && (win->browser_path_id == Vivaldi) && !_webui_is_empty(win->browser_path))
                 return true;
         }
 
@@ -8459,7 +8478,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
         static bool BraveExist = false;
         if(win) {
-            if (BraveExist && !_webui_is_empty(win->browser_path))
+            if (BraveExist && (win->browser_path_id == Brave) && !_webui_is_empty(win->browser_path))
                 return true;
         }
 
@@ -8555,7 +8574,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
         static bool FirefoxExist = false;
         if(win) {
-            if (FirefoxExist && !_webui_is_empty(win->browser_path))
+            if (FirefoxExist && (win->browser_path_id == Firefox) && !_webui_is_empty(win->browser_path))
                 return true;
         }
 
@@ -8639,7 +8658,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
         static bool YandexExist = false;
         if(win) {
-            if (YandexExist && !_webui_is_empty(win->browser_path))
+            if (YandexExist && (win->browser_path_id == Yandex) && !_webui_is_empty(win->browser_path))
                 return true;
         }
 
@@ -8720,7 +8739,7 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
 
         static bool ChromiumExist = false;
         if(win) {
-            if (ChromiumExist && !_webui_is_empty(win->browser_path))
+            if (ChromiumExist && (win->browser_path_id == Chromium) && !_webui_is_empty(win->browser_path))
                 return true;
         }
 
@@ -8805,6 +8824,18 @@ static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
     }
 
     return false;
+}
+
+static bool _webui_browser_exist(_webui_window_t* win, size_t browser) {
+
+    // `win->browser_path` holds the path of one browser only. Remember which
+    // one, so a cached check of another browser does not reuse that path and
+    // launch the wrong browser.
+
+    bool found = _webui_browser_find(win, browser);
+    if (found && win != NULL && browser != AnyBrowser && browser != ChromiumBased && browser != Webview)
+        win->browser_path_id = browser;
+    return found;
 }
 
 static void _webui_clean(void) {
@@ -8941,6 +8972,26 @@ static int _webui_run_browser(_webui_window_t* win, char* cmd) {
     return _webui_cmd_async(win, cmd, false);
 }
 
+static int _webui_append_args(char* buffer, size_t len, int c, const char* format, ...) {
+
+    // Append at position `c` using only the space left in the buffer. A text
+    // that does not fit is truncated, and the position never passes the end.
+
+    if (c < 0 || (size_t)c >= len)
+        return c;
+
+    va_list args;
+    va_start(args, format);
+    int n = vsnprintf(buffer + c, len - (size_t)c, format, args);
+    va_end(args);
+
+    if (n < 0)
+        return c;
+    if ((size_t)n >= (len - (size_t)c))
+        return (int)(len - 1);
+    return c + n;
+}
+
 static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* buffer, size_t len) {
 
     #ifdef WEBUI_LOG
@@ -8976,63 +9027,63 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
         case Chromium:
             // Profile
             if (!_webui_is_empty(win->profile_path))
-                c = WEBUI_SN_PRINTF_STATIC(buffer, len, " --user-data-dir=\"%s\"", win->profile_path);
+                c = _webui_append_args(buffer, len, c, " --user-data-dir=\"%s\"", win->profile_path);
             // Basic
             if (_webui_is_empty(win->custom_parameters)) {
                 for (int i = 0; i < (int)(sizeof(chromium_options) / sizeof(chromium_options[0])); i++) {
-                    c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", chromium_options[i]);
+                    c = _webui_append_args(buffer, len, c, " %s", chromium_options[i]);
                 }
             }
             // Kiosk Mode
             if (win->kiosk_mode)
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "--chrome-frame --kiosk");
+                c = _webui_append_args(buffer, len, c, " %s", "--chrome-frame --kiosk");
             // High Contrast Support
             if (win->disable_browser_high_contrast)
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "--disable-features=ForcedColors");
+                c = _webui_append_args(buffer, len, c, " %s", "--disable-features=ForcedColors");
             // Hide Mode
             if (win->hide)
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "--headless --headless=new");
+                c = _webui_append_args(buffer, len, c, " %s", "--headless --headless=new");
             // Window Size
             if (win->size_set)
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " --window-size=%u,%u", win->width, win->height);
+                c = _webui_append_args(buffer, len, c, " --window-size=%u,%u", win->width, win->height);
             // Window Position
             if (win->position_set)
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " --window-position=%u,%u", win->x, win->y);
+                c = _webui_append_args(buffer, len, c, " --window-position=%u,%u", win->x, win->y);
             // Proxy
             if (win->proxy_set)
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " --proxy-server=%s", win->proxy_server);
+                c = _webui_append_args(buffer, len, c, " --proxy-server=%s", win->proxy_server);
             else {
                 if (_webui_is_empty(win->custom_parameters)) {
-                    c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "--no-proxy-server");
+                    c = _webui_append_args(buffer, len, c, " %s", "--no-proxy-server");
                 }
             }
             // User-defined command line parameters.
             if (!_webui_is_empty(win->custom_parameters)) {
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", win->custom_parameters);
+                c = _webui_append_args(buffer, len, c, " %s", win->custom_parameters);
             }
 
             // URL (END)
-            c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "--app=");
+            c = _webui_append_args(buffer, len, c, " %s", "--app=");
             return c;
         case Firefox:
             // Profile
             if (!_webui_is_empty(win->profile_name))
-                c = WEBUI_SN_PRINTF_STATIC(buffer, len, " -P %s", win->profile_name);
+                c = _webui_append_args(buffer, len, c, " -P %s", win->profile_name);
             // Basic
             if (_webui_is_empty(win->custom_parameters)) {
                 if (_webui.current_browser != Firefox) {
-                    c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " -purgecaches");
+                    c = _webui_append_args(buffer, len, c, " -purgecaches");
                 }
             }
             // Kiosk Mode
             if (win->kiosk_mode)
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "-kiosk");
+                c = _webui_append_args(buffer, len, c, " %s", "-kiosk");
             // Hide Mode
             if (win->hide)
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", "-headless");
+                c = _webui_append_args(buffer, len, c, " %s", "-headless");
             // Window Size
             if (win->size_set)
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " -width %u -height %u", win->width, win->height);
+                c = _webui_append_args(buffer, len, c, " -width %u -height %u", win->width, win->height);
             // Window Position
                 // Firefox does not support window positioning.
             // Proxy
@@ -9044,10 +9095,10 @@ static int _webui_get_browser_args(_webui_window_t* win, size_t browser, char* b
             }
             // User-defined command line parameters.
             if (!_webui_is_empty(win->custom_parameters))
-                c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " %s", win->custom_parameters);
+                c = _webui_append_args(buffer, len, c, " %s", win->custom_parameters);
 
             // URL (END)
-            c += WEBUI_SN_PRINTF_STATIC(buffer + c, len, " -new-window ");
+            c = _webui_append_args(buffer, len, c, " -new-window ");
             return c;
     }
 
@@ -10206,12 +10257,13 @@ static bool _webui_tls_generate_self_signed_cert(char* root_cert, char* root_key
 #endif
 
 static const char* _webui_get_local_ip(void) {
-    char *buf = malloc(64);
+    // Tracked allocation, the caller frees it using `_webui_free_mem()`
+    char *buf = (char*)_webui_malloc(64);
     if (!buf) return NULL;
     #ifdef _WIN32
     WSADATA wsa;
     if (WSAStartup(MAKEWORD(2,2), &wsa) != 0) {
-        free(buf);
+        _webui_free_mem((void*)buf);
         return NULL;
     }
     buf[0] = '\0';
@@ -10283,14 +10335,14 @@ static const char* _webui_get_local_ip(void) {
     }
     WSACleanup();
     if (!buf[0]) {
-        free(buf);
+        _webui_free_mem((void*)buf);
         return NULL;
     }
     return buf;
     #else
     struct ifaddrs *ifaddr = NULL, *ifa;
     if (getifaddrs(&ifaddr) == -1) {
-        free(buf);
+        _webui_free_mem((void*)buf);
         return NULL;
     }
     // first non-loopback IPv4
@@ -10315,7 +10367,7 @@ static const char* _webui_get_local_ip(void) {
         }
     }
     freeifaddrs(ifaddr);
-    free(buf);
+    _webui_free_mem((void*)buf);
     return NULL;
     #endif
 }
@@ -11127,6 +11179,44 @@ static bool _webui_get_cb_index(_webui_window_t* win, const char* element, size_
 
     _webui_mutex_unlock(&_webui.mutex_bridge);
     return false;
+}
+
+static bool _webui_new_cb_index(size_t* id) {
+
+    // Bind IDs index the per-window bind arrays, and stay unique across
+    // all windows, because wrappers use them to find the callback. Once
+    // the counter reached the end, an ID no window is using is reused.
+    // ID 0 is never reused, wrappers treat it as an invalid bind.
+
+    bool found = false;
+    _webui_mutex_lock(&_webui.mutex_allocator);
+
+    if (_webui.cb_count < WEBUI_MAX_IDS) {
+        *id = _webui.cb_count++;
+        found = true;
+    } else {
+        bool* used = (bool*)_webui_malloc(WEBUI_MAX_IDS * sizeof(bool));
+        for (size_t w = 1; w < WEBUI_MAX_IDS; w++) {
+            _webui_window_t* win = _webui.wins[w];
+            if (win == NULL)
+                continue;
+            for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
+                if (win->html_elements[i] != NULL)
+                    used[i] = true;
+            }
+        }
+        for (size_t i = 1; i < WEBUI_MAX_IDS; i++) {
+            if (!used[i]) {
+                *id = i;
+                found = true;
+                break;
+            }
+        }
+        _webui_free_mem((void*)used);
+    }
+
+    _webui_mutex_unlock(&_webui.mutex_allocator);
+    return found;
 }
 
 #ifdef WEBUI_LOG
@@ -14026,12 +14116,15 @@ static bool _webui_get_windows_reg_value(HKEY key, LPCWSTR reg, LPCWSTR value_na
     #endif
 
     HKEY hKey;
+    bool found = false;
 
     if (RegOpenKeyExW(key, reg, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
 
         DWORD VALUE_TYPE;
-        BYTE VALUE_DATA[WEBUI_MAX_PATH];
-        DWORD VALUE_SIZE = sizeof(VALUE_DATA);
+        // A stored string is not always null terminated, so the
+        // last wide character is kept zero to terminate it
+        BYTE VALUE_DATA[WEBUI_MAX_PATH + sizeof(wchar_t)] = {0};
+        DWORD VALUE_SIZE = WEBUI_MAX_PATH;
 
         // If `value_name` is empty then it will read the "(default)" reg-key
         if (RegQueryValueExW(hKey, value_name, NULL, &VALUE_TYPE, VALUE_DATA, &VALUE_SIZE) == ERROR_SUCCESS) {
@@ -14041,12 +14134,14 @@ static bool _webui_get_windows_reg_value(HKEY key, LPCWSTR reg, LPCWSTR value_na
             else if (VALUE_TYPE == REG_DWORD)
                 WEBUI_SN_PRINTF_STATIC(value, WEBUI_MAX_PATH, "%lu", *((DWORD * ) VALUE_DATA));
 
-            RegCloseKey(hKey);
-            return true;
+            found = true;
         }
+
+        // The key is closed whether the value was read or not
+        RegCloseKey(hKey);
     }
 
-    return false;
+    return found;
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
@@ -14439,12 +14534,21 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #endif
 
         _webui_window_t* win = _webui_dereference_win_ptr(arg);
-        if (win == NULL || win->webView == NULL || win->webView->cpp_handle == NULL) {
-            if (win && win->webView) {
+        if (win == NULL) {
+            // The app is exiting, or the window is gone,
+            // nothing here can be touched anymore
+            WEBUI_THREAD_RETURN
+        }
+
+        // Every early exit below must also clear `webview_running`,
+        // otherwise this window can never be reclaimed
+        if (win->webView == NULL || win->webView->cpp_handle == NULL) {
+            if (win->webView) {
                 _webui_wv_free(win->webView);
                 win->webView = NULL;
             }
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
+            _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
 
@@ -14453,6 +14557,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             _webui_wv_free(win->webView);
             win->webView = NULL;
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
+            _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
 
@@ -14465,6 +14570,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             _webui_wv_free(win->webView);
             win->webView = NULL;
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
+            _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
 
@@ -14492,6 +14598,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             _webui_wv_free(win->webView);
             win->webView = NULL;
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
+            _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
 
@@ -14533,6 +14640,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             _webui_wv_free(win->webView);
             win->webView = NULL;
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
+            _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
 
@@ -14692,7 +14800,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
         #ifdef WEBUI_LOG
         _webui_log_debug("[Core]\t\t_webui_wv_event_title()\n");
         #endif
-        _webui_window_t* win = (_webui_window_t *)arg;
+        _webui_window_t* win = _webui_dereference_win_ptr(arg);
+        if (win == NULL || win->webView == NULL)
+            return;
         webkit_web_view_get_title_func webkit_web_view_get_title = (
             webkit_web_view_get_title_func)dlsym(libwebkit, "webkit_web_view_get_title");
         const char *title = webkit_web_view_get_title(web_view);
@@ -14708,6 +14818,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             case WEBKIT_POLICY_DECISION_TYPE_NAVIGATION_ACTION: {
                 
                 _webui_window_t* win = _webui_dereference_win_ptr(user_data);
+                if (win == NULL) // The app is exiting, or the window is gone
+                    return false;
 
                 // If all events are handled, check in_show
                 if (win->has_all_events) {
@@ -14902,10 +15014,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
                 #endif
                 gtk_window_close(webView->gtk_win);
             }
-        }
 
-        _webui_free_mem((void*) webView->url);
-        _webui_free_mem((void*) webView);
+            _webui_free_mem((void*) webView->url);
+            _webui_free_mem((void*) webView);
+        }
     };
 
     static void _webui_wv_free() {
@@ -15549,9 +15661,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         _webui_window_t* win = _webui_dereference_win_ptr(arg);
         if (win == NULL) {
-            _webui_wv_close(win->webView);
-            win->webView = NULL;
-            _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
+            // The app is exiting, or the window is gone,
+            // nothing here can be touched anymore
             WEBUI_THREAD_RETURN
         }
 
@@ -15560,6 +15671,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
             _webui_wv_close(win->webView);
             win->webView = NULL;
             _webui_mutex_is_webview_update(win, WEBUI_MUTEX_SET_FALSE);
+            _webui_mutex_is_webview_running(win, WEBUI_MUTEX_SET_FALSE);
             WEBUI_THREAD_RETURN
         }
 
@@ -15837,8 +15949,8 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 
         _webui_window_t* win = _webui_dereference_win_ptr(arg);
         if (win == NULL) {
-            _webui_wv_free(win->webView);
-            win->webView = NULL;
+            // The app is exiting, or the window is gone,
+            // nothing here can be touched anymore
             WEBUI_THREAD_RETURN
         }
 
@@ -16131,6 +16243,8 @@ static void _webui_bridge_api_handler(webui_event_t* e) {
     // an internal core API. This is not a public user API.
 
     const char* api_name = webui_get_string(e);
+    if (api_name == NULL) // The event is gone, or the app is exiting
+        return;
     #ifdef WEBUI_LOG
     _webui_log_debug("[Core]\t\t_webui_bridge_api_handler() -> api_name: [%s]\n", api_name);
     #endif

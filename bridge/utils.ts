@@ -32,7 +32,7 @@ export function addRefreshableEventListener<K extends keyof HTMLElementEventMap>
 	function rebindListener(mutations: MutationRecord[]) {
 		for (const mutation of mutations) {
 			for (const node of mutation.addedNodes) {
-				if (!(node instanceof HTMLElement)) return; // Target only html elements
+				if (!(node instanceof HTMLElement)) continue; // Target only html elements, keep checking the other nodes
 				if (node.matches(targetSelector)) {
 					// Bind event on added nodes
 					node.addEventListener<K>(type, listener, options);
