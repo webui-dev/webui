@@ -745,6 +745,7 @@ static void _webui_http_send_file(_webui_window_t* win, struct mg_connection* cl
 static void _webui_http_send_header(_webui_window_t* win, struct mg_connection* client,
     const char* mime_type, size_t body_len, bool cache);
 static void _webui_http_send_error(struct mg_connection* client, const char* body, int status);
+static int _webui_http_redirect_keep_query(struct mg_connection* client, const char* target);
 static int _webui_http_handler(struct mg_connection* client, void * _win);
 static int _webui_ws_connect_handler(const struct mg_connection* client, void * _win);
 static void _webui_ws_ready_handler(struct mg_connection* client, void * _win);
@@ -6195,9 +6196,8 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
                 #ifdef WEBUI_LOG
                 _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> 302 Redirecting to [%s]\n", handler_url);
                 #endif
-                mg_send_http_redirect(client, handler_url, 302);
+                http_status_code = _webui_http_redirect_keep_query(client, handler_url);
                 _webui_free_mem((void*)callback_resp);
-                http_status_code = 302;
                 return http_status_code;
             }
 
@@ -6274,8 +6274,7 @@ static int _webui_external_file_handler(_webui_window_t* win, struct mg_connecti
                         #ifdef WEBUI_LOG
                         _webui_log_debug("[Core]\t\t_webui_external_file_handler() -> 302 Redirecting to [%s]\n", index_url);
                         #endif
-                        mg_send_http_redirect(client, index_url, 302);
-                        http_status_code = 302;
+                        http_status_code = _webui_http_redirect_keep_query(client, index_url);
                         break;
                     }
                 }
@@ -11427,6 +11426,64 @@ static void _webui_http_send(
     mg_write(client, body, body_len);
 }
 
+// Longest query string a redirect carries over; longer ones get 414.
+#define WEBUI_REDIRECT_QUERY_MAX (8 * 1024)
+
+// Sends `302 Location: <target>?<query>`, keeping the request's query
+// string so deep links and callbacks survive WebUI's index redirects.
+// Bytes outside visible ASCII (and `#`) are percent-encoded, so the
+// Location header always stays a single header line. The query is
+// still percent-encoded here (CivetWeb's `decode_query_string` is off),
+// so `%` is passed through as-is.
+static int _webui_http_redirect_keep_query(struct mg_connection* client, const char* target) {
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_http_redirect_keep_query()\n");
+    #endif
+
+    const struct mg_request_info * ri = mg_get_request_info(client);
+    const char* query = (ri != NULL ? ri->query_string : NULL);
+    if (_webui_is_empty(query)) {
+        mg_send_http_redirect(client, target, 302);
+        return 302;
+    }
+
+    size_t query_len = _webui_strlen(query);
+    if (query_len > WEBUI_REDIRECT_QUERY_MAX) {
+        #ifdef WEBUI_LOG
+        _webui_log_debug("[Core]\t\t_webui_http_redirect_keep_query() -> 414 Query too long (%zu bytes)\n", query_len);
+        #endif
+        mg_send_http_error(client, 414, "%s", "URI Too Long");
+        return 414;
+    }
+
+    static const char hex[] = "0123456789ABCDEF";
+    size_t target_len = _webui_strlen(target);
+    char* location = (char*)_webui_malloc(target_len + 1 + (query_len * 3));
+    memcpy(location, target, target_len);
+    size_t pos = target_len;
+    location[pos++] = '?';
+    for (size_t i = 0; i < query_len; i++) {
+        unsigned char c = (unsigned char)query[i];
+        if (c > 0x20 && c < 0x7F && c != '#') {
+            location[pos++] = (char)c;
+        } else {
+            location[pos++] = '%';
+            location[pos++] = hex[c >> 4];
+            location[pos++] = hex[c & 0x0F];
+        }
+    }
+    location[pos] = '\0';
+
+    #ifdef WEBUI_LOG
+    _webui_log_debug("[Core]\t\t_webui_http_redirect_keep_query() -> 302 Redirecting to [%s]\n", location);
+    #endif
+
+    mg_send_http_redirect(client, location, 302);
+    _webui_free_mem((void*)location);
+    return 302;
+}
+
 static void _webui_http_send_error(struct mg_connection* client, const char* body, int status) {
 
     #ifdef WEBUI_LOG
@@ -11771,10 +11828,10 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                         #ifdef WEBUI_LOG
                         _webui_log_debug("[Core]\t\t_webui_http_handler() -> 302 Redirecting to [%s]\n", index_files[i]);
                         #endif
-                        mg_send_http_redirect(client, index_files[i], 302);
+                        int status = _webui_http_redirect_keep_query(client, index_files[i]);
                         _webui_free_mem((void*)index_path);
                         _webui_mutex_unlock(&_webui.mutex_http_handler);
-                        return 302;
+                        return status;
                     }
                 }
 
@@ -11909,12 +11966,12 @@ static int _webui_http_handler(struct mg_connection* client, void * _win) {
                         #ifdef WEBUI_LOG
                         _webui_log_debug("[Core]\t\t_webui_http_handler() -> 302 Redirecting to [%s]\n", redirect_url);
                         #endif
-                        mg_send_http_redirect(client, redirect_url, 302);
+                        int status = _webui_http_redirect_keep_query(client, redirect_url);
                         _webui_free_mem((void*)redirect_url);
                         _webui_free_mem((void*)folder_path);
                         _webui_free_mem((void*)index_path);
                         _webui_mutex_unlock(&_webui.mutex_http_handler);
-                        return 302;
+                        return status;
                     }
                 }
 
